@@ -9,8 +9,9 @@ python3 -m stanza.resources.prepare_resources --input_dir /u/nlp/software/stanza
 nlprun -a stanza-1.2 -q john "python3 -m stanza.resources.prepare_resources --input_dir /u/nlp/software/stanza/models/current-models-1.5.0 --output_dir /u/nlp/software/stanza/models/1.5.0" -o resources.out
 """
 
-import json
 import argparse
+import copy
+import json
 import os
 from pathlib import Path
 import hashlib
@@ -214,12 +215,7 @@ pos_charlms = {
     },
 }
 
-# TODO: retrain all of the depparse models with the charlm
-depparse_charlms = {
-    "en": {
-        "combined": "1billion",
-    }
-}
+depparse_charlms = copy.deepcopy(pos_charlms)
 
 ner_charlms = {
     "en": {

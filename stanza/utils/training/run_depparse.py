@@ -4,10 +4,15 @@ import os
 from stanza.models import parser
 
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode
+from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm
 from stanza.utils.training.run_pos import wordvec_args
 
+from stanza.resources.prepare_resources import default_charlms, depparse_charlms
+
 logger = logging.getLogger('stanza')
+
+def add_depparse_args(parser):
+    add_charlm_args(parser)
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
@@ -22,6 +27,9 @@ def run_treebank(mode, paths, treebank, short_name,
     test_in_file   = f"{depparse_dir}/{short_name}.test.in.conllu"
     test_gold_file = f"{depparse_dir}/{short_name}.test.gold.conllu"
     test_pred_file = temp_output_file if temp_output_file else f"{depparse_dir}/{short_name}.test.pred.conllu"
+
+    charlm = choose_charlm(short_language, dataset, command_args.charlm, default_charlms, depparse_charlms)
+    charlm_args = build_charlm_args(short_language, charlm)
 
     if mode == Mode.TRAIN:
         if not os.path.exists(train_file):
@@ -48,7 +56,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       "--lang", short_language,
                       "--shorthand", short_name,
                       "--mode", "train"]
-        train_args = train_args + wordvec_args(short_language, dataset, extra_args)
+        train_args = train_args + wordvec_args(short_language, dataset, extra_args) + charlm_args
         train_args = train_args + extra_args
         logger.info("Running train depparse for {} with args {}".format(treebank, train_args))
         parser.main(train_args)
@@ -61,7 +69,7 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
-        dev_args = dev_args + wordvec_args(short_language, dataset, extra_args)
+        dev_args = dev_args + wordvec_args(short_language, dataset, extra_args) + charlm_args
         dev_args = dev_args + extra_args
         logger.info("Running dev depparse for {} with args {}".format(treebank, dev_args))
         parser.main(dev_args)
@@ -77,7 +85,7 @@ def run_treebank(mode, paths, treebank, short_name,
                      "--lang", short_language,
                      "--shorthand", short_name,
                      "--mode", "predict"]
-        test_args = test_args + wordvec_args(short_language, dataset, extra_args)
+        test_args = test_args + wordvec_args(short_language, dataset, extra_args) + charlm_args
         test_args = test_args + extra_args
         logger.info("Running test depparse for {} with args {}".format(treebank, test_args))
         parser.main(test_args)
@@ -87,7 +95,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_treebank, "depparse", "parser")
+    common.main(run_treebank, "depparse", "parser", add_depparse_args)
 
 if __name__ == "__main__":
     main()
