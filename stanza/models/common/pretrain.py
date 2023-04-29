@@ -112,7 +112,7 @@ class Pretrain:
     def read_pretrain(self):
         # load from pretrained filename
         if self._vec_filename is not None:
-            words, emb, failed = self.read_from_file(self._vec_filename)
+            words, emb, failed = self.read_from_file(self._vec_filename, self._max_vocab)
         elif self._csv_filename is not None:
             words, emb = self.read_from_csv(self._csv_filename)
         else:
@@ -156,7 +156,7 @@ class Pretrain:
         return words, emb
 
     @staticmethod
-    def read_from_file(filename):
+    def read_from_file(filename, max_vocab=None):
         """
         Open a vector file using the provided function and read from it.
         """
@@ -196,7 +196,8 @@ class Pretrain:
                         logger.debug("Found an unk line while reading the pretrain")
                     unk_line = pieces
                 else:
-                    lines.append(pieces)
+                    if not max_vocab or max_vocab < 0 or len(lines) < max_vocab:
+                        lines.append(pieces)
 
         if cols is None:
             # another failure case: all words have spaces in them
