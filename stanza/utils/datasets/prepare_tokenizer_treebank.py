@@ -957,7 +957,7 @@ def build_combined_dataset(paths, short_name, model_type, augment):
 
 BIO_DATASETS = ("en_craft", "en_genia", "en_mimic")
 
-def build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, augment):
+def build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, model_type, augment):
     """
     Process the en bio datasets
 
@@ -969,7 +969,7 @@ def build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_na
     for dataset in ("train", "dev", "test"):
         output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
         if dataset == 'train':
-            sents = build_combined_english_dataset(paths, dataset)
+            sents = build_combined_english_dataset(paths, model_type, dataset)
             if dataset == 'train' and augment:
                 sents = augment_punct(sents)
         else:
@@ -1119,7 +1119,7 @@ def process_treebank(treebank, model_type, paths, args):
     elif short_name in COMBINED_FNS: # eg "it_combined", "en_combined", etc
         build_combined_dataset(paths, short_name, model_type, args.augment)
     elif short_name in BIO_DATASETS:
-        build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.augment)
+        build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, model_type, args.augment)
     elif short_name.startswith("en_gum"):
         # we special case GUM because it should include a filled-out GUMReddit
         print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
