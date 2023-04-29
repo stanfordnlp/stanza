@@ -145,6 +145,23 @@ Multilingual Facilitation (pp. 275-288).
 University of Helsinki.
 https://doi.org/10.31885/9789515150257
 
+### Marathi
+
+[The L3Cube project](https://github.com/l3cube-pune/MarathiNLP)
+provides a couple very useful Marathi datasets we incorporate in our
+models, NER and Sentiment.  They also provide a set of Fasttext WV.
+We experimented with this to rebuild the POS, depparse, and NER
+models.  In general, the results were not conclusive when compared
+with the fasttextwiki model, so we kept fasttextwiki as the default.
+
+In the following chart, POS and NER used the charlm as well, whereas
+the depparse did not.
+
+| Pretrain     | UPOS  | UFeats | AllTags | UAS   | LAS   | CLAS  | MLAS  | BLEX  | NER dev | NER test |
+| :------:     | :---: | :----: | :----:  | :--:  | :--:  | :--:  | :--:  | :--:  | :----:  | :---:    |
+| fasttextwiki | 91.78 | 72.60  | 70.78   | 74.66 | 63.70 | 58.92 | 52.51 | 58.92 | 83.44   | 84.85    |
+| l3cube       | 91.55 | 75.80  | 73.52   | 74.66 | 63.47 | 56.86 | 52.49 | 56.86 | 83.98   | 84.46    |
+
 ### Myanmar
 
 Word vectors were kindly provided to us from UCSY in Myanmar.
