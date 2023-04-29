@@ -105,6 +105,9 @@ class Trainer(BaseTrainer):
             raise
         self.args = checkpoint['config']
         if args is not None: self.args.update(args)
+        # preserve old models which were created before transformers were added
+        if 'bert_model' not in self.args:
+            self.args['bert_model'] = None
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         # load model
         emb_matrix = None
