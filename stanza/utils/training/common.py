@@ -70,6 +70,17 @@ BERT = {
     # this was true even with more than 4 layers of roberta-large
     # roberta-base:  0.9591
     # roberta-large: 0.9577
+    #
+    # experiments using a few different models for POS tagging,
+    # dev set, including WV and charlm:
+    #  roberta-base:   95.67
+    #  roberta-large:  95.98
+    #  electra-small:  95.31
+    #  electra-base:   95.90
+    #  electra-large:  96.01
+    #
+    # electra, especially electra-large, seems quite effective.
+    # will have to run tests on NER, depparse, and constituency
     "en": "roberta-base",
 
     # NER scores for a couple Persian options:
