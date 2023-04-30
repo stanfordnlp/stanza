@@ -157,8 +157,14 @@ with the fasttextwiki model, so we kept fasttextwiki as the default.
 In the following chart, POS and NER used the charlm as well, whereas
 the depparse did not.
 
+We compare the L3Cube MahaFT vectors with
+[Fasttext for 157 languages](https://fasttext.cc/docs/en/crawl-vectors.html) and
+[Fasttext from Wiki](https://fasttext.cc/docs/en/pretrained-vectors.html).
+Fasttext 157 was best for depparse, Fasttext Wiki was best for NER, and L3Cube was best for POS.
+
 | Pretrain     | UPOS  | UFeats | AllTags | UAS   | LAS   | CLAS  | MLAS  | BLEX  | NER dev | NER test |
 | :------:     | :---: | :----: | :----:  | :--:  | :--:  | :--:  | :--:  | :--:  | :----:  | :---:    |
+| fasttext     | 91.55 | 73.29  | 70.32   | 78.54 | 66.21 | 59.68 | 54.44 | 59.68 | 83.27   | 83.62    |
 | fasttextwiki | 91.78 | 72.60  | 70.78   | 74.66 | 63.70 | 58.92 | 52.51 | 58.92 | 83.44   | 84.85    |
 | l3cube       | 91.55 | 75.80  | 73.52   | 74.66 | 63.47 | 56.86 | 52.49 | 56.86 | 83.98   | 84.46    |
 
