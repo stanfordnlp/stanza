@@ -252,6 +252,7 @@ pos_pretrains = {
         "vit_bert": "vit",
     },
     "vi": {
+        "vlsp22": "vtb",
         "vlsp22_phobert_large": "vtb",
         "vtb_phobert_base": "vtb",
         "vtb_phobert_large": "vtb",
