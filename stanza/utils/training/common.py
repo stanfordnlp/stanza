@@ -63,25 +63,37 @@ BERT = {
     # test: 2022-04-27 22:25:27 INFO: de_germeval2014 87.80
     "de": "dbmdz/bert-base-german-cased",
 
-    # https://huggingface.co/roberta-base
-    # an experiment with the constituency parser
-    # to compare roberta-base vs roberta-large had
-    # better results with roberta-large
-    # this was true even with more than 4 layers of roberta-large
-    # roberta-base:  0.9591
-    # roberta-large: 0.9577
+    # experiments on various forms of roberta & electra
+    #  https://huggingface.co/roberta-base
+    #  https://huggingface.co/roberta-large
+    #  https://huggingface.co/google/electra-small-discriminator
+    #  https://huggingface.co/google/electra-base-discriminator
+    #  https://huggingface.co/google/electra-large-discriminator
     #
-    # experiments using a few different models for POS tagging,
-    # dev set, including WV and charlm:
+    # experiments using the different models for POS tagging,
+    # dev set, including WV and charlm, AllTags score:
     #  roberta-base:   95.67
     #  roberta-large:  95.98
     #  electra-small:  95.31
     #  electra-base:   95.90
     #  electra-large:  96.01
     #
-    # electra, especially electra-large, seems quite effective.
-    # will have to run tests on NER, depparse, and constituency
-    "en": "roberta-base",
+    # depparse scores, dev set, no finetuning, with WV and charlm
+    #                   UAS   LAS  CLAS  MLAS  BLEX
+    #  roberta-base:   93.16 91.20 89.87 89.38 89.87
+    #  roberta-large:  93.47 91.56 90.13 89.71 90.13
+    #  electra-small:  92.17 90.02 88.25 87.66 88.25
+    #  electra-base:   93.42 91.44 90.10 89.67 90.10
+    #  electra-large:  94.07 92.17 90.99 90.53 90.99
+    #
+    # conparse scores, dev & test set, with WV and charlm
+    #  roberta_base:   96.05 95.60
+    #  roberta_large:  95.95 95.60
+    #  electra-small:  95.33 95.04
+    #  electra-base:   96.09 95.98
+    #  electra-large:  96.25 96.14
+    #
+    "en": "google/electra-large-discriminator",
 
     # NER scores for a couple Persian options:
     # none:
