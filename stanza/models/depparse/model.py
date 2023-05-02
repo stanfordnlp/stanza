@@ -137,10 +137,10 @@ class Parser(nn.Module):
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('charlm', None):
                 # \n is to add a somewhat neutral "word" for the ROOT
-                text = [["\n"] + x for x in text]
-                all_forward_chars = self.charmodel_forward.build_char_representation(text)
+                charlm_text = [["\n"] + x for x in text]
+                all_forward_chars = self.charmodel_forward.build_char_representation(charlm_text)
                 all_forward_chars = pack(pad_sequence(all_forward_chars, batch_first=True))
-                all_backward_chars = self.charmodel_backward.build_char_representation(text)
+                all_backward_chars = self.charmodel_backward.build_char_representation(charlm_text)
                 all_backward_chars = pack(pad_sequence(all_backward_chars, batch_first=True))
                 inputs += [all_forward_chars, all_backward_chars]
             else:
