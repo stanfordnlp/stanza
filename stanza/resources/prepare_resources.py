@@ -129,6 +129,7 @@ no_pretrain_languages = set([
 specific_default_pretrains = {
     "mr":      "fasttextwiki",
     "myv":     "mokha",
+    "vi":      "conll17",
 }
 
 default_pretrains = dict(default_treebanks)
@@ -250,12 +251,6 @@ pos_pretrains = {
     "it": {
         "combined_electra": "combined",
         "vit_bert": "vit",
-    },
-    "vi": {
-        "vlsp22": "vtb",
-        "vlsp22_phobert_large": "vtb",
-        "vtb_phobert_base": "vtb",
-        "vtb_phobert_large": "vtb",
     },
 }
 
