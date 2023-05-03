@@ -246,7 +246,8 @@ ner_charlms = {
 #   - only have special / unique names for the few which need it, such as the bio pretrains
 pos_pretrains = {
     "en": {
-        "combined_bert": "combined",
+        "combined_roberta": "combined",
+        "combined_electra": "combined",
     },
     "it": {
         "combined_electra": "combined",
