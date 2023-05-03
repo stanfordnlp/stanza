@@ -72,6 +72,15 @@ class Parser(nn.Module):
                 input_size += self.args['transformed_dim']
 
         if self.args['bert_model']:
+            if args.get('bert_hidden_layers', False):
+                # The average will be offset by 1/N so that the default zeros
+                # repressents an average of the N layers
+                self.bert_layer_mix = nn.Linear(args['bert_hidden_layers'], 1, bias=False)
+                nn.init.zeros_(self.bert_layer_mix.weight)
+            else:
+                # an average of layers 2, 3, 4 will be used
+                # (for historic reasons)
+                self.bert_layer_mix = None
             bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
             input_size += bert_model.config.hidden_size
         else:
@@ -160,7 +169,14 @@ class Parser(nn.Module):
 
         if self.bert_model is not None:
             device = next(self.parameters()).device
-            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=True)
+            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=True,
+                                                     num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None)
+            if self.bert_layer_mix is not None:
+                # add the average so that the default behavior is to
+                # take an average of the N layers, and anything else
+                # other than that needs to be learned
+                # TODO: refactor this
+                processed_bert = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in processed_bert]
             # we are using the first endpoint from the transformer as the "word" for ROOT
             processed_bert = [x[:-1, :] for x in processed_bert]
             processed_bert = pad_sequence(processed_bert, batch_first=True)
