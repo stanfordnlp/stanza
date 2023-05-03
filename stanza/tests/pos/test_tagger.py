@@ -209,3 +209,10 @@ class TestTagger:
         TODO: we should find some evidence that it is successfully training the upos & xpos
         """
         trainer = self.run_training(tmp_path, wordvec_pretrain_file, [TRAIN_DATA_NO_UPOS, TRAIN_DATA_NO_XPOS, TRAIN_DATA_NO_FEATS], DEV_DATA)
+
+    def test_with_bert(self, tmp_path, wordvec_pretrain_file):
+        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert'])
+
+    def test_with_bert_nlayers(self, tmp_path, wordvec_pretrain_file):
+        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_hidden_layers', '2'])
+
