@@ -115,9 +115,15 @@ class TestParser:
         saved_model = Trainer(pretrain=pt, model_file=save_file)
         return saved_model
 
-    def test_train(self, tmp_path, wordvec_pretrain_file, augment_nopunct=True):
+    def test_train(self, tmp_path, wordvec_pretrain_file):
         """
         Simple test of a few 'epochs' of tagger training
         """
         self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA)
+
+    def test_with_bert(self, tmp_path, wordvec_pretrain_file):
+        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert'])
+
+    def test_with_bert_nlayers(self, tmp_path, wordvec_pretrain_file):
+        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_hidden_layers', '2'])
 
