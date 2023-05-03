@@ -59,6 +59,11 @@ dicts = [[{'id': '1', 'text': 'Test', 'upos': 'NOUN', 'xpos': 'NN', 'feats': 'Nu
 conll = CoNLL.convert_dict(dicts) # conll is List[List[List]], representing each token / word in each sentence in the document
 ```
 
+{% include alerts.html %}
+{{ note }}
+{{ "`convert_dict` is now marked as deprecated, as internally we use the Document object everywhere.  If you have a use case where you need it, please let us know!" | markdownify }}
+{{ end }}
+
 ## CoNLL to Document
 
 New in v1.2.1
