@@ -150,13 +150,15 @@ import os
 
 import torch
 
-from stanza import Pipeline
+import stanza
+from stanza.models.common import constant
 from stanza.models.common import utils
 from stanza.models.constituency import retagging
 from stanza.models.constituency import trainer
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY, add_predict_output_args, postprocess_predict_output_args
+from stanza.resources.common import DEFAULT_MODEL_DIR
 
 logger = logging.getLogger('stanza')
 
@@ -607,6 +609,7 @@ def parse_args(args=None):
     parser.add_argument('--checkpoint_save_name', type=str, default=None, help="File name to save the most recent checkpoint")
     parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
     parser.add_argument('--load_name', type=str, default=None, help='Model to load when finetuning, evaluating, or manipulating an existing file')
+    parser.add_argument('--load_package', type=str, default=None, help='Download an existing stanza package & use this for tests, finetuning, etc')
 
     retagging.add_retag_args(parser)
 
@@ -751,7 +754,24 @@ def main(args=None):
             model_load_file = args['load_name']
         else:
             model_load_file = os.path.join(args['save_dir'], args['load_name'])
+    elif args['load_package']:
+        if args['lang'] is None:
+            lang_pieces = args['load_package'].split("_", maxsplit=1)
+            try:
+                lang = constant.lang_to_langcode(lang_pieces[0])
+            except ValueError as e:
+                raise ValueError("--lang not specified, and the start of the --load_package name, %s, is not a known language.  Please check the values of those parameters" % args['load_package']) from e
+            args['lang'] = lang
+            args['load_package'] = lang_pieces[1]
+        stanza.download(args['lang'], processors="constituency", package={"constituency": args['load_package']})
+        model_load_file = os.path.join(DEFAULT_MODEL_DIR, args['lang'], 'constituency', args['load_package'] + ".pt")
+        if not os.path.exists(model_load_file):
+            raise FileNotFoundError("Expected the downloaded model file for language %s package %s to be in %s, but there is nothing there.  Perhaps the package name doesn't exist?" % (args['lang'], args['load_package'], model_load_file))
+        else:
+            logger.info("Model for language %s package %s is in %s", args['lang'], args['load_package'], model_load_file)
 
+    # TODO: when loading a saved model, we should default to whatever
+    # is in the model file for --retag_method, not the default for the language
     retag_pipeline = retagging.build_retag_pipeline(args)
 
     if args['mode'] == 'train':
