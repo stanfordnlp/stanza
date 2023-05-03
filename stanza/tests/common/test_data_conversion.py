@@ -1,6 +1,8 @@
 """
 Basic tests of the data conversion
 """
+
+import io
 import pytest
 import tempfile
 from zipfile import ZipFile
@@ -149,6 +151,38 @@ def test_write_russian_doc(tmp_path):
 
     doc2 = CoNLL.conll2doc(filename)
     check_russian_doc(doc2)
+
+# random sentence from EN_Pronouns
+ENGLISH_SAMPLE = """
+# newdoc
+# sent_id = 1
+# text = It is hers.
+# previous = Which person owns this?
+# comment = copular subject
+1	It	it	PRON	PRP	Number=Sing|Person=3|PronType=Prs	3	nsubj	_	_
+2	is	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	3	cop	_	_
+3	hers	hers	PRON	PRP	Gender=Fem|Number=Sing|Person=3|Poss=Yes|PronType=Prs	0	root	_	SpaceAfter=No
+4	.	.	PUNCT	.	_	3	punct	_	_
+""".strip()
+
+def test_write_to_io():
+    doc = CoNLL.conll2doc(input_str=ENGLISH_SAMPLE)
+    output = io.StringIO()
+    CoNLL.write_doc2conll(doc, output)
+    output_value = output.getvalue()
+    assert output_value.endswith("\n\n")
+    assert output_value.strip() == ENGLISH_SAMPLE
+
+def test_write_doc2conll_append(tmp_path):
+    doc = CoNLL.conll2doc(input_str=ENGLISH_SAMPLE)
+    filename = tmp_path / "english.conll"
+    CoNLL.write_doc2conll(doc, filename)
+    CoNLL.write_doc2conll(doc, filename, mode="a")
+
+    with open(filename) as fin:
+        text = fin.read()
+    expected = ENGLISH_SAMPLE + "\n\n" + ENGLISH_SAMPLE + "\n\n"
+    assert text == expected
 
 def test_doc_with_comments():
     """

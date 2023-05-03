@@ -183,12 +183,16 @@ class CoNLL:
         return "{:C}".format(doc)
 
     @staticmethod
-    def write_doc2conll(doc, filename):
+    def write_doc2conll(doc, filename, mode='w', encoding='utf-8'):
         """
-        Writes the doc as a conll file to the given filename
+        Writes the doc as a conll file to the given file.
+
+        If passed a string, that filename will be opened.  Otherwise, filename.write() will be called.
 
         Note that the output needs an extra \n\n at the end to be a legal output file
         """
-        with open(filename, 'w', encoding='utf-8') as outfile:
-            outfile.write("{:C}".format(doc))
-            outfile.write("\n\n")
+        if hasattr(filename, "write"):
+            filename.write("{:C}\n\n".format(doc))
+        else:
+            with open(filename, mode, encoding=encoding) as outfile:
+                outfile.write("{:C}\n\n".format(doc))
