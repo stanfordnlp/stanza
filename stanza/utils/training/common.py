@@ -93,6 +93,13 @@ BERT = {
     #  electra-base:   96.09 95.98
     #  electra-large:  96.25 96.14
     #
+    # conparse scores w/ finetune, dev & test set, with WV and charlm
+    #  roberta_base:   96.07 95.81
+    #  roberta_large:  96.37 96.41   (!!!)
+    #  electra-small:  95.62 95.36
+    #  electra-base:   96.21 95.94
+    #  electra-large:  96.40 96.32
+    #
     "en": "google/electra-large-discriminator",
 
     # NER scores for a couple Persian options:
