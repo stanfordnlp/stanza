@@ -348,8 +348,10 @@ def evaluate(args, model_file, retag_pipeline):
         logger.info("Read %d trees for evaluation", len(treebank))
 
         if retag_pipeline is not None:
-            logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
-            retagged_treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
+            retag_method = trainer.model.args['retag_method']
+            retag_xpos = trainer.model.args['retag_xpos']
+            logger.info("Retagging trees using the %s tags from the %s package...", retag_method, args['retag_package'])
+            retagged_treebank = retag_trees(treebank, retag_pipeline, retag_xpos)
             logger.info("Retagging finished")
 
         if args['log_norms']:
