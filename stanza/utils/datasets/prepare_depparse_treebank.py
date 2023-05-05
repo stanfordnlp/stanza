@@ -101,7 +101,6 @@ def process_treebank(treebank, model_type, paths, args) -> None:
             retagged = f"{dest_dir}/{short_name}.{dest_file}.conllu"
             # fmt: off
             tagger_args = ["--eval_file", original,
-                           "--gold_file", original,
                            "--output_file", retagged]
             # fmt: on
             tagger_args = base_args + tagger_args

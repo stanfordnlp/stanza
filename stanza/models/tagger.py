@@ -38,10 +38,10 @@ def parse_args(args=None):
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/wordvec', help='Directory of word vectors.')
     parser.add_argument('--wordvec_file', type=str, default=None, help='Word vectors filename.')
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
-    parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
+    parser.add_argument('--train_file', type=str, default=None, help='Input file for training.')
+    parser.add_argument('--eval_file', type=str, default=None, help='Input file for scoring.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
-    parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
+    parser.add_argument('--no_gold_labels', dest='gold_labels', action='store_false', help="Don't score the eval file - perhaps it has no gold labels, for example.  Cannot be used at training time")
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
@@ -220,7 +220,6 @@ def train(args):
 
     # pred and gold path
     system_pred_file = args['output_file']
-    gold_file = args['gold_file']
 
     # skip training if the language does not have training or dev data
     if sum(len(train_batch) for train_batch in train_batches) == 0 or len(dev_batch) == 0:
@@ -280,7 +279,7 @@ def train(args):
                 dev_batch.doc.set([UPOS, XPOS, FEATS], [y for x in dev_preds for y in x])
                 CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
 
-                _, _, dev_score = scorer.score(system_pred_file, gold_file, eval_type=eval_type)
+                _, _, dev_score = scorer.score(system_pred_file, args['eval_file'], eval_type=eval_type)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
                 logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
@@ -344,7 +343,6 @@ def train(args):
 def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
-    gold_file = args['gold_file']
     model_file = model_file_name(args)
 
     pretrain = load_pretrain(args)
@@ -382,8 +380,8 @@ def evaluate(args):
     batch.doc.set([UPOS, XPOS, FEATS], [y for x in preds for y in x])
     CoNLL.write_doc2conll(batch.doc, system_pred_file)
 
-    if gold_file is not None:
-        _, _, score = scorer.score(system_pred_file, gold_file, eval_type=eval_type)
+    if args['gold_labels']:
+        _, _, score = scorer.score(system_pred_file, args['eval_file'], eval_type=eval_type)
 
         logger.info("POS Tagger score: %s %.2f", args['shorthand'], score*100)
 

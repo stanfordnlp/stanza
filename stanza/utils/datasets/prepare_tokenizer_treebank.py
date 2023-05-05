@@ -76,10 +76,11 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, postprocess=None
 
         # now we copy the processed conllu data files
         postprocess(tokenizer_dir, "train.gold", dest_dir, "train.in", short_name)
-        postprocess(tokenizer_dir, "dev.gold", dest_dir, "dev.gold", short_name)
-        copy_conllu_file(dest_dir, "dev.gold", dest_dir, "dev.in", short_name)
-        postprocess(tokenizer_dir, "test.gold", dest_dir, "test.gold", short_name)
-        copy_conllu_file(dest_dir, "test.gold", dest_dir, "test.in", short_name)
+        postprocess(tokenizer_dir, "dev.gold", dest_dir, "dev.in", short_name)
+        postprocess(tokenizer_dir, "test.gold", dest_dir, "test.in", short_name)
+        if model_type is not common.ModelType.POS:
+            copy_conllu_file(dest_dir, "dev.in", dest_dir, "dev.gold", short_name)
+            copy_conllu_file(dest_dir, "test.in", dest_dir, "test.gold", short_name)
 
 def split_train_file(treebank, train_input_conllu, train_output_conllu, dev_output_conllu):
     # set the seed for each data file so that the results are the same
