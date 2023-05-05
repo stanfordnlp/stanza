@@ -34,28 +34,49 @@ def parse_args():
     parser.add_argument("--output", default="oscar_dump", help="Path for saving files")
     parser.add_argument("--no_xz", dest="xz", default=True, action='store_false', help="Don't xz the files - default is to compress while writing")
     parser.add_argument("--prefix", default="oscar_dump", help="Prefix to use for the pieces of the dataset")
+    parser.add_argument("--version", choices=["2019", "2023"], default="2023", help="Which version of the Oscar dataset to download")
 
     args = parser.parse_args()
     args.language = lang_to_langcode(args.language)
     return args
 
+def download_2023(args):
+    dataset = load_dataset('oscar-corpus/OSCAR-2301', 'sd')
+    split_names = list(dataset.keys())
+
+
 def main():
     args = parse_args()
 
+    # this is the 2019 version.  for 2023, you can do
+    # dataset = load_dataset('oscar-corpus/OSCAR-2301', 'sd')
     language = args.language
-    dataset_name = "unshuffled_deduplicated_%s" % language
-    try:
-        split_names = get_dataset_split_names("oscar", dataset_name)
-    except ValueError as e:
-        raise ValueError("Language %s not available in HuggingFace Oscar" % language) from e
+    if args.version == "2019":
+        dataset_name = "unshuffled_deduplicated_%s" % language
+        try:
+            split_names = get_dataset_split_names("oscar", dataset_name)
+        except ValueError as e:
+            raise ValueError("Language %s not available in HuggingFace Oscar" % language) from e
 
-    if len(split_names) > 1:
-        raise ValueError("Unexpected split_names: {}".format(split_names))
+        if len(split_names) > 1:
+            raise ValueError("Unexpected split_names: {}".format(split_names))
 
-    dataset = load_dataset("oscar", dataset_name)
-    dataset = dataset[split_names[0]]
-    size_in_bytes = dataset.info.size_in_bytes
-    chunks = size_in_bytes // 1e8 # an overestimate
+        dataset = load_dataset("oscar", dataset_name)
+        dataset = dataset[split_names[0]]
+        size_in_bytes = dataset.info.size_in_bytes
+        process_item = lambda x: x['text']
+    elif args.version == "2023":
+        dataset = load_dataset("oscar-corpus/OSCAR-2301", language)
+        split_names = list(dataset.keys())
+        if len(split_names) > 1:
+            raise ValueError("Unexpected split_names: {}".format(split_names))
+        dataset = dataset[split_names[0]]['text']
+        size_in_bytes = sum(len(x) for x in dataset)
+        process_item = lambda x: x
+    else:
+        raise AssertionError("Unknown version: %s" % args.version)
+
+    chunks = max(1.0, size_in_bytes // 1e8) # an overestimate
     id_len = max(3, math.floor(math.log10(chunks)) + 1)
 
     if args.xz:
@@ -75,10 +96,7 @@ def main():
     fout = fopen(file_idx)
 
     for item in tqdm(dataset):
-        if len(item.keys()) > 2:
-            raise ValueError("Unexpected keys: {}".format(item.keys()))
-
-        text = item['text']
+        text = process_item(item)
         fout.write(text)
         fout.write("\n")
         file_len += len(text)
