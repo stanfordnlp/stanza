@@ -235,6 +235,11 @@ BAD_TOKENIZERS = ('bert-base-german-cased',
                   'dbmdz/bert-base-italian-xxl-cased',
                   'dbmdz/bert-base-italian-cased',
                   'dbmdz/electra-base-italian-xxl-cased-discriminator',
+                  # each of these (perhaps using similar tokenizers?)
+                  # does not digest the script-flip-mark \u200f
+                  'avichr/heBERT',
+                  'onlplab/alephbert-base',
+                  'imvladikon/alephbertgimmel-base-512',
                   # these indonesian models fail on a sentence in the Indonesian GSD dataset:
                   # 'Tak', 'dapat', 'disangkal', 'jika', '\u200e', 'kemenangan', ...
                   # weirdly some other indonesian models (even by the same group) don't have that problem
