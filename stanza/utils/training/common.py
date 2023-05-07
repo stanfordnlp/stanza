@@ -135,9 +135,25 @@ BERT = {
     "fi": "TurkuNLP/bert-base-finnish-cased-v1",
 
     # a couple possibilities to experiment with for Hebrew
+    # dev scores for POS and depparse
     # https://huggingface.co/imvladikon/alephbertgimmel-base-512
+    #   UPOS    XPOS  UFeats AllTags
+    #  97.25   97.25   92.84   91.81
+    #   UAS   LAS  CLAS  MLAS  BLEX
+    #  94.42 92.47 89.49 88.82 89.49
+    #
     # https://huggingface.co/onlplab/alephbert-base
+    #   UPOS    XPOS  UFeats AllTags
+    #  97.37   97.37   92.50   91.55
+    #   UAS   LAS  CLAS  MLAS  BLEX
+    #  94.06 92.12 88.80 88.13 88.80
+    #
     # https://huggingface.co/avichr/heBERT
+    #   UPOS    XPOS  UFeats AllTags
+    #  97.09   97.09   92.36   91.28
+    #   UAS   LAS  CLAS  MLAS  BLEX
+    #  94.29 92.30 88.99 88.38 88.99
+    "he": "imvladikon/alephbertgimmel-base-512",
 
     # https://huggingface.co/xlm-roberta-base
     # Scores by entity for armtdp NER on 18 labels:
