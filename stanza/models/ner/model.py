@@ -19,7 +19,7 @@ from stanza.models.common.bert_embedding import extract_bert_embeddings
 logger = logging.getLogger('stanza')
 
 class NERTagger(nn.Module):
-    def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None):
+    def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, force_bert_saved=False):
         super().__init__()
 
         self.vocab = vocab
@@ -67,10 +67,26 @@ class NERTagger(nn.Module):
 
             input_size += self.args['word_emb_dim']
 
+        # TODO: this, pos, depparse should all be refactored
+        # (the force_bert_saved option here handles that)
+        # FIXME: possibly pos and depparse are all losing a finetuned transformer if loaded & saved
         if self.args.get('bert_model', None):
-            bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
-            add_unsaved_module('bert_model', bert_model)
-            add_unsaved_module('bert_tokenizer', bert_tokenizer)
+            # first we load the transformer model and possibly turn off its requires_grad parameters ...
+            if self.args.get('bert_finetune', False):
+                bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
+            else:
+                bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
+                for n, p in bert_model.named_parameters():
+                    p.requires_grad = False
+            # then we attach it to the NER model
+            # if force_bert_saved is True, that probably indicates the save file had a transformer in it
+            # thus we need to save it again in the future to avoid losing it when resaving
+            if self.args.get('bert_finetune', False) or force_bert_saved:
+                self.bert_model = bert_model
+                add_unsaved_module('bert_tokenizer', bert_tokenizer)
+            else:
+                add_unsaved_module('bert_model', bert_model)
+                add_unsaved_module('bert_tokenizer', bert_tokenizer)
             input_size += self.bert_model.config.hidden_size
         else:
             self.bert_model = None
@@ -174,7 +190,8 @@ class NERTagger(nn.Module):
 
         if self.bert_model is not None:
             device = next(self.parameters()).device
-            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, device, keep_endpoints=False)
+            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, device, keep_endpoints=False,
+                                                     detach=not self.args.get('bert_finetune', False))
             processed_bert = pad_sequence(processed_bert, batch_first=True)
             inputs += [pack(processed_bert)]
 
