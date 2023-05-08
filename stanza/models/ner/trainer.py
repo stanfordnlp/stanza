@@ -7,7 +7,6 @@ import logging
 import torch
 from torch import nn
 
-from stanza.models.common.foundation_cache import load_bert
 from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.common import utils, loss
@@ -70,8 +69,7 @@ class Trainer(BaseTrainer):
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.bert_model, self.bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
-            self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, bert_model = self.bert_model, bert_tokenizer = self.bert_tokenizer)
+            self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, foundation_cache=foundation_cache)
 
         if train_classifier_only:
             logger.info('Disabling gradient for non-classifier layers')
@@ -154,14 +152,13 @@ class Trainer(BaseTrainer):
             raise
         self.args = checkpoint['config']
         if args: self.args.update(args)
-        self.bert_model, self.bert_tokenizer = load_bert(self.args.get('bert_model', None), foundation_cache)
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
 
         emb_matrix=None
         if pretrain is not None:
             emb_matrix = pretrain.emb
 
-        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, bert_model=self.bert_model, bert_tokenizer=self.bert_tokenizer)
+        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache)
         self.model.load_state_dict(checkpoint['model'], strict=False)
 
         # there is a possible issue with the delta embeddings.

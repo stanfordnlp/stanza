@@ -6,18 +6,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, pad_sequence, PackedSequence
-from stanza.models.common.data import map_to_ids, get_long_tensor
 
+from stanza.models.common.data import map_to_ids, get_long_tensor
 from stanza.models.common.packed_lstm import PackedLSTM
 from stanza.models.common.dropout import WordDropout, LockedDropout
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanza.models.common.crf import CRFLoss
+from stanza.models.common.foundation_cache import load_bert
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.common.bert_embedding import extract_bert_embeddings
+
 logger = logging.getLogger('stanza')
 
 class NERTagger(nn.Module):
-    def __init__(self, args, vocab, emb_matrix=None, bert_model=None, bert_tokenizer=None):
+    def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None):
         super().__init__()
 
         self.vocab = vocab
@@ -27,10 +29,6 @@ class NERTagger(nn.Module):
         def add_unsaved_module(name, module):
             self.unsaved_modules += [name]
             setattr(self, name, module)
-
-        # this will remember None if there is no bert
-        add_unsaved_module('bert_model', bert_model)
-        add_unsaved_module('bert_tokenizer', bert_tokenizer)
 
         # input layers
         input_size = 0
@@ -69,8 +67,14 @@ class NERTagger(nn.Module):
 
             input_size += self.args['word_emb_dim']
 
-        if self.bert_model is not None:
+        if self.args.get('bert_model', None):
+            bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
+            add_unsaved_module('bert_model', bert_model)
+            add_unsaved_module('bert_tokenizer', bert_tokenizer)
             input_size += self.bert_model.config.hidden_size
+        else:
+            self.bert_model = None
+            self.bert_tokenizer = None
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args['charlm']:
