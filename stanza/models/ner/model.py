@@ -124,6 +124,13 @@ class NERTagger(nn.Module):
             "Input embedding matrix must match size: {} x {}, found {}".format(vocab_size, dim, emb_matrix.size())
         self.word_emb.weight.data.copy_(emb_matrix)
 
+    def log_norms(self):
+        lines = ["NORMS FOR MODEL PARAMTERS"]
+        for name, param in self.named_parameters():
+            if param.requires_grad and name.split(".")[0] not in ('charmodel_forward', 'charmodel_backward'):
+                lines.append("  %s %.6g" % (name, torch.norm(param).item()))
+        logger.info("\n".join(lines))
+
     def forward(self, sentences, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx):
         device = next(self.parameters()).device
 
