@@ -98,3 +98,7 @@ def test_train_model_cpu(pretrain_file, tmp_path):
     device = next(model.parameters()).device
     assert str(device).startswith("cpu")
 
+
+def test_with_bert(pretrain_file, tmp_path):
+    run_training(pretrain_file, tmp_path, '--bert_model', 'hf-internal-testing/tiny-bert')
+
