@@ -21,10 +21,10 @@ logger = logging.getLogger('stanza')
 RETAG_METHOD = {
     "da": "upos",   # the DDT has no xpos tags anyway
     "es": "upos",   # AnCora has half-finished xpos tags
-    "id": "upos",   # GSD is missing a few punctuation tags
+    "id": "upos",   # GSD is missing a few punctuation tags - fixed in 2.12, though
     "it": "upos",
-    "vi": "upos",
     "pt": "upos",   # default PT model has no xpos either
+    "vi": "xpos",   # the new version of UD can be merged with xpos from VLSP22
 }
 
 def add_constituency_args(parser):
