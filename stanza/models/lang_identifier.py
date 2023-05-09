@@ -84,11 +84,11 @@ def train_model(args):
     # set up indexes
     tag_to_idx, char_to_idx = build_indexes(args)
     # load training data
-    train_data = DataLoader(args['device'])
+    train_data = DataLoader(args.device)
     train_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "train" in x]
     train_data.load_data(args.batch_size, train_files, char_to_idx, tag_to_idx, args.randomize)
     # load dev data
-    dev_data = DataLoader(args['device'])
+    dev_data = DataLoader(args.device)
     dev_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "dev" in x]
     dev_data.load_data(args.batch_size, dev_files, char_to_idx, tag_to_idx, randomize=False, 
                        max_length=args.eval_length)
@@ -103,7 +103,7 @@ def train_model(args):
     if args.load_model:
         trainer_config["load_model"] = args.load_model
         logger.info(f"{datetime.now()}\tLoading model from: {args.load_model}")
-    trainer = Trainer(trainer_config, load_model=args.load_model, device=args['device'])
+    trainer = Trainer(trainer_config, load_model=args.load_model, device=args.device)
     # run training
     best_accuracy = 0.0
     for epoch in range(1, args.num_epochs+1):
@@ -150,9 +150,9 @@ def eval_model(args):
         "load_model": args.load_model,
         "batch_size": args.batch_size
     }
-    trainer = Trainer(trainer_config, load_model=True, device=args['device'])
+    trainer = Trainer(trainer_config, load_model=True, device=args.device)
     # load test data
-    test_data = DataLoader(args['device'])
+    test_data = DataLoader(args.device)
     test_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if args.eval_set in x]
     test_data.load_data(args.batch_size, test_files, trainer.model.char_to_idx, trainer.model.tag_to_idx, 
                         randomize=False, max_length=args.eval_length)
