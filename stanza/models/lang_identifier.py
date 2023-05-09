@@ -24,7 +24,7 @@ def parse_args(args=None):
     parser.add_argument("--eval-length", help="length of strings to eval on", type=int, default=None)
     parser.add_argument("--eval-set", help="eval on dev or test", default="test")
     parser.add_argument("--data-dir", help="directory with train/dev/test data", default=None)
-    parser.add_argument("--load-model", help="path to load model from", default=None)
+    parser.add_argument("--load_name", help="path to load model from", default=None)
     parser.add_argument("--mode", help="train or eval", default="train")
     parser.add_argument("--num-epochs", help="number of epochs for training", type=int, default=50)
     parser.add_argument("--randomize", help="take random substrings of samples", action="store_true")
@@ -100,10 +100,10 @@ def train_model(args):
         "batch_size": args.batch_size,
         "lang_weights": train_data.lang_weights
     }
-    if args.load_model:
-        trainer_config["load_model"] = args.load_model
-        logger.info(f"{datetime.now()}\tLoading model from: {args.load_model}")
-    trainer = Trainer(trainer_config, load_model=args.load_model, device=args.device)
+    if args.load_name:
+        trainer_config["load_name"] = args.load_name
+        logger.info(f"{datetime.now()}\tLoading model from: {args.load_name}")
+    trainer = Trainer(trainer_config, load_model=args.load_name is not None, device=args.device)
     # run training
     best_accuracy = 0.0
     for epoch in range(1, args.num_epochs+1):
@@ -147,7 +147,7 @@ def eval_model(args):
     # set up trainer
     trainer_config = {
         "model_path": None,
-        "load_model": args.load_model,
+        "load_name": args.load_name,
         "batch_size": args.batch_size
     }
     trainer = Trainer(trainer_config, load_model=True, device=args.device)
@@ -159,7 +159,7 @@ def eval_model(args):
     curr_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
         eval_trainer(trainer, test_data, batch_mode=args.batch_mode, fine_grained=not args.merge_labels_for_eval)
     logger.info(f"{datetime.now()}\t{args.eval_set} accuracy: {curr_accuracy}")
-    eval_save_path = args.save_name if args.save_name else score_log_path(args.load_model)
+    eval_save_path = args.save_name if args.save_name else score_log_path(args.load_name)
     if not os.path.exists(eval_save_path) or args.save_name:
         with open(eval_save_path, "w") as score_log_file:
             for score_log in [{"dev_accuracy": curr_accuracy}, curr_confusion_matrix, curr_precisions,

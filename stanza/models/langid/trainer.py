@@ -15,7 +15,7 @@ class Trainer:
         self.model_path = config["model_path"]
         self.batch_size = config.get("batch_size", Trainer.DEFAULT_BATCH_SIZE)
         if load_model:
-            self.load(config["load_model"], device)
+            self.load(config["load_name"], device)
         else:
             self.model = LangIDBiLSTM(config["char_to_idx"], config["tag_to_idx"], Trainer.DEFAULT_LAYERS, 
                                       Trainer.DEFAULT_EMBEDDING_DIM,

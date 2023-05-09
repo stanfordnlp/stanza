@@ -1,3 +1,5 @@
+import os
+
 import torch
 import torch.nn as nn
 
@@ -108,6 +110,10 @@ class LangIDBiLSTM(nn.Module):
     @classmethod
     def load(cls, path, device=None, batch_size=64, lang_subset=None):
         """ Load a serialized model located at path """
+        if path is None:
+            raise FileNotFoundError("Trying to load langid model, but path not specified!  Try --load_name")
+        if not os.path.exists(path):
+            raise FileNotFoundError("Trying to load langid model from path which does not exist: %s" % path)
         checkpoint = torch.load(path, map_location=torch.device("cpu"))
         weights = checkpoint["model_state_dict"]["loss_train.weight"]
         model = cls(checkpoint["char_to_idx"], checkpoint["tag_to_idx"], checkpoint["num_layers"],
