@@ -13,7 +13,9 @@ from datetime import datetime
 from stanza.models.common import utils
 from stanza.models.langid.data import DataLoader
 from stanza.models.langid.trainer import Trainer
-from tqdm import tqdm
+from stanza.utils.get_tqdm import get_tqdm
+
+tqdm = get_tqdm()
 
 logger = logging.getLogger('stanza')
 
