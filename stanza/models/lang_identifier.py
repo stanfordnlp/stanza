@@ -19,22 +19,22 @@ logger = logging.getLogger('stanza')
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--batch-mode", help="custom settings when running in batch mode", action="store_true")
-    parser.add_argument("--batch-size", help="batch size for training", type=int, default=64)
-    parser.add_argument("--eval-length", help="length of strings to eval on", type=int, default=None)
-    parser.add_argument("--eval-set", help="eval on dev or test", default="test")
-    parser.add_argument("--data-dir", help="directory with train/dev/test data", default=None)
+    parser.add_argument("--batch_mode", help="custom settings when running in batch mode", action="store_true")
+    parser.add_argument("--batch_size", help="batch size for training", type=int, default=64)
+    parser.add_argument("--eval_length", help="length of strings to eval on", type=int, default=None)
+    parser.add_argument("--eval_set", help="eval on dev or test", default="test")
+    parser.add_argument("--data_dir", help="directory with train/dev/test data", default=None)
     parser.add_argument("--load_name", help="path to load model from", default=None)
     parser.add_argument("--mode", help="train or eval", default="train")
-    parser.add_argument("--num-epochs", help="number of epochs for training", type=int, default=50)
+    parser.add_argument("--num_epochs", help="number of epochs for training", type=int, default=50)
     parser.add_argument("--randomize", help="take random substrings of samples", action="store_true")
-    parser.add_argument("--randomize-lengths-range", help="range of lengths to use when random sampling text", 
+    parser.add_argument("--randomize_lengths_range", help="range of lengths to use when random sampling text",
                         type=randomize_lengths_range, default="5,20")
-    parser.add_argument("--merge-labels-for-eval", 
+    parser.add_argument("--merge_labels_for_eval",
                         help="merge some language labels for eval (e.g. \"zh-hans\" and \"zh-hant\" to \"zh\")", 
                         action="store_true")
-    parser.add_argument("--save-best-epochs", help="save model for every epoch with new best score", action="store_true")
-    parser.add_argument("--save-name", help="where to save model", default=None)
+    parser.add_argument("--save_best_epochs", help="save model for every epoch with new best score", action="store_true")
+    parser.add_argument("--save_name", help="where to save model", default=None)
     utils.add_device_args(parser)
     args = parser.parse_args(args=args)
     return args
