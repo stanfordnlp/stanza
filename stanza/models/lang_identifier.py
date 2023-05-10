@@ -111,9 +111,14 @@ def train_model(args):
     for epoch in range(1, args.num_epochs+1):
         logger.info(f"{datetime.now()}\tEpoch {epoch}")
         logger.info(f"{datetime.now()}\tNum training batches: {len(train_data.batches)}")
-        for train_batch in tqdm(train_data.batches, disable=args.batch_mode):
+
+        batches = train_data.batches
+        if not args.batch_mode:
+            batches = tqdm(batches)
+        for train_batch in batches:
             inputs = (train_batch["sentences"], train_batch["targets"])
             trainer.update(inputs)
+
         logger.info(f"{datetime.now()}\tEpoch complete. Evaluating on dev data.")
         curr_dev_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
             eval_trainer(trainer, dev_data, batch_mode=args.batch_mode)
@@ -138,8 +143,8 @@ def score_log_path(file_path):
     Helper that will determine corresponding log file (e.g. /path/to/demo.pt to /path/to/demo.json
     """
     model_suffix = os.path.splitext(file_path)
-    if model_suffix:
-        score_log_path = f"{file_path[:-len(model_suffix)]}.json"
+    if model_suffix[1]:
+        score_log_path = f"{file_path[:-len(model_suffix[1])]}.json"
     else:
         score_log_path = f"{file_path}.json"
     return score_log_path
@@ -185,7 +190,10 @@ def eval_trainer(trainer, dev_data, batch_mode=False, fine_grained=True):
             confusion_matrix[row_label][col_label] = 0
 
     # process dev batches
-    for dev_batch in tqdm(dev_data.batches, disable=batch_mode):
+    batches = dev_data.batches
+    if not batch_mode:
+        batches = tqdm(batches)
+    for dev_batch in batches:
         inputs = (dev_batch["sentences"], dev_batch["targets"])
         predictions = trainer.predict(inputs)
         for target_idx, prediction in zip(dev_batch["targets"], predictions):
