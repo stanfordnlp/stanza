@@ -21,6 +21,7 @@ The Ukrainian model and its score [was provided by a user](https://github.com/st
 | Language          | lcode  | Corpus          | Types     | F1    | Def?                                               | Since                              |  Doc     |
 | :--------------   | :----  | :-----          | :-------  | :---- | :------------------------------------------------: | :---:                              | :---------  |
 | Afrikaans         |   af   | NCHLT           | 4         | 80.08 | <i class="fas fa-check" style="color:#33a02c"></i> |                                    | [<i class="fas fa-file-alt"></i>](https://hdl.handle.net/20.500.12185/299) |
+| Armenian          |   hy   | ARMTDP          | 18        | 87.96 | <i class="fas fa-check" style="color:#33a02c"></i> | 1.5.0                              | [<i class="fas fa-file-alt"></i>](https://github.com/myavrum/ArmTDP-NER.git) |
 | Arabic            |   ar   | AQMAR           | 4         | 74.3  | <i class="fas fa-check" style="color:#33a02c"></i> |                                    | [<i class="fas fa-file-alt"></i>](http://www.cs.cmu.edu/~ark/ArabicNER/) |
 | Bulgarian         |   bg   | BSNLP 2019      | 5         | 83.21 | <i class="fas fa-check" style="color:#33a02c"></i> | 1.2.1                              | [<i class="fas fa-file-alt"></i>](http://bsnlp.cs.helsinki.fi/bsnlp-2019/shared_task.html) |
 | Chinese           |   zh   | OntoNotes       | 18        | 79.2  | <i class="fas fa-check" style="color:#33a02c"></i> |                                    | [<i class="fas fa-file-alt"></i>](https://catalog.ldc.upenn.edu/LDC2013T19) |
@@ -36,6 +37,7 @@ The Ukrainian model and its score [was provided by a user](https://github.com/st
 | Hungarian         |   hu   | Combined        | 4         | -     | <i class="fas fa-check" style="color:#33a02c"></i> | 1.2.1                              | [<i class="fas fa-file-alt"></i>](https://rgai.inf.u-szeged.hu/node/130)  [<i class="fas fa-file-alt"></i>](https://github.com/nytud/NYTK-NerKor) |
 | Italian           |   it   | FBK             | 3         | 87.92 | <i class="fas fa-check" style="color:#33a02c"></i> | 1.2.3                              | [<i class="fas fa-file-alt"></i>](https://dh.fbk.eu/) |
 | Japanese          |   ja   | GSD             | 22        | 81.01 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.0</b> | [<i class="fas fa-file-alt"></i>](https://github.com/megagonlabs/UD_Japanese-GSD) |
+| Kazakh            |   kk   | kazNERD         | 25        | 94.94 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.1</b> | [<i class="fas fa-file-alt"></i>](https://arxiv.org/abs/2111.13419) [<i class="fas fa-file-alt"></i>](https://github.com/IS2AI/KazNERD) |
 | Myanmar           |   my   | UCSY            | 7         | 95.86 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.0</b> | [<i class="fas fa-file-alt"></i>](https://arxiv.org/ftp/arxiv/papers/1903/1903.04739.pdf) |
 | Norwegian&#8209;Bokmaal |   nb   | Norne           | 8         | 84.79 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.0</b> | [<i class="fas fa-file-alt"></i>](https://github.com/ltgoslo/norne) |
 | Norwegian&#8209;Nynorsk |   nn   | Norne           | 8         | 80.16 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.0</b> | [<i class="fas fa-file-alt"></i>](https://github.com/ltgoslo/norne) |
@@ -80,6 +82,7 @@ We have provided links to all NER datasets used to train the released models on 
 - The Italian FBK dataset uses `LOC`, `ORG`, `PER`
 - The Myanmar UCSY dataset uses `LOC` (Location), `NE` (Misc), `ORG` (Organization), `PNAME` (Person), `RACE`, `TIME`, `NUM`
 - The Japanese GSD dataset uses 22 tags: `CARDINAL`, `DATE`, `EVENT`, `FAC`, `GPE`, `LANGUAGE`, `LAW`, `LOC`, `MONEY`, `MOVEMENT`, `NORP`, `ORDINAL`, `ORG`, `PERCENT`, `PERSON`, `PET_NAME`, `PHONE`, `PRODUCT`, `QUANTITY`, `TIME`, `TITLE_AFFIX`, `WORK_OF_ART`
+- The Kazakh KazNERD dataset uses 25 tags: `ADAGE`, `ART`, `CARDINAL`, `CONTACT`, `DATE`, `DISEASE`, `EVENT`, `FACILITY`, `GPE`, `LANGUAGE`, `LAW`, `LOCATION`, `MISCELLANEOUS`, `MONEY`, `NON_HUMAN`, `NORP`, `ORDINAL`, `ORGANISATION`, `PERCENTAGE`, `PERSON`, `POSITION`, `PRODUCT`, `PROJECT`, `QUANTITY`, `TIME`
 - The Norwegian Norne dataset uses 8 tags for both NB and NN: `DRV`, `EVT`, `GPE`, `LOC`, `MISC`, `ORG`, `PER`, `PROD`
 - The Persian Arman dataset uses 6 tags: `event`, `fac`, `loc`, `org`, `pers`, `pro`
 - The Turkish Starlang dataset uses 5 tags: `LOCATION`, `MONEY`, `ORGANIZATION`, `PERSON`, `TIME`
