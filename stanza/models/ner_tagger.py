@@ -231,8 +231,8 @@ def train(args):
     if args['lr_decay'] > 0:
         # learning rate changes on plateau -- no improvement on model for patience number of epochs
         # change is made as a factor of the learning rate decay
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(trainer.optimizer, mode='max', factor=args['lr_decay'], \
-            patience=args['patience'], verbose=True, min_lr=args['min_lr'])
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(trainer.optimizer, mode='max', factor=args['lr_decay'],
+                                                               patience=args['patience'], verbose=True, min_lr=args['min_lr'])
     else:
         scheduler = None
 
