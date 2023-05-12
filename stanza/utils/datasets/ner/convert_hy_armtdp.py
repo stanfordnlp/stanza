@@ -124,7 +124,7 @@ def train_test_dev_split(sents, base_output_path, short_name, train_fraction=0.7
         write_sentences_to_file(batch, os.path.join(base_output_path, filename))
 
 
-def convert_dataset(base_input_path, base_output_path, short_name, download_method):
+def convert_dataset(base_input_path, base_output_path, short_name, download_method=DownloadMethod.DOWNLOAD_RESOURCES):
     nlp_hy = stanza.Pipeline(lang='hy', processors='tokenize', download_method=download_method)
     paragraphs = read_data(os.path.join(base_input_path, 'ArmNER-HY.json1'))
     tagged_sentences = format_sentences(paragraphs, nlp_hy)
