@@ -16,7 +16,7 @@ NER models. All numbers reported are micro-averaged F1 scores. We used
 canonical train/dev/test splits for all datasets except for the
 WikiNER datasets, for which we used random splits.
 
-The Ukrainian model and its score [was provided by a user](https://github.com/stanfordnlp/stanza/issues/319).
+The Ukrainian model and its score [was provided by gawy](https://github.com/stanfordnlp/stanza/issues/319).  The Armenian model [was provided by ShakeHakobyan](https://github.com/stanfordnlp/stanza/issues/1206).
 
 | Language          | lcode  | Corpus          | Types     | F1    | Def?                                               | Since                              |  Doc     |
 | :--------------   | :----  | :-----          | :-------  | :---- | :------------------------------------------------: | :---:                              | :---------  |
