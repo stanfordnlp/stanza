@@ -16,7 +16,7 @@ NER models. All numbers reported are micro-averaged F1 scores. We used
 canonical train/dev/test splits for all datasets except for the
 WikiNER datasets, for which we used random splits.
 
-The Ukrainian model and its score [was provided by gawy](https://github.com/stanfordnlp/stanza/issues/319).  The Armenian model [was provided by ShakeHakobyan](https://github.com/stanfordnlp/stanza/issues/1206).
+The Ukrainian model and its score [was provided by gawy](https://github.com/stanfordnlp/stanza/issues/319).  The Armenian model [was provided by ShakeHakobyan](https://github.com/stanfordnlp/stanza/issues/1206).  The Polish model [was provided by Karol Saputa](https://github.com/stanfordnlp/stanza/issues/1070)
 
 | Language          | lcode  | Corpus          | Types     | F1    | Def?                                               | Since                              |  Doc     |
 | :--------------   | :----  | :-----          | :-------  | :---- | :------------------------------------------------: | :---:                              | :---------  |
@@ -43,6 +43,7 @@ The Ukrainian model and its score [was provided by gawy](https://github.com/stan
 | Norwegian&#8209;Bokmaal |   nb   | Norne           | 8         | 84.79 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.0</b> | [<i class="fas fa-file-alt"></i>](https://github.com/ltgoslo/norne) |
 | Norwegian&#8209;Nynorsk |   nn   | Norne           | 8         | 80.16 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.0</b> | [<i class="fas fa-file-alt"></i>](https://github.com/ltgoslo/norne) |
 | Persian           |   fa   | Arman           | 6         | 80.07 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.0</b> | [<i class="fas fa-file-alt"></i>](https://github.com/HaniehP/PersianNER) |
+| Polish            |   pl   | NKJP            | 6         | 88.73 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.1</b> | [<i class="fas fa-file-alt"></i>](http://clip.ipipan.waw.pl/NationalCorpusOfPolish?action=AttachFile&do=view&target=NKJP-PodkorpusMilionowy-1.2.tar.gz) |
 | Russian           |   ru   | WikiNER         | 4         | 92.9  | <i class="fas fa-check" style="color:#33a02c"></i> |                                    | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) |
 | Sindhi            |   sd   | SiNER           | 11        | 84.74 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.5.0</b> | [<i class="fas fa-file-alt"></i>](https://github.com/AliWazir/SiNER-dataset) [<i class="fas fa-file-alt"></i>](https://aclanthology.org/2020.lrec-1.361/) |
 | Spanish           |   es   | CoNLL02         | 4         | 88.1  | <i class="fas fa-check" style="color:#33a02c"></i> |                                    | [<i class="fas fa-file-alt"></i>](https://www.aclweb.org/anthology/W02-2024.pdf) |
@@ -88,5 +89,6 @@ We have provided links to all NER datasets used to train the released models on 
 - The Kazakh KazNERD dataset uses 25 tags: `ADAGE`, `ART`, `CARDINAL`, `CONTACT`, `DATE`, `DISEASE`, `EVENT`, `FACILITY`, `GPE`, `LANGUAGE`, `LAW`, `LOCATION`, `MISCELLANEOUS`, `MONEY`, `NON_HUMAN`, `NORP`, `ORDINAL`, `ORGANISATION`, `PERCENTAGE`, `PERSON`, `POSITION`, `PRODUCT`, `PROJECT`, `QUANTITY`, `TIME`
 - The Norwegian Norne dataset uses 8 tags for both NB and NN: `DRV`, `EVT`, `GPE`, `LOC`, `MISC`, `ORG`, `PER`, `PROD`
 - The Persian Arman dataset uses 6 tags: `event`, `fac`, `loc`, `org`, `pers`, `pro`
+- The Polish NKJP dataset uses 6 tags: `date`, `geogName`, `orgName`, `persName`, `placeName`, `time`
 - The Sindhi SiNER dataset uses 11 tags: `ART`, `EVENT`, `FAC`, `GPE`, `LANGUAGE`, `LOC`, `NORP`, `ORG`, `OTHERS`, `PERSON`, `TITLE`
 - The Turkish Starlang dataset uses 5 tags: `LOCATION`, `MONEY`, `ORGANIZATION`, `PERSON`, `TIME`
