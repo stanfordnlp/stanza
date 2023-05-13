@@ -67,19 +67,19 @@ def run_treebank(mode, paths, treebank, short_name,
     ner_dir = paths["NER_DATA_DIR"]
     language, dataset = short_name.split("_")
 
-    train_file = os.path.join(ner_dir, f"{short_name}.train.json")
-    dev_file   = os.path.join(ner_dir, f"{short_name}.dev.json")
-    test_file  = os.path.join(ner_dir, f"{short_name}.test.json")
+    train_file = os.path.join(ner_dir, f"{treebank}.train.json")
+    dev_file   = os.path.join(ner_dir, f"{treebank}.dev.json")
+    test_file  = os.path.join(ner_dir, f"{treebank}.test.json")
 
     # if any files are missing, try to rebuild the dataset
     # if that still doesn't work, we have to throw an error
     missing_file = [x for x in (train_file, dev_file, test_file) if not os.path.exists(x)]
     if len(missing_file) > 0:
-        logger.warning(f"The data for {short_name} is missing or incomplete.  Cannot find {missing_file}  Attempting to rebuild...")
+        logger.warning(f"The data for {treebank} is missing or incomplete.  Cannot find {missing_file}  Attempting to rebuild...")
         try:
-            prepare_ner_dataset.main(short_name)
+            prepare_ner_dataset.main(treebank)
         except Exception as e:
-            raise FileNotFoundError(f"An exception occurred while trying to build the data for {short_name}  At least one portion of the data was missing: {missing_file}  Please correctly build these files and then try again.") from e
+            raise FileNotFoundError(f"An exception occurred while trying to build the data for {treebank}  At least one portion of the data was missing: {missing_file}  Please correctly build these files and then try again.") from e
 
     pretrain_args = build_pretrain_args(language, dataset, command_args.charlm, extra_args)
 
