@@ -70,6 +70,8 @@ We have provided links to all NER datasets used to train the released models on 
 
 - **Italian**: The Italian FBK dataset was licensed to us from [FBK](https://dh.fbk.eu/).  Paccosi T. and Palmero Aprosio A.  KIND: an Italian Multi-Domain Dataset for Named Entity Recognition.  LREC 2022
 
+- **Marathi**: The L3cube-MahaNER dataset was used for Marathi NER training. The original dataset was curated as a part of the [MahaNLP](https://arxiv.org/abs/2205.14728) initiative by L3Cube Pune. The MahaNER along with other Marathi resources is shared on the [Marathi NLP](https://github.com/l3cube-pune/MarathiNLP) page and described in their [dataset description paper](https://aclanthology.org/2022.wildre-1.6.pdf).
+
 - **Myanmar**: The Myanmar dataset is by special request from [UCSY](https://arxiv.org/ftp/arxiv/papers/1903/1903.04739.pdf).
 
 - **Swedish**: The [SUC3 dataset] has two versions, one with the entries shuffled and another using the original ordering of the data.  We make the shuffled version the default in order to expand the coverage of the model.
