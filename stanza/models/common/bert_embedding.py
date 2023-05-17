@@ -77,7 +77,7 @@ def tokenize_manual(model_name, sent, tokenizer):
 
 def filter_data(model_name, data, tokenizer = None, log_level=logging.INFO):
     """
-    Filter out the (NER) data that is too long for BERT model.
+    Filter out the (NER, POS) data that is too long for BERT model.
     """
     if tokenizer is None:
         tokenizer = load_tokenizer(model_name) 

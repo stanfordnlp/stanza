@@ -2,6 +2,7 @@ import random
 import logging
 import torch
 
+from stanza.models.common.bert_embedding import filter_data
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX, CharVocab
 from stanza.models.pos.vocab import WordVocab, XPOSVocab, FeatureVocab, MultiVocab
@@ -11,7 +12,7 @@ from stanza.models.common.doc import *
 logger = logging.getLogger('stanza')
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False):
+    def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False, bert_tokenizer=None):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -29,6 +30,9 @@ class DataLoader:
         self.has_feats = not all(x is None or x == '_' for x in doc.get(FEATS, as_sentences=False))
 
         data = self.load_doc(self.doc)
+        # filter out the long sentences if bert is used
+        if self.args.get('bert_model', None):
+            data = filter_data(self.args['bert_model'], data, bert_tokenizer)
 
         # handle pretrain; pretrain vocab is used when args['pretrain'] == True and pretrain is not None
         self.pretrain_vocab = None
