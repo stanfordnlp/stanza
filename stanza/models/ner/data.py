@@ -22,11 +22,11 @@ class DataLoader:
         self.preprocess_tags = preprocess_tags
 
         data = self.load_doc(self.doc)
-        
+
         # filter out the long sentences if bert is used
         if self.args.get('bert_model', False):
             data = filter_data(self.args['bert_model'], data, bert_tokenizer)
-        
+
         self.tags = [[w[1] for w in sent] for sent in data]
         # handle vocab
         self.pretrain = pretrain
