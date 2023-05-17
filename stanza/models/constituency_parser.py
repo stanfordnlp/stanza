@@ -516,7 +516,13 @@ def parse_args(args=None):
 
     parser.add_argument('--stage1_learning_rate', default=None, type=float, help='Learning rate to use in the first stage of --multistage.  None means use default: {}'.format(DEFAULT_LEARNING_RATES['adadelta']))
 
-    parser.add_argument('--learning_rate_warmup', default=0, type=int, help='Number of epochs to ramp up learning rate from 0 to full.  Set to 0 to always use the chosen learning rate')
+    parser.add_argument('--learning_rate_warmup', default=0, type=int, help="Number of epochs to ramp up learning rate from 0 to full.  Set to 0 to always use the chosen learning rate.  Currently not functional, as it didn't do anything")
+
+    parser.add_argument('--learning_rate_factor', default=0.6, type=float, help='Plateau learning rate decreate when plateaued')
+    parser.add_argument('--learning_rate_patience', default=5, type=int, help='Plateau learning rate patience')
+    parser.add_argument('--learning_rate_cooldown', default=10, type=int, help='Plateau learning rate cooldown')
+    parser.add_argument('--learning_rate_min_lr', default=None, type=float, help='Plateau learning rate minimum')
+    parser.add_argument('--stage1_learning_rate_min_lr', default=None, type=float, help='Plateau learning rate minimum (stage 1)')
 
     parser.add_argument('--grad_clipping', default=None, type=float, help='Clip abs(grad) to this amount.  Use --no_grad_clipping to turn off grad clipping')
     parser.add_argument('--no_grad_clipping', action='store_const', const=None, dest='grad_clipping', help='Use --no_grad_clipping to turn off grad clipping')
@@ -695,6 +701,11 @@ def parse_args(args=None):
             args.stage1_learning_rate = DEFAULT_LEARNING_RATES["adadelta"]
         if args.stage1_bert_finetune is None:
             args.stage1_bert_finetune = args.bert_finetune
+
+        if args.learning_rate_min_lr is None:
+            args.learning_rate_min_lr = args.learning_rate * 0.02
+        if args.stage1_learning_rate_min_lr is None:
+            args.stage1_learning_rate_min_lr = args.stage1_learning_rate * 0.02
 
     if args.reduce_position is None:
         args.reduce_position = args.hidden_size // 4

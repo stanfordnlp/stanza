@@ -284,18 +284,29 @@ def build_optimizer(args, model, build_simple_adadelta=False):
         raise ValueError("Unknown optimizer: %s" % optim)
     return optimizer
 
-def build_scheduler(args, optimizer):
-    if args.get('learning_rate_warmup', 0) <= 0:
-        # TODO: is there an easier way to make an empty scheduler?
-        lr_lambda = lambda x: 1.0
-    else:
-        warmup_end = args['learning_rate_warmup']
-        def lr_lambda(x):
-            if x >= warmup_end:
-                return 1.0
-            return x / warmup_end
+def build_scheduler(args, optimizer, first_optimizer=False):
+    """
+    Build the scheduler for the conparser based on its args
 
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+    Used to use a warmup for learning rate, but that wasn't working very well
+    Now, we just use a ReduceLROnPlateau, which does quite well
+    """
+    #if args.get('learning_rate_warmup', 0) <= 0:
+    #    # TODO: is there an easier way to make an empty scheduler?
+    #    lr_lambda = lambda x: 1.0
+    #else:
+    #    warmup_end = args['learning_rate_warmup']
+    #    def lr_lambda(x):
+    #        if x >= warmup_end:
+    #            return 1.0
+    #        return x / warmup_end
+
+    #scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+    if first_optimizer:
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=args['learning_rate_factor'], patience=args['learning_rate_patience'], cooldown=args['learning_rate_cooldown'], min_lr=args['stage1_learning_rate_min_lr'])
+    else:
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=args['learning_rate_factor'], patience=args['learning_rate_patience'], cooldown=args['learning_rate_cooldown'], min_lr=args['learning_rate_min_lr'])
     return scheduler
 
 def initialize_linear(linear, nonlinearity, bias):

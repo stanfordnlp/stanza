@@ -181,7 +181,7 @@ class Trainer:
             else:
                 logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
 
-            scheduler = build_scheduler(model.args, optimizer)
+            scheduler = build_scheduler(model.args, optimizer, first_optimizer=build_simple_adadelta)
             if 'scheduler_state_dict' in checkpoint:
                 scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         else:
@@ -534,7 +534,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         temp_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, False, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, temp_args)
         temp_model = temp_model.to(args['device'])
         temp_optim = build_optimizer(temp_args, temp_model, True)
-        scheduler = build_scheduler(temp_args, temp_optim)
+        scheduler = build_scheduler(temp_args, temp_optim, True)
         trainer = Trainer(temp_model, temp_optim, scheduler)
     else:
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, False, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
@@ -796,6 +796,12 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             logger.warning("Had to ignore %d batches with NaN", epoch_stats.nans)
         logger.info("Epoch %d finished\n  Transitions correct: %s\n  Transitions incorrect: %s\n  Total loss for epoch: %.5f\n  Dev score      (%5d): %8f\n  Best dev score (%5d): %8f", trainer.epochs_trained, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, trainer.epochs_trained, f1, trainer.best_epoch, trainer.best_f1)
 
+        old_lr = trainer.optimizer.param_groups[0]['lr']
+        trainer.scheduler.step(f1)
+        new_lr = trainer.optimizer.param_groups[0]['lr']
+        if old_lr != new_lr:
+            logger.info("Updating learning rate from %f to %f", old_lr, new_lr)
+
         if args['wandb']:
             wandb.log({'epoch_loss': epoch_stats.epoch_loss, 'dev_score': f1}, step=trainer.epochs_trained)
             if args['wandb_norm_regex']:
@@ -859,7 +865,6 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
 
     model = trainer.model
     optimizer = trainer.optimizer
-    scheduler = trainer.scheduler
 
     epoch_stats = EpochStats(0.0, Counter(), Counter(), Counter(), 0, 0)
 
@@ -878,12 +883,6 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
         optimizer.zero_grad()
         epoch_stats = epoch_stats + batch_stats
 
-
-    old_lr = scheduler.get_last_lr()[0]
-    scheduler.step()
-    new_lr = scheduler.get_last_lr()[0]
-    if old_lr != new_lr:
-        logger.info("Updating learning rate from %f to %f", old_lr, new_lr)
 
     # TODO: refactor the logging?
     total_correct = sum(v for _, v in epoch_stats.transitions_correct.items())
