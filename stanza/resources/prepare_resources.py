@@ -18,12 +18,13 @@ import hashlib
 import shutil
 import zipfile
 
+from stanza import __resources_version__
 from stanza.models.common.constant import lcode2lang, two_to_three_letters
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_dir', type=str, default="/u/nlp/software/stanza/models/current-models-1.5.0", help='Input dir for various models.  Defaults to the recommended home on the nlp cluster')
-    parser.add_argument('--output_dir', type=str, default="/u/nlp/software/stanza/models/1.5.0", help='Output dir for various models.')
+    parser.add_argument('--input_dir', type=str, default="/u/nlp/software/stanza/models/current-models-%s" % __resources_version__, help='Input dir for various models.  Defaults to the recommended home on the nlp cluster')
+    parser.add_argument('--output_dir', type=str, default="/u/nlp/software/stanza/models/%s" % __resources_version__, help='Output dir for various models.')
     args = parser.parse_args()
     args.input_dir = os.path.abspath(args.input_dir)
     args.output_dir = os.path.abspath(args.output_dir)
@@ -687,6 +688,7 @@ def process_misc(args):
 
 def main():
     args = parse_args()
+    print("Converting models from %s to %s" % (args.input_dir, args.output_dir))
     process_dirs(args)
     process_defaults(args)
     process_lcode(args)
