@@ -134,6 +134,18 @@ BERT = {
     # test: 2022-03-04 INFO: fi_turku 91.36
     "fi": "TurkuNLP/bert-base-finnish-cased-v1",
 
+    # POS dev set tagging results for French:
+    #  No bert:
+    #    98.60  100.00   98.55   98.04
+    #  dbmdz/electra-base-french-europeana-cased-discriminator
+    #    98.70  100.00   98.69   98.24
+    #  benjamin/roberta-base-wechsel-french
+    #    98.71  100.00   98.75   98.26
+    #  camembert/camembert-large
+    #    98.75  100.00   98.75   98.30
+    #  camembert-base
+    #    98.78  100.00   98.77   98.33
+
     # a couple possibilities to experiment with for Hebrew
     # dev scores for POS and depparse
     # https://huggingface.co/imvladikon/alephbertgimmel-base-512
