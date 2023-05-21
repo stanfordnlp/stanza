@@ -171,7 +171,7 @@ To get your started, we also provide interactive Jupyter notebooks in the `demo`
 
 * Go to the [Google Colab website](https://colab.research.google.com)
 * Navigate to `File` -> `Open notebook`, and choose `GitHub` in the pop-up menu
-* Note that you do **not** need to give Colab access permission to your github account
+* Note that you do **not** need to give Colab access permission to your GitHub account
 * Type `stanfordnlp/stanza` in the search bar, and click enter
 
 ### Trained Models for the Neural Pipeline
