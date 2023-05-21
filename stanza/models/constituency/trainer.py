@@ -281,7 +281,7 @@ def parse_text(args, model, retag_pipeline, tokenized_file=None, predict_file=No
             lines = fin.readlines()
         lines = [x.strip() for x in lines]
         lines = [x for x in lines if x]
-        docs = [[word.replace("_", " ") for word in sentence.split()] for sentence in lines]
+        docs = [[word if all(x == '_' for x in word) else word.replace("_", " ") for word in sentence.split()] for sentence in lines]
         logger.info("Processing %d lines", len(docs))
         treebank = []
         chunk_size = 10000
