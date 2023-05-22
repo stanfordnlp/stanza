@@ -53,6 +53,20 @@ def get_wordvec_file(wordvec_dir, shorthand, wordvec_type=None):
     return filename
 
 @contextmanager
+def output_stream(filename=None):
+    """
+    Yields the given file if a file is given, or returns sys.stdout if filename is None
+
+    Opens the file in a context manager so it closes nicely
+    """
+    if filename is None:
+        yield sys.stdout
+    else:
+        with open(filename, "w", encoding="utf-8") as fout:
+            yield fout
+
+
+@contextmanager
 def open_read_text(filename, encoding="utf-8"):
     """
     Opens a file as an .xz file or .gz if it ends with .xz or .gz, or regular text otherwise.

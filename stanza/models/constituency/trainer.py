@@ -17,6 +17,7 @@ from operator import itemgetter
 import os
 import random
 import re
+import sys
 
 import torch
 from torch import nn
@@ -270,8 +271,16 @@ def parse_text(args, model, retag_pipeline, tokenized_file=None, predict_file=No
     Use the given model to parse text and write it
 
     refactored so it can be used elsewhere, such as Ensemble
+
+    TODO: some of these things really ought to be separated out from trainer.py
     """
     model.eval()
+
+    if predict_file is None:
+        if args['predict_file']:
+            predict_file = args['predict_file']
+            if args['predict_dir']:
+                predict_file = os.path.join(args['predict_dir'], predict_file)
 
     if tokenized_file is None:
         tokenized_file = args['tokenized_file']
@@ -283,39 +292,25 @@ def parse_text(args, model, retag_pipeline, tokenized_file=None, predict_file=No
         lines = [x for x in lines if x]
         docs = [[word if all(x == '_' for x in word) else word.replace("_", " ") for word in sentence.split()] for sentence in lines]
         logger.info("Processing %d lines", len(docs))
-        treebank = []
-        chunk_size = 10000
-        for chunk_start in range(0, len(docs), chunk_size):
-            chunk = docs[chunk_start:chunk_start+chunk_size]
-            logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
 
-            tags = retag_tags(chunk, retag_pipeline, model.uses_xpos())
-            words = [[(word, tag) for word, tag in zip(s_words, s_tags)] for s_words, s_tags in zip(chunk, tags)]
-            logger.info("Retagging finished.  Parsing tagged text")
+        with utils.output_stream(predict_file) as fout:
+            chunk_size = 10000
+            for chunk_start in range(0, len(docs), chunk_size):
+                chunk = docs[chunk_start:chunk_start+chunk_size]
+                logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
 
-            assert len(words) == len(chunk)
-            chunk_trees = model.parse_sentences_no_grad(iter(tqdm(words)), model.build_batch_from_tagged_words, args['eval_batch_size'], model.predict, keep_scores=False)
-            treebank.extend(chunk_trees)
+                tags = retag_tags(chunk, retag_pipeline, model.uses_xpos())
+                words = [[(word, tag) for word, tag in zip(s_words, s_tags)] for s_words, s_tags in zip(chunk, tags)]
+                logger.info("Retagging finished.  Parsing tagged text")
 
-        if predict_file is None:
-            if args['predict_file']:
-                predict_file = args['predict_file']
-                if args['predict_dir']:
-                    predict_file = os.path.join(args['predict_dir'], predict_file)
+                assert len(words) == len(chunk)
+                treebank = model.parse_sentences_no_grad(iter(tqdm(words)), model.build_batch_from_tagged_words, args['eval_batch_size'], model.predict, keep_scores=False)
 
-        if predict_file is not None:
-            with open(predict_file, "w", encoding="utf-8") as fout:
                 for tree_idx, result in enumerate(treebank):
                     tree = result.predictions[0].tree
-                    tree.tree_id = tree_idx + 1
+                    tree.tree_id = chunk_start + tree_idx + 1
                     fout.write(args['predict_format'].format(tree))
                     fout.write("\n")
-        else:
-            for tree_idx, result in enumerate(treebank):
-                tree = result.predictions[0].tree
-                tree.tree_id = tree_idx + 1
-                print(args['predict_format'].format(tree))
-
 
 def evaluate(args, model_file, retag_pipeline):
     """
