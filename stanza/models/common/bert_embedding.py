@@ -248,9 +248,8 @@ BAD_TOKENIZERS = ('bert-base-german-cased',
                   'google/muril-base-cased',
                   'l3cube-pune/marathi-roberta')
 
-def fix_german_tokens(tokenizer, data):
-    """
-    Patch bert tokenizers with missing characters
+def fix_blank_tokens(tokenizer, data):
+    """Patch bert tokenizers with missing characters
 
     There is an issue that some tokenizers (so far the German ones identified above)
     tokenize soft hyphens or other unknown characters into nothing
@@ -260,6 +259,10 @@ def fix_german_tokens(tokenizer, data):
 
     The solution we take here is to look for any words which get vaporized
     in such a manner, eg `len(token) == 2`, and replace it with a regular "-"
+
+    Actually, recently we have found that even the Bert / Electra tokenizer
+    can do this in the case of "words" which are one special character long,
+    so the easiest thing to do is just always run this function
     """
     new_data = []
     for sentence in data:
@@ -360,8 +363,7 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     if "xlnet" in model_name:
         return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
 
-    if model_name in BAD_TOKENIZERS:
-        data = fix_german_tokens(tokenizer, data)
+    data = fix_blank_tokens(tokenizer, data)
 
     #add add_prefix_space = True for RoBerTa-- error if not
     # using attention masks makes contextual embeddings much more useful for downstream tasks
