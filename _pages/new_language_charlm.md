@@ -154,3 +154,7 @@ cp saved_models/charlm/bn_oscar_backward_charlm.pt ~/stanza_resources/bn/backwar
 python3 -m stanza.utils.training.run_ner bn_daffodil --charlm oscar --save_name bn_daffodil_charlm.pt
 ```
 
+## Citation
+
+> Akbik, Alan and Blythe, Duncan and Vollgraf, Roland.  [Contextual String Embeddings for Sequence Labeling](https://aclanthology.org/C18-1139), Proceedings of the 27th International Conference on Computational Linguistics, Association for Computational Linguistics, 2018.
+{: .citation }
