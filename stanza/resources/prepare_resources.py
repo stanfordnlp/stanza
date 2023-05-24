@@ -518,7 +518,7 @@ def process_dirs(args):
             lang, package, processor = split_model_name(model)
             # copy file
             input_path = os.path.join(args.input_dir, model_dir, model)
-            output_path = os.path.join(args.output_dir, lang, processor, package + '.pt')
+            output_path = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
             copy_file(input_path, output_path)
             # maintain md5
             md5 = get_md5(output_path)
