@@ -190,6 +190,7 @@ default_charlms = {
     "fr": "newswiki",
     "he": "oscar",
     "hi": "oscar",
+    "id": "oscar2023",
     "it": "conll17",
     "ja": "conll17",
     "kk": "oscar",
