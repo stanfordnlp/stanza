@@ -604,14 +604,15 @@ def process_defaults(args):
             processors = ['langid']
             default_dependencies = {}
 
-        with zipfile.ZipFile('default.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
+        with zipfile.ZipFile(os.path.join('models', 'default.zip'), 'w', zipfile.ZIP_DEFLATED) as zipf:
             for processor in processors:
                 if processor == 'pretrain':
                     for package in sorted(pretrains_needed):
-                        filename = os.path.join(args.output_dir, lang, processor, package + '.pt')
+                        filename = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
                         if os.path.exists(filename):
                             print("   Model {} package {}: file {}".format(processor, package, filename))
-                            zipf.write(os.path.join(processor, package + '.pt'))
+                            zipf.write(filename=os.path.join("models", processor, package + '.pt'),
+                                       arcname=os.path.join(processor, package + '.pt'))
                         else:
                             raise FileNotFoundError(f"Pretrain package {package} needed for {lang} but cannot be found at {filename}")
 
@@ -626,13 +627,14 @@ def process_defaults(args):
                 elif processor == 'tokenize' and lang in default_tokenizer: package = default_tokenizer[lang]
                 else: package = ud_package
 
-                filename = os.path.join(args.output_dir, lang, processor, package + '.pt')
+                filename = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
 
                 if os.path.exists(filename):
                     print("   Model {} package {}: file {}".format(processor, package, filename))
                     if processor in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner', 'sentiment', 'constituency', 'langid']:
                         default_processors[processor] = package
-                    zipf.write(os.path.join(processor, package + '.pt'))
+                    zipf.write(filename=os.path.join("models", processor, package + '.pt'),
+                               arcname=os.path.join(processor, package + '.pt'))
                 elif lang in allowed_empty_languages:
                     # we don't have a lot of Thai or Myanmar support yet
                     pass
@@ -648,7 +650,7 @@ def process_defaults(args):
                 else:
                     raise FileNotFoundError(f"Could not find an expected model file for {lang} {processor} {package} : {filename}")
 
-        default_md5 = get_md5(os.path.join(args.output_dir, lang, 'default.zip'))
+        default_md5 = get_md5(os.path.join(args.output_dir, lang, 'models', 'default.zip'))
         resources[lang]['default_processors'] = default_processors
         resources[lang]['default_dependencies'] = default_dependencies
         resources[lang]['default_md5'] = default_md5
