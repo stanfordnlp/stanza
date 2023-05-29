@@ -240,6 +240,7 @@ def build_optimizer(args, model, build_simple_adadelta=False):
     if bert_finetune:
         bert_parameters = [param for name, param in model.named_parameters()
                            if not model.is_unsaved_module(name) and name.startswith("bert_model.")]
+        logger.debug("Finetuning %d transformer parameters" % len(bert_parameters))
         if len(bert_parameters) > 0 and args['bert_finetune_layers'] is not None:
             num_layers = model.bert_model.config.num_hidden_layers
             start_layer = num_layers - args['bert_finetune_layers']
