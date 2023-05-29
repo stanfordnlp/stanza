@@ -480,10 +480,6 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     pt = foundation_cache.load_pretrain(args['wordvec_pretrain_file'])
     forward_charlm = foundation_cache.load_charlm(args['charlm_forward_file'])
     backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
-    # TODO: technically, if we are training Bert, we should be loading Bert separately.
-    # Otherwise, this will be a huge mess if someone tries to use the previous
-    # Bert model later on for any reason
-    bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
 
     trainer = None
     if args['checkpoint'] and args['checkpoint_save_name'] and os.path.exists(args['checkpoint_save_name']):
@@ -515,7 +511,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         # using the model's current values works for if the new
         # dataset is the same or smaller
         # TODO: handle a larger dataset as well
-        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, trainer.model.force_bert_saved, trainer.model.transitions, trainer.model.constituents, trainer.model.tags, trainer.model.delta_words, trainer.model.rare_words, trainer.model.root_labels, trainer.model.constituent_opens, trainer.model.unary_limit(), args)
+        model = LSTMModel(pt, forward_charlm, backward_charlm, trainer.model.bert_model, trainer.model.bert_tokenizer, trainer.model.force_bert_saved, trainer.model.transitions, trainer.model.constituents, trainer.model.tags, trainer.model.delta_words, trainer.model.rare_words, trainer.model.root_labels, trainer.model.constituent_opens, trainer.model.unary_limit(), args)
         model = model.to(args['device'])
         model.copy_with_new_structure(trainer.model)
         optimizer = build_optimizer(args, model, False)
@@ -531,12 +527,20 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         temp_args['pattn_num_layers'] = 0
         temp_args['lattn_d_proj'] = 0
 
+        if args['bert_finetune'] or args['stage1_bert_finetune']:
+            bert_model, bert_tokenizer = load_bert(args['bert_model'])
+        else:
+            bert_model, bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
         temp_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, False, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, temp_args)
         temp_model = temp_model.to(args['device'])
         temp_optim = build_optimizer(temp_args, temp_model, True)
         scheduler = build_scheduler(temp_args, temp_optim, True)
         trainer = Trainer(temp_model, temp_optim, scheduler)
-    else:
+    else:     # TODO: combine with the multistage version?  could make this a single stage
+        if args['bert_finetune']:
+            bert_model, bert_tokenizer = load_bert(args['bert_model'])
+        else:
+            bert_model, bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
         model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, False, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         model = model.to(args['device'])
 
