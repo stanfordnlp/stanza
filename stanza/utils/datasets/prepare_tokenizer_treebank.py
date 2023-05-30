@@ -891,6 +891,21 @@ def build_combined_spanish_dataset(paths, model_type, dataset):
 
     return sents
 
+def build_combined_french_dataset(paths, model_type, dataset):
+    udbase_dir = paths["UDBASE_GIT"]
+    if dataset == 'train':
+        train_treebanks = ["UD_French-GSD", "UD_French-ParisStories", "UD_French-Rhapsodie", "UD_French-Sequoia"]
+        sents = []
+        for treebank in train_treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
+            new_sents = read_sentences_from_conllu(conllu_file)
+            print("Read %d sentences from %s" % (len(new_sents), conllu_file))
+            sents.extend(new_sents)
+    else:
+        gsd_conllu = common.find_treebank_dataset_file("UD_French-GSD", udbase_dir, dataset, "conllu")
+        sents = read_sentences_from_conllu(gsd_conllu)
+
+    return sents
 
 def build_combined_hebrew_dataset(paths, model_type, dataset):
     """
@@ -932,6 +947,7 @@ def build_combined_hebrew_dataset(paths, model_type, dataset):
 COMBINED_FNS = {
     "en_combined": build_combined_english_dataset,
     "es_combined": build_combined_spanish_dataset,
+    "fr_combined": build_combined_french_dataset,
     "he_combined": build_combined_hebrew_dataset,
     "it_combined": build_combined_italian_dataset,
 }
