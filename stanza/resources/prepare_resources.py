@@ -131,9 +131,15 @@ specific_default_pretrains = {
     "fr":      "conll17",
     "he":      "conll17",
     "id":      "conll17",
+    "it":      "conll17",
     "mr":      "fasttextwiki",
     "myv":     "mokha",
     "pt":      "conll17",
+    "ro":      "conll17",
+    "ru":      "conll17",
+    "sv":      "conll17",
+    "tr":      "conll17",
+    "uk":      "conll17",
     "vi":      "conll17",
 }
 
@@ -254,10 +260,6 @@ pos_pretrains = {
     "en": {
         "combined_roberta": "combined",
         "combined_electra": "combined",
-    },
-    "it": {
-        "combined_electra": "combined",
-        "vit_bert": "vit",
     },
 }
 
