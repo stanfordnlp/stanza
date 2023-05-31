@@ -128,6 +128,7 @@ no_pretrain_languages = set([
 # name for the UD dataset
 # we will eventually do this for all of the pretrains
 specific_default_pretrains = {
+    "es":      "conll17",
     "fr":      "conll17",
     "he":      "conll17",
     "id":      "conll17",
@@ -137,9 +138,12 @@ specific_default_pretrains = {
     "pt":      "conll17",
     "ro":      "conll17",
     "ru":      "conll17",
+    "sk":      "conll17",
+    "sl":      "conll17",
     "sv":      "conll17",
     "tr":      "conll17",
     "uk":      "conll17",
+    "ur":      "conll17",
     "vi":      "conll17",
 }
 
