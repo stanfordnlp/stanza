@@ -129,10 +129,17 @@ no_pretrain_languages = set([
 # we will eventually do this for all of the pretrains
 specific_default_pretrains = {
     "ar":      "conll17",
+    "bg":      "conll17",
+    "ca":      "conll17",
+    "cs":      "conll17",
+    "da":      "conll17",
     "es":      "conll17",
+    "eu":      "conll17",
     "fa":      "conll17",
     "fr":      "conll17",
+    "grc":     "conll17",
     "he":      "conll17",
+    "hr":      "conll17",
     "hu":      "conll17",
     "id":      "conll17",
     "it":      "conll17",
