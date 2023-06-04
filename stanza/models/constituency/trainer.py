@@ -691,6 +691,11 @@ def update_bert_learning_rate(args, optimizer, epochs_trained):
         raise AssertionError("There should always be a base parameter group")
     for param_group in optimizer.param_groups:
         if param_group['param_group_name'] == 'bert':
+            # Occasionally a model goes haywire and forgets how to use the transformer
+            # So far we have only seen this happen with Electra on the non-NML version of PTB
+            # We tried fixing that with an increasing transformer learning rate, but that
+            # didn't fully resolve the problem
+            # Switching to starting the finetuning after a few epochs seems to help a lot, though
             old_lr = param_group['lr']
             if args['bert_finetune_begin_epoch'] is not None and epochs_trained < args['bert_finetune_begin_epoch']:
                 param_group['lr'] = 0.0
