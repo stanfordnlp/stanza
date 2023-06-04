@@ -757,7 +757,7 @@ def main(args=None):
         except TypeError:
             # so models.pt -> models_0001.pt, etc
             pieces = os.path.splitext(model_save_each_file)
-            model_save_each_file = pieces[0] + "_%4d" + pieces[1]
+            model_save_each_file = pieces[0] + "_%04d" + pieces[1]
 
     model_load_file = args['save_name']
     if args['load_name']:
