@@ -39,6 +39,9 @@ from stanza.models.constituency.utils import retag_tags, retag_trees, build_opti
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
 from stanza.server.parser_eval import EvaluateParser, ParseResult
 from stanza.utils.get_tqdm import get_tqdm
+# TODO: could put find_wordvec_pretrain, choose_charlm, etc in a more central place if it becomes widely used
+from stanza.utils.training.common import find_wordvec_pretrain, choose_charlm, find_charlm_file
+from stanza.resources.default_packages import default_charlms, default_pretrains
 
 tqdm = get_tqdm()
 
@@ -80,6 +83,29 @@ class Trainer:
         logger.info("Model saved to %s", filename)
 
     @staticmethod
+    def find_and_load_pretrain(saved_args, foundation_cache):
+        if 'wordvec_pretrain_file' not in saved_args:
+            return None
+        if os.path.exists(saved_args['wordvec_pretrain_file']):
+            return load_pretrain(saved_args['wordvec_pretrain_file'], foundation_cache)
+        logger.info("Unable to find pretrain in %s  Will try to load from the default resources instead", saved_args['wordvec_pretrain_file'])
+        language = saved_args['lang']
+        wordvec_pretrain = find_wordvec_pretrain(language, default_pretrains)
+        return load_pretrain(wordvec_pretrain, foundation_cache)
+
+    @staticmethod
+    def find_and_load_charlm(charlm_file, direction, saved_args, foundation_cache):
+        try:
+            return load_charlm(charlm_file, foundation_cache)
+        except FileNotFoundError as e:
+            logger.info("Unable to load charlm from %s  Will try to load from the default resources instead", charlm_file)
+            language = saved_args['lang']
+            dataset = saved_args['shorthand'].split("_")[1]
+            charlm = choose_charlm(language, dataset, "default", default_charlms, {})
+            charlm_file = find_charlm_file(direction, language, charlm)
+            return load_charlm(charlm_file, foundation_cache)
+
+    @staticmethod
     def model_from_params(params, args, foundation_cache=None):
         """
         Build a new model just from the saved params and some extra args
@@ -112,7 +138,7 @@ class Trainer:
 
         model_type = params['model_type']
         if model_type == 'LSTM':
-            pt = load_pretrain(saved_args.get('wordvec_pretrain_file', None), foundation_cache)
+            pt = Trainer.find_and_load_pretrain(saved_args, foundation_cache)
             if saved_args['bert_finetune'] or saved_args['stage1_bert_finetune'] or any(x.startswith("bert_model.") for x in params['model'].keys()):
                 # if bert_finetune is True, don't use the cached model!
                 # otherwise, other uses of the cached model will be ruined
@@ -121,8 +147,8 @@ class Trainer:
             else:
                 bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
                 bert_saved = False
-            forward_charlm = load_charlm(saved_args["charlm_forward_file"], foundation_cache)
-            backward_charlm = load_charlm(saved_args["charlm_backward_file"], foundation_cache)
+            forward_charlm =  Trainer.find_and_load_charlm(saved_args["charlm_forward_file"],  "forward",  saved_args, foundation_cache)
+            backward_charlm = Trainer.find_and_load_charlm(saved_args["charlm_backward_file"], "backward", saved_args, foundation_cache)
             model = LSTMModel(pretrain=pt,
                               forward_charlm=forward_charlm,
                               backward_charlm=backward_charlm,
