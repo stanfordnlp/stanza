@@ -16,7 +16,7 @@ import os
 from stanza.models import tagger
 from stanza.models.common.constant import treebank_to_short_name
 from stanza.resources.common import download, DEFAULT_MODEL_DIR
-from stanza.resources.prepare_resources import default_charlms, pos_charlms
+from stanza.resources.default_packages import default_charlms, pos_charlms
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_treebank
 from stanza.utils.training.run_pos import pos_batch_size, wordvec_args

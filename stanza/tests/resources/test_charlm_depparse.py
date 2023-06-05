@@ -1,7 +1,7 @@
 import pytest
 
+from stanza.resources.default_packages import default_charlms, depparse_charlms
 from stanza.resources.print_charlm_depparse import list_depparse
-from stanza.resources.prepare_resources import default_charlms, depparse_charlms
 
 def test_list_depparse():
     models = list_depparse()

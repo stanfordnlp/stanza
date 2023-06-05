@@ -28,7 +28,7 @@ from stanza.utils.datasets.ner import prepare_ner_dataset
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
-from stanza.resources.prepare_resources import default_charlms, default_pretrains, ner_charlms, ner_pretrains
+from stanza.resources.default_packages import default_charlms, default_pretrains, ner_charlms, ner_pretrains
 
 # extra arguments specific to a particular dataset
 DATASET_EXTRA_ARGS = {

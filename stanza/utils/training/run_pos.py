@@ -5,11 +5,9 @@ import os
 
 from stanza.models import tagger
 
-from stanza.resources.prepare_resources import no_pretrain_languages
+from stanza.resources.default_packages import no_pretrain_languages, default_charlms, pos_charlms, pos_pretrains, default_pretrains, specific_default_pretrains
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm, find_wordvec_pretrain
-
-from stanza.resources.prepare_resources import default_charlms, pos_charlms, pos_pretrains, default_pretrains, specific_default_pretrains
 
 logger = logging.getLogger('stanza')
 

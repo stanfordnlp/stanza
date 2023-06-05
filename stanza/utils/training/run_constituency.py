@@ -12,7 +12,7 @@ from stanza.utils.datasets.constituency import prepare_con_dataset
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
-from stanza.resources.prepare_resources import default_charlms, default_pretrains
+from stanza.resources.default_packages import default_charlms, default_pretrains
 
 logger = logging.getLogger('stanza')
 

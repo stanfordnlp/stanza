@@ -30,7 +30,7 @@ from stanza.models import tokenizer
 
 from stanza.models.common.constant import treebank_to_short_name
 
-from stanza.resources.prepare_resources import default_charlms, pos_charlms
+from stanza.resources.default_packages import default_charlms, pos_charlms
 
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm

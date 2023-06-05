@@ -18,7 +18,7 @@ import os
 
 from stanza.models import constituency_parser
 from stanza.models.common.constant import treebank_to_short_name
-from stanza.resources.prepare_resources import default_charlms, default_pretrains
+from stanza.resources.default_packages import default_charlms, default_pretrains
 from stanza.utils.training import common
 
 logger = logging.getLogger('stanza')

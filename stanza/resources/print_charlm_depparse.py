@@ -6,8 +6,8 @@ A small utility script to output which depparse models use charlm
 Not frequently useful, but seems like the kind of thing that might get used a couple times
 """
 
-from stanza.resources.prepare_resources import default_charlms, depparse_charlms
 from stanza.resources.common import load_resources_json
+from stanza.resources.default_packages import default_charlms, depparse_charlms
 
 def list_depparse():
     charlm_langs = list(default_charlms.keys())

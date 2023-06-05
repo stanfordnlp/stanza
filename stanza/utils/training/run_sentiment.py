@@ -14,7 +14,7 @@ from stanza.models import classifier
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
-from stanza.resources.prepare_resources import default_charlms, default_pretrains
+from stanza.resources.default_packages import default_charlms, default_pretrains
 
 logger = logging.getLogger('stanza')
 

@@ -7,7 +7,7 @@ from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm
 from stanza.utils.training.run_pos import wordvec_args
 
-from stanza.resources.prepare_resources import default_charlms, depparse_charlms
+from stanza.resources.default_packages import default_charlms, depparse_charlms
 
 logger = logging.getLogger('stanza')
 
