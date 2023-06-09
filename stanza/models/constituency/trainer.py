@@ -800,6 +800,11 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     leftover_silver_data = []
     if trainer.best_epoch > 0:
         logger.info("Restarting trainer with a model trained for %d epochs.  Best epoch %d, f1 %f", trainer.epochs_trained, trainer.best_epoch, trainer.best_f1)
+
+    # if we're training a new model, save the initial state so it can be inspected
+    if model_save_each_filename and trainer.epochs_trained == 0:
+        trainer.save(model_save_each_filename % trainer.epochs_trained, save_optimizer=True)
+
     # trainer.epochs_trained+1 so that if the trainer gets saved after 1 epoch, the epochs_trained is 1
     for trainer.epochs_trained in range(trainer.epochs_trained+1, args['epochs']+1):
         model.train()
