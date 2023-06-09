@@ -645,6 +645,47 @@ def augment_initial_punct(sents, ratio=0.20):
     return sents + new_sents
 
 
+def augment_brackets(sents, ratio=0.1):
+    """
+    If there are no sentences with [], transform some () into []
+    """
+    new_sents = []
+    for sent in sents:
+        text_idx = find_text_idx(sent)
+        text_line = sent[text_idx]
+        if text_line.count("[") > 0 or text_line.count("]") > 0:
+            # found a square bracket, so, never mind
+            return sents
+
+    for sent in sents:
+        if random.random() > ratio:
+            continue
+
+        text_idx = find_text_idx(sent)
+        text_line = sent[text_idx]
+        if text_line.count("(") == 0 and text_line.count(")") == 0:
+            continue
+
+        text_line = text_line.replace("(", "[").replace(")", "]")
+        new_sent = list(sent)
+        new_sent[text_idx] = text_line
+        for idx, line in enumerate(new_sent):
+            if line.startswith("#"):
+                continue
+            pieces = line.split("\t")
+            if pieces[1] == '(':
+                pieces[1] = '['
+            elif pieces[1] == ')':
+                pieces[1] = ']'
+            new_sent[idx] = "\t".join(pieces)
+        new_sents.append(new_sent)
+
+    if len(new_sents) > 0:
+        print("Added %d sentences with parens replaced with square brackets" % len(new_sents))
+
+    return sents + new_sents
+
+
 def augment_punct(sents):
     """
     If there are no instances of ’ in the dataset, but there are instances of ',
@@ -658,6 +699,7 @@ def augment_punct(sents):
     new_sents = augment_comma_separations(new_sents)
     new_sents = augment_initial_punct(new_sents)
     new_sents = augment_ellipses(new_sents)
+    new_sents = augment_brackets(new_sents)
 
     return new_sents
 
