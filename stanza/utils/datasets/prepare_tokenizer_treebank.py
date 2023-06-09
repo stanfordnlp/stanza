@@ -465,10 +465,12 @@ def augment_ellipses(sents):
 
     new_sents = []
 
+    num_updated = 0
     for sent in sents:
-        if random.random() > 0.05:
+        if random.random() > 0.1:
             new_sents.append(sent)
             continue
+        found = False
         new_sent = []
         for line in sent:
             if line.startswith("#"):
@@ -477,9 +479,13 @@ def augment_ellipses(sents):
                 pieces = line.split("\t")
                 if pieces[1] == '...':
                     pieces[1] = '…'
+                    found = True
                 new_sent.append("\t".join(pieces))
         new_sents.append(new_sent)
+        if found:
+            num_updated = num_updated + 1
 
+    print("Changed %d sentences to use fancy unicode ellipses" % num_updated)
     return new_sents
 
 # https://en.wikipedia.org/wiki/Quotation_mark
