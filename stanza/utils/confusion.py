@@ -24,7 +24,7 @@ def condense_ner_labels(confusion, labels):
     return new_confusion, new_labels
 
 
-def format_confusion(confusion, labels=None, hide_zeroes=False):
+def format_confusion(confusion, labels=None, hide_zeroes=False, hide_blank_rows=False):
     """
     pretty print for confusion matrixes
     adapted from https://gist.github.com/zachguo/10296432
@@ -89,6 +89,11 @@ def format_confusion(confusion, labels=None, hide_zeroes=False):
 
     # Print rows
     for i, label1 in enumerate(labels):
+        if hide_blank_rows:
+            if label1 not in confusion:
+                continue
+            if sum(confusion[label1][key] for key in confusion[label1].keys()) == 0:
+                continue
         row = "    %{0}s ".format(columnwidth) % label1
         for j, label2 in enumerate(labels):
             confusion_cell = confusion.get(label1, {}).get(label2, 0)
