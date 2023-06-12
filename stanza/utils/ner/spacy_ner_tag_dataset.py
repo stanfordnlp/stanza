@@ -1,5 +1,5 @@
 """
-Test a flair model on a 4 class dataset
+Test a spacy model on a 4 class dataset
 """
 
 import argparse
@@ -50,16 +50,16 @@ WORK_OF_ART
 
 ENTITY_MAPPING = {
     "CARDINAL":    None,
-    "DATE":        None,
     "ORDINAL":     None,
     "PERCENT":     None,
     "QUANTITY":    None,
     "TIME":        None,
 
+    "DATE":        "Misc",
     "EVENT":       "Misc",
     "FAC":         "Facility",
     "GPE":         "Location",
-    "LANGUAGE":    "Misc",
+    "LANGUAGE":    "NORP",
     "LAW":         "Misc",
     "LOC":         "Location",
     "MONEY":       "Money",
@@ -128,7 +128,7 @@ def main():
     args = parser.parse_args()
 
     # load tagger
-    # there is also en_core_web_sm
+    # there is also en_core_web_trf
     tagger = spacy.load(args.ner_model, disable=["tagger", "parser", "attribute_ruler", "lemmatizer"])
 
 
