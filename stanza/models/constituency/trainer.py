@@ -125,6 +125,14 @@ class Trainer:
         update_args.pop("transition_scheme", None)
         update_args.pop("transition_stack", None)
         update_args.pop("maxout_k", None)
+        # if the pretrain or charlms are not specified, don't override the values in the model
+        # (if any), since the model won't even work without loading the same charlm
+        if 'wordvec_pretrain_file' in update_args and update_args['wordvec_pretrain_file'] is None:
+            update_args.pop('wordvec_pretrain_file')
+        if 'charlm_forward_file' in update_args and update_args['charlm_forward_file'] is None:
+            update_args.pop('charlm_forward_file')
+        if 'charlm_backward_file' in update_args and update_args['charlm_backward_file'] is None:
+            update_args.pop('charlm_backward_file')
         # we don't pop bert_finetune, with the theory being that if
         # the saved model has bert_finetune==True we can load the bert
         # weights but then not further finetune if bert_finetune==False

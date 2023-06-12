@@ -231,27 +231,6 @@ DEFAULT_EVAL = {
     "vi": "vi_vlsp22_dev.mrg",
 }
 
-DEFAULT_FORWARD = {
-    "en": os.path.join(DEFAULT_MODEL_DIR, "en/forward_charlm/1billion.pt"),
-    "id": os.path.join(DEFAULT_MODEL_DIR, "id/forward_charlm/oscar2023.pt"),
-    "it": os.path.join(DEFAULT_MODEL_DIR, "it/forward_charlm/conll17.pt"),
-    "vi": os.path.join(DEFAULT_MODEL_DIR, "vi/forward_charlm/conll17.pt"),
-}
-
-DEFAULT_BACKWARD = {
-    "en": os.path.join(DEFAULT_MODEL_DIR, "en/backward_charlm/1billion.pt"),
-    "id": os.path.join(DEFAULT_MODEL_DIR, "id/backward_charlm/oscar2023.pt"),
-    "it": os.path.join(DEFAULT_MODEL_DIR, "it/backward_charlm/conll17.pt"),
-    "vi": os.path.join(DEFAULT_MODEL_DIR, "vi/backward_charlm/conll17.pt"),
-}
-
-DEFAULT_PRETRAIN = {
-    "en": os.path.join(DEFAULT_MODEL_DIR, "en/pretrain/combined.pt"),
-    "id": os.path.join(DEFAULT_MODEL_DIR, "id/pretrain/conll17.pt"),
-    "it": os.path.join(DEFAULT_MODEL_DIR, "it/pretrain/combined.pt"),
-    "vi": os.path.join(DEFAULT_MODEL_DIR, "vi/pretrain/vtb.pt"),
-}
-
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
 
@@ -284,13 +263,6 @@ def parse_args(args=None):
     if not args['eval_file'] and args['lang'] in DEFAULT_EVAL:
         paths = get_default_paths()
         args['eval_file'] = os.path.join(paths["CONSTITUENCY_DATA_DIR"], DEFAULT_EVAL[args['lang']])
-    # TODO: try to download defaults if needed
-    if not args['charlm_forward_file'] and args['lang'] in DEFAULT_FORWARD:
-        args['charlm_forward_file'] = DEFAULT_FORWARD[args['lang']]
-    if not args['charlm_backward_file'] and args['lang'] in DEFAULT_BACKWARD:
-        args['charlm_backward_file'] = DEFAULT_BACKWARD[args['lang']]
-    if not args['wordvec_pretrain_file'] and args['lang'] in DEFAULT_PRETRAIN:
-        args['wordvec_pretrain_file'] = DEFAULT_PRETRAIN[args['lang']]
 
     return args
 
