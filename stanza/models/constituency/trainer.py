@@ -177,6 +177,13 @@ class Trainer:
         """
         Load back a model and possibly its optimizer.
         """
+        if not os.path.exists(filename):
+            if args.get('save_dir', None) is None:
+                raise FileNotFoundError("Cannot find model in {} and args['save_dir'] is None".format(filename))
+            elif os.path.exists(os.path.join(args['save_dir'], filename)):
+                filename = os.path.join(args['save_dir'], filename)
+            else:
+                raise FileNotFoundError("Cannot find model in {} or in {}".format(filename, os.path.join(args['save_dir'], filename)))
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
