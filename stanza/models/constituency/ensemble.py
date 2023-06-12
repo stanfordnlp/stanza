@@ -274,8 +274,6 @@ def parse_args(args=None):
     add_predict_output_args(parser)
 
     retagging.add_retag_args(parser)
-    # TODO: get default method & package from run_constituency.py
-    parser.set_defaults(retag_method='xpos')
 
     args = vars(parser.parse_args())
 

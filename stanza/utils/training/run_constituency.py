@@ -8,6 +8,7 @@ import logging
 import os
 
 from stanza.models import constituency_parser
+from stanza.models.constituency.retagging import RETAG_METHOD
 from stanza.utils.datasets.constituency import prepare_con_dataset
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm, find_wordvec_pretrain
@@ -15,17 +16,6 @@ from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_arg
 from stanza.resources.default_packages import default_charlms, default_pretrains
 
 logger = logging.getLogger('stanza')
-
-# xpos tagger doesn't produce PP tag on the turin treebank,
-# so instead we use upos to avoid unknown tag errors
-RETAG_METHOD = {
-    "da": "upos",   # the DDT has no xpos tags anyway
-    "es": "upos",   # AnCora has half-finished xpos tags
-    "id": "upos",   # GSD is missing a few punctuation tags - fixed in 2.12, though
-    "it": "upos",
-    "pt": "upos",   # default PT model has no xpos either
-    "vi": "xpos",   # the new version of UD can be merged with xpos from VLSP22
-}
 
 def add_constituency_args(parser):
     add_charlm_args(parser)

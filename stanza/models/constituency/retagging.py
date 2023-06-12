@@ -19,12 +19,23 @@ from stanza.resources.common import download_resources_json, load_resources_json
 
 logger = logging.getLogger('stanza')
 
+# xpos tagger doesn't produce PP tag on the turin treebank,
+# so instead we use upos to avoid unknown tag errors
+RETAG_METHOD = {
+    "da": "upos",   # the DDT has no xpos tags anyway
+    "es": "upos",   # AnCora has half-finished xpos tags
+    "id": "upos",   # GSD is missing a few punctuation tags - fixed in 2.12, though
+    "it": "upos",
+    "pt": "upos",   # default PT model has no xpos either
+    "vi": "xpos",   # the new version of UD can be merged with xpos from VLSP22
+}
+
 def add_retag_args(parser):
     """
     Arguments specifically for retagging treebanks
     """
     parser.add_argument('--retag_package', default="default", help='Which tagger shortname to use when retagging trees.  None for no retagging.  Retagging is recommended, as gold tags will not be available at pipeline time')
-    parser.add_argument('--retag_method', default='xpos', choices=['xpos', 'upos'], help='Which tags to use when retagging')
+    parser.add_argument('--retag_method', default=None, choices=['xpos', 'upos'], help='Which tags to use when retagging.  Default depends on the language')
     parser.add_argument('--retag_model_path', default=None, help='Path to a retag POS model to use.  Will use a downloaded Stanza model by default.  Can specify multiple taggers with ; in which case the majority vote wins')
     parser.add_argument('--retag_pretrain_path', default=None, help='Use this for a pretrain path for the retagging pipeline.  Generally not needed unless using a custom POS model with a custom pretrain')
     parser.add_argument('--retag_charlm_forward_file', default=None, help='Use this for a forward charlm path for the retagging pipeline.  Generally not needed unless using a custom POS model with a custom charlm')
@@ -35,6 +46,13 @@ def postprocess_args(args):
     """
     After parsing args, unify some settings
     """
+    # use a language specific default for retag_method if we know the language
+    # otherwise, use xpos
+    if args['retag_method'] is None and 'lang' in args and args['lang'] in RETAG_METHOD:
+        args['retag_method'] = RETAG_METHOD[args['lang']]
+    if args['retag_method'] is None:
+        args['retag_method'] = 'xpos'
+
     if args['retag_method'] == 'xpos':
         args['retag_xpos'] = True
     elif args['retag_method'] == 'upos':
