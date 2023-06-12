@@ -27,7 +27,7 @@ def condense_ner_labels(confusion, gold_labels, pred_labels):
     return new_confusion, new_gold_labels, new_pred_labels
 
 
-def format_confusion(confusion, labels=None, hide_zeroes=False, hide_blank=False):
+def format_confusion(confusion, labels=None, hide_zeroes=False, hide_blank=False, transpose=False):
     """
     pretty print for confusion matrixes
     adapted from https://gist.github.com/zachguo/10296432
@@ -54,6 +54,13 @@ def format_confusion(confusion, labels=None, hide_zeroes=False, hide_blank=False
         if had_O:
             labels = ['O'] + labels
         return labels
+
+    if transpose:
+        new_confusion = defaultdict(lambda: defaultdict(int))
+        for label1 in confusion.keys():
+            for label2 in confusion[label1].keys():
+                new_confusion[label2][label1] = confusion[label1][label2]
+        confusion = new_confusion
 
     if labels is None:
         gold_labels = set(confusion.keys())
@@ -108,7 +115,11 @@ def format_confusion(confusion, labels=None, hide_zeroes=False, hide_blank=False
         confusion, gold_labels, pred_labels = condense_ner_labels(confusion, gold_labels, pred_labels)
 
     # Print header
-    fst_empty_cell = (columnwidth-3)//2 * " " + "t\\p" + (columnwidth-3)//2 * " "
+    if transpose:
+        corner_label = "p\\t"
+    else:
+        corner_label = "t\\p"
+    fst_empty_cell = (columnwidth-3)//2 * " " + corner_label + (columnwidth-3)//2 * " "
     if len(fst_empty_cell) < len(empty_cell):
         fst_empty_cell = " " * (len(empty_cell) - len(fst_empty_cell)) + fst_empty_cell
     header = "    " + fst_empty_cell + " "
