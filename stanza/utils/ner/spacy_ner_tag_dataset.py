@@ -107,9 +107,10 @@ def test_file(eval_file, tagger, simplify):
                     word = [word[0], simplify_entity(pieces[0], pieces[1], True)]
                     doc[idx] = word
 
+    original_text = [[x[0] for x in gold_sentence] for gold_sentence in gold_doc]
     pred_doc = []
-    for gold_sentence in tqdm(gold_doc):
-        spacy_sentence = Doc(tagger.vocab, [x[0] for x in gold_sentence])
+    for sentence in tqdm(original_text):
+        spacy_sentence = Doc(tagger.vocab, sentence)
         spacy_sentence = tagger(spacy_sentence)
         pred_sentence = [[token.text, simplify_entity(token.ent_iob_, token.ent_type_, simplify)]
                          for token in spacy_sentence]
