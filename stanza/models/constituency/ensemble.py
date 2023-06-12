@@ -227,23 +227,27 @@ class Ensemble:
 
 DEFAULT_EVAL = {
     "en": "en_wsj_dev.mrg",
+    "id": "id_icon_dev.mrg",
     "vi": "vi_vlsp22_dev.mrg",
 }
 
 DEFAULT_FORWARD = {
     "en": os.path.join(DEFAULT_MODEL_DIR, "en/forward_charlm/1billion.pt"),
+    "id": os.path.join(DEFAULT_MODEL_DIR, "id/forward_charlm/oscar2023.pt"),
     "it": os.path.join(DEFAULT_MODEL_DIR, "it/forward_charlm/conll17.pt"),
     "vi": os.path.join(DEFAULT_MODEL_DIR, "vi/forward_charlm/conll17.pt"),
 }
 
 DEFAULT_BACKWARD = {
     "en": os.path.join(DEFAULT_MODEL_DIR, "en/backward_charlm/1billion.pt"),
+    "id": os.path.join(DEFAULT_MODEL_DIR, "id/backward_charlm/oscar2023.pt"),
     "it": os.path.join(DEFAULT_MODEL_DIR, "it/backward_charlm/conll17.pt"),
     "vi": os.path.join(DEFAULT_MODEL_DIR, "vi/backward_charlm/conll17.pt"),
 }
 
 DEFAULT_PRETRAIN = {
     "en": os.path.join(DEFAULT_MODEL_DIR, "en/pretrain/combined.pt"),
+    "id": os.path.join(DEFAULT_MODEL_DIR, "id/pretrain/conll17.pt"),
     "it": os.path.join(DEFAULT_MODEL_DIR, "it/pretrain/combined.pt"),
     "vi": os.path.join(DEFAULT_MODEL_DIR, "vi/pretrain/vtb.pt"),
 }
