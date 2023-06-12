@@ -51,9 +51,22 @@ EXPECTED_SHORT_OUTPUT = """
     E-PER     0     0     0     0     0     0
 """[1:-1]
 
-def test_output(simple_confusion, short_confusion):
+EXPECTED_HIDE_BLANK_SHORT_OUTPUT = """
+     t\\p      O B-ORG E-ORG B-PER E-PER
+        O     4     0     0     0     0
+        A     0     1     0     0     0
+    B-ORG     0     0     0     1     0
+    E-ORG     0     0     1     0     1
+"""[1:-1]
+
+def test_simple_output(simple_confusion):
     assert EXPECTED_SIMPLE_OUTPUT == format_confusion(simple_confusion)
+
+def test_short_output(short_confusion):
     assert EXPECTED_SHORT_OUTPUT == format_confusion(short_confusion)
+
+def test_hide_blank_short_output(short_confusion):
+    assert EXPECTED_HIDE_BLANK_SHORT_OUTPUT == format_confusion(short_confusion, hide_blank=True)
 
 def test_macro_f1(simple_confusion, short_confusion):
     assert confusion_to_macro_f1(simple_confusion) == pytest.approx(0.466666666666)

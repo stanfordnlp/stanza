@@ -122,7 +122,7 @@ def test_file(eval_file, tagger, simplify):
     print("RESULTS ON: %s" % eval_file)
     score_by_entity(pred_tags, gold_tags)
     _, _, _, confusion = score_by_token(pred_tags, gold_tags)
-    print("NER token confusion matrix:\n{}".format(format_confusion(confusion, hide_blank_rows=True)))
+    print("NER token confusion matrix:\n{}".format(format_confusion(confusion, hide_blank=True)))
 
 def main():
     parser = argparse.ArgumentParser()
