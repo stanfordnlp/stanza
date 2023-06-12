@@ -34,7 +34,10 @@ def build_request(treebank):
             else:
                 prediction = pred
                 score = None
-            parse_result.predicted.append(build_tree(prediction, score))
+            try:
+                parse_result.predicted.append(build_tree(prediction, score))
+            except Exception as e:
+                raise RuntimeError("Unable to build parser request from tree {}".format(pred)) from e
 
     return request
 
