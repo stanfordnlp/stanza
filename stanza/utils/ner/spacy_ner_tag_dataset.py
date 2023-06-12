@@ -11,6 +11,8 @@ from spacy.tokens import Doc
 from stanza.models.ner.utils import process_tags
 from stanza.models.ner.scorer import score_by_entity, score_by_token
 
+from stanza.utils.confusion import format_confusion
+
 from tqdm import tqdm
 
 """
@@ -118,7 +120,8 @@ def test_file(eval_file, tagger, simplify):
     gold_tags = [[x[1] for x in sentence] for sentence in gold_doc]
     print("RESULTS ON: %s" % eval_file)
     score_by_entity(pred_tags, gold_tags)
-    score_by_token(pred_tags, gold_tags)
+    _, _, _, confusion = score_by_token(pred_tags, gold_tags)
+    print("NER token confusion matrix:\n{}".format(format_confusion(confusion, hide_blank_rows=True)))
 
 def main():
     parser = argparse.ArgumentParser()
