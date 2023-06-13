@@ -80,12 +80,11 @@ ENTITY_MAPPING = {
     "Product":     "Product",
 }
 
-def simplify_entity(ent_iob, ent_type, simplify):
-    if not ent_type:
+def simplify_entity(entity):
+    if not entity or entity == "O":
         return "O"
 
-    if not simplify:
-        return ent_iob + "-" + ent_type
+    ent_iob, ent_type = entity.split("-", maxsplit=1)
 
     if ent_type in ENTITY_MAPPING:
         if not ENTITY_MAPPING[ent_type]:
@@ -103,8 +102,7 @@ def test_file(eval_file, tagger, simplify):
         for doc in gold_doc:
             for idx, word in enumerate(doc):
                 if word[1] != "O":
-                    pieces = word[1].split("-")
-                    word = [word[0], simplify_entity(pieces[0], pieces[1], True)]
+                    word = [word[0], simplify_entity(word[1])]
                     doc[idx] = word
 
     original_text = [[x[0] for x in gold_sentence] for gold_sentence in gold_doc]
@@ -112,8 +110,10 @@ def test_file(eval_file, tagger, simplify):
     for sentence in tqdm(original_text):
         spacy_sentence = Doc(tagger.vocab, sentence)
         spacy_sentence = tagger(spacy_sentence)
-        pred_sentence = [[token.text, simplify_entity(token.ent_iob_, token.ent_type_, simplify)]
-                         for token in spacy_sentence]
+        entities = ["O" if not token.ent_type_ else "%s-%s" % (token.ent_iob_, token.ent_type_) for token in spacy_sentence]
+        if simplify:
+            entities = [simplify_entity(x) for x in entities]
+        pred_sentence = [[token.text, entity] for token, entity in zip(spacy_sentence, entities)]
         pred_doc.append(pred_sentence)
 
     pred_doc = process_tags(pred_doc, 'bioes')
