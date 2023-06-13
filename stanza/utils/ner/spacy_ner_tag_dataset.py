@@ -16,7 +16,7 @@ from stanza.utils.confusion import format_confusion
 from tqdm import tqdm
 
 """
-Simplified classes are:
+Simplified classes used in the Worldwide dataset are:
 
 Facility
 Location
@@ -47,7 +47,6 @@ PRODUCT
 QUANTITY
 TIME
 WORK_OF_ART
-
 """
 
 ENTITY_MAPPING = {
