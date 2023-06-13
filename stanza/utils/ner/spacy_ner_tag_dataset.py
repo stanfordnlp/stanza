@@ -12,6 +12,7 @@ from stanza.models.ner.utils import process_tags
 from stanza.models.ner.scorer import score_by_entity, score_by_token
 
 from stanza.utils.confusion import format_confusion
+from stanza.utils.datasets.ner.simplify_ontonotes_to_worldwide import simplify_ontonotes_to_worldwide
 
 from tqdm import tqdm
 
@@ -49,48 +50,6 @@ TIME
 WORK_OF_ART
 """
 
-ENTITY_MAPPING = {
-    "CARDINAL":    None,
-    "ORDINAL":     None,
-    "PERCENT":     None,
-    "QUANTITY":    None,
-    "TIME":        None,
-
-    "DATE":        "Misc",
-    "EVENT":       "Misc",
-    "FAC":         "Facility",
-    "GPE":         "Location",
-    "LANGUAGE":    "NORP",
-    "LAW":         "Misc",
-    "LOC":         "Location",
-    "MONEY":       "Money",
-    "NORP":        "NORP",
-    "ORG":         "Organization",
-    "PERSON":      "Person",
-    "PRODUCT":     "Product",
-    "WORK_OF_ART": "Misc",
-
-    "Facility":    "Facility",
-    "Location":    "Location",
-    "Misc":        "Misc",
-    "Money":       "Money",
-    "Organization":"Organization",
-    "Person":      "Person",
-    "Product":     "Product",
-}
-
-def simplify_entity(entity):
-    if not entity or entity == "O":
-        return "O"
-
-    ent_iob, ent_type = entity.split("-", maxsplit=1)
-
-    if ent_type in ENTITY_MAPPING:
-        if not ENTITY_MAPPING[ent_type]:
-            return "O"
-        return ent_iob + "-" + ENTITY_MAPPING[ent_type]
-    raise ValueError("Unhandled entity: %s" % ent_type)
-
 def test_file(eval_file, tagger, simplify):
     with open(eval_file) as fin:
         gold_doc = json.load(fin)
@@ -101,7 +60,7 @@ def test_file(eval_file, tagger, simplify):
         for doc in gold_doc:
             for idx, word in enumerate(doc):
                 if word[1] != "O":
-                    word = [word[0], simplify_entity(word[1])]
+                    word = [word[0], simplify_ontonotes_to_worldwide(word[1])]
                     doc[idx] = word
 
     original_text = [[x[0] for x in gold_sentence] for gold_sentence in gold_doc]
@@ -111,7 +70,7 @@ def test_file(eval_file, tagger, simplify):
         spacy_sentence = tagger(spacy_sentence)
         entities = ["O" if not token.ent_type_ else "%s-%s" % (token.ent_iob_, token.ent_type_) for token in spacy_sentence]
         if simplify:
-            entities = [simplify_entity(x) for x in entities]
+            entities = [simplify_ontonotes_to_worldwide(x) for x in entities]
         pred_sentence = [[token.text, entity] for token, entity in zip(spacy_sentence, entities)]
         pred_doc.append(pred_sentence)
 
