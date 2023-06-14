@@ -985,9 +985,14 @@ def process_sd_siner(paths, short_name):
     convert_sindhi_siner.convert_sindhi_siner(in_filename, paths["NER_DATA_DIR"], short_name)
 
 def process_en_foreign_4class(paths, short_name):
-    # TODO: simplify to a temp directory?
-    simplify_en_foreign.main(args=[])
+    simplify_en_foreign.main(args=['--simplify'])
     in_directory = os.path.join(paths["NERBASE"], "en_foreign", "4class")
+    out_directory = paths["NER_DATA_DIR"]
+    random_shuffle_files(in_directory, out_directory, short_name)
+
+def process_en_foreign_8class(paths, short_name):
+    simplify_en_foreign.main(args=['--no_simplify'])
+    in_directory = os.path.join(paths["NERBASE"], "en_foreign", "8class")
     out_directory = paths["NER_DATA_DIR"]
     random_shuffle_files(in_directory, out_directory, short_name)
 
@@ -1011,6 +1016,7 @@ DATASET_MAPPING = {
     "da_ddt":            process_da_ddt,
     "de_germeval2014":   process_de_germeval2014,
     "en_foreign-4class": process_en_foreign_4class,
+    "en_foreign-8class": process_en_foreign_8class,
     "fa_arman":          process_fa_arman,
     "fi_turku":          process_turku,
     "hi_hiner":          process_hiner,

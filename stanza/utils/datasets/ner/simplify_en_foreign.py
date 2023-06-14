@@ -91,10 +91,10 @@ def process_label(line, is_start=False):
     return [token, position + label_name, is_start]
 
 
-def write_new_file(save_dir, input_path, old_file):
+def write_new_file(save_dir, input_path, old_file, simplify):
     starts_b = False
     with open(input_path, "r+", encoding="utf-8") as iob:
-        new_filename = os.path.splitext(old_file)[0] + ".4class.tsv"
+        new_filename = (os.path.splitext(old_file)[0] + ".4class.tsv") if simplify else old_file
         with open(os.path.join(save_dir, new_filename), 'w', encoding='utf-8') as fout:
             for i, line in enumerate(iob):
                 if i == 0 or i == 1:  # skip over the URL and subsequent space line.
@@ -104,21 +104,24 @@ def write_new_file(save_dir, input_path, old_file):
                     fout.write("\n")
                     continue
                 label = line.split("\t")
-                try:
-                    edited = process_label(label, is_start=starts_b)  # processed label line labels
-                except ValueError as e:
-                    raise ValueError("Error in %s at line %d" % (input_path, i)) from e
-                assert edited
-                starts_b = edited[-1]
-                fout.write("\t".join(edited[:-1]))
-                fout.write("\n")
+                if simplify:
+                    try:
+                        edited = process_label(label, is_start=starts_b)  # processed label line labels
+                    except ValueError as e:
+                        raise ValueError("Error in %s at line %d" % (input_path, i)) from e
+                    assert edited
+                    starts_b = edited[-1]
+                    fout.write("\t".join(edited[:-1]))
+                    fout.write("\n")
+                else:
+                    fout.write("%s\t%s\n" % (label[0], label[1]))
 
 
-def copy_and_simplify(base_path):
+def copy_and_simplify(base_path, simplify):
     with tempfile.TemporaryDirectory(dir=base_path) as tempdir:
         # Condense Labels
         input_dir = os.path.join(base_path, "en-foreign-newswire")
-        final_dir = os.path.join(base_path, "4class")
+        final_dir = os.path.join(base_path, "4class" if simplify else "8class")
         os.makedirs(tempdir, exist_ok=True)
         os.makedirs(final_dir, exist_ok=True)
         for root, dirs, files in os.walk(input_dir):
@@ -126,7 +129,7 @@ def copy_and_simplify(base_path):
                 batch_files = os.listdir(root)
                 for filename in batch_files:
                     file_path = os.path.join(root, filename)
-                    write_new_file(final_dir, file_path, filename)
+                    write_new_file(final_dir, file_path, filename, simplify)
 
 def main(args=None):
     BASE_PATH = "C:\\Users\\SystemAdmin\\PycharmProjects\\General Code\\stanza source code"
@@ -136,9 +139,11 @@ def main(args=None):
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_path', type=str, default=BASE_PATH, help="Where to find the raw data")
+    parser.add_argument('--simplify', default=False, action='store_true', help='Simplify to 4 classes... otherwise, keep all classes')
+    parser.add_argument('--no_simplify', dest='simplify', action='store_false', help="Don't simplify to 4 classes")
     args = parser.parse_args(args=args)
 
-    copy_and_simplify(args.base_path)
+    copy_and_simplify(args.base_path, args.simplify)
 
 if __name__ == '__main__':
     main()
