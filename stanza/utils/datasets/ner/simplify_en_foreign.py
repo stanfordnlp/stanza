@@ -16,6 +16,7 @@ MONEY_WORDS = {"million", "billion", "trillion", "millions", "billions", "trilli
 
 # Doesn't include Money but this case is handled explicitly for processing
 LABEL_TRANSLATION = {
+    "Date":         None,
     "Misc":         "MISC",
     "Product":      "MISC",
     "NORP":         "MISC",
@@ -81,6 +82,10 @@ def process_label(line, is_start=False):
         pass
     elif label_name in LABEL_TRANSLATION:
         label_name = LABEL_TRANSLATION[label_name]
+        if label_name is None:
+            position = ""
+            label_name = "O"
+            is_start = False
     else:
         raise ValueError("Oops, missed a label: %s" % label_name)
     return [token, position + label_name, is_start]
@@ -109,40 +114,6 @@ def write_new_file(save_dir, input_path, old_file):
                 fout.write("\n")
 
 
-def ner_tags(pipe, sentence):
-    doc = pipe([sentence])
-    tags = [token.ner for sentence in doc.sentences for token in sentence.tokens]
-    return tags
-
-
-def write_file_stanza(pipe, input_dir, output_dir, file_name):
-    """
-    REMOVES DATES ONLY! To collapse rest of labels use write_new_file
-    """
-    complete_path = os.path.join(input_dir, file_name)
-    output_path = os.path.join(output_dir, file_name)
-    data = read_tsv(complete_path, text_column=0, annotation_column=1, keep_broken_tags=True)
-    with open(output_path, 'w', encoding='utf-8') as fout:
-        for segment in data:  # segments delimited by spaces
-            tokens = [token for token, _ in segment]
-            labels = [label for _, label in segment]
-
-            if any(x.endswith("MISC") for x in labels):
-                stanza_tags = ner_tags(pipe, tokens)
-                just_removed = False
-                for i, stanza_tag in enumerate(stanza_tags):
-                    if stanza_tag[2:] == "DATE":
-                        labels[i] = "O"  # remove date labels replace with empty
-                        just_removed = True
-                    elif just_removed:
-                        # make sure new tags start with B- instead of I-
-                        just_removed = False
-                        if labels[i].startswith("I-"):
-                            labels[i] = "B-" + labels[i][2:]
-            for token, tag in zip(tokens, labels):
-                fout.write("%s\t%s\n" % (token, tag))
-            fout.write("\n")
-
 def copy_and_simplify(base_path):
     with tempfile.TemporaryDirectory(dir=base_path) as tempdir:
         # Condense Labels
@@ -155,16 +126,7 @@ def copy_and_simplify(base_path):
                 batch_files = os.listdir(root)
                 for filename in batch_files:
                     file_path = os.path.join(root, filename)
-                    write_new_file(tempdir, file_path, filename)
-
-        # REMOVE DATES
-        batch_files = os.listdir(tempdir)
-        pipe = stanza.Pipeline("en", processors="tokenize,ner", tokenize_pretokenized=True)
-        for filename in tqdm(batch_files):
-            try:
-                write_file_stanza(pipe, tempdir, final_dir, filename)
-            except Exception as e:
-                raise RuntimeError("Failed to process filename %s" % filename) from e
+                    write_new_file(final_dir, file_path, filename)
 
 def main(args=None):
     BASE_PATH = "C:\\Users\\SystemAdmin\\PycharmProjects\\General Code\\stanza source code"
