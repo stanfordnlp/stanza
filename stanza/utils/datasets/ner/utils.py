@@ -153,7 +153,10 @@ def random_shuffle_files(input_dir, output_dir, short_name):
 
     for filename in input_files:
         seed = filename.split(".")[0]
-        random.seed(filename, 2)
+        # "salt" the filenames when using as a seed
+        # definitely not because of a dumb bug in the original implementation
+        seed = seed + ".txt.4class.tsv"
+        random.seed(seed, 2)
         location = random.random()
         if location < 0.7:
             train_files.append(filename)
