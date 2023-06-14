@@ -3,6 +3,7 @@ Simplify an existing ner json with the OntoNotes 18 class scheme to the Worldwid
 
 Simplified classes used in the Worldwide dataset are:
 
+Date
 Facility
 Location
 Misc
@@ -48,7 +49,7 @@ WORLDWIDE_ENTITY_MAPPING = {
     "QUANTITY":    None,
     "TIME":        None,
 
-    "DATE":        "Misc",
+    "DATE":        "Date",
     "EVENT":       "Misc",
     "FAC":         "Facility",
     "GPE":         "Location",
@@ -63,6 +64,7 @@ WORLDWIDE_ENTITY_MAPPING = {
     "WORK_OF_ART": "Misc",
 
     # identity map in case this is called on the Worldwide half of the tags
+    "Date":        "Date",
     "Facility":    "Facility",
     "Location":    "Location",
     "Misc":        "Misc",
