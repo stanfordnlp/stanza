@@ -162,7 +162,7 @@ def random_shuffle_files(input_dir, output_dir, short_name):
         else:
             test_files.append(filename)
 
-    print(len(train_files), len(dev_files), len(test_files))
+    print("Train files: %d  Dev files: %d  Test files: %d" % (len(train_files), len(dev_files), len(test_files)))
     assert len(train_files) + len(dev_files) + len(test_files) == len(input_files)
 
     file_lists = [train_files, dev_files, test_files]
