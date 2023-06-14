@@ -143,24 +143,11 @@ def write_file_stanza(pipe, input_dir, output_dir, file_name):
                 fout.write("%s\t%s\n" % (token, tag))
             fout.write("\n")
 
-
-def main(args=None):
-    BASE_PATH = "C:\\Users\\SystemAdmin\\PycharmProjects\\General Code\\stanza source code"
-    if not os.path.exists(BASE_PATH):
-        paths = get_default_paths()
-        BASE_PATH = os.path.join(paths["NERBASE"], "en_foreign")
-
-    # TODO: use a temp dir for the intermediate files
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--base_path', type=str, default=BASE_PATH, help="Where to find the raw data")
-    args = parser.parse_args(args=args)
-
-    BASE_PATH = args.base_path
-
-    with tempfile.TemporaryDirectory(dir=BASE_PATH) as tempdir:
+def copy_and_simplify(base_path):
+    with tempfile.TemporaryDirectory(dir=base_path) as tempdir:
         # Condense Labels
-        input_dir = os.path.join(BASE_PATH, "en-foreign-newswire")
-        final_dir = os.path.join(BASE_PATH, "4class")
+        input_dir = os.path.join(base_path, "en-foreign-newswire")
+        final_dir = os.path.join(base_path, "4class")
         os.makedirs(tempdir, exist_ok=True)
         os.makedirs(final_dir, exist_ok=True)
         for root, dirs, files in os.walk(input_dir):
@@ -178,6 +165,18 @@ def main(args=None):
                 write_file_stanza(pipe, tempdir, final_dir, filename)
             except Exception as e:
                 raise RuntimeError("Failed to process filename %s" % filename) from e
+
+def main(args=None):
+    BASE_PATH = "C:\\Users\\SystemAdmin\\PycharmProjects\\General Code\\stanza source code"
+    if not os.path.exists(BASE_PATH):
+        paths = get_default_paths()
+        BASE_PATH = os.path.join(paths["NERBASE"], "en_foreign")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--base_path', type=str, default=BASE_PATH, help="Where to find the raw data")
+    args = parser.parse_args(args=args)
+
+    copy_and_simplify(args.base_path)
 
 if __name__ == '__main__':
     main()
