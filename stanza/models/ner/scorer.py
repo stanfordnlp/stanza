@@ -17,6 +17,7 @@ def score_by_entity(pred_tag_sequences, gold_tag_sequences, verbose=True, ignore
         pred_tags_sequences: a list of list of predicted tags for each word
         gold_tags_sequences: a list of list of gold tags for each word
         verbose: print log with results
+        ignore_tags: a list or a string with a comma-separated list of tags to ignore
     
     Returns:
         Precision, recall and F1 scores.
@@ -81,9 +82,10 @@ def score_by_token(pred_tag_sequences, gold_tag_sequences, verbose=True, ignore_
         pred_tags_sequences: a list of list of predicted tags for each word
         gold_tags_sequences: a list of list of gold tags for each word
         verbose: print log with results
+        ignore_tags: a list or a string with a comma-separated list of tags to ignore
     
     Returns:
-        Precision, recall and F1 scores.
+        Precision, recall and F1 scores, along with a confusion matrix
     """
     assert(len(gold_tag_sequences) == len(pred_tag_sequences)), \
         "Number of predicted tag sequences does not match gold sequences."
