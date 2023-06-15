@@ -5,6 +5,8 @@ These can be invoked from either the specific dataset scripts
 or the entire prepare_ner_dataset.py script
 """
 
+from collections import defaultdict
+import json
 import os
 import random
 
@@ -126,8 +128,12 @@ def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comme
 
     return sentences
 
+def random_shuffle_directory(input_dir, output_dir, short_name):
+    input_files = os.listdir(input_dir)
+    input_files = sorted(input_files)
+    random_shuffle_files(input_dir, input_files, output_dir, short_name)
 
-def random_shuffle_files(input_dir, output_dir, short_name):
+def random_shuffle_files(input_dir, input_files, output_dir, short_name):
     """
     Shuffle the files into different chunks based on their filename
 
@@ -137,8 +143,6 @@ def random_shuffle_files(input_dir, output_dir, short_name):
     annotation scheme (assuming that's encoding in pieces of the
     filename) won't change the distibution of the files
     """
-    input_files = os.listdir(input_dir)
-    input_files = sorted(input_files)
     input_keys = {}
     for f in input_files:
         seed = f.split(".")[0]
@@ -177,3 +181,87 @@ def random_shuffle_files(input_dir, output_dir, short_name):
         datasets.append(dataset)
 
     write_dataset(datasets, output_dir, short_name)
+
+def random_shuffle_by_prefixes(input_dir, output_dir, short_name, prefix_map):
+    input_files = os.listdir(input_dir)
+    input_files = sorted(input_files)
+
+    file_divisions = defaultdict(list)
+    for filename in input_files:
+        for division in prefix_map.keys():
+            for prefix in prefix_map[division]:
+                if filename.startswith(prefix):
+                    break
+            else: # for/else is intentional
+                continue
+            break
+        else: # yes, stop asking
+            raise ValueError("Could not assign %s to any of the divisions in the prefix_map" % filename)
+        #print("Assigning %s to %s because of %s" % (filename, division, prefix))
+        file_divisions[division].append(filename)
+
+    for division in file_divisions.keys():
+        print()
+        print("Processing %d files from %s" % (len(file_divisions[division]), division))
+        random_shuffle_files(input_dir, file_divisions[division], output_dir, "%s-%s" % (short_name, division))
+
+    dataset_divisions = ["%s-%s" % (short_name, division) for division in file_divisions]
+    combine_dataset(output_dir, output_dir, dataset_divisions, short_name)
+
+def combine_dataset(input_dir, output_dir, input_datasets, output_dataset):
+    datasets = []
+    for shard in SHARDS:
+        full_dataset = []
+        for input_dataset in input_datasets:
+            input_filename = "%s.%s.json" % (input_dataset, shard)
+            input_path = os.path.join(input_dir, input_filename)
+            with open(input_path, encoding="utf-8") as fin:
+                dataset = json.load(fin)
+                converted = [[(word['text'], word['ner']) for word in sentence] for sentence in dataset]
+                full_dataset.extend(converted)
+        datasets.append(full_dataset)
+    write_dataset(datasets, output_dir, output_dataset)
+
+def read_prefix_file(destination_file):
+    """
+    Read a prefix file such as the one for the Worldwide dataset
+
+    the format should be
+
+    africa:
+    af_
+    ...
+
+    asia:
+    cn_
+    ...
+    """
+    destination = None
+    known_prefixes = set()
+    prefixes = []
+
+    prefix_map = {}
+    with open(destination_file, encoding="utf-8") as fin:
+        for line in fin:
+            line = line.strip()
+            if line.startswith("#"):
+                continue
+            if not line:
+                continue
+            if line.endswith(":"):
+                if destination is not None:
+                    prefix_map[destination] = prefixes
+                prefixes = []
+                destination = line[:-1].strip().lower().replace(" ", "_")
+            else:
+                if not destination:
+                    raise RuntimeError("Found a prefix before the first label was assigned when reading %s" % destination_file)
+                prefixes.append(line)
+                if line in known_prefixes:
+                    raise RuntimeError("Found the same prefix twice! %s" % line)
+                known_prefixes.add(line)
+
+        if destination and prefixes:
+            prefix_map[destination] = prefixes
+
+    return prefix_map

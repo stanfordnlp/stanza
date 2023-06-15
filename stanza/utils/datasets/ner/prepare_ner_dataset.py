@@ -386,7 +386,7 @@ import stanza.utils.datasets.ner.simplify_en_foreign as simplify_en_foreign
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
 import stanza.utils.datasets.ner.convert_hy_armtdp as convert_hy_armtdp
-from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset, random_shuffle_files
+from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset, random_shuffle_by_prefixes, read_prefix_file
 
 SHARDS = ('train', 'dev', 'test')
 
@@ -986,15 +986,25 @@ def process_sd_siner(paths, short_name):
 
 def process_en_foreign_4class(paths, short_name):
     simplify_en_foreign.main(args=['--simplify'])
+
     in_directory = os.path.join(paths["NERBASE"], "en_foreign", "4class")
     out_directory = paths["NER_DATA_DIR"]
-    random_shuffle_files(in_directory, out_directory, short_name)
+
+    destination_file = os.path.join(paths["NERBASE"], "en_foreign", "en-foreign-newswire", "regions.txt")
+    prefix_map = read_prefix_file(destination_file)
+
+    random_shuffle_by_prefixes(in_directory, out_directory, short_name, prefix_map)
 
 def process_en_foreign_8class(paths, short_name):
     simplify_en_foreign.main(args=['--no_simplify'])
+
     in_directory = os.path.join(paths["NERBASE"], "en_foreign", "8class")
     out_directory = paths["NER_DATA_DIR"]
-    random_shuffle_files(in_directory, out_directory, short_name)
+
+    destination_file = os.path.join(paths["NERBASE"], "en_foreign", "en-foreign-newswire", "regions.txt")
+    prefix_map = read_prefix_file(destination_file)
+
+    random_shuffle_by_prefixes(in_directory, out_directory, short_name, prefix_map)
 
 def process_armtdp(paths, short_name):
     assert short_name == 'hy_armtdp'
