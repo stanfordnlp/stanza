@@ -87,6 +87,8 @@ def parse_args(args=None):
     parser.add_argument('--lr_decay', type=float, default=0.5, help="LR decay rate.")
     parser.add_argument('--patience', type=int, default=3, help="Patience for LR decay.")
 
+    parser.add_argument('--ignore_tag_scores', type=str, default=None, help="Which tags to ignore, if any, when scoring dev & test sets")
+
     parser.add_argument('--max_steps', type=int, default=200000)
     parser.add_argument('--eval_interval', type=int, default=500)
     parser.add_argument('--batch_size', type=int, default=32)
@@ -264,7 +266,7 @@ def train(args):
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
-                _, _, dev_score = scorer.score_by_entity(dev_preds, dev_gold_tags)
+                _, _, dev_score = scorer.score_by_entity(dev_preds, dev_gold_tags, ignore_tags=args['ignore_tag_scores'])
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
                 logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
@@ -348,8 +350,8 @@ def evaluate(args):
         preds += trainer.predict(b)
 
     gold_tags = batch.tags
-    _, _, score = scorer.score_by_entity(preds, gold_tags)
-    _, _, _, confusion = scorer.score_by_token(preds, gold_tags)
+    _, _, score = scorer.score_by_entity(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
+    _, _, _, confusion = scorer.score_by_token(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
     logger.info("Weighted f1 for non-O tokens: %5f", confusion_to_weighted_f1(confusion, exclude=["O"]))
 
     logger.info("NER tagger score: %s %.2f", args['shorthand'], score*100)

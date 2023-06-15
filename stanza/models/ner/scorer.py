@@ -10,7 +10,7 @@ from stanza.models.ner.utils import decode_from_bioes
 
 logger = logging.getLogger('stanza')
 
-def score_by_entity(pred_tag_sequences, gold_tag_sequences, verbose=True):
+def score_by_entity(pred_tag_sequences, gold_tag_sequences, verbose=True, ignore_tags=None):
     """ Score predicted tags at the entity level.
 
     Args:
@@ -33,8 +33,18 @@ def score_by_entity(pred_tag_sequences, gold_tag_sequences, verbose=True):
                 ents += [ent]
         return ents
 
+    ignore_tag_set = set()
+    if ignore_tags:
+        if isinstance(ignore_tags, str):
+            ignore_tag_set.update(ignore_tags.split(","))
+        else:
+            ignore_tag_set.update(ignore_tags)
+
     gold_ents = decode_all(gold_tag_sequences)
+    gold_ents = [x for x in gold_ents if x['type'] not in ignore_tag_set]
+
     pred_ents = decode_all(pred_tag_sequences)
+    pred_ents = [x for x in pred_ents if x['type'] not in ignore_tag_set]
 
     # scoring
     correct_by_type = Counter()
@@ -64,7 +74,7 @@ def score_by_entity(pred_tag_sequences, gold_tag_sequences, verbose=True):
     return prec_micro, rec_micro, f_micro
 
 
-def score_by_token(pred_tag_sequences, gold_tag_sequences, verbose=True):
+def score_by_token(pred_tag_sequences, gold_tag_sequences, verbose=True, ignore_tags=None):
     """ Score predicted tags at the token level.
 
     Args:
@@ -78,6 +88,22 @@ def score_by_token(pred_tag_sequences, gold_tag_sequences, verbose=True):
     assert(len(gold_tag_sequences) == len(pred_tag_sequences)), \
         "Number of predicted tag sequences does not match gold sequences."
     
+    ignore_tag_set = set()
+    if ignore_tags:
+        if isinstance(ignore_tags, str):
+            ignore_tag_set.update(ignore_tags.split(","))
+        else:
+            ignore_tag_set.update(ignore_tags)
+
+    def ignore_tag(tag):
+        if tag == 'O':
+            return True
+        if len(tag) > 2 and (tag[1] == '_' or tag[1] == '-'):
+            tag = tag[2:]
+        if tag in ignore_tag_set:
+            return True
+        return False
+
     correct_by_tag = Counter()
     guessed_by_tag = Counter()
     gold_by_tag = Counter()
@@ -87,6 +113,10 @@ def score_by_token(pred_tag_sequences, gold_tag_sequences, verbose=True):
         assert(len(gold_tags) == len(pred_tags)), \
             "Number of predicted tags does not match gold."
         for g, p in zip(gold_tags, pred_tags):
+            if ignore_tag(g):
+                g = 'O'
+            if ignore_tag(p):
+                p = 'O'
             confusion[g][p] = confusion[g][p] + 1
             if g == 'O' and p == 'O':
                 continue
