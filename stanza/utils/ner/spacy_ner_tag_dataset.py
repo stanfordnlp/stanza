@@ -19,6 +19,7 @@ from tqdm import tqdm
 """
 Simplified classes used in the Worldwide dataset are:
 
+Date
 Facility
 Location
 Misc
@@ -63,6 +64,8 @@ def test_file(eval_file, tagger, simplify):
                     word = [word[0], simplify_ontonotes_to_worldwide(word[1])]
                     doc[idx] = word
 
+    ignore_tags = "Date,DATE" if simplify else None
+
     original_text = [[x[0] for x in gold_sentence] for gold_sentence in gold_doc]
     pred_doc = []
     for sentence in tqdm(original_text):
@@ -78,8 +81,8 @@ def test_file(eval_file, tagger, simplify):
     pred_tags = [[x[1] for x in sentence] for sentence in pred_doc]
     gold_tags = [[x[1] for x in sentence] for sentence in gold_doc]
     print("RESULTS ON: %s" % eval_file)
-    score_by_entity(pred_tags, gold_tags)
-    _, _, _, confusion = score_by_token(pred_tags, gold_tags)
+    score_by_entity(pred_tags, gold_tags, ignore_tags=ignore_tags)
+    _, _, _, confusion = score_by_token(pred_tags, gold_tags, ignore_tags=ignore_tags)
     print("NER token confusion matrix:\n{}".format(format_confusion(confusion, hide_blank=True, transpose=True)))
 
 def main():
