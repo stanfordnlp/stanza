@@ -152,6 +152,8 @@ def tokenize_docs(docs, pipe, min_len, max_len):
     """
     results = []
     docs = [stanza.Document([], text=t) for t in docs]
+    if len(docs) == 0:
+        return results
     pipe(docs)
     is_zh = pipe.lang and pipe.lang.startswith("zh")
     is_ja = pipe.lang and pipe.lang.startswith("ja")
