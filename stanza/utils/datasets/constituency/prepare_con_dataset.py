@@ -116,6 +116,10 @@ vlsp22 is the 2022 constituency treebank from the VLSP bakeoff
   LE Van Cuong, NGUYEN Thi Luong, NGO The Quyen
     VLSP 2022 Challenge: Vietnamese Constituency Parsing
     to appear in Journal of Computer Science and Cybernetics.
+
+zh_ctb-51 is the 5.1 version of CTB
+  put LDC2005T01U01_ChineseTreebank5.1 in $CONSTITUENCY_BASE/chinese
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset zh_ctb-51  
 """
 
 import argparse
@@ -132,6 +136,7 @@ from stanza.utils.datasets.constituency import utils
 from stanza.utils.datasets.constituency.convert_alt import convert_alt
 from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
 from stanza.utils.datasets.constituency.convert_cintil import convert_cintil_treebank
+from stanza.utils.datasets.constituency.convert_ctb import convert_ctb
 from stanza.utils.datasets.constituency.convert_it_turin import convert_it_turin
 from stanza.utils.datasets.constituency.convert_it_vit import convert_it_vit
 from stanza.utils.datasets.constituency.convert_starlang import read_starlang
@@ -335,6 +340,15 @@ def process_id_icon(paths, dataset_name, *args):
     output_dir = paths["CONSTITUENCY_DATA_DIR"]
     write_dataset(datasets, output_dir, dataset_name)
 
+def process_ctb_51(paths, dataset_name, *args):
+    lang, source = dataset_name.split("_", 1)
+    assert lang == 'zh-hans'
+    assert source == 'ctb-51'
+
+    input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "chinese", "LDC2005T01U01_ChineseTreebank5.1", "bracketed")
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    convert_ctb(input_dir, output_dir, dataset_name)
+
 
 DATASET_MAPPING = {
     'da_arboretum': process_arboretum,
@@ -353,6 +367,8 @@ DATASET_MAPPING = {
     'vi_vlsp09':    process_vlsp09,
     'vi_vlsp21':    process_vlsp21,
     'vi_vlsp22':    process_vlsp22,
+
+    'zh-hans_ctb-51':   process_ctb_51,
 }
 
 def main(dataset_name, *args):
