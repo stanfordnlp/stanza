@@ -243,6 +243,9 @@ BERT = {
 
     # https://github.com/ymcui/Chinese-BERT-wwm
     # there's also hfl/chinese-roberta-wwm-ext-large
+    # or hfl/chinese-electra-base-discriminator
+    # or hfl/chinese-electra-180g-large-discriminator,
+    #   which works better than the below roberta on constituency
     "zh-hans": "hfl/chinese-roberta-wwm-ext",
 
     # https://huggingface.co/allegro/herbert-base-cased
