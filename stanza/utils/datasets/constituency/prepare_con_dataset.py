@@ -119,7 +119,7 @@ vlsp22 is the 2022 constituency treebank from the VLSP bakeoff
 
 zh_ctb-51 is the 5.1 version of CTB
   put LDC2005T01U01_ChineseTreebank5.1 in $CONSTITUENCY_BASE/chinese
-  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset zh_ctb-51  
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset zh_ctb-51
 """
 
 import argparse

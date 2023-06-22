@@ -30,7 +30,7 @@ def convert_ctb(input_dir, output_dir, dataset_name):
 
     sorted_filenames = []
     for input_filename in input_files:
-        base_filename = os.path.split(input_filename)[1]        
+        base_filename = os.path.split(input_filename)[1]
         filenum = int(os.path.splitext(base_filename)[0].split("_")[1])
         sorted_filenames.append((filenum, input_filename))
     sorted_filenames.sort()
