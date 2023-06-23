@@ -120,6 +120,17 @@ vlsp22 is the 2022 constituency treebank from the VLSP bakeoff
 zh_ctb-51 is the 5.1 version of CTB
   put LDC2005T01U01_ChineseTreebank5.1 in $CONSTITUENCY_BASE/chinese
   python3 -m stanza.utils.datasets.constituency.prepare_con_dataset zh_ctb-51
+
+  @article{xue_xia_chiou_palmer_2005,
+           title={The Penn Chinese TreeBank: Phrase structure annotation of a large corpus},
+           volume={11},
+           DOI={10.1017/S135132490400364X},
+           number={2},
+           journal={Natural Language Engineering},
+           publisher={Cambridge University Press},
+           author={XUE, NAIWEN and XIA, FEI and CHIOU, FU-DONG and PALMER, MARTA},
+           year={2005},
+           pages={207–238}}
 """
 
 import argparse
