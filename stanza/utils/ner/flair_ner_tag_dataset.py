@@ -41,21 +41,57 @@ def test_file(eval_file, tagger):
     pred_tags = [[x[1] for x in sentence] for sentence in pred_doc]
     gold_tags = [[x[1] for x in sentence] for sentence in gold_doc]
     print("RESULTS ON: %s" % eval_file)
-    score_by_entity(pred_tags, gold_tags)
+    _, _, f_micro = score_by_entity(pred_tags, gold_tags)
     score_by_token(pred_tags, gold_tags)
+    return f_micro
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ner_model', type=str, default='ner-fast',  help='Which NER model to test')
-    parser.add_argument('filename', type=str, nargs='+', help='which files to test')
+    parser.add_argument('--ner_model', type=str, default=None,  help='Which NER model to test')
+    parser.add_argument('filename', type=str, nargs='*', help='which files to test')
     args = parser.parse_args()
 
-    # load tagger
-    #tagger = SequenceTagger.load("ner-fast")
-    tagger = SequenceTagger.load(args.ner_model)
+    if args.ner_model is None:
+        ner_models = ["ner-fast", "ner", "ner-large"]
+    else:
+        ner_models = [args.ner_model]
 
-    for filename in args.filename:
-        test_file(filename, tagger)
+    if not args.filename:
+        args.filename = ["data/ner/en_conll03.test.json",
+                         "data/ner/en_foreign-4class.test.json",
+                         "data/ner/en_foreign-4class-africa.test.json",
+                         "data/ner/en_foreign-4class-asia.test.json",
+                         "data/ner/en_foreign-4class-indigenous.test.json",
+                         "data/ner/en_foreign-4class-latam.test.json",
+                         "data/ner/en_foreign-4class-middle_east.test.json"]
+
+    print("Processing the files: %s" % ",".join(args.filename))
+
+    results = []
+    model_results = {}
+
+    for ner_model in ner_models:
+        model_results[ner_model] = []
+
+        # load tagger
+        #tagger = SequenceTagger.load("ner-fast")
+        print("-----------------------------")
+        print("Running %s" % ner_model)
+        print("-----------------------------")
+        tagger = SequenceTagger.load(ner_model)
+
+        for filename in args.filename:
+            f_micro = test_file(filename, tagger)
+            f_micro = "%.2f" % (f_micro * 100)
+            results.append((ner_model, filename, f_micro))
+            model_results[ner_model].append(f_micro)
+
+    for result in results:
+        print(result)
+
+    for model in model_results.keys():
+        result = [model] + model_results[model]
+        print(" & ".join(result))
 
 if __name__ == '__main__':
     main()
