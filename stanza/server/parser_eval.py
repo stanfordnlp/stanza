@@ -3,11 +3,12 @@ This class runs a Java process to evaluate a treebank prediction using CoreNLP
 """
 
 from collections import namedtuple
+import sys
 
 import stanza
 from stanza.protobuf import EvaluateParserRequest, EvaluateParserResponse
 from stanza.server.java_protobuf_requests import send_request, build_tree, JavaProtobufContext
-
+from stanza.models.constituency.tree_reader import read_treebank
 
 EVALUATE_JAVA = "edu.stanford.nlp.parser.metrics.EvaluateExternalParser"
 
@@ -41,6 +42,16 @@ def build_request(treebank):
 
     return request
 
+def collate(gold_treebank, predictions_treebank):
+    """
+    Turns a list of gold and prediction into a evaluation object
+    """
+    treebank = []
+    for gold, prediction in zip(gold_treebank, predictions_treebank):
+        result = ParseResult(gold, [prediction], None, None)
+        treebank.append(result)
+    return treebank
+
 
 class EvaluateParser(JavaProtobufContext):
     """
@@ -64,3 +75,15 @@ class EvaluateParser(JavaProtobufContext):
         request = build_request(treebank)
         return self.process_request(request)
 
+
+def main():
+    gold = read_treebank(sys.argv[1])
+    predictions = read_treebank(sys.argv[2])
+    treebank = collate(gold, predictions)
+
+    with EvaluateParser() as ep:
+        ep.process(treebank)
+
+
+if __name__ == '__main__':
+    main()

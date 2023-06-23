@@ -6,7 +6,7 @@ import pytest
 import stanza
 from stanza.models.constituency import tree_reader
 from stanza.protobuf import EvaluateParserRequest, EvaluateParserResponse
-from stanza.server.parser_eval import build_request, EvaluateParser, ParseResult
+from stanza.server.parser_eval import build_request, collate, EvaluateParser, ParseResult
 from stanza.tests.server.test_java_protobuf_requests import check_tree
 
 from stanza.tests import *
@@ -20,10 +20,11 @@ def build_one_tree_treebank(fake_scores=True):
     gold = trees[0]
     if fake_scores:
         prediction = (gold, 1.0)
+        treebank = [ParseResult(gold, [prediction], None, None)]
+        return treebank
     else:
         prediction = gold
-    treebank = [ParseResult(gold, [prediction], None, None)]
-    return treebank
+        return collate([gold], [prediction])
 
 def check_build(fake_scores=True):
     treebank = build_one_tree_treebank(fake_scores)
