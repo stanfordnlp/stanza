@@ -354,7 +354,7 @@ def evaluate(args):
     _, _, _, confusion = scorer.score_by_token(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
     logger.info("Weighted f1 for non-O tokens: %5f", confusion_to_weighted_f1(confusion, exclude=["O"]))
 
-    logger.info("NER tagger score: %s %s %.2f", args['shorthand'], args['eval_file'], score*100)
+    logger.info("NER tagger score: %s %s %s %.2f", args['shorthand'], model_file, args['eval_file'], score*100)
     logger.info("NER token confusion matrix:\n{}".format(format_confusion(confusion)))
 
     if args['eval_output_file']:
