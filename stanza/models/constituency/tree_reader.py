@@ -7,6 +7,7 @@ then recursively processing those tokens into trees.
 
 from collections import deque
 import logging
+import os
 import re
 
 from stanza.models.constituency.parse_tree import Tree
@@ -234,6 +235,16 @@ def read_tree_file(filename, broken_ok=False, tree_callback=None):
     """
     with FileTokenIterator(filename) as token_iterator:
         trees = read_token_iterator(token_iterator, broken_ok=broken_ok, tree_callback=tree_callback)
+    return trees
+
+def read_directory(dirname, broken_ok=False, tree_callback=None):
+    """
+    Read all of the trees in all of the files in a directory
+    """
+    trees = []
+    for filename in sorted(os.listdir(dirname)):
+        full_name = os.path.join(dirname, filename)
+        trees.extend(read_tree_file(full_name, broken_ok, tree_callback))
     return trees
 
 def read_treebank(filename, tree_callback=None):

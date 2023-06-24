@@ -131,6 +131,28 @@ zh_ctb-51 is the 5.1 version of CTB
            author={XUE, NAIWEN and XIA, FEI and CHIOU, FU-DONG and PALMER, MARTA},
            year={2005},
            pages={207–238}}
+
+en_ptb3-revised is an updated version of PTB with NML and stuff
+  put LDC2015T13 in $CONSTITUENCY_BASE/english
+  the directory name may look like LDC2015T13_eng_news_txt_tbnk-ptb_revised
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset en_ptb3-revised
+
+  All this needs to do is concatenate the various pieces
+
+  @article{ptb_revised,
+    title= {Penn Treebank Revised: English News Text Treebank LDC2015T13},
+    journal= {},
+    author= {Ann Bies and Justin Mott and Colin Warner},
+    year= {2015},
+    url= {https://doi.org/10.35111/xpjy-at91},
+    doi= {10.35111/xpjy-at91},
+    isbn= {1-58563-724-6},
+    dcmi= {text},
+    languages= {english},
+    language= {english},
+    ldc= {LDC2015T13},
+  }
+
 """
 
 import argparse
@@ -361,8 +383,32 @@ def process_ctb_51(paths, dataset_name, *args):
     convert_ctb(input_dir, output_dir, dataset_name)
 
 
+def process_ptb3_revised(paths, dataset_name, *args):
+    """ TODO """
+    input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "english", "LDC2015T13_eng_news_txt_tbnk-ptb_revised")
+    if not os.path.exists(input_dir):
+        backup_input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "english", "LDC2015T13")
+        if not os.path.exists(backup_input_dir):
+            raise FileNotFoundError("Could not find ptb3-revised in either %s or %s" % (input_dir, backup_input_dir))
+        input_dir = backup_input_dir
+
+    bracket_dir = os.path.join(input_dir, "data", "penntree")
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+
+    train_trees = []
+    for i in range(2, 22):
+        train_trees.extend(tree_reader.read_directory(os.path.join(bracket_dir, "%02d" % i)))
+    dev_trees = tree_reader.read_directory(os.path.join(bracket_dir, "22"))
+    test_trees = tree_reader.read_directory(os.path.join(bracket_dir, "23"))
+    print("Read %d train trees, %d dev trees, and %d test trees" % (len(train_trees), len(dev_trees), len(test_trees)))
+    datasets = [train_trees, dev_trees, test_trees]
+    write_dataset(datasets, output_dir, dataset_name)
+
+
 DATASET_MAPPING = {
     'da_arboretum': process_arboretum,
+
+    'en_ptb3-revised': process_ptb3_revised,
 
     'id_icon':      process_id_icon,
 
