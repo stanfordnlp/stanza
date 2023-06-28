@@ -46,23 +46,27 @@ def run_treebank(mode, paths, treebank, short_name,
                     '--lang', short_language,
                     '--shorthand', short_name]
     if mode == Mode.TRAIN:
-        train_args = ['--train_dir', train_dir,
-                      '--eval_file', dev_file,
-                      '--mode', 'train']
+        train_args = ['--mode', 'train']
+        if '--train_dir' not in extra_args:
+            train_args += ['--train_dir', train_dir]
+        if '--eval_file' not in extra_args:
+            train_args += ['--eval_file', dev_file]
         train_args = train_args + default_args + extra_args
         logger.info("Running train step with args: %s", train_args)
         charlm.main(train_args)
 
     if mode == Mode.SCORE_DEV:
-        dev_args = ['--eval_file', dev_file,
-                    '--mode', 'predict']
+        dev_args = ['--mode', 'predict']
+        if '--eval_file' not in extra_args:
+            dev_args += ['--eval_file', dev_file]
         dev_args = dev_args + default_args + extra_args
         logger.info("Running dev step with args: %s", dev_args)
         charlm.main(dev_args)
 
     if mode == Mode.SCORE_TEST:
-        test_args = ['--eval_file', test_file,
-                     '--mode', 'predict']
+        test_args = ['--mode', 'predict']
+        if '--eval_file' not in extra_args:
+            test_args += ['--eval_file', test_file]
         test_args = test_args + default_args + extra_args
         logger.info("Running test step with args: %s", test_args)
         charlm.main(test_args)

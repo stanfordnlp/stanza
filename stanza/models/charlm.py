@@ -111,6 +111,9 @@ def parse_args(args=None):
 
     if args.wandb_name:
         args.wandb = True
+    if not args.lang and args.shorthand:
+        args.lang = args.shorthand.split("_", 1)[0]
+        logger.info("Language not specified, but should be %s based on the shorthand of %s", args.lang, args.shorthand)
 
     args = vars(args)
     return args
