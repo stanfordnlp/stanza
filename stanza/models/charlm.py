@@ -74,6 +74,8 @@ def parse_args(args=None):
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--direction', default='forward', choices=['forward', 'backward'], help="Forward or backward language model")
+    parser.add_argument('--forward', action='store_const', dest='direction', const='forward', help="Train a forward language model")
+    parser.add_argument('--backward', action='store_const', dest='direction', const='backward', help="Train a backward language model")
 
     parser.add_argument('--char_emb_dim', type=int, default=100, help="Dimension of unit embeddings")
     parser.add_argument('--char_hidden_dim', type=int, default=1024, help="Dimension of hidden units")

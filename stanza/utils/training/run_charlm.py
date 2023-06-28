@@ -16,8 +16,9 @@ def add_charlm_args(parser):
     """
     Extra args for the charlm: forward/backward
     """
-    parser.add_argument('--forward',  dest='forward', action='store_true',  default=False, help='Train a forward model')
-    parser.add_argument('--backward', dest='forward', action='store_false', default=False, help='Train a backward model')
+    parser.add_argument('--direction', default='forward', choices=['forward', 'backward'], help="Forward or backward language model")
+    parser.add_argument('--forward', action='store_const', dest='direction', const='forward', help="Train a forward language model")
+    parser.add_argument('--backward', action='store_const', dest='direction', const='backward', help="Train a backward language model")
 
 
 def run_treebank(mode, paths, treebank, short_name,
@@ -41,8 +42,8 @@ def run_treebank(mode, paths, treebank, short_name,
     # python -m stanza.models.charlm --eval_file $test_file \
     #     --direction $direction --lang $lang --shorthand $short --mode predict $args
 
-    direction = "forward" if command_args.forward else "backward"
-    default_args = ['--direction', direction,
+    direction = command_args.direction
+    default_args = ['--%s' % direction,
                     '--lang', short_language,
                     '--shorthand', short_name]
     if mode == Mode.TRAIN:
@@ -76,10 +77,7 @@ def get_model_name(args):
     """
     The charlm saves forward and backward charlms to the same dir, but with different filenames
     """
-    if args.forward:
-        return "forward_charlm"
-    else:
-        return "backward_charlm"
+    return "%s_charlm" % args.direction
 
 def main():
     common.main(run_treebank, "charlm", get_model_name, add_charlm_args)
