@@ -55,6 +55,7 @@ def parse_args(args=None):
     parser.add_argument('--word_cutoff', type=int, default=7, help='How common a word must be to include it in the finetuned word embedding')
     parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--tag_emb_dim', type=int, default=50)
+    parser.add_argument('--charlm_transform_dim', type=int, default=None, help='Transform the pretrained charlm to this dimension.  If not set, no transform is used')
     parser.add_argument('--transformed_dim', type=int, default=125)
     parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--char_num_layers', type=int, default=1)

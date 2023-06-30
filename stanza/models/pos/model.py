@@ -50,7 +50,15 @@ class Tagger(nn.Module):
                 logger.debug("POS model loading charmodels: %s and %s", args['charlm_forward_file'], args['charlm_backward_file'])
                 add_unsaved_module('charmodel_forward', load_charlm(args['charlm_forward_file'], foundation_cache=foundation_cache))
                 add_unsaved_module('charmodel_backward', load_charlm(args['charlm_backward_file'], foundation_cache=foundation_cache))
-                input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
+                # optionally add a input transformation layer
+                if self.args.get('charlm_transform_dim', 0):
+                    self.charmodel_forward_transform = nn.Linear(self.charmodel_forward.hidden_dim(), self.args['charlm_transform_dim'], bias=False)
+                    self.charmodel_backward_transform = nn.Linear(self.charmodel_backward.hidden_dim(), self.args['charlm_transform_dim'], bias=False)
+                    input_size += self.args['charlm_transform_dim'] * 2
+                else:
+                    self.charmodel_forward_transform = None
+                    self.charmodel_backward_transform = None
+                    input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
             else:
                 bidirectional = args.get('char_bidirectional', False)
                 self.charmodel = CharacterModel(args, vocab, bidirectional=bidirectional)
@@ -165,9 +173,16 @@ class Tagger(nn.Module):
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('charlm', None):
                 all_forward_chars = self.charmodel_forward.build_char_representation(text)
+                assert isinstance(all_forward_chars, list)
+                if self.charmodel_forward_transform is not None:
+                    all_forward_chars = [self.charmodel_forward_transform(x) for x in all_forward_chars]
                 all_forward_chars = pack(pad_sequence(all_forward_chars, batch_first=True))
+
                 all_backward_chars = self.charmodel_backward.build_char_representation(text)
+                if self.charmodel_backward_transform is not None:
+                    all_backward_chars = [self.charmodel_backward_transform(x) for x in all_backward_chars]
                 all_backward_chars = pack(pad_sequence(all_backward_chars, batch_first=True))
+
                 inputs += [all_forward_chars, all_backward_chars]
             else:
                 char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
