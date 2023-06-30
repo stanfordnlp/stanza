@@ -30,10 +30,8 @@ from stanza.models import tokenizer
 
 from stanza.models.common.constant import treebank_to_short_name
 
-from stanza.resources.default_packages import default_charlms, pos_charlms
-
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm
+from stanza.utils.training.common import Mode, build_charlm_args, choose_pos_charlm
 from stanza.utils.training.run_lemma import check_lemmas
 from stanza.utils.training.run_mwt import check_mwt
 from stanza.utils.training.run_pos import wordvec_args
@@ -116,10 +114,10 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
 
     # TODO: refactor these args.  Possibly just put this in common as a single function call,
     # build_charlm_args_pos or something like that
-    charlm = choose_charlm(short_language, package, command_args.charlm, default_charlms, pos_charlms)
-    charlm_args = build_charlm_args(short_language, charlm)
+    pos_charlm = choose_pos_charlm(short_language, package, command_args.charlm)
+    pos_charlm_args = build_charlm_args(short_language, charlm)
 
-    pos_args = pos_args + wordvec_args(short_language, package, extra_args) + charlm_args + extra_args
+    pos_args = pos_args + wordvec_args(short_language, package, extra_args) + pos_charlm_args + extra_args
     logger.info("Running pos step with args: {}".format(pos_args))
     tagger.main(pos_args)
 

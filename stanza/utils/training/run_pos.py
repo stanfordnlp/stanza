@@ -5,9 +5,9 @@ import os
 
 from stanza.models import tagger
 
-from stanza.resources.default_packages import no_pretrain_languages, default_charlms, pos_charlms, pos_pretrains, default_pretrains, specific_default_pretrains
+from stanza.resources.default_packages import no_pretrain_languages, pos_pretrains, default_pretrains, specific_default_pretrains
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm, find_wordvec_pretrain
+from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_pos_charlm, find_wordvec_pretrain
 
 logger = logging.getLogger('stanza')
 
@@ -61,7 +61,7 @@ def run_treebank(mode, paths, treebank, short_name,
     test_in_file   = f"{pos_dir}/{short_name}.test.in.conllu"
     test_pred_file = temp_output_file if temp_output_file else f"{pos_dir}/{short_name}.test.pred.conllu"
 
-    charlm = choose_charlm(short_language, dataset, command_args.charlm, default_charlms, pos_charlms)
+    charlm = choose_pos_charlm(short_language, dataset, command_args.charlm)
     charlm_args = build_charlm_args(short_language, charlm)
 
     bert_args = []

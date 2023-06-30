@@ -8,6 +8,7 @@ import tempfile
 
 from enum import Enum
 
+from stanza.resources.default_packages import default_charlms, pos_charlms
 from stanza.models.common.constant import treebank_to_short_name
 from stanza.models.common.utils import ud_scores
 from stanza.resources.common import download, DEFAULT_MODEL_DIR, UnknownLanguageError
@@ -513,6 +514,10 @@ def build_charlm_args(language, charlm, base_args=True, model_dir=DEFAULT_MODEL_
     return []
 
 def choose_charlm(language, dataset, charlm, language_charlms, dataset_charlms):
+    """
+    charlm == "default" means the default charlm for this dataset or language
+    charlm == None is no charlm
+    """
     default_charlm = language_charlms.get(language, None)
     specific_charlm = dataset_charlms.get(language, {}).get(dataset, None)
 
@@ -528,4 +533,11 @@ def choose_charlm(language, dataset, charlm, language_charlms, dataset_charlms):
         return default_charlm
     else:
         return None
+
+def choose_pos_charlm(short_language, dataset, charlm):
+    """
+    charlm == "default" means the default charlm for this dataset or language
+    charlm == None is no charlm
+    """
+    return choose_charlm(short_language, dataset, charlm, default_charlms, pos_charlms)
 
