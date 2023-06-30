@@ -419,7 +419,7 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
         if not os.path.exists(default_pt_path):
             logger.info("Default pretrain should be {}  Attempting to download".format(default_pt_path))
             try:
-                download(lang=language, package=None, processors={"pretrain": default_pt})
+                download(lang=language, package=None, processors={"pretrain": default_pt}, model_dir=model_dir)
             except UnknownLanguageError:
                 # if there's a pretrain in the directory, hiding this
                 # error will let us find that pretrain later
@@ -439,7 +439,7 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
         # will have something?
         logger.warning(f"Cannot figure out which pretrain to use for '{language}'.  Will download the default package and hope for the best")
         try:
-            download(lang=language)
+            download(lang=language, model_dir=model_dir)
         except UnknownLanguageError as e:
             # this is a very unusual situation
             # basically, there was a language which we started to add
@@ -472,7 +472,7 @@ def find_charlm_file(direction, language, charlm, model_dir=DEFAULT_MODEL_DIR):
         return resource_path
 
     try:
-        download(lang=language, package=None, processors={f"{direction}_charlm": charlm})
+        download(lang=language, package=None, processors={f"{direction}_charlm": charlm}, model_dir=model_dir)
         if os.path.exists(resource_path):
             logger.info(f'Downloaded model, using model {resource_path} for {direction} charlm')
             return resource_path
