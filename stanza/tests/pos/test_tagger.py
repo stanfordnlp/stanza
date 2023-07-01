@@ -10,7 +10,8 @@ import pytest
 from stanza.models import tagger
 from stanza.models.common import pretrain
 from stanza.models.pos.trainer import Trainer
-from stanza.tests import TEST_WORKING_DIR
+from stanza.tests import TEST_WORKING_DIR, TEST_MODELS_DIR
+from stanza.utils.training.common import choose_pos_charlm, build_charlm_args
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
@@ -124,6 +125,12 @@ class TestTagger:
     def wordvec_pretrain_file(self):
         return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
 
+    @pytest.fixture(scope="class")
+    def charlm_args(self):
+        charlm = choose_pos_charlm("en", "test", "default")
+        charlm_args = build_charlm_args("en", charlm, model_dir=TEST_MODELS_DIR)
+        return charlm_args
+
     def run_training(self, tmp_path, wordvec_pretrain_file, train_text, dev_text, augment_nopunct=False, extra_args=None):
         """
         Run the training for a few iterations, load & return the model
@@ -201,6 +208,12 @@ class TestTagger:
         assert '	hers	' in TRAIN_DATA_2
         assert 'hers' in word_vocab
 
+    def test_train_charlm(self, tmp_path, wordvec_pretrain_file, charlm_args):
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=charlm_args)
+
+    def test_train_charlm_projection(self, tmp_path, wordvec_pretrain_file, charlm_args):
+        extra_args = charlm_args + ['--charlm_transform_dim', '100']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=extra_args)
 
     def test_missing_column(self, tmp_path, wordvec_pretrain_file):
         """
