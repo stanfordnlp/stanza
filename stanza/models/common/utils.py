@@ -154,9 +154,16 @@ def harmonic_mean(a, weights=None):
             return sum(weights) / sum(w/x for x, w in zip(a, weights))
 
 # torch utils
-def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0):
-    base_parameters = [p for n, p in model.named_parameters() if p.requires_grad and not n.startswith("bert_model.")]
+def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, charlm_learning_rate=0.0):
+    base_parameters = [p for n, p in model.named_parameters()
+                       if p.requires_grad and not n.startswith("bert_model.")
+                       and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
     parameters = [{'param_group_name': 'base', 'params': base_parameters}]
+
+    charlm_parameters = [p for n, p in model.named_parameters()
+                         if p.requires_grad and (n.startswith("charmodel_forward.") or n.startswith("charmodel_backward."))]
+    if len(charlm_parameters) > 0 and charlm_learning_rate > 0:
+        parameters.append({'param_group_name': 'charlm', 'params': charlm_parameters, 'lr': lr * charlm_learning_rate})
 
     bert_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
     if len(bert_parameters) > 0 and bert_learning_rate > 0:
