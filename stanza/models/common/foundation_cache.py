@@ -94,9 +94,14 @@ def load_bert(model_name, foundation_cache=None):
     else:
         return foundation_cache.load_bert(model_name)
 
-def load_charlm(charlm_file, foundation_cache=None):
+def load_charlm(charlm_file, foundation_cache=None, finetune=False):
     if not charlm_file:
         return None
+
+    if finetune:
+        # can't use the cache in the case of a model which will be finetuned
+        # and the numbers will be different for other users of the model
+        return CharacterLanguageModel.load(charlm_file, finetune=True)
 
     if foundation_cache is not None:
         return foundation_cache.load_charlm(charlm_file)
