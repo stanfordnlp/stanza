@@ -172,7 +172,11 @@ def evaluate_and_save(args, vocab, data, trainer, best_loss, model_file, checkpo
     ppl = math.exp(loss)
     elapsed = int(time.time() - start_time)
     # TODO: step the scheduler less often when the eval frequency is higher
+    previous_lr = get_current_lr(trainer, args)
     trainer.scheduler.step(loss)
+    current_lr = get_current_lr(trainer, args)
+    if previous_lr != current_lr:
+        logger.info("Updating learning rate to %f", current_lr)
     logger.info(
         "| eval checkpoint @ global step {:10d} | time elapsed {:6d}s | loss {:5.2f} | ppl {:8.2f}".format(
             trainer.global_step,
