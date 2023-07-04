@@ -264,8 +264,32 @@ BERT_LAYERS = {
     "vi": 7,
 }
 
-def build_argparse():
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+class ArgumentParserWithExtraHelp(argparse.ArgumentParser):
+    def __init__(self, sub_argparse, *args, **kwargs):
+        super().__init__(*args, **kwargs)  # forwards all unused arguments
+
+        self.sub_argparse = sub_argparse
+
+    def print_help(self, file=None):
+        super().print_help(file=file)
+
+    def format_help(self):
+        help_text = super().format_help()
+        if self.sub_argparse is not None:
+            sub_text = self.sub_argparse.format_help().split("\n")
+            first_line = -1
+            for line_idx, line in enumerate(sub_text):
+                if line.strip().startswith("usage:"):
+                    first_line = line_idx
+                elif first_line >= 0 and not line.strip():
+                    first_line = line_idx
+                    break
+            help_text = help_text + "\n\nmodel arguments:" + "\n".join(sub_text[first_line:])
+        return help_text
+
+
+def build_argparse(sub_argparse=None):
+    parser = ArgumentParserWithExtraHelp(sub_argparse=sub_argparse, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--save_output', dest='temp_output', default=True, action='store_false', help="Save output - default is to use a temp directory.")
 
     parser.add_argument('treebanks', type=str, nargs='+', help='Which treebanks to run on.  Use all_ud or ud_all for all UD treebanks')
@@ -285,7 +309,7 @@ def add_charlm_args(parser):
     parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
     parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
 
-def main(run_treebank, model_dir, model_name, add_specific_args=None):
+def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argparse=None):
     """
     A main program for each of the run_xyz scripts
 
@@ -300,7 +324,7 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
 
     paths = default_paths.get_default_paths()
 
-    parser = build_argparse()
+    parser = build_argparse(sub_argparse)
     if add_specific_args is not None:
         add_specific_args(parser)
     if '--extra_args' in sys.argv:

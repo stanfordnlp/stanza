@@ -80,7 +80,7 @@ def get_model_name(args):
     return "%s_charlm" % args.direction
 
 def main():
-    common.main(run_treebank, "charlm", get_model_name, add_charlm_args)
+    common.main(run_treebank, "charlm", get_model_name, add_charlm_args, charlm.build_argparse())
 
 if __name__ == "__main__":
     main()
