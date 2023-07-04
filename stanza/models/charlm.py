@@ -65,7 +65,7 @@ def load_data(path, vocab, direction):
         yield data
 
 def build_argparse():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--train_file', type=str, help="Input plaintext file")
     parser.add_argument('--train_dir', type=str, help="If non-empty, load from directory with multiple training files")
     parser.add_argument('--eval_file', type=str, help="Input plaintext file for the dev/test set")
