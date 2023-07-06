@@ -384,7 +384,6 @@ def process_ctb_51(paths, dataset_name, *args):
 
 
 def process_ptb3_revised(paths, dataset_name, *args):
-    """ TODO """
     input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "english", "LDC2015T13_eng_news_txt_tbnk-ptb_revised")
     if not os.path.exists(input_dir):
         backup_input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "english", "LDC2015T13")
