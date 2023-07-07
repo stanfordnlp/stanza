@@ -1,5 +1,8 @@
 import glob
 import os
+import re
+
+import xml.etree.ElementTree as ET
 
 from stanza.models.constituency import tree_reader
 from stanza.utils.datasets.constituency.utils import write_dataset
@@ -22,6 +25,17 @@ def filenum_to_shard(filenum):
 
     raise ValueError("Unhandled filenum %d" % filenum)
 
+def collect_trees(root):
+    if root.tag == 'S':
+        yield root.text, root.attrib['ID']
+
+    for child in root:
+        for tree in collect_trees(child):
+            yield tree
+
+id_re = re.compile("<S ID=([0-9a-z]+)>")
+amp_re = re.compile("[&]")
+
 def convert_ctb(input_dir, output_dir, dataset_name):
     input_files = glob.glob(os.path.join(input_dir, "*"))
 
@@ -36,36 +50,26 @@ def convert_ctb(input_dir, output_dir, dataset_name):
     sorted_filenames.sort()
 
     for filenum, filename in sorted_filenames:
-        line_idx = -1
         with open(filename, errors='ignore', encoding="gb2312") as fin:
-            trees = []
-            in_tree = False
-            for line_idx, line in enumerate(fin):
-                #print(line, line.startswith("<S"), line.startswith("</S"))
-                if line.startswith("<S"):
-                    tree_id = line.strip().split("=")[1][:-1]
-                    in_tree = True
-                    tree_text = []
-                elif line.startswith("</S"):
-                    in_tree = False
-                    if filenum == 414 and tree_id == "4366":
-                        print("SKIPPING A BROKEN TREE IN %d" % filenum)
-                        continue
-                    else:
-                        trees.append("".join(tree_text))
-                    tree_text = []
-                elif in_tree:
-                    tree_text.append(line)
+            text = fin.read()
+            text = id_re.sub(r'<S ID="\1">', text)
+            text = text.replace("&", "&amp;")
 
-            trees = "\n".join(trees)
-            trees = tree_reader.read_trees(trees)
-            trees = [t.prune_none().simplify_labels() for t in trees]
+        try:
+            xml_root = ET.fromstring(text)
+        except Exception as e:
+            raise RuntimeError("Cannot xml process %s" % filename) from e
+        trees = [x for x in collect_trees(xml_root)]
+        trees = [x[0] for x in trees if filenum != 414 or x[1] != "4366"]
 
-            assert len(trees) > 0
-            assert len(tree_text) == 0
+        trees = "\n".join(trees)
+        trees = tree_reader.read_trees(trees)
+        trees = [t.prune_none().simplify_labels() for t in trees]
 
-            shard = filenum_to_shard(filenum)
-            datasets[shard].extend(trees)
+        assert len(trees) > 0, "No trees in %s" % filename
+
+        shard = filenum_to_shard(filenum)
+        datasets[shard].extend(trees)
 
 
     write_dataset(datasets, output_dir, dataset_name)
