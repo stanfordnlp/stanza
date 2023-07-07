@@ -132,6 +132,13 @@ zh_ctb-51 is the 5.1 version of CTB
            year={2005},
            pages={207–238}}
 
+zh_ctb-90 is the 9.0 version of CTB
+  put LDC2016T13 in $CONSTITUENCY_BASE/chinese
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset zh_ctb-90
+
+  the splits used are the ones from the file docs/ctb9.0-file-list.txt
+    included in the CTB 9.0 release
+
 en_ptb3-revised is an updated version of PTB with NML and stuff
   put LDC2015T13 in $CONSTITUENCY_BASE/english
   the directory name may look like LDC2015T13_eng_news_txt_tbnk-ptb_revised
@@ -169,7 +176,7 @@ from stanza.utils.datasets.constituency import utils
 from stanza.utils.datasets.constituency.convert_alt import convert_alt
 from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
 from stanza.utils.datasets.constituency.convert_cintil import convert_cintil_treebank
-from stanza.utils.datasets.constituency.convert_ctb import convert_ctb
+import stanza.utils.datasets.constituency.convert_ctb as convert_ctb
 from stanza.utils.datasets.constituency.convert_it_turin import convert_it_turin
 from stanza.utils.datasets.constituency.convert_it_vit import convert_it_vit
 from stanza.utils.datasets.constituency.convert_starlang import read_starlang
@@ -380,7 +387,16 @@ def process_ctb_51(paths, dataset_name, *args):
 
     input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "chinese", "LDC2005T01U01_ChineseTreebank5.1", "bracketed")
     output_dir = paths["CONSTITUENCY_DATA_DIR"]
-    convert_ctb(input_dir, output_dir, dataset_name)
+    convert_ctb.convert_ctb(input_dir, output_dir, dataset_name, convert_ctb.Version.V51)
+
+def process_ctb_90(paths, dataset_name, *args):
+    lang, source = dataset_name.split("_", 1)
+    assert lang == 'zh-hans'
+    assert source == 'ctb-90'
+
+    input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "chinese", "LDC2016T13", "ctb9.0", "data", "bracketed")
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    convert_ctb.convert_ctb(input_dir, output_dir, dataset_name, convert_ctb.Version.V90)
 
 
 def process_ptb3_revised(paths, dataset_name, *args):
@@ -425,6 +441,7 @@ DATASET_MAPPING = {
     'vi_vlsp22':    process_vlsp22,
 
     'zh-hans_ctb-51':   process_ctb_51,
+    'zh-hans_ctb-90':   process_ctb_90,
 }
 
 def main(dataset_name, *args):
