@@ -694,6 +694,42 @@ class CoreNLPClient(RobustService):
             raise AnnotationException(r.text)
 
 
+    def scenegraph(self, text, properties=None):
+        """
+        Send a request to the server which processes the text using SceneGraph
+
+        This will require a new CoreNLP release, 4.5.5 or later
+        """
+        if properties is None:
+            properties = {}
+        # the only thing the scenegraph knows how to use is text
+        properties['inputFormat'] = 'text'
+        ctype = "text/plain; charset=utf-8"
+        # the json output format is much more useful
+        properties['outputFormat'] = 'json'
+        try:
+            r = requests.post(
+                self.endpoint + "/scenegraph",
+                params={
+                    'properties': str(properties)
+                },
+                data=text.encode('utf-8') if isinstance(text, str) else text,
+                headers={'content-type': ctype},
+                timeout=(self.timeout*2)/1000,
+            )
+            r.raise_for_status()
+            if r.encoding is None:
+                r.encoding = "utf-8"
+            return json.loads(r.text)
+        except requests.HTTPError as e:
+            if r.text.startswith("Timeout"):
+                raise TimeoutException(r.text)
+            else:
+                raise AnnotationException(r.text)
+        except json.JSONDecodeError:
+            raise AnnotationException(r.text)
+
+
 def read_corenlp_props(props_path):
     """ Read a Stanford CoreNLP properties file into a dict """
     props_dict = {}
