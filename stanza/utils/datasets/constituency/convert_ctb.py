@@ -32,37 +32,37 @@ def filenum_to_shard_51(filenum):
 
 def filenum_to_shard_90(filenum):
     if filenum >= 1 and filenum <= 40:
-        return 1
+        return 2
     if filenum >= 900 and filenum <= 931:
-        return 1
+        return 2
     if filenum in (1018, 1020, 1036, 1044, 1060, 1061, 1072, 1118, 1119, 1132, 1141, 1142, 1148):
-        return 1
+        return 2
     if filenum >= 2165 and filenum <= 2180:
-        return 1
+        return 2
     if filenum >= 2295 and filenum <= 2310:
-        return 1
+        return 2
     if filenum >= 2570 and filenum <= 2602:
-        return 1
+        return 2
     if filenum >= 2800 and filenum <= 2819:
-        return 1
+        return 2
     if filenum >= 3110 and filenum <= 3145:
-        return 1
+        return 2
 
 
     if filenum >= 41 and filenum <= 80:
-        return 2
+        return 1
     if filenum >= 1120 and filenum <= 1129:
-        return 2
+        return 1
     if filenum >= 2140 and filenum <= 2159:
-        return 2
+        return 1
     if filenum >= 2280 and filenum <= 2294:
-        return 2
+        return 1
     if filenum >= 2550 and filenum <= 2569:
-        return 2
+        return 1
     if filenum >= 2775 and filenum <= 2799:
-        return 2
+        return 1
     if filenum >= 3080 and filenum <= 3109:
-        return 2
+        return 1
 
     if filenum >= 81 and filenum <= 900:
         return 0
