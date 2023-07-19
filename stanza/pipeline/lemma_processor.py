@@ -8,6 +8,8 @@ from stanza.models.lemma.trainer import Trainer
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 
+WORD_TAGS = [doc.TEXT, doc.UPOS]
+
 @register_processor(name=LEMMA)
 class LemmaProcessor(UDProcessor):
 
@@ -74,7 +76,9 @@ class LemmaProcessor(UDProcessor):
                     edits += es
 
             if self.config.get('ensemble_dict', False):
-                preds = self.trainer.postprocess([x for x, y in zip(batch.doc.get([doc.TEXT]), skip) if not y], preds, edits=edits)
+                word_tags = batch.doc.get(WORD_TAGS)
+                words = [x[0] for x in word_tags]
+                preds = self.trainer.postprocess([x for x, y in zip(words, skip) if not y], preds, edits=edits)
                 # expand seq2seq predictions to the same size as all words
                 i = 0
                 preds1 = []
@@ -84,7 +88,7 @@ class LemmaProcessor(UDProcessor):
                     else:
                         preds1.append(preds[i])
                         i += 1
-                preds = self.trainer.ensemble(batch.doc.get([doc.TEXT, doc.UPOS]), preds1)
+                preds = self.trainer.ensemble(word_tags, preds1)
             else:
                 preds = self.trainer.postprocess(batch.doc.get([doc.TEXT]), preds, edits=edits)
 
