@@ -118,8 +118,14 @@ class Trainer(object):
     def update_lr(self, new_lr):
         utils.change_lr(self.optimizer, new_lr)
 
-    def train_dict(self, triples):
-        """ Train a dict lemmatizer given training (word, pos, lemma) triples. """
+    def train_dict(self, triples, update_word_dict=True):
+        """
+        Train a dict lemmatizer given training (word, pos, lemma) triples.
+
+        Can update only the composite_dict (word/pos) in situations where
+        the data might be limited from the tags, such as when adding more
+        words at pipeline time
+        """
         # accumulate counter
         ctr = Counter()
         ctr.update([(p[0], p[1], p[2]) for p in triples])
@@ -128,7 +134,7 @@ class Trainer(object):
             w, pos, l = p
             if (w,pos) not in self.composite_dict:
                 self.composite_dict[(w,pos)] = l
-            if w not in self.word_dict:
+            if update_word_dict and w not in self.word_dict:
                 self.word_dict[w] = l
         return
 
