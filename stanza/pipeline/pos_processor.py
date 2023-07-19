@@ -2,6 +2,8 @@
 Processor for performing part-of-speech tagging
 """
 
+import torch
+
 from stanza.models.common import doc
 from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import VOCAB_PREFIX, CompositeVocab
@@ -70,12 +72,13 @@ class POSProcessor(UDProcessor):
             sort_during_eval=True)
         preds = []
 
-        if self._tqdm:
-            for i, b in enumerate(tqdm(batch)):
-                preds += self.trainer.predict(b)
-        else:
-            for i, b in enumerate(batch):
-                preds += self.trainer.predict(b)
+        with torch.no_grad():
+            if self._tqdm:
+                for i, b in enumerate(tqdm(batch)):
+                    preds += self.trainer.predict(b)
+            else:
+                for i, b in enumerate(batch):
+                    preds += self.trainer.predict(b)
 
         preds = unsort(preds, batch.data_orig_idx)
         batch.doc.set([doc.UPOS, doc.XPOS, doc.FEATS], [y for x in preds for y in x])

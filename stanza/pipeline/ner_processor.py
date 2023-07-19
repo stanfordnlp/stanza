@@ -1,6 +1,9 @@
 """
 Processor for performing named entity tagging.
 """
+
+import torch
+
 import logging
 
 from stanza.models.common import doc
@@ -76,14 +79,15 @@ class NERProcessor(UDProcessor):
         self.trainers = None
 
     def process(self, document):
-        all_preds = []
-        for trainer, config in zip(self.trainers, self.configs):
-            # set up a eval-only data loader and skip tag preprocessing
-            batch = DataLoader(document, config['batch_size'], config, vocab=trainer.vocab, evaluation=True, preprocess_tags=False, bert_tokenizer=trainer.bert_tokenizer)
-            preds = []
-            for i, b in enumerate(batch):
-                preds += trainer.predict(b)
-            all_preds.append(preds)
+        with torch.no_grad():
+            all_preds = []
+            for trainer, config in zip(self.trainers, self.configs):
+                # set up a eval-only data loader and skip tag preprocessing
+                batch = DataLoader(document, config['batch_size'], config, vocab=trainer.vocab, evaluation=True, preprocess_tags=False, bert_tokenizer=trainer.bert_tokenizer)
+                preds = []
+                for i, b in enumerate(batch):
+                    preds += trainer.predict(b)
+                all_preds.append(preds)
         # for each sentence, gather a list of predictions
         # merge those predictions into a single list
         # earlier models will have precedence

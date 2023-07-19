@@ -9,6 +9,8 @@ TODO: a possible way to generalize this would be to make it a
 ClassifierProcessor and have "sentiment" be an option.
 """
 
+import torch
+
 from types import SimpleNamespace
 
 from stanza.models.classifiers.trainer import Trainer
@@ -60,7 +62,8 @@ class SentimentProcessor(UDProcessor):
 
     def process(self, document):
         sentences = self._model.extract_sentences(document)
-        labels = self._model.label_sentences(sentences, batch_size=self._batch_size)
+        with torch.no_grad():
+            labels = self._model.label_sentences(sentences, batch_size=self._batch_size)
         # TODO: allow a classifier processor for any attribute, not just sentiment
         document.set(SENTIMENT, labels, to_sentence=True)
         return document

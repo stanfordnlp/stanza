@@ -4,6 +4,8 @@ Processor for performing lemmatization
 
 from itertools import compress
 
+import torch
+
 from stanza.models.common import doc
 from stanza.models.lemma.data import DataLoader
 from stanza.models.lemma.trainer import Trainer
@@ -77,13 +79,14 @@ class LemmaProcessor(UDProcessor):
             else:
                 seq2seq_batch = batch
 
-            preds = []
-            edits = []
-            for i, b in enumerate(seq2seq_batch):
-                ps, es = self.trainer.predict(b, self.config['beam_size'])
-                preds += ps
-                if es is not None:
-                    edits += es
+            with torch.no_grad():
+                preds = []
+                edits = []
+                for i, b in enumerate(seq2seq_batch):
+                    ps, es = self.trainer.predict(b, self.config['beam_size'])
+                    preds += ps
+                    if es is not None:
+                        edits += es
 
             if self.config.get('ensemble_dict', False):
                 word_tags = batch.doc.get(WORD_TAGS)
