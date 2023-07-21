@@ -114,6 +114,7 @@ specific_default_pretrains = {
     "da":      "conll17",
     "de":      "conll17",
     "el":      "conll17",
+    "en":      "conll17",
     "es":      "conll17",
     "et":      "conll17",
     "eu":      "conll17",
@@ -132,6 +133,7 @@ specific_default_pretrains = {
     "id":      "conll17",
     "it":      "conll17",
     "ja":      "conll17",
+    "kk":      "fasttext157",
     "ko":      "conll17",
     "la":      "conll17",
     "lv":      "conll17",
@@ -151,6 +153,7 @@ specific_default_pretrains = {
     "uk":      "conll17",
     "ur":      "conll17",
     "vi":      "conll17",
+    "zh-hant": "conll17",
 }
 
 default_pretrains = dict(default_treebanks)
@@ -216,7 +219,7 @@ ner_pretrains = {
         "wikiner": "fasttextwiki",
     },
     "th": {
-        "lst20": "fasttext",
+        "lst20": "fasttext157",
     },
     "zh-hans": {
         "ontonotes": "fasttextwiki",
