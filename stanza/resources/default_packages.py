@@ -139,7 +139,7 @@ specific_default_pretrains = {
     "myv":     "mokha",
     "nb":      "conll17",
     "nl":      "conll17",
-    "no":      "conll17",
+    "nn":      "conll17",
     "pl":      "conll17",
     "pt":      "conll17",
     "ro":      "conll17",
