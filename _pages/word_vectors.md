@@ -165,10 +165,10 @@ perform better.  Therefore, starting with Stanza 1.5.1, we use that
 vector file for each of the Chinese tasks.  Incidentally, this makes
 the download somewhat smaller, as only one set of vectors is needed.
 
-| Pretrain     |  POS  | depparse | sentiment |
-| :------:     | :---: | :----:   | :----:    |
-| fasttext157  | 94.78 | 78.58    | 65.91     |
-| fasttextwiki | 94.47 | 78.28    | 62.65     |
+| Pretrain     |  POS  | depparse | ner    | sentiment |
+| :------:     | :---: | :----:   | :----: | :----:    |
+| fasttext157  | 94.78 | 78.58    | 74.96  | 65.91     |
+| fasttextwiki | 94.47 | 78.28    | 73.15  | 62.65     |
 
 
 ### Erzya
