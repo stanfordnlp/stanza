@@ -125,6 +125,24 @@ python3 -m stanza.models.common.convert_pretrain ~/stanza_resources/bn/pretrain/
 In addition to the CoNLL shared task vectors and the Fasttext vectors
 mentioned above, some languages use specific word vector packages.
 
+### CoNLL 17
+
+For many of the languages which were in the conll 17 shared task, the word vectors used by default are the word vectors provided in that task.
+
+New in v1.5.1
+{: .label .label-green }
+
+Starting with Stanza 1.5.1, the conll17 word vectors are all marked as such in the pretrain filename.
+
+### Fasttext
+
+Other languages use either the [Fasttext for 157 languages](https://fasttext.cc/docs/en/crawl-vectors.html) or [Fasttext Wiki](https://fasttext.cc/docs/en/pretrained-vectors.html) word vectors.
+
+New in v1.5.1
+{: .label .label-green }
+
+Starting with Stanza 1.5.1, those vectors are marked with either `fasttext157` or `fasttextwiki`, as appropriate.
+
 ### Armenian and Western Armenian
 
 [Glove vectors specifically for Armenian](https://github.com/ispras-texterra/word-embeddings-eval-hy)
@@ -133,6 +151,25 @@ for which there is a separate UD dataset.
 
 Avetisyan, Karen and Ghukasyan, Tsolak (2019).
 [Word Embeddings for the Armenian Language: Intrinsic and Extrinsic Evaluation](https://arxiv.org/abs/1906.03134).
+
+### Chinese (Simplified)
+
+The NER model for Stanza for 1.5.0 or earlier used the
+[fasttextwiki](https://fasttext.cc/docs/en/pretrained-vectors.html)
+word vectors.  The other models, such as POS or depparse, used a
+version of those vectors where any words that still had traditional
+characters were remapped to simplified characters instead.
+
+We observe that for each of several tasks, the Fasttext 157 vectors
+perform better.  Therefore, starting with Stanza 1.5.1, we use that
+vector file for each of the Chinese tasks.  Incidentally, this makes
+the download somewhat smaller, as only one set of vectors is needed.
+
+| Pretrain     |  POS  | depparse | sentiment |
+| :------:     | :---: | :----:   | :----:    |
+| fasttext157  | 94.78 | 78.58    | 65.91     |
+| fasttextwiki | 94.47 | 78.28    | 62.65     |
+
 
 ### Erzya
 
