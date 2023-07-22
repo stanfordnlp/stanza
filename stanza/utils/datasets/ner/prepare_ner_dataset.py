@@ -351,6 +351,8 @@ ArmTDP-NER is an Armenian NER dataset
   - Then run
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hy_armtdp
 
+OntoNotes 5 contains a Chinese NER dataset
+  - https://catalog.ldc.upenn.edu/LDC2013T19
 """
 
 import glob
