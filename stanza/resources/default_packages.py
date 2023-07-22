@@ -106,7 +106,9 @@ no_pretrain_languages = set([
 # name for the UD dataset
 # we will eventually do this for all of the pretrains
 specific_default_pretrains = {
+    "af":      "fasttextwiki",
     "ar":      "conll17",
+    "be":      "fasttextwiki",
     "bg":      "conll17",
     "ca":      "conll17",
     "cs":      "conll17",
@@ -131,6 +133,7 @@ specific_default_pretrains = {
     "hy":      "isprasglove",
     "hyw":     "isprasglove",
     "id":      "conll17",
+    "is":      "fasttext157",
     "it":      "conll17",
     "ja":      "conll17",
     "kk":      "fasttext157",
