@@ -165,11 +165,14 @@ perform better.  Therefore, starting with Stanza 1.5.1, we use that
 vector file for each of the Chinese tasks.  Incidentally, this makes
 the download somewhat smaller, as only one set of vectors is needed.
 
+We also tested [VCWE](https://github.com/HSLCY/VCWE), but found that
+the fasttext vectors performed better for these tasks.
+
 | Pretrain     |  POS  | depparse | ner    | sentiment |
 | :------:     | :---: | :----:   | :----: | :----:    |
 | fasttext157  | 94.78 | 78.58    | 74.96  | 65.91     |
 | fasttextwiki | 94.47 | 78.28    | 73.15  | 62.65     |
-
+| vcwe         | 94.16 | 78.09    | 74.72  | 64.24     |
 
 ### Erzya
 
@@ -213,3 +216,13 @@ Aye Mya Hlaing and Win Pa Pa (2020).
 [Word Representations for Neural Network Based Myanmar Text-to-Speech System](http://oaji.net/articles/2020/3603-1582708892.pdf).
 in International Journal of Intelligent Engineering and Systems, volume 13, pp 239-349.
 
+### Old French
+
+We use the vectors for French from the CoNLL 17 shared task.  Other suggestions are welcome.
+
+### Sindhi
+
+We trained a new set of word vectors using Glove.  For the training
+corpus, we used Wikipedia, Oscar 2023, and a collection of text from
+the NLP group at [ISRA University](https://isra.edu.pk) in Pakistan.
+This is still a work in progress.
