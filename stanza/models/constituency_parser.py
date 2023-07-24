@@ -399,7 +399,7 @@ def parse_args(args=None):
     parser.add_argument('--eval_batch_size', type=int, default=50, help='How many trees to batch when running eval')
 
     parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_constituency.pt", help="File name to save the model")
     parser.add_argument('--save_each_name', type=str, default=None, help="Save each model in sequence to this pattern.  Mostly for testing")
 
     parser.add_argument('--seed', type=int, default=1234)
@@ -724,7 +724,11 @@ def parse_args(args=None):
     retagging.postprocess_args(args)
     postprocess_predict_output_args(args)
 
-    model_save_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
+    model_save_file = args['save_name'].format(shorthand=args['shorthand'],
+                                               transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
+                                               trans_layers=args['bert_hidden_layers'],
+                                               seed=args['seed'])
+    logger.info("Expanded save_name: %s", model_save_file)
 
     if args['checkpoint']:
         args['checkpoint_save_name'] = utils.checkpoint_name(args['save_dir'], model_save_file, args['checkpoint_save_name'])
