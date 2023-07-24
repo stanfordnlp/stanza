@@ -175,6 +175,7 @@ specific_default_pretrains = {
     "ur":      "conll17",
     "vi":      "conll17",
     "wo":      "fasttextwiki",
+    "zh-hans": "fasttext157",
     "zh-hant": "conll17",
 }
 

@@ -83,7 +83,7 @@ default_constituency = {
     "ja": "alt",
     "pt": "cintil",
     "tr": "starlang",
-    "zh-hans": "ctb",
+    #"zh-hans": "ctb",
 }
 
 # an alternate tokenizer for languages which aren't trained from a base UD source
