@@ -7,6 +7,9 @@ import xml.etree.ElementTree as ET
 
 from stanza.models.constituency import tree_reader
 from stanza.utils.datasets.constituency.utils import write_dataset
+from stanza.utils.get_tqdm import get_tqdm
+
+tqdm = get_tqdm()
 
 class Version(Enum):
     V51   = 1
@@ -136,7 +139,7 @@ def convert_ctb(input_dir, output_dir, dataset_name, version):
         sorted_filenames.append((filenum, input_filename))
     sorted_filenames.sort()
 
-    for filenum, filename in sorted_filenames:
+    for filenum, filename in tqdm(sorted_filenames):
         if version is Version.V51:
             with open(filename, errors='ignore', encoding="gb2312") as fin:
                 text = fin.read()
@@ -179,7 +182,7 @@ def convert_ctb(input_dir, output_dir, dataset_name, version):
 
         trees = "\n".join(trees)
         try:
-            trees = tree_reader.read_trees(trees)
+            trees = tree_reader.read_trees(trees, use_tqdm=False)
         except ValueError as e:
             print(text[:300])
             raise RuntimeError("Could not process the tree text in %s" % filename)
