@@ -252,7 +252,7 @@ def load_pretrain_or_wordvec(args):
     pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
 
-def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse):
+def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse, name):
     """
     Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
     """
@@ -263,18 +263,18 @@ def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse
     if logger.getEffectiveLevel() <= logging.INFO:
         data = tqdm(zip(trees, sequences), total=len(trees))
 
-    for tree, sequence in data:
+    for tree_idx, (tree, sequence) in enumerate(data):
         # TODO: make the SimpleModel have a parse operation?
         state = model.initial_state_from_gold_trees([tree])[0]
         for idx, trans in enumerate(sequence):
             if not trans.is_legal(state, model):
-                raise RuntimeError("Transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(idx, trans, tree, sequence))
+                raise RuntimeError("Tree {} of {} failed: transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(tree_idx, name, idx, trans, tree, sequence))
             state = trans.apply(state, model)
         result = model.get_top_constituent(state.constituents)
         if reverse:
             result = result.reverse()
         if tree != result:
-            raise RuntimeError("Transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree, sequence, result))
+            raise RuntimeError("Tree {} of {} failed: transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree_idx, name, tree, sequence, result))
 
 def load_model_parse_text(args, model_file, retag_pipeline):
     """
@@ -478,6 +478,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
                       max(t.count_unary_depth() for t in dev_trees)) + 1
     if silver_trees:
         unary_limit = max(unary_limit, max(t.count_unary_depth() for t in silver_trees))
+    logger.info("Unary limit: %d", unary_limit)
     train_sequences, train_transitions = transition_sequence.convert_trees_to_sequences(train_trees, "training", args['transition_scheme'], args['reversed'])
     dev_sequences, dev_transitions = transition_sequence.convert_trees_to_sequences(dev_trees, "dev", args['transition_scheme'], args['reversed'])
     silver_sequences, silver_transitions = transition_sequence.convert_trees_to_sequences(silver_trees, "silver", args['transition_scheme'], args['reversed'])
@@ -489,8 +490,8 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     # theoretically could just train based on the items in the silver dataset
     parse_transitions.check_transitions(expanded_train_transitions, silver_transitions, "silver")
 
-    verify_transitions(train_trees, train_sequences, args['transition_scheme'], unary_limit, args['reversed'])
-    verify_transitions(dev_trees, dev_sequences, args['transition_scheme'], unary_limit, args['reversed'])
+    verify_transitions(train_trees, train_sequences, args['transition_scheme'], unary_limit, args['reversed'], "train")
+    verify_transitions(dev_trees, dev_sequences, args['transition_scheme'], unary_limit, args['reversed'], "dev")
 
     root_labels = parse_tree.Tree.get_root_labels(train_trees)
     check_root_labels(root_labels, dev_trees, "dev")
