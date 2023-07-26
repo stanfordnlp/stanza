@@ -160,23 +160,25 @@ class Seq2SeqModel(nn.Module):
 
     def forward(self, src, src_mask, tgt_in, pos=None):
         # prepare for encoder/decoder
-        batch_size = src.size(0)
         enc_inputs = self.emb_drop(self.embedding(src))
-        dec_inputs = self.emb_drop(self.embedding(tgt_in))
+        batch_size = enc_inputs.size(0)
         if self.use_pos:
             assert pos is not None, "Missing POS input for seq2seq lemmatizer."
             pos_inputs = self.pos_drop(self.pos_embedding(pos))
             enc_inputs = torch.cat([pos_inputs.unsqueeze(1), enc_inputs], dim=1)
             pos_src_mask = src_mask.new_zeros([batch_size, 1])
             src_mask = torch.cat([pos_src_mask, src_mask], dim=1)
-        src_lens = list(src_mask.data.eq(0).long().sum(1))
+        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
 
+        # encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
 
         if self.edit:
             edit_logits = self.edit_clf(hn)
         else:
             edit_logits = None
+
+        dec_inputs = self.emb_drop(self.embedding(tgt_in))
 
         log_probs, _ = self.decode(dec_inputs, hn, cn, h_in, src_mask, src=src)
         return log_probs, edit_logits
