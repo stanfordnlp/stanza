@@ -158,8 +158,7 @@ class Seq2SeqModel(nn.Module):
 
         return log_probs, dec_hidden
 
-    def forward(self, src, src_mask, tgt_in, pos=None):
-        # prepare for encoder/decoder
+    def embed(self, src, src_mask, pos):
         enc_inputs = self.emb_drop(self.embedding(src))
         batch_size = enc_inputs.size(0)
         if self.use_pos:
@@ -169,6 +168,11 @@ class Seq2SeqModel(nn.Module):
             pos_src_mask = src_mask.new_zeros([batch_size, 1])
             src_mask = torch.cat([pos_src_mask, src_mask], dim=1)
         src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
+        return enc_inputs, batch_size, src_lens, src_mask
+
+    def forward(self, src, src_mask, tgt_in, pos=None):
+        # prepare for encoder/decoder
+        enc_inputs, batch_size, src_lens, src_mask = self.embed(src, src_mask, pos)
 
         # encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
@@ -192,15 +196,7 @@ class Seq2SeqModel(nn.Module):
 
     def predict_greedy(self, src, src_mask, pos=None):
         """ Predict with greedy decoding. """
-        enc_inputs = self.embedding(src)
-        batch_size = enc_inputs.size(0)
-        if self.use_pos:
-            assert pos is not None, "Missing POS input for seq2seq lemmatizer."
-            pos_inputs = self.pos_drop(self.pos_embedding(pos))
-            enc_inputs = torch.cat([pos_inputs.unsqueeze(1), enc_inputs], dim=1)
-            pos_src_mask = src_mask.new_zeros([batch_size, 1])
-            src_mask = torch.cat([pos_src_mask, src_mask], dim=1)
-        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
+        enc_inputs, batch_size, src_lens, src_mask = self.embed(src, src_mask, pos)
 
         # encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
@@ -240,15 +236,7 @@ class Seq2SeqModel(nn.Module):
         if beam_size == 1:
             return self.predict_greedy(src, src_mask, pos=pos)
 
-        enc_inputs = self.embedding(src)
-        batch_size = enc_inputs.size(0)
-        if self.use_pos:
-            assert pos is not None, "Missing POS input for seq2seq lemmatizer."
-            pos_inputs = self.pos_drop(self.pos_embedding(pos))
-            enc_inputs = torch.cat([pos_inputs.unsqueeze(1), enc_inputs], dim=1)
-            pos_src_mask = src_mask.new_zeros([batch_size, 1])
-            src_mask = torch.cat([pos_src_mask, src_mask], dim=1)
-        src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
+        enc_inputs, batch_size, src_lens, src_mask = self.embed(src, src_mask, pos)
 
         # (1) encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
