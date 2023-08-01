@@ -1172,13 +1172,13 @@ def process_treebank(treebank, model_type, paths, args):
     if short_name == "my_alt":
         convert_my_alt.convert_my_alt(paths["CONSTITUENCY_BASE"], tokenizer_dir)
     elif short_name == "vi_vlsp":
-        convert_vi_vlsp.convert_vi_vlsp(paths["EXTERN_DIR"], tokenizer_dir, args)
+        convert_vi_vlsp.convert_vi_vlsp(paths["STANZA_EXTERN_DIR"], tokenizer_dir, args)
     elif short_name == "th_orchid":
-        convert_th_orchid.main(paths["EXTERN_DIR"], tokenizer_dir)
+        convert_th_orchid.main(paths["STANZA_EXTERN_DIR"], tokenizer_dir)
     elif short_name == "th_lst20":
-        convert_th_lst20.convert(paths["EXTERN_DIR"], tokenizer_dir, args)
+        convert_th_lst20.convert(paths["STANZA_EXTERN_DIR"], tokenizer_dir, args)
     elif short_name == "th_best":
-        convert_th_best.main(paths["EXTERN_DIR"], tokenizer_dir)
+        convert_th_best.main(paths["STANZA_EXTERN_DIR"], tokenizer_dir)
     elif short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
     elif short_name in COMBINED_FNS: # eg "it_combined", "en_combined", etc
