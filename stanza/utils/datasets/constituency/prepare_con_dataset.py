@@ -410,11 +410,20 @@ def process_ptb3_revised(paths, dataset_name, *args):
     bracket_dir = os.path.join(input_dir, "data", "penntree")
     output_dir = paths["CONSTITUENCY_DATA_DIR"]
 
+    # compensate for a weird mislabeling in the original dataset
+    label_map = {"ADJ-PRD": "ADJP-PRD"}
+
     train_trees = []
     for i in range(2, 22):
-        train_trees.extend(tree_reader.read_directory(os.path.join(bracket_dir, "%02d" % i)))
+        new_trees = tree_reader.read_directory(os.path.join(bracket_dir, "%02d" % i))
+        new_trees = [t.remap_constituent_labels(label_map) for t in new_trees]
+        train_trees.extend(new_trees)
+
     dev_trees = tree_reader.read_directory(os.path.join(bracket_dir, "22"))
+    dev_trees = [t.remap_constituent_labels(label_map) for t in dev_trees]
+
     test_trees = tree_reader.read_directory(os.path.join(bracket_dir, "23"))
+    test_trees = [t.remap_constituent_labels(label_map) for t in test_trees]
     print("Read %d train trees, %d dev trees, and %d test trees" % (len(train_trees), len(dev_trees), len(test_trees)))
     datasets = [train_trees, dev_trees, test_trees]
     write_dataset(datasets, output_dir, dataset_name)
