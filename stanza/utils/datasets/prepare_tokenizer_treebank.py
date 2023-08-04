@@ -33,6 +33,7 @@ from collections import Counter
 from stanza.models.common.constant import treebank_to_short_name
 import stanza.utils.datasets.common as common
 from stanza.utils.datasets.common import read_sentences_from_conllu, write_sentences_to_conllu, INT_RE, MWT_RE, MWT_OR_COPY_RE
+import stanza.utils.datasets.tokenization.convert_ml_cochin as convert_ml_cochin
 import stanza.utils.datasets.tokenization.convert_my_alt as convert_my_alt
 import stanza.utils.datasets.tokenization.convert_vi_vlsp as convert_vi_vlsp
 import stanza.utils.datasets.tokenization.convert_th_best as convert_th_best
@@ -1179,6 +1180,8 @@ def process_treebank(treebank, model_type, paths, args):
         convert_th_lst20.convert(paths["STANZA_EXTERN_DIR"], tokenizer_dir, args)
     elif short_name == "th_best":
         convert_th_best.main(paths["STANZA_EXTERN_DIR"], tokenizer_dir)
+    elif short_name == "ml_cochin":
+        convert_ml_cochin.main(paths["STANZA_EXTERN_DIR"], tokenizer_dir)
     elif short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
     elif short_name in COMBINED_FNS: # eg "it_combined", "en_combined", etc
