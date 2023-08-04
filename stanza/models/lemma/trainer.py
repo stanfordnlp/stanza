@@ -12,7 +12,9 @@ from torch import nn
 import torch.nn.init as init
 
 import stanza.models.common.seq2seq_constant as constant
+from stanza.models.common.foundation_cache import load_charlm
 from stanza.models.common.seq2seq_model import Seq2SeqModel
+from stanza.models.common.char_model import CharacterLanguageModelWordAdapter
 from stanza.models.common import utils, loss
 from stanza.models.lemma import edit
 from stanza.models.lemma.vocab import MultiVocab
@@ -23,18 +25,24 @@ def unpack_batch(batch, device):
     """ Unpack a batch from the data loader. """
     inputs = [b.to(device) if b is not None else None for b in batch[:6]]
     orig_idx = batch[6]
-    return inputs, orig_idx
+    text = batch[7]
+    return inputs, orig_idx, text
 
 class Trainer(object):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, device=None):
+    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, device=None, foundation_cache=None):
+        self.unsaved_modules = []
         if model_file is not None:
             # load everything from file
-            self.load(model_file)
+            self.load(model_file, args, foundation_cache)
         else:
             # build model from scratch
             self.args = args
-            self.model = None if args['dict_only'] else Seq2SeqModel(args, emb_matrix=emb_matrix)
+            if args['dict_only']:
+                self.model = None
+            else:
+                self.model, charmodel = self.build_seq2seq(args, emb_matrix, foundation_cache)
+                self.add_unsaved_module("charmodel", charmodel)
             self.vocab = vocab
             # dict-based components
             self.word_dict = dict()
@@ -48,9 +56,21 @@ class Trainer(object):
                 self.crit = loss.SequenceLoss(self.vocab['char'].size).to(device)
             self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'])
 
+    def build_seq2seq(self, args, emb_matrix, foundation_cache):
+        charmodel = None
+        if args is not None and args.get('charlm_forward_file', None):
+            charmodel_forward = load_charlm(args['charlm_forward_file'], foundation_cache=foundation_cache)
+            charmodel = CharacterLanguageModelWordAdapter(charmodel_forward)
+        model = Seq2SeqModel(args, emb_matrix=emb_matrix, contextual_embedding=charmodel)
+        return model, charmodel
+
+    def add_unsaved_module(self, name, module):
+        self.unsaved_modules += [name]
+        setattr(self, name, module)
+
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
-        inputs, orig_idx = unpack_batch(batch, device)
+        inputs, orig_idx, text = unpack_batch(batch, device)
         src, src_mask, tgt_in, tgt_out, pos, edits = inputs
 
         if eval:
@@ -58,7 +78,7 @@ class Trainer(object):
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        log_probs, edit_logits = self.model(src, src_mask, tgt_in, pos)
+        log_probs, edit_logits = self.model(src, src_mask, tgt_in, pos, raw=text)
         if self.args.get('edit', False):
             assert edit_logits is not None
             loss = self.crit(log_probs.view(-1, self.vocab['char'].size), tgt_out.view(-1), \
@@ -76,12 +96,12 @@ class Trainer(object):
 
     def predict(self, batch, beam_size=1):
         device = next(self.model.parameters()).device
-        inputs, orig_idx = unpack_batch(batch, device)
+        inputs, orig_idx, text = unpack_batch(batch, device)
         src, src_mask, tgt, tgt_mask, pos, edits = inputs
 
         self.model.eval()
         batch_size = src.size(0)
-        preds, edit_logits = self.model.predict(src, src_mask, pos=pos, beam_size=beam_size)
+        preds, edit_logits = self.model.predict(src, src_mask, pos=pos, beam_size=beam_size, raw=text)
         pred_seqs = [self.vocab['char'].unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
@@ -182,7 +202,13 @@ class Trainer(object):
             lemmas.append(lemma)
         return lemmas
 
-    def save(self, filename):
+    def save(self, filename, skip_modules=True):
+        model_state = self.model.state_dict()
+        # skip saving modules like the pretrained charlm
+        if skip_modules:
+            skipped = [k for k in model_state.keys() if k.split('.')[0] in self.unsaved_modules]
+            for k in skipped:
+                del model_state[k]
         params = {
                 'model': self.model.state_dict() if self.model is not None else None,
                 'dicts': (self.word_dict, self.composite_dict),
@@ -193,16 +219,20 @@ class Trainer(object):
         torch.save(params, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to {}".format(filename))
 
-    def load(self, filename):
+    def load(self, filename, args, foundation_cache):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             logger.error("Cannot load model from {}".format(filename))
             raise
         self.args = checkpoint['config']
+        if args is not None:
+            self.args['charlm_forward_file'] = args['charlm_forward_file']
+            self.args['charlm_backward_file'] = args['charlm_backward_file']
         self.word_dict, self.composite_dict = checkpoint['dicts']
         if not self.args['dict_only']:
-            self.model = Seq2SeqModel(self.args)
+            self.model, charmodel = self.build_seq2seq(self.args, None, foundation_cache)
+            self.add_unsaved_module("charmodel", charmodel)
             # could remove strict=False after rebuilding all models,
             # or could switch to 1.6.0 torch with the buffer in seq2seq persistent=False
             self.model.load_state_dict(checkpoint['model'], strict=False)
