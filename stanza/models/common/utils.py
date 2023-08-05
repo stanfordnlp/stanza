@@ -21,6 +21,7 @@ import numpy as np
 from stanza.models.common.constant import lcode2lang
 import stanza.models.common.seq2seq_constant as constant
 import stanza.utils.conll18_ud_eval as ud_eval
+from stanza.utils.conll18_ud_eval import UDError
 
 logger = logging.getLogger('stanza')
 
@@ -137,8 +138,15 @@ def get_adaptive_eval_interval(cur_dev_size, thres_dev_size, base_interval):
 
 # ud utils
 def ud_scores(gold_conllu_file, system_conllu_file):
-    gold_ud = ud_eval.load_conllu_file(gold_conllu_file)
-    system_ud = ud_eval.load_conllu_file(system_conllu_file)
+    try:
+        gold_ud = ud_eval.load_conllu_file(gold_conllu_file)
+    except UDError as e:
+        raise UDError("Could not read %s" % gold_conllu_file) from e
+
+    try:
+        system_ud = ud_eval.load_conllu_file(system_conllu_file)
+    except UDError as e:
+        raise UDError("Could not read %s" % system_conllu_file) from e
     evaluation = ud_eval.evaluate(gold_ud, system_ud)
 
     return evaluation
