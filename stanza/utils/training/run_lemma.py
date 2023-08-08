@@ -22,15 +22,18 @@ from stanza.models import identity_lemmatizer
 from stanza.models import lemmatizer
 
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode
+from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_lemma_charlm
 
 from stanza.utils.datasets.prepare_lemma_treebank import check_lemmas
 
 logger = logging.getLogger('stanza')
 
+def add_lemma_args(parser):
+    add_charlm_args(parser)
+
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
-    short_language = short_name.split("_")[0]
+    short_language, dataset = short_name.split("_", 1)
 
     lemma_dir      = paths["LEMMA_DATA_DIR"]
     train_file     = f"{lemma_dir}/{short_name}.train.in.conllu"
@@ -40,6 +43,9 @@ def run_treebank(mode, paths, treebank, short_name,
     test_in_file   = f"{lemma_dir}/{short_name}.test.in.conllu"
     test_gold_file = f"{lemma_dir}/{short_name}.test.gold.conllu"
     test_pred_file = temp_output_file if temp_output_file else f"{lemma_dir}/{short_name}.test.pred.conllu"
+
+    charlm = choose_lemma_charlm(short_language, dataset, command_args.charlm)
+    charlm_args = build_charlm_args(short_language, charlm)
 
     if not os.path.exists(train_file):
         logger.error("Treebank %s is not prepared for training the lemmatizer.  Could not find any training data at %s  Skipping..." % (treebank, train_file))
@@ -80,7 +86,7 @@ def run_treebank(mode, paths, treebank, short_name,
                           "--shorthand", short_name,
                           "--num_epoch", num_epochs,
                           "--mode", "train"]
-            train_args = train_args + extra_args
+            train_args = train_args + charlm_args + extra_args
             logger.info("Running train lemmatizer for {} with args {}".format(treebank, train_args))
             lemmatizer.main(train_args)
 
@@ -90,7 +96,7 @@ def run_treebank(mode, paths, treebank, short_name,
                         "--gold_file", dev_gold_file,
                         "--shorthand", short_name,
                         "--mode", "predict"]
-            dev_args = dev_args + extra_args
+            dev_args = dev_args + charlm_args + extra_args
             logger.info("Running dev lemmatizer for {} with args {}".format(treebank, dev_args))
             lemmatizer.main(dev_args)
 
@@ -100,12 +106,12 @@ def run_treebank(mode, paths, treebank, short_name,
                          "--gold_file", test_gold_file,
                          "--shorthand", short_name,
                          "--mode", "predict"]
-            test_args = test_args + extra_args
+            test_args = test_args + charlm_args + extra_args
             logger.info("Running test lemmatizer for {} with args {}".format(treebank, test_args))
             lemmatizer.main(test_args)
 
 def main():
-    common.main(run_treebank, "lemma", "lemmatizer", sub_argparse=lemmatizer.build_argparse())
+    common.main(run_treebank, "lemma", "lemmatizer", add_lemma_args, sub_argparse=lemmatizer.build_argparse())
 
 if __name__ == "__main__":
     main()
