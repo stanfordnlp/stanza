@@ -71,7 +71,7 @@ def build_argparse():
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_lemmatizer.pt", help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
@@ -102,6 +102,13 @@ def main(args=None):
     else:
         evaluate(args)
 
+def build_model_filename(args):
+    model_file = args['save_name'].format(shorthand=args['lang'])
+    model_dir = os.path.split(model_file)[0]
+    if not model_dir.startswith(args['save_dir']):
+        model_file = os.path.join(args['save_dir'], model_file)
+    return model_file
+
 def train(args):
     # load data
     logger.info("[Loading data with batch size {}...]".format(args['batch_size']))
@@ -114,10 +121,7 @@ def train(args):
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
 
     utils.ensure_dir(args['save_dir'])
-    if args['save_name']:
-        model_file = os.path.join(args['save_dir'], args['save_name'])
-    else:
-        model_file = os.path.join(args['save_dir'], '{}_lemmatizer.pt'.format(args['lang']))
+    model_file = build_model_filename(args)
 
     # pred and gold path
     system_pred_file = args['output_file']
@@ -229,10 +233,7 @@ def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
-    if args['save_name']:
-        model_file = os.path.join(args['save_dir'], args['save_name'])
-    else:
-        model_file = os.path.join(args['save_dir'], '{}_lemmatizer.pt'.format(args['lang']))
+    model_file = build_model_filename(args)
 
     # load model
     trainer = Trainer(model_file=model_file, device=args['device'])
