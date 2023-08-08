@@ -61,6 +61,8 @@ def build_argparse():
     parser.add_argument('--no_pos', dest='pos', action='store_false', help='Do not use UPOS in lemmatization. By default UPOS is used.')
     parser.add_argument('--no_copy', dest='copy', action='store_false', help='Do not use copy mechanism in lemmatization. By default copy mechanism is used to improve generalization.')
 
+    parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using pretrained character-level language model.")
+    parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
     parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
 
