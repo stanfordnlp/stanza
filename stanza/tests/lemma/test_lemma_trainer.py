@@ -8,6 +8,8 @@ import glob
 import os
 import tempfile
 
+import torch
+
 from stanza.models import lemmatizer
 from stanza.models.lemma import trainer
 from stanza.tests import *
@@ -143,5 +145,10 @@ class TestLemmatizer:
         """
         Simple test of a few 'epochs' of lemmatizer training
         """
-        self.run_training(tmp_path, TRAIN_DATA, DEV_DATA, extra_args=charlm_args)
+        saved_model = self.run_training(tmp_path, TRAIN_DATA, DEV_DATA, extra_args=charlm_args)
 
+        # check that the charlm wasn't saved in here
+        args = saved_model.args
+        save_name = os.path.join(args['save_dir'], args['save_name'])
+        checkpoint = torch.load(save_name, lambda storage, loc: storage)
+        assert not any(x.startswith("contextual_embedding") for x in checkpoint['model'].keys())

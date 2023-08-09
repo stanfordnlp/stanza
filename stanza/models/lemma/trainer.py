@@ -31,7 +31,6 @@ def unpack_batch(batch, device):
 class Trainer(object):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, device=None, foundation_cache=None):
-        self.unsaved_modules = []
         if model_file is not None:
             # load everything from file
             self.load(model_file, args, foundation_cache)
@@ -41,8 +40,7 @@ class Trainer(object):
             if args['dict_only']:
                 self.model = None
             else:
-                self.model, charmodel = self.build_seq2seq(args, emb_matrix, foundation_cache)
-                self.add_unsaved_module("charmodel", charmodel)
+                self.model = self.build_seq2seq(args, emb_matrix, foundation_cache)
             self.vocab = vocab
             # dict-based components
             self.word_dict = dict()
@@ -69,11 +67,7 @@ class Trainer(object):
             charlms = nn.ModuleList(charlms)
             charmodel = CharacterLanguageModelWordAdapter(charlms)
         model = Seq2SeqModel(args, emb_matrix=emb_matrix, contextual_embedding=charmodel)
-        return model, charmodel
-
-    def add_unsaved_module(self, name, module):
-        self.unsaved_modules += [name]
-        setattr(self, name, module)
+        return model
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
@@ -210,18 +204,20 @@ class Trainer(object):
         return lemmas
 
     def save(self, filename, skip_modules=True):
-        model_state = self.model.state_dict()
-        # skip saving modules like the pretrained charlm
-        if skip_modules:
-            skipped = [k for k in model_state.keys() if k.split('.')[0] in self.unsaved_modules]
-            for k in skipped:
-                del model_state[k]
+        model_state = None
+        if self.model is not None:
+            model_state = self.model.state_dict()
+            # skip saving modules like the pretrained charlm
+            if skip_modules:
+                skipped = [k for k in model_state.keys() if k.split('.')[0] in self.model.unsaved_modules]
+                for k in skipped:
+                    del model_state[k]
         params = {
-                'model': self.model.state_dict() if self.model is not None else None,
-                'dicts': (self.word_dict, self.composite_dict),
-                'vocab': self.vocab.state_dict(),
-                'config': self.args
-                }
+            'model': model_state,
+            'dicts': (self.word_dict, self.composite_dict),
+            'vocab': self.vocab.state_dict(),
+            'config': self.args
+        }
         os.makedirs(os.path.split(filename)[0], exist_ok=True)
         torch.save(params, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to {}".format(filename))
@@ -238,8 +234,7 @@ class Trainer(object):
             self.args['charlm_backward_file'] = args['charlm_backward_file']
         self.word_dict, self.composite_dict = checkpoint['dicts']
         if not self.args['dict_only']:
-            self.model, charmodel = self.build_seq2seq(self.args, None, foundation_cache)
-            self.add_unsaved_module("charmodel", charmodel)
+            self.model = self.build_seq2seq(self.args, None, foundation_cache)
             # could remove strict=False after rebuilding all models,
             # or could switch to 1.6.0 torch with the buffer in seq2seq persistent=False
             self.model.load_state_dict(checkpoint['model'], strict=False)
