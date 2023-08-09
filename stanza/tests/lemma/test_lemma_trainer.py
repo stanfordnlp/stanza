@@ -11,6 +11,7 @@ import tempfile
 from stanza.models import lemmatizer
 from stanza.models.lemma import trainer
 from stanza.tests import *
+from stanza.utils.training.common import choose_lemma_charlm, build_charlm_args
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
@@ -91,6 +92,13 @@ DEV_DATA = """
 """.lstrip()
 
 class TestLemmatizer:
+    @pytest.fixture(scope="class")
+    def charlm_args(self):
+        charlm = choose_lemma_charlm("en", "test", "default")
+        charlm_args = build_charlm_args("en", charlm, model_dir=TEST_MODELS_DIR)
+        return charlm_args
+
+
     def run_training(self, tmp_path, train_text, dev_text, extra_args=None):
         """
         Run the training for a few iterations, load & return the model
@@ -122,10 +130,18 @@ class TestLemmatizer:
         lemmatizer.main(args)
 
         assert os.path.exists(save_file)
+        saved_model = trainer.Trainer(model_file=save_file)
+        return saved_model
 
     def test_basic_train(self, tmp_path):
         """
         Simple test of a few 'epochs' of lemmatizer training
         """
         self.run_training(tmp_path, TRAIN_DATA, DEV_DATA)
+
+    def test_charlm_train(self, tmp_path, charlm_args):
+        """
+        Simple test of a few 'epochs' of lemmatizer training
+        """
+        self.run_training(tmp_path, TRAIN_DATA, DEV_DATA, extra_args=charlm_args)
 
