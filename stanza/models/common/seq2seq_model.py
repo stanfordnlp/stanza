@@ -18,9 +18,15 @@ logger = logging.getLogger('stanza')
 class Seq2SeqModel(nn.Module):
     """
     A complete encoder-decoder model, with optional attention.
+
+    A parent class which makes use of the contextual_embedding (such as a charlm)
+    can make use of unsaved_modules when saving.
     """
     def __init__(self, args, emb_matrix=None, contextual_embedding=None):
         super().__init__()
+
+        self.unsaved_modules = []
+
         self.vocab_size = args['vocab_size']
         self.emb_dim = args['emb_dim']
         self.hidden_dim = args['hidden_dim']
@@ -32,7 +38,7 @@ class Seq2SeqModel(nn.Module):
         self.top = args.get('top', 1e10)
         self.args = args
         self.emb_matrix = emb_matrix
-        self.contextual_embedding = contextual_embedding
+        self.add_unsaved_module("contextual_embedding", contextual_embedding)
 
         logger.debug("Building an attentional Seq2Seq model...")
         logger.debug("Using a Bi-LSTM encoder")
@@ -77,6 +83,10 @@ class Seq2SeqModel(nn.Module):
         self.register_buffer('SOS_tensor', SOS_tensor)
 
         self.init_weights()
+
+    def add_unsaved_module(self, name, module):
+        self.unsaved_modules += [name]
+        setattr(self, name, module)
 
     def init_weights(self):
         # initialize embeddings
