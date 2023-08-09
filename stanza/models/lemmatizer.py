@@ -76,7 +76,7 @@ def build_argparse():
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default="{shorthand}_lemmatizer.pt", help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_lemmatizer.pt", help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
@@ -111,7 +111,11 @@ def main(args=None):
         evaluate(args)
 
 def build_model_filename(args):
-    model_file = args['save_name'].format(shorthand=args['shorthand'])
+    embedding = "nocharlm"
+    if args['charlm'] and args['charlm_forward_file']:
+        embedding = "charlm"
+    model_file = args['save_name'].format(shorthand=args['shorthand'],
+                                          embedding=embedding)
     model_dir = os.path.split(model_file)[0]
     if not model_dir.startswith(args['save_dir']):
         model_file = os.path.join(args['save_dir'], model_file)
@@ -130,6 +134,7 @@ def train(args):
 
     utils.ensure_dir(args['save_dir'])
     model_file = build_model_filename(args)
+    logger.info("Using full savename: %s", model_file)
 
     # pred and gold path
     system_pred_file = args['output_file']
