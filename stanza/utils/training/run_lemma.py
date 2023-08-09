@@ -31,6 +31,40 @@ logger = logging.getLogger('stanza')
 def add_lemma_args(parser):
     add_charlm_args(parser)
 
+def build_model_filename(paths, short_name, command_args, extra_args):
+    """
+    Figure out what the model savename will be, taking into account the model settings.
+
+    Useful for figuring out if the model already exists
+
+    None will represent that there is no expected save_name
+    """
+    short_language, dataset = short_name.split("_", 1)
+
+    lemma_dir      = paths["LEMMA_DATA_DIR"]
+    train_file     = f"{lemma_dir}/{short_name}.train.in.conllu"
+
+    if not os.path.exists(train_file):
+        logger.debug("Treebank %s is not prepared for training the lemmatizer.  Could not find any training data at %s  Cannot figure out the expected save_name without looking at the data, but a later step in the process will skip the training anyway" % (treebank, train_file))
+        return None
+
+    has_lemmas = check_lemmas(train_file)
+    if not has_lemmas:
+        return None
+
+    # TODO: can avoid downloading the charlm at this point, since we
+    # might not even be training
+    charlm = choose_lemma_charlm(short_language, dataset, command_args.charlm)
+    charlm_args = build_charlm_args(short_language, charlm)
+
+    train_args = ["--train_file", train_file,
+                  "--shorthand", short_name,
+                  "--mode", "train"]
+    train_args = train_args + charlm_args + extra_args
+    args = lemmatizer.parse_args(train_args)
+    save_name = lemmatizer.build_model_filename(args)
+    return save_name
+
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
     short_language, dataset = short_name.split("_", 1)
@@ -111,7 +145,7 @@ def run_treebank(mode, paths, treebank, short_name,
             lemmatizer.main(test_args)
 
 def main():
-    common.main(run_treebank, "lemma", "lemmatizer", add_lemma_args, sub_argparse=lemmatizer.build_argparse())
+    common.main(run_treebank, "lemma", "lemmatizer", add_lemma_args, sub_argparse=lemmatizer.build_argparse(), build_model_filename=build_model_filename)
 
 if __name__ == "__main__":
     main()
