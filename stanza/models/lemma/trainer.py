@@ -58,9 +58,16 @@ class Trainer(object):
 
     def build_seq2seq(self, args, emb_matrix, foundation_cache):
         charmodel = None
+        charlms = []
         if args is not None and args.get('charlm_forward_file', None):
             charmodel_forward = load_charlm(args['charlm_forward_file'], foundation_cache=foundation_cache)
-            charmodel = CharacterLanguageModelWordAdapter(charmodel_forward)
+            charlms.append(charmodel_forward)
+        if args is not None and args.get('charlm_backward_file', None):
+            charmodel_backward = load_charlm(args['charlm_backward_file'], foundation_cache=foundation_cache)
+            charlms.append(charmodel_backward)
+        if len(charlms) > 0:
+            charlms = nn.ModuleList(charlms)
+            charmodel = CharacterLanguageModelWordAdapter(charlms)
         model = Seq2SeqModel(args, emb_matrix=emb_matrix, contextual_embedding=charmodel)
         return model, charmodel
 

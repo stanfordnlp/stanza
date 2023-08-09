@@ -272,20 +272,24 @@ class CharacterLanguageModelWordAdapter(nn.Module):
 
     TODO: multiple charlms, eg, forward & back
     """
-    def __init__(self, charlm):
+    def __init__(self, charlms):
         super().__init__()
-        self.charlm = charlm
+        self.charlms = charlms
 
     def forward(self, words):
         words = [CHARLM_START + x + CHARLM_END for x in words]
-        rep = self.charlm.per_char_representation(words)
-        padded_rep = torch.zeros(len(rep), max(x.shape[0] for x in rep), rep[0].shape[1], dtype=rep[0].dtype, device=rep[0].device)
-        for idx, row in enumerate(rep):
-            padded_rep[idx, :row.shape[0], :] = row
+        padded_reps = []
+        for charlm in self.charlms:
+            rep = charlm.per_char_representation(words)
+            padded_rep = torch.zeros(len(rep), max(x.shape[0] for x in rep), rep[0].shape[1], dtype=rep[0].dtype, device=rep[0].device)
+            for idx, row in enumerate(rep):
+                padded_rep[idx, :row.shape[0], :] = row
+            padded_reps.append(padded_rep)
+        padded_rep = torch.cat(padded_reps, dim=2)
         return padded_rep
 
     def hidden_dim(self):
-        return self.charlm.hidden_dim()
+        return sum(charlm.hidden_dim() for charlm in self.charlms)
 
 class CharacterLanguageModelTrainer():
     def __init__(self, model, params, optimizer, criterion, scheduler, epoch=1, global_step=0):
