@@ -39,7 +39,7 @@ def build_argparse():
     parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
-    parser.add_argument('--lang', type=str, help='Language - actually, lang_dataset is better')
+    parser.add_argument('--shorthand', type=str, help='Shorthand for the dataset to use.  lang_dataset')
 
     parser.add_argument('--no_dict', dest='ensemble_dict', action='store_false', help='Do not ensemble dictionary with seq2seq. By default use ensemble.')
     parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based lemmatizer.')
@@ -87,14 +87,17 @@ def parse_args(args=None):
     if args.wandb_name:
         args.wandb = True
 
+    args = vars(args)
+    # when building the vocab, we keep track of the original language name
+    lang = args['shorthand'].split("_")[0] if args['shorthand'] else ""
+    args['lang'] = lang
     return args
 
 def main(args=None):
     args = parse_args(args=args)
 
-    utils.set_random_seed(args.seed)
+    utils.set_random_seed(args['seed'])
 
-    args = vars(args)
     logger.info("Running lemmatizer in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
@@ -103,7 +106,7 @@ def main(args=None):
         evaluate(args)
 
 def build_model_filename(args):
-    model_file = args['save_name'].format(shorthand=args['lang'])
+    model_file = args['save_name'].format(shorthand=args['shorthand'])
     model_dir = os.path.split(model_file)[0]
     if not model_dir.startswith(args['save_dir']):
         model_file = os.path.join(args['save_dir'], model_file)
@@ -153,7 +156,7 @@ def train(args):
     else:
         if args['wandb']:
             import wandb
-            wandb_name = args['wandb_name'] if args['wandb_name'] else "%s_lemmatizer" % args['lang']
+            wandb_name = args['wandb_name'] if args['wandb_name'] else "%s_lemmatizer" % args['shorthand']
             wandb.init(name=wandb_name, config=args)
             wandb.run.define_metric('train_loss', summary='min')
             wandb.run.define_metric('dev_score', summary='max')
@@ -250,7 +253,7 @@ def evaluate(args):
 
     # skip eval if dev data does not exist
     if len(batch) == 0:
-        logger.warning("Skip evaluation because no dev data is available...\nLemma score:\n{} ".format(args['lang']))
+        logger.warning("Skip evaluation because no dev data is available...\nLemma score:\n{} ".format(args['shorthand']))
         return
 
     dict_preds = trainer.predict_dict(batch.doc.get([TEXT, UPOS]))
@@ -278,7 +281,7 @@ def evaluate(args):
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
-        logger.info("Finished evaluation\nLemma score:\n{} {:.2f}".format(args['lang'], score*100))
+        logger.info("Finished evaluation\nLemma score:\n{} {:.2f}".format(args['shorthand'], score*100))
 
 if __name__ == '__main__':
     main()
