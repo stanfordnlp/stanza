@@ -664,6 +664,18 @@ def build_argparse():
 
     return parser
 
+def build_model_filename(args):
+    model_save_file = args['save_name'].format(shorthand=args['shorthand'],
+                                               transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
+                                               trans_layers=args['bert_hidden_layers'],
+                                               seed=args['seed'])
+    logger.info("Expanded save_name: %s", model_save_file)
+
+    model_dir = os.path.split(model_save_file)[0]
+    if model_dir != args['save_dir']:
+        model_save_file = os.path.join(args['save_dir'], model_save_file)
+    return model_save_file
+
 def parse_args(args=None):
     parser = build_argparse()
 
@@ -729,19 +741,11 @@ def parse_args(args=None):
     retagging.postprocess_args(args)
     postprocess_predict_output_args(args)
 
-    model_save_file = args['save_name'].format(shorthand=args['shorthand'],
-                                               transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
-                                               trans_layers=args['bert_hidden_layers'],
-                                               seed=args['seed'])
-    logger.info("Expanded save_name: %s", model_save_file)
+    model_save_file = build_model_filename(args)
+    args['save_name'] = model_save_file
 
     if args['checkpoint']:
         args['checkpoint_save_name'] = utils.checkpoint_name(args['save_dir'], model_save_file, args['checkpoint_save_name'])
-
-    model_dir = os.path.split(model_save_file)[0]
-    if model_dir != args['save_dir']:
-        model_save_file = os.path.join(args['save_dir'], model_save_file)
-    args['save_name'] = model_save_file
 
     return args
 
