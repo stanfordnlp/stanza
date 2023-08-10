@@ -93,7 +93,7 @@ def run_treebank(mode, paths, treebank, short_name,
         constituency_parser.main(text_args)
 
 def main():
-    common.main(run_treebank, "constituency", "constituency", add_constituency_args)
+    common.main(run_treebank, "constituency", "constituency", add_constituency_args, sub_argparse=constituency_parser.build_argparse())
 
 if __name__ == "__main__":
     main()

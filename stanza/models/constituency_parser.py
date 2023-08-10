@@ -162,7 +162,7 @@ from stanza.resources.common import DEFAULT_MODEL_DIR
 
 logger = logging.getLogger('stanza')
 
-def parse_args(args=None):
+def build_argparse():
     """
     Adds the arguments for building the con parser
 
@@ -661,6 +661,11 @@ def parse_args(args=None):
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
     parser.add_argument('--wandb_norm_regex', default=None, help='Log on wandb any tensor whose norm matches this matrix.  Might get cluttered?')
+
+    return parser
+
+def parse_args(args=None):
+    parser = build_argparse()
 
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_", maxsplit=1)) == 2:
