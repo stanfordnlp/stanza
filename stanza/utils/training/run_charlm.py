@@ -36,15 +36,14 @@ def run_treebank(mode, paths, treebank, short_name,
         test_file = test_file + ".xz"
 
     # python -m stanza.models.charlm --train_dir $train_dir --eval_file $dev_file \
-    #     --direction $direction --lang $lang --shorthand $short --mode train $args
+    #     --direction $direction --shorthand $short --mode train $args
     # python -m stanza.models.charlm --eval_file $dev_file \
-    #     --direction $direction --lang $lang --shorthand $short --mode predict $args
+    #     --direction $direction --shorthand $short --mode predict $args
     # python -m stanza.models.charlm --eval_file $test_file \
-    #     --direction $direction --lang $lang --shorthand $short --mode predict $args
+    #     --direction $direction --shorthand $short --mode predict $args
 
     direction = command_args.direction
     default_args = ['--%s' % direction,
-                    '--lang', short_language,
                     '--shorthand', short_name]
     if mode == Mode.TRAIN:
         train_args = ['--mode', 'train']

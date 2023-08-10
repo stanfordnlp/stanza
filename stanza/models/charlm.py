@@ -69,7 +69,6 @@ def build_argparse():
     parser.add_argument('--train_file', type=str, help="Input plaintext file")
     parser.add_argument('--train_dir', type=str, help="If non-empty, load from directory with multiple training files")
     parser.add_argument('--eval_file', type=str, help="Input plaintext file for the dev/test set")
-    parser.add_argument('--lang', type=str, help="Language")
     parser.add_argument('--shorthand', type=str, help="UD treebank shorthand")
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
@@ -125,9 +124,6 @@ def parse_args(args=None):
 
     if args.wandb_name:
         args.wandb = True
-    if not args.lang and args.shorthand:
-        args.lang = args.shorthand.split("_", 1)[0]
-        logger.info("Language not specified, but should be %s based on the shorthand of %s", args.lang, args.shorthand)
 
     args = vars(args)
     return args
