@@ -129,7 +129,7 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress, split_size, 
         train_dir = tgt_dir / 'train'
         if not os.path.exists(train_dir): # make training dir
             os.makedirs(train_dir)
-        cmd = f"split -C {split_size} -a 3 -d --additional-suffix .txt {tgt_tmp_shuffled} {train_dir}/{lang}-{dataset_name}-"
+        cmd = f"split -C {split_size} -a 4 -d --additional-suffix .txt {tgt_tmp_shuffled} {train_dir}/{lang}-{dataset_name}-"
         result = subprocess.run(cmd, shell=True)
         if result.returncode != 0:
             raise RuntimeError("Failed to split files!")
