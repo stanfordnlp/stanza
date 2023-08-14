@@ -383,19 +383,19 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
                 logger.info("Save file for %s model: %s", short_name, save_name)
             save_name_args = ['--save_name', save_name]
 
-        if mode == Mode.TRAIN and not command_args.force and model_name != 'ete':
-            if command_args.save_dir:
-                model_path = os.path.join(command_args.save_dir, save_name)
-            else:
-                save_dir = os.path.join("saved_models", model_dir)
-                save_name_args.extend(["--save_dir", save_dir])
-                model_path = os.path.join(save_dir, save_name)
+            if mode == Mode.TRAIN and not command_args.force:
+                if command_args.save_dir:
+                    model_path = os.path.join(command_args.save_dir, save_name)
+                else:
+                    save_dir = os.path.join("saved_models", model_dir)
+                    save_name_args.extend(["--save_dir", save_dir])
+                    model_path = os.path.join(save_dir, save_name)
 
-            if os.path.exists(model_path):
-                logger.info("%s: %s exists, skipping!" % (treebank, model_path))
-                continue
-            else:
-                logger.info("%s: %s does not exist, training new model" % (treebank, model_path))
+                if os.path.exists(model_path):
+                    logger.info("%s: %s exists, skipping!" % (treebank, model_path))
+                    continue
+                else:
+                    logger.info("%s: %s does not exist, training new model" % (treebank, model_path))
 
         if command_args.temp_output and model_name != 'ete':
             with tempfile.NamedTemporaryFile() as temp_output_file:
