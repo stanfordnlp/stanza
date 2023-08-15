@@ -32,7 +32,7 @@ from stanza.models import _training_logging
 
 logger = logging.getLogger('stanza')
 
-def parse_args(args=None):
+def build_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/pos', help='Root dir for saving models.')
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/wordvec', help='Directory of word vectors.')
@@ -116,7 +116,10 @@ def parse_args(args=None):
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+    return parser
 
+def parse_args(args=None):
+    parser = build_argparse()
     args = parser.parse_args(args=args)
 
     if args.wandb_name:
