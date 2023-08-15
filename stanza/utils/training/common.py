@@ -354,6 +354,7 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
             treebank = treebank[:-1]
         if treebank.lower() in ('ud_all', 'all_ud'):
             ud_treebanks = common.get_ud_treebanks(paths["UDBASE"])
+            logger.info("Expanding %s to %s", treebank, " ".join(ud_treebanks))
             treebanks.extend(ud_treebanks)
         else:
             treebanks.append(treebank)
