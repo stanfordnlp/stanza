@@ -143,6 +143,24 @@ New in v1.5.1
 
 Starting with Stanza 1.5.1, those vectors are marked with either `fasttext157` or `fasttextwiki`, as appropriate.
 
+### Ancient Hebrew
+
+A work studying word embeddings on old languages covered Ancient
+Hebrew.  Those vectors were slightly more effective than using modern
+Hebrew vectors on the first official
+[Ancient Hebrew UD dataset](https://github.com/UniversalDependencies/UD_Ancient_Hebrew-PTNK)
+
+| Pretrain     |  POS dev  | POS test | depparse LAS dev | depparse LAS test |
+| :------:     | :-------: | :----:   | :------------:   | :-------------:   |
+| conll17 HE   |  86.39    |  88.90   |  80.41           |  85.63            |
+| utah         |  86.45    |  88.90   |  80.64           |  86.02            |
+
+Note that with one author from Pomona, and one author from Claremont,
+we split the difference and called this embedding the Utah embedding,
+since that is where it is currently hosted.
+
+[Evaluating Word Embeddings on Low-Resource Languages](https://aclanthology.org/2020.eval4nlp-1.17) (Stringham & Izbicki, Eval4NLP 2020)
+
 ### Armenian and Western Armenian
 
 [Glove vectors specifically for Armenian](https://github.com/ispras-texterra/word-embeddings-eval-hy)
