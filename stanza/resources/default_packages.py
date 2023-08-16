@@ -97,6 +97,8 @@ no_pretrain_languages = set([
     "cop",
     "orv",
     "pcm",
+    "qaf",   # the QAF treebank is code switched and Romanized, so not easy to reuse existing resources
+    "qpm",   # have talked about deriving this from a language neighborinig to Pomak, but that hasn't happened yet
     "qtd",
     "swl",
 ])
