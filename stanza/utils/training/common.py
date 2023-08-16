@@ -302,6 +302,8 @@ def build_argparse(sub_argparse=None):
     parser.add_argument('--save_dir', type=str, default=None, help="Root dir for saving models.  If set, will override the model's default.")
     parser.add_argument('--save_name', type=str, default=None, help="Base name for saving models.  If set, will override the model's default.")
 
+    parser.add_argument('--charlm_only', action='store_true', default=False, help='When asking for ud_all, filter the ones which have charlms')
+
     parser.add_argument('--force', dest='force', action='store_true', default=False, help='Retrain existing models')
     return parser
 
@@ -309,7 +311,7 @@ def add_charlm_args(parser):
     parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
     parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
 
-def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argparse=None, build_model_filename=None):
+def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argparse=None, build_model_filename=None, choose_charlm_method=None):
     """
     A main program for each of the run_xyz scripts
 
@@ -354,6 +356,10 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
             treebank = treebank[:-1]
         if treebank.lower() in ('ud_all', 'all_ud'):
             ud_treebanks = common.get_ud_treebanks(paths["UDBASE"])
+            if choose_charlm_method is not None and command_args.charlm_only:
+                logger.info("Filtering ud_all treebanks to only those which can use charlm for this model")
+                ud_treebanks = [x for x in ud_treebanks
+                                if choose_charlm_method(*treebank_to_short_name(x).split("_", 1), 'default') is not None]
             logger.info("Expanding %s to %s", treebank, " ".join(ud_treebanks))
             treebanks.extend(ud_treebanks)
         else:
