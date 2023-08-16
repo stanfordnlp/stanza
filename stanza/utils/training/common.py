@@ -299,6 +299,7 @@ def build_argparse(sub_argparse=None):
     parser.add_argument('--score_test', dest='mode', action='store_const', const=Mode.SCORE_TEST, help='Score the test set')
 
     # These arguments need to be here so we can identify if the model already exists in the user-specified home
+    # TODO: when all of the model scripts handle their own names, can eliminate this argument
     parser.add_argument('--save_dir', type=str, default=None, help="Root dir for saving models.  If set, will override the model's default.")
     parser.add_argument('--save_name', type=str, default=None, help="Base name for saving models.  If set, will override the model's default.")
 

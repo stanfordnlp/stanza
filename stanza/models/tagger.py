@@ -107,7 +107,7 @@ def build_argparse():
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
     parser.add_argument('--save_dir', type=str, default='saved_models/pos', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_tagger.pt", help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
@@ -141,14 +141,21 @@ def main(args=None):
         evaluate(args)
 
 def model_file_name(args):
-    if args['save_name'] is not None:
-        save_name = args['save_name']
-    else:
-        save_name = args['shorthand'] + "_tagger.pt"
+    embedding = "nocharlm"
+    if args['wordvec_pretrain_file'] is None and args['wordvec_file'] is None:
+        embedding = "nopretrain"
+    if args['charlm'] and args['charlm_forward_file']:
+        embedding = "charlm"
+    if args['bert_model']:
+        embedding = "trans"
 
-    if not os.path.exists(os.path.join(args['save_dir'], save_name)) and os.path.exists(save_name):
-        return save_name
-    return os.path.join(args['save_dir'], save_name)
+    model_file = args['save_name'].format(shorthand=args['shorthand'],
+                                          embedding=embedding)
+    model_dir = os.path.split(model_file)[0]
+
+    if not os.path.exists(os.path.join(args['save_dir'], model_file)) and os.path.exists(model_file):
+        return model_file
+    return os.path.join(args['save_dir'], model_file)
 
 def load_pretrain(args):
     pt = None
