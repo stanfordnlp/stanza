@@ -145,7 +145,7 @@ def run_treebank(mode, paths, treebank, short_name,
             lemmatizer.main(test_args)
 
 def main():
-    common.main(run_treebank, "lemma", "lemmatizer", add_lemma_args, sub_argparse=lemmatizer.build_argparse(), build_model_filename=build_model_filename)
+    common.main(run_treebank, "lemma", "lemmatizer", add_lemma_args, sub_argparse=lemmatizer.build_argparse(), build_model_filename=build_model_filename, choose_charlm_method=choose_lemma_charlm)
 
 if __name__ == "__main__":
     main()
