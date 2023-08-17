@@ -152,6 +152,7 @@ Hebrew vectors on the first official
 
 | Pretrain     |  POS dev  | POS test | depparse LAS dev | depparse LAS test |
 | :------:     | :-------: | :----:   | :------------:   | :-------------:   |
+| none         |  85.64    |  88.15   |  80.73           |  85.99            |
 | conll17 HE   |  86.39    |  88.90   |  80.41           |  85.63            |
 | utah         |  86.45    |  88.90   |  80.64           |  86.02            |
 
