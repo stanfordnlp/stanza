@@ -10,6 +10,7 @@ Example:
 """
 
 from enum import Enum
+import glob
 import logging
 import os
 
@@ -43,6 +44,8 @@ def add_specific_args(parser) -> None:
                         help='Exact name of the pretrain file to read')
     parser.add_argument('--tagger_model', type=str, default=None,
                         help='Tagger save file to use.  If not specified, order searched will be saved/models, then $STANZA_RESOURCES_DIR')
+    parser.add_argument('--save_dir', type=str, default=os.path.join('saved_models', 'pos'),
+                        help='Where to look for recently trained POS models')
     parser.add_argument('--no_download_tagger', default=True, dest='download_tagger', action='store_false',
                         help="Don't try to automatically download a tagger for retagging the dependencies.  Will fail to make silver tags if there is no tagger model to be found")
     add_charlm_args(parser)
@@ -55,9 +58,17 @@ def choose_tagger_model(short_language, dataset, tagger_model, args):
     if tagger_model:
         return tagger_model
 
-    save_path = os.path.join("saved_models", "pos", "%s_%s_tagger.pt" % (short_language, dataset))
-    if os.path.exists(save_path):
-        return save_path
+    candidates = glob.glob(os.path.join(args.save_dir, "%s_%s_*.pt" % (short_language, dataset)))
+    if len(candidates) == 1:
+        return candidates[0]
+    if len(candidates) > 1:
+        for ending in ("_trans_tagger.pt", "_charlm_tagger.pt", "_nocharlm_tagger.pt"):
+            best_candidates = [x for x in candidates if x.endswith(ending)]
+            if len(best_candidates) == 1:
+                return best_candidates[0]
+            if len(best_candidates) > 1:
+                raise FileNotFoundError("Could not choose among the candidate taggers... please pick one with --tagger_model: {}".format(best_candidates))
+        raise FileNotFoundError("Could not choose among the candidate taggers... please pick one with --tagger_model: {}".format(candidates))
 
     if not args.download_tagger:
         return None
