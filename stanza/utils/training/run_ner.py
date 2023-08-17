@@ -128,7 +128,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_treebank, "ner", "nertagger", add_charlm_args)
+    common.main(run_treebank, "ner", "nertagger", add_charlm_args, ner_tagger.build_argparse())
 
 if __name__ == "__main__":
     main()

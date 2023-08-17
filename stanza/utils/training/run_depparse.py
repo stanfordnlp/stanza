@@ -104,7 +104,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_treebank, "depparse", "parser", add_depparse_args)
+    common.main(run_treebank, "depparse", "parser", add_depparse_args, sub_argparse=parser.build_argparse())
 
 if __name__ == "__main__":
     main()

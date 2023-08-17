@@ -39,7 +39,7 @@ def build_argparse():
     parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
-    parser.add_argument('--lang', type=str, help='Language - actually, lang_dataset is better')
+    parser.add_argument('--shorthand', type=str, help='Shorthand for the dataset to use.  lang_dataset')
 
     parser.add_argument('--no_dict', dest='ensemble_dict', action='store_false', help='Do not ensemble dictionary with seq2seq. By default use ensemble.')
     parser.add_argument('--dict_only', action='store_true', help='Only train a dictionary-based lemmatizer.')
@@ -61,6 +61,11 @@ def build_argparse():
     parser.add_argument('--no_pos', dest='pos', action='store_false', help='Do not use UPOS in lemmatization. By default UPOS is used.')
     parser.add_argument('--no_copy', dest='copy', action='store_false', help='Do not use copy mechanism in lemmatization. By default copy mechanism is used to improve generalization.')
 
+    parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using pretrained character-level language model.")
+    parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
+    parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
+    parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
+
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=1e-3, help='Learning rate')
@@ -71,7 +76,7 @@ def build_argparse():
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_lemmatizer.pt", help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
@@ -87,20 +92,34 @@ def parse_args(args=None):
     if args.wandb_name:
         args.wandb = True
 
+    args = vars(args)
+    # when building the vocab, we keep track of the original language name
+    lang = args['shorthand'].split("_")[0] if args['shorthand'] else ""
+    args['lang'] = lang
     return args
 
 def main(args=None):
     args = parse_args(args=args)
 
-    utils.set_random_seed(args.seed)
+    utils.set_random_seed(args['seed'])
 
-    args = vars(args)
     logger.info("Running lemmatizer in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
         train(args)
     else:
         evaluate(args)
+
+def build_model_filename(args):
+    embedding = "nocharlm"
+    if args['charlm'] and args['charlm_forward_file']:
+        embedding = "charlm"
+    model_file = args['save_name'].format(shorthand=args['shorthand'],
+                                          embedding=embedding)
+    model_dir = os.path.split(model_file)[0]
+    if not model_dir.startswith(args['save_dir']):
+        model_file = os.path.join(args['save_dir'], model_file)
+    return model_file
 
 def train(args):
     # load data
@@ -114,10 +133,8 @@ def train(args):
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
 
     utils.ensure_dir(args['save_dir'])
-    if args['save_name']:
-        model_file = os.path.join(args['save_dir'], args['save_name'])
-    else:
-        model_file = os.path.join(args['save_dir'], '{}_lemmatizer.pt'.format(args['lang']))
+    model_file = build_model_filename(args)
+    logger.info("Using full savename: %s", model_file)
 
     # pred and gold path
     system_pred_file = args['output_file']
@@ -149,7 +166,7 @@ def train(args):
     else:
         if args['wandb']:
             import wandb
-            wandb_name = args['wandb_name'] if args['wandb_name'] else "%s_lemmatizer" % args['lang']
+            wandb_name = args['wandb_name'] if args['wandb_name'] else "%s_lemmatizer" % args['shorthand']
             wandb.init(name=wandb_name, config=args)
             wandb.run.define_metric('train_loss', summary='min')
             wandb.run.define_metric('dev_score', summary='max')
@@ -229,13 +246,10 @@ def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
-    if args['save_name']:
-        model_file = os.path.join(args['save_dir'], args['save_name'])
-    else:
-        model_file = os.path.join(args['save_dir'], '{}_lemmatizer.pt'.format(args['lang']))
+    model_file = build_model_filename(args)
 
     # load model
-    trainer = Trainer(model_file=model_file, device=args['device'])
+    trainer = Trainer(model_file=model_file, device=args['device'], args=args)
     loaded_args, vocab = trainer.args, trainer.vocab
 
     for k in args:
@@ -249,7 +263,7 @@ def evaluate(args):
 
     # skip eval if dev data does not exist
     if len(batch) == 0:
-        logger.warning("Skip evaluation because no dev data is available...\nLemma score:\n{} ".format(args['lang']))
+        logger.warning("Skip evaluation because no dev data is available...\nLemma score:\n{} ".format(args['shorthand']))
         return
 
     dict_preds = trainer.predict_dict(batch.doc.get([TEXT, UPOS]))
@@ -277,7 +291,7 @@ def evaluate(args):
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
-        logger.info("Finished evaluation\nLemma score:\n{} {:.2f}".format(args['lang'], score*100))
+        logger.info("Finished evaluation\nLemma score:\n{} {:.2f}".format(args['shorthand'], score*100))
 
 if __name__ == '__main__':
     main()

@@ -376,6 +376,7 @@ def process_defaults(args):
                 elif processor == 'constituency': package = constituency_package
                 elif processor == 'langid': package = 'ud' 
                 elif processor == 'tokenize' and lang in default_tokenizer: package = default_tokenizer[lang]
+                elif processor == 'lemma': package = ud_package + "_nocharlm"
                 else: package = ud_package
 
                 filename = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')

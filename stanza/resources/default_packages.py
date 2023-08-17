@@ -97,6 +97,8 @@ no_pretrain_languages = set([
     "cop",
     "orv",
     "pcm",
+    "qaf",   # the QAF treebank is code switched and Romanized, so not easy to reuse existing resources
+    "qpm",   # have talked about deriving this from a language neighborinig to Pomak, but that hasn't happened yet
     "qtd",
     "swl",
 ])
@@ -132,6 +134,8 @@ specific_default_pretrains = {
     "gl":      "conll17",
     "got":     "fasttextwiki",
     "grc":     "conll17",
+    "gv":      "fasttext157",
+    "hbo":     "utah",
     "he":      "conll17",
     "hi":      "conll17",
     "hr":      "conll17",
@@ -146,6 +150,7 @@ specific_default_pretrains = {
     "kk":      "fasttext157",
     "kmr":     "fasttextwiki",
     "ko":      "conll17",
+    "ky":      "fasttext157",
     "la":      "conll17",
     "lij":     "fasttextwiki",
     "lt":      "fasttextwiki",
@@ -297,6 +302,8 @@ pos_charlms = {
 }
 
 depparse_charlms = copy.deepcopy(pos_charlms)
+
+lemma_charlms = copy.deepcopy(pos_charlms)
 
 ner_charlms = {
     "en": {

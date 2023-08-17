@@ -90,7 +90,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
 
 def main():
-    common.main(run_treebank, "tokenize", "tokenizer")
+    common.main(run_treebank, "tokenize", "tokenizer", sub_argparse=tokenizer.build_argparse())
         
 if __name__ == "__main__":
     main()

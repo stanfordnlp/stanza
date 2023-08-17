@@ -43,10 +43,12 @@ def add_specific_args(parser) -> None:
                         help='Exact name of the pretrain file to read')
     parser.add_argument('--tagger_model', type=str, default=None,
                         help='Tagger save file to use.  If not specified, order searched will be saved/models, then $STANZA_RESOURCES_DIR')
+    parser.add_argument('--no_download_tagger', default=True, dest='download_tagger', action='store_false',
+                        help="Don't try to automatically download a tagger for retagging the dependencies.  Will fail to make silver tags if there is no tagger model to be found")
     add_charlm_args(parser)
 # fmt: on
 
-def choose_tagger_model(short_language, dataset, tagger_model):
+def choose_tagger_model(short_language, dataset, tagger_model, args):
     """
     Preferentially chooses a retrained tagger model, but tries to download one if that doesn't exist
     """
@@ -56,6 +58,9 @@ def choose_tagger_model(short_language, dataset, tagger_model):
     save_path = os.path.join("saved_models", "pos", "%s_%s_tagger.pt" % (short_language, dataset))
     if os.path.exists(save_path):
         return save_path
+
+    if not args.download_tagger:
+        return None
 
     # TODO: just create a Pipeline for the retagging instead?
     pos_path = os.path.join(DEFAULT_MODEL_DIR, short_language, "pos", dataset + ".pt")
@@ -80,7 +85,11 @@ def process_treebank(treebank, model_type, paths, args) -> None:
         # fmt: on
 
         # perhaps download a tagger if one doesn't already exist
-        tagger_model = choose_tagger_model(short_language, dataset, args.tagger_model)
+        tagger_model = choose_tagger_model(short_language, dataset, args.tagger_model, args)
+        if tagger_model is None:
+            raise FileNotFoundError("Cannot find a tagger for language %s, dataset %s - you can specify one with the --tagger_model flag")
+        else:
+            logger.info("Using tagger model in %s for %s_%s", tagger_model, short_language, dataset)
         tagger_dir, tagger_name = os.path.split(tagger_model)
         base_args = base_args + ['--save_dir', tagger_dir, '--save_name', tagger_name]
 

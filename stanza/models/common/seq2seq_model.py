@@ -18,9 +18,15 @@ logger = logging.getLogger('stanza')
 class Seq2SeqModel(nn.Module):
     """
     A complete encoder-decoder model, with optional attention.
+
+    A parent class which makes use of the contextual_embedding (such as a charlm)
+    can make use of unsaved_modules when saving.
     """
-    def __init__(self, args, emb_matrix=None):
+    def __init__(self, args, emb_matrix=None, contextual_embedding=None):
         super().__init__()
+
+        self.unsaved_modules = []
+
         self.vocab_size = args['vocab_size']
         self.emb_dim = args['emb_dim']
         self.hidden_dim = args['hidden_dim']
@@ -32,6 +38,7 @@ class Seq2SeqModel(nn.Module):
         self.top = args.get('top', 1e10)
         self.args = args
         self.emb_matrix = emb_matrix
+        self.add_unsaved_module("contextual_embedding", contextual_embedding)
 
         logger.debug("Building an attentional Seq2Seq model...")
         logger.debug("Using a Bi-LSTM encoder")
@@ -50,7 +57,10 @@ class Seq2SeqModel(nn.Module):
         self.emb_drop = nn.Dropout(self.emb_dropout)
         self.drop = nn.Dropout(self.dropout)
         self.embedding = nn.Embedding(self.vocab_size, self.emb_dim, self.pad_token)
-        self.encoder = nn.LSTM(self.emb_dim, self.enc_hidden_dim, self.nlayers, \
+        self.input_dim = self.emb_dim
+        if self.contextual_embedding is not None:
+            self.input_dim += self.contextual_embedding.hidden_dim()
+        self.encoder = nn.LSTM(self.input_dim, self.enc_hidden_dim, self.nlayers, \
                 bidirectional=True, batch_first=True, dropout=self.dropout if self.nlayers > 1 else 0)
         self.decoder = LSTMAttention(self.emb_dim, self.dec_hidden_dim, \
                 batch_first=True, attn_type=self.args['attn_type'])
@@ -73,6 +83,10 @@ class Seq2SeqModel(nn.Module):
         self.register_buffer('SOS_tensor', SOS_tensor)
 
         self.init_weights()
+
+    def add_unsaved_module(self, name, module):
+        self.unsaved_modules += [name]
+        setattr(self, name, module)
 
     def init_weights(self):
         # initialize embeddings
@@ -158,7 +172,7 @@ class Seq2SeqModel(nn.Module):
 
         return log_probs, dec_hidden
 
-    def embed(self, src, src_mask, pos):
+    def embed(self, src, src_mask, pos, raw):
         enc_inputs = self.emb_drop(self.embedding(src))
         batch_size = enc_inputs.size(0)
         if self.use_pos:
@@ -167,12 +181,18 @@ class Seq2SeqModel(nn.Module):
             enc_inputs = torch.cat([pos_inputs.unsqueeze(1), enc_inputs], dim=1)
             pos_src_mask = src_mask.new_zeros([batch_size, 1])
             src_mask = torch.cat([pos_src_mask, src_mask], dim=1)
+        if raw is not None and self.contextual_embedding is not None:
+            raw_inputs = self.contextual_embedding(raw)
+            if self.use_pos:
+                raw_zeros = raw_inputs.new_zeros((raw_inputs.shape[0], 1, raw_inputs.shape[2]))
+                raw_inputs = torch.cat([raw_inputs, raw_zeros], dim=1)
+            enc_inputs = torch.cat([enc_inputs, raw_inputs], dim=2)
         src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
         return enc_inputs, batch_size, src_lens, src_mask
 
-    def forward(self, src, src_mask, tgt_in, pos=None):
+    def forward(self, src, src_mask, tgt_in, pos=None, raw=None):
         # prepare for encoder/decoder
-        enc_inputs, batch_size, src_lens, src_mask = self.embed(src, src_mask, pos)
+        enc_inputs, batch_size, src_lens, src_mask = self.embed(src, src_mask, pos, raw)
 
         # encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
@@ -194,9 +214,9 @@ class Seq2SeqModel(nn.Module):
             return log_probs
         return log_probs.view(logits.size(0), logits.size(1), logits.size(2))
 
-    def predict_greedy(self, src, src_mask, pos=None):
+    def predict_greedy(self, src, src_mask, pos=None, raw=None):
         """ Predict with greedy decoding. """
-        enc_inputs, batch_size, src_lens, src_mask = self.embed(src, src_mask, pos)
+        enc_inputs, batch_size, src_lens, src_mask = self.embed(src, src_mask, pos, raw)
 
         # encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)
@@ -231,12 +251,12 @@ class Seq2SeqModel(nn.Module):
                         output_seqs[i].append(token)
         return output_seqs, edit_logits
 
-    def predict(self, src, src_mask, pos=None, beam_size=5):
+    def predict(self, src, src_mask, pos=None, beam_size=5, raw=None):
         """ Predict with beam search. """
         if beam_size == 1:
-            return self.predict_greedy(src, src_mask, pos=pos)
+            return self.predict_greedy(src, src_mask, pos, raw)
 
-        enc_inputs, batch_size, src_lens, src_mask = self.embed(src, src_mask, pos)
+        enc_inputs, batch_size, src_lens, src_mask = self.embed(src, src_mask, pos, raw)
 
         # (1) encode source
         h_in, (hn, cn) = self.encode(enc_inputs, src_lens)

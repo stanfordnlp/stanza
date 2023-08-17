@@ -98,7 +98,7 @@ def run_dataset(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_dataset, "classifier", "classifier", add_sentiment_args)
+    common.main(run_dataset, "classifier", "classifier", add_sentiment_args, classifier.build_argparse())
 
 if __name__ == "__main__":
     main()

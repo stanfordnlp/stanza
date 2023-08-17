@@ -25,7 +25,7 @@ def parse_args(args=None):
     parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
-    parser.add_argument('--lang', type=str, help='Language')
+    parser.add_argument('--shorthand', type=str, help='Shorthand')
 
     parser.add_argument('--batch_size', type=int, default=50)
     parser.add_argument('--seed', type=int, default=1234)
@@ -60,7 +60,7 @@ def main(args=None):
         _, _, score = scorer.score(system_pred_file, gold_file)
 
         logger.info("Lemma score:")
-        logger.info("{} {:.2f}".format(args['lang'], score*100))
+        logger.info("{} {:.2f}".format(args['shorthand'], score*100))
 
 if __name__ == '__main__':
     main()

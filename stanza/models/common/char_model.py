@@ -115,6 +115,9 @@ def build_charlm_vocab(path, cutoff=0):
     vocab = CharVocab(data) # skip cutoff argument because this has been dealt with
     return vocab
 
+CHARLM_START = "\n"
+CHARLM_END = " "
+
 class CharacterLanguageModel(nn.Module):
 
     def __init__(self, args, vocab, pad=False, is_forward_lm=True):
@@ -162,13 +165,25 @@ class CharacterLanguageModel(nn.Module):
                 res = pad_packed_sequence(res, batch_first=True)[0]
         return res
 
+    def per_char_representation(self, words):
+        device = next(self.parameters()).device
+        vocab = self.char_vocab()
+
+        all_data = [(vocab.map(word), len(word), idx) for idx, word in enumerate(words)]
+        all_data.sort(key=itemgetter(1), reverse=True)
+        chars = [x[0] for x in all_data]
+        char_lens = [x[1] for x in all_data]
+        char_tensor = get_long_tensor(chars, len(chars), pad_id=vocab.unit2id(CHARLM_END)).to(device=device)
+        with torch.no_grad():
+            output, _, _ = self.forward(char_tensor, char_lens)
+            output = [x[:y, :] for x, y in zip(output, char_lens)]
+            output = unsort(output, [x[2] for x in all_data])
+        return output
+
     def build_char_representation(self, sentences):
         """
         Return values from this charlm for a list of list of words
         """
-        CHARLM_START = "\n"
-        CHARLM_END = " "
-
         forward = self.is_forward_lm
         vocab = self.char_vocab()
         device = next(self.parameters()).device
@@ -191,6 +206,7 @@ class CharacterLanguageModel(nn.Module):
 
         all_data.sort(key=itemgetter(2), reverse=True)
         chars, char_offsets, char_lens, orig_idx = tuple(zip(*all_data))
+        # TODO: can this be faster?
         chars = get_long_tensor(chars, len(all_data), pad_id=vocab.unit2id(CHARLM_END)).to(device=device)
 
         with torch.no_grad():
@@ -249,6 +265,31 @@ class CharacterLanguageModel(nn.Module):
         if 'state_dict' in state:
             return cls.from_full_state(state, finetune)
         return cls.from_full_state(state['model'], finetune)
+
+class CharacterLanguageModelWordAdapter(nn.Module):
+    """
+    Adapts a character model to return embeddings for each character in a word
+
+    TODO: multiple charlms, eg, forward & back
+    """
+    def __init__(self, charlms):
+        super().__init__()
+        self.charlms = charlms
+
+    def forward(self, words):
+        words = [CHARLM_START + x + CHARLM_END for x in words]
+        padded_reps = []
+        for charlm in self.charlms:
+            rep = charlm.per_char_representation(words)
+            padded_rep = torch.zeros(len(rep), max(x.shape[0] for x in rep), rep[0].shape[1], dtype=rep[0].dtype, device=rep[0].device)
+            for idx, row in enumerate(rep):
+                padded_rep[idx, :row.shape[0], :] = row
+            padded_reps.append(padded_rep)
+        padded_rep = torch.cat(padded_reps, dim=2)
+        return padded_rep
+
+    def hidden_dim(self):
+        return sum(charlm.hidden_dim() for charlm in self.charlms)
 
 class CharacterLanguageModelTrainer():
     def __init__(self, model, params, optimizer, criterion, scheduler, epoch=1, global_step=0):

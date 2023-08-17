@@ -144,7 +144,7 @@ DEFAULT_LEARNING_RHO = 0.9
 DEFAULT_MOMENTUM = { "madgrad": 0.9, "sgd": 0.9 }
 DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.0001, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 2e-6 }
 
-def build_parser():
+def build_argparse():
     """
     Build the argparse for the classifier.
 
@@ -289,7 +289,7 @@ def parse_args(args=None):
     Add arguments for building the classifier.
     Parses command line args and returns the result.
     """
-    parser = build_parser()
+    parser = build_argparse()
     args = parser.parse_args(args)
 
     if args.wandb_name:

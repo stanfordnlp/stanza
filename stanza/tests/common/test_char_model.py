@@ -119,7 +119,6 @@ class TestCharModel:
                     '--epochs', '2',
                     '--cutoff', '1',
                     '--batch_size', '%d' % len(fake_text_1),
-                    '--lang', 'en',
                     '--shorthand', 'en_test',
                     '--save_dir', tempdir,
                     '--save_name', save_name,

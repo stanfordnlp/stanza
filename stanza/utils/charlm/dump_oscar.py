@@ -70,9 +70,16 @@ def main():
         split_names = list(dataset.keys())
         if len(split_names) > 1:
             raise ValueError("Unexpected split_names: {}".format(split_names))
-        dataset = dataset[split_names[0]]['text']
-        size_in_bytes = sum(len(x) for x in dataset)
-        process_item = lambda x: x
+        # it's not clear if some languages don't support size_in_bytes,
+        # or if there was an update to datasets which now allows that
+        #
+        # previously we did:
+        #  dataset = dataset[split_names[0]]['text']
+        #  size_in_bytes = sum(len(x) for x in dataset)
+        #  process_item = lambda x: x
+        dataset = dataset[split_names[0]]
+        size_in_bytes = dataset.info.size_in_bytes
+        process_item = lambda x: x['text']
     else:
         raise AssertionError("Unknown version: %s" % args.version)
 

@@ -8,7 +8,7 @@ import tempfile
 
 from enum import Enum
 
-from stanza.resources.default_packages import default_charlms, pos_charlms
+from stanza.resources.default_packages import default_charlms, lemma_charlms, pos_charlms
 from stanza.models.common.constant import treebank_to_short_name
 from stanza.models.common.utils import ud_scores
 from stanza.resources.common import download, DEFAULT_MODEL_DIR, UnknownLanguageError
@@ -302,6 +302,8 @@ def build_argparse(sub_argparse=None):
     parser.add_argument('--save_dir', type=str, default=None, help="Root dir for saving models.  If set, will override the model's default.")
     parser.add_argument('--save_name', type=str, default=None, help="Base name for saving models.  If set, will override the model's default.")
 
+    parser.add_argument('--charlm_only', action='store_true', default=False, help='When asking for ud_all, filter the ones which have charlms')
+
     parser.add_argument('--force', dest='force', action='store_true', default=False, help='Retrain existing models')
     return parser
 
@@ -309,7 +311,7 @@ def add_charlm_args(parser):
     parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
     parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
 
-def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argparse=None):
+def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argparse=None, build_model_filename=None, choose_charlm_method=None):
     """
     A main program for each of the run_xyz scripts
 
@@ -354,6 +356,11 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
             treebank = treebank[:-1]
         if treebank.lower() in ('ud_all', 'all_ud'):
             ud_treebanks = common.get_ud_treebanks(paths["UDBASE"])
+            if choose_charlm_method is not None and command_args.charlm_only:
+                logger.info("Filtering ud_all treebanks to only those which can use charlm for this model")
+                ud_treebanks = [x for x in ud_treebanks
+                                if choose_charlm_method(*treebank_to_short_name(x).split("_", 1), 'default') is not None]
+            logger.info("Expanding %s to %s", treebank, " ".join(ud_treebanks))
             treebanks.extend(ud_treebanks)
         else:
             treebanks.append(treebank)
@@ -378,24 +385,34 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
                     save_name_filename = "%s_%s" % (short_name, save_name_filename)
                     save_name = os.path.join(save_name_dir, save_name_filename)
                     logger.info("Save file for %s model for %s: %s", short_name, treebank, save_name)
-            else:
+                save_name_args = ['--save_name', save_name]
+            # some run scripts can build the model filename
+            # in order to check for models that are already created
+            elif build_model_filename is None:
                 save_name = "%s_%s.pt" % (short_name, model_name)
                 logger.info("Save file for %s model: %s", short_name, save_name)
-            save_name_args = ['--save_name', save_name]
-
-        if mode == Mode.TRAIN and not command_args.force and model_name != 'ete':
-            if command_args.save_dir:
-                model_path = os.path.join(command_args.save_dir, save_name)
+                save_name_args = ['--save_name', save_name]
             else:
-                save_dir = os.path.join("saved_models", model_dir)
-                save_name_args.extend(["--save_dir", save_dir])
-                model_path = os.path.join(save_dir, save_name)
+                save_name_args = []
 
-            if os.path.exists(model_path):
-                logger.info("%s: %s exists, skipping!" % (treebank, model_path))
-                continue
-            else:
-                logger.info("%s: %s does not exist, training new model" % (treebank, model_path))
+            if mode == Mode.TRAIN and not command_args.force:
+                if build_model_filename is not None:
+                    model_path = build_model_filename(paths, short_name, command_args, extra_args)
+                elif command_args.save_dir:
+                    model_path = os.path.join(command_args.save_dir, save_name)
+                else:
+                    save_dir = os.path.join("saved_models", model_dir)
+                    save_name_args.extend(["--save_dir", save_dir])
+                    model_path = os.path.join(save_dir, save_name)
+
+                if model_path is None:
+                    # this can happen with the identity lemmatizer, for example
+                    pass
+                elif os.path.exists(model_path):
+                    logger.info("%s: %s exists, skipping!" % (treebank, model_path))
+                    continue
+                else:
+                    logger.info("%s: %s does not exist, training new model" % (treebank, model_path))
 
         if command_args.temp_output and model_name != 'ete':
             with tempfile.NamedTemporaryFile() as temp_output_file:
@@ -564,4 +581,11 @@ def choose_pos_charlm(short_language, dataset, charlm):
     charlm == None is no charlm
     """
     return choose_charlm(short_language, dataset, charlm, default_charlms, pos_charlms)
+
+def choose_lemma_charlm(short_language, dataset, charlm):
+    """
+    charlm == "default" means the default charlm for this dataset or language
+    charlm == None is no charlm
+    """
+    return choose_charlm(short_language, dataset, charlm, default_charlms, lemma_charlms)
 

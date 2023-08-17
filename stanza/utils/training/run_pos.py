@@ -18,7 +18,7 @@ def add_pos_args(parser):
 
 # TODO: move this somewhere common
 def wordvec_args(short_language, dataset, extra_args):
-    if '--wordvec_pretrain_file' in extra_args:
+    if '--wordvec_pretrain_file' in extra_args or '--no_pretrain' in extra_args:
         return []
 
     if short_language in no_pretrain_languages:
@@ -132,7 +132,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_treebank, "pos", "tagger", add_pos_args)
+    common.main(run_treebank, "pos", "tagger", add_pos_args, tagger.build_argparse())
 
 if __name__ == "__main__":
     main()
