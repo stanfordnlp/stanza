@@ -218,14 +218,14 @@ ner_pretrains = {
         "germeval2014": "fasttextwiki",
     },
     "en": {
-        "anatem":       "craft",
-        "bc4chemd":     "craft",
-        "bc5cdr":       "craft",
-        "bionlp13cg":   "craft",
-        "jnlpba":       "craft",
-        "linnaeus":     "craft",
-        "ncbi_disease": "craft",
-        "s800":         "craft",
+        "anatem":       "biomed",
+        "bc4chemd":     "biomed",
+        "bc5cdr":       "biomed",
+        "bionlp13cg":   "biomed",
+        "jnlpba":       "biomed",
+        "linnaeus":     "biomed",
+        "ncbi_disease": "biomed",
+        "s800":         "biomed",
 
         "ontonotes":    "fasttextcrawl",
         # the stanza-train sample NER model should use the default NER pretrain
