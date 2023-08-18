@@ -312,30 +312,27 @@ def process_defaults(args):
         os.chdir(os.path.join(args.output_dir, lang))
         default_processors = {}
         if lang in allowed_empty_languages or lang in no_pretrain_languages:
-            default_dependencies = {}
+            pass
         else:
-            default_dependencies = {'pos': get_pos_dependencies(lang, ud_package),
-                                    'depparse': get_depparse_dependencies(lang, ud_package)}
-            pretrains_needed.update([dep['package'] for dep in default_dependencies['pos'] if dep['model'] == 'pretrain'])
-            pretrains_needed.update([dep['package'] for dep in default_dependencies['depparse'] if dep['model'] == 'pretrain'])
+            pos_dependencies = get_pos_dependencies(lang, ud_package)
+            depparse_dependencies = get_depparse_dependencies(lang, ud_package)
+            pretrains_needed.update([dep['package'] for dep in pos_dependencies if dep['model'] == 'pretrain'])
+            pretrains_needed.update([dep['package'] for dep in depparse_dependencies if dep['model'] == 'pretrain'])
 
         if lang in default_ners:
             ner_package = default_ners[lang]
             ner_dependencies = get_ner_dependencies(lang, ner_package)
             if ner_dependencies is not None:
-                default_dependencies['ner'] = ner_dependencies
                 pretrains_needed.update([dep['package'] for dep in ner_dependencies if dep['model'] == 'pretrain'])
         if lang in default_charlms:
             charlm_package = default_charlms[lang]
         if lang in default_sentiment:
             sentiment_package = default_sentiment[lang]
             sentiment_dependencies = get_sentiment_dependencies(lang, package)
-            default_dependencies['sentiment'] = sentiment_dependencies
             pretrains_needed.update([dep['package'] for dep in sentiment_dependencies if dep['model'] == 'pretrain'])
         if lang in default_constituency:
             constituency_package = default_constituency[lang]
             constituency_dependencies = get_con_dependencies(lang, constituency_package)
-            default_dependencies['constituency'] = constituency_dependencies
             pretrains_needed.update([dep['package'] for dep in constituency_dependencies if dep['model'] == 'pretrain'])
 
         # pretrain doesn't really need to be here, but by putting it here,
@@ -353,7 +350,6 @@ def process_defaults(args):
 
         if lang == 'multilingual':
             processors = ['langid']
-            default_dependencies = {}
 
         with zipfile.ZipFile(os.path.join('models', 'default.zip'), 'w', zipfile.ZIP_DEFLATED) as zipf:
             for processor in processors:
@@ -404,7 +400,6 @@ def process_defaults(args):
 
         default_md5 = get_md5(os.path.join(args.output_dir, lang, 'models', 'default.zip'))
         resources[lang]['default_processors'] = default_processors
-        resources[lang]['default_dependencies'] = default_dependencies
         resources[lang]['default_md5'] = default_md5
 
     print("Processed default model dependencies.  Writing resources.json")
