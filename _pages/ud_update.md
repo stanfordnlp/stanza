@@ -71,6 +71,17 @@ East Slavic, you can add that to the `no_pretrain_languages` set which
 currently resides in `stanza/resources/default_packages.py`
 (although there is no guarantee that map doesn't move somewhere else)
 
+### Add new default packages
+
+Any new languages will also need a default package marked in the appropriate resources file, probably
+`stanza/resources/default_packages.py`
+
+### Tokenizer models with dictionaries
+
+Some of the tokenizer models have dictionaries.  To get the best
+results, you will want to reuse the dictionaries, possibly by
+extracting them from the current models.
+
 ### Combined models
 
 There are some "combined" models which are composed of multiple UD
