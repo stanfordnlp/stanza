@@ -193,6 +193,30 @@ the fasttext vectors performed better for these tasks.
 | fasttextwiki | 94.47 | 78.28    | 73.15  | 62.65     |
 | vcwe         | 94.16 | 78.09    | 74.72  | 64.24     |
 
+### English
+
+For the biomed datasets, we use two sources of word vectors.
+
+The `craft` and `genia` datasets used word vectors published by
+bio.nlplab.org, specifically the `wikipedia-pubmed-and-PMC-w2v.bin` file
+[available here](http://evexdb.org/pmresources/vec-space-models/)
+trimmed to 100,000 vectors.
+
+```
+@inproceedings{Pyysalo2013DistributionalSR,
+  title={Distributional Semantics Resources for Biomedical Text Processing},
+  author={Sampo Pyysalo and Filip Ginter and Hans Moen and Tapio Salakoski and Sophia Ananiadou},
+  year={2013},
+  url={https://api.semanticscholar.org/CorpusID:3103489}
+}
+```
+
+The `mimic` dataset used word vectors specifically trained on the Mimic data,
+`BioWordVec_PubMed_MIMICIII_d200.vec.bin`, trimmed to 100,000 vectors,
+[available here](https://github.com/ncbi-nlp/BioSentVec#biowordvec)
+
+Zhang Y, Chen Q, Yang Z, Lin H, Lu Z. [BioWordVec, improving biomedical word embeddings with subword information and MeSH.](https://www.nature.com/articles/s41597-019-0055-0) Sci Data. 2019;6(1):52. Published 2019 May 10. doi:10.1038/s41597-019-0055-0
+
 ### Erzya
 
 For Erzya, we used [vectors trained by Khalid Alnajjar](https://github.com/mokha/semantics) as part of a project to preserve endangered languages:
