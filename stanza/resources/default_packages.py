@@ -196,13 +196,10 @@ for lang in specific_default_pretrains.keys():
     default_pretrains[lang] = specific_default_pretrains[lang]
 
 
-# TODO: eventually we want to
-#   - rename all the pretrains to indicate where they are from
-#   - only have special / unique names for the few which need it, such as the bio pretrains
 pos_pretrains = {
     "en": {
-        "combined_roberta": "combined",
-        "combined_electra": "combined",
+        "craft":            "biomed",
+        "genia":            "biomed",
     },
 }
 
