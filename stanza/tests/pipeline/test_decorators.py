@@ -45,7 +45,7 @@ EN_DOC_COOL_LEMMAS = '''<Token id=1;words=[<Word id=1;text=This;lemma=cool;upos=
 
 <Token id=1;words=[<Word id=1;text=This;lemma=cool;upos=PRON;xpos=DT;feats=Number=Sing|PronType=Dem>]>
 <Token id=2;words=[<Word id=2;text=is;lemma=cool;upos=AUX;xpos=VBZ;feats=Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin>]>
-<Token id=3;words=[<Word id=3;text=another;lemma=cool;upos=DET;xpos=DT>]>
+<Token id=3;words=[<Word id=3;text=another;lemma=cool;upos=DET;xpos=DT;feats=PronType=Art>]>
 <Token id=4;words=[<Word id=4;text=!;lemma=cool;upos=PUNCT;xpos=.>]>'''
 
 @register_processor("lowercase")
@@ -115,9 +115,10 @@ class CoolLemmatizer(ProcessorVariant):
         return document
 
 def test_register_processor_variant_with_override():
-    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors={"tokenize": "combined", "pos": "combined", "lemma": "cool"}, package=None)
+    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors={"tokenize": "combined", "pos": "combined_nocharlm", "lemma": "cool"}, package=None)
     doc = nlp(EN_DOC)
-    assert EN_DOC_COOL_LEMMAS == '\n\n'.join(sent.tokens_string() for sent in doc.sentences)
+    result = '\n\n'.join(sent.tokens_string() for sent in doc.sentences)
+    assert EN_DOC_COOL_LEMMAS == result
 
 def test_register_nonprocessor_variant():
     with pytest.raises(ProcessorRegisterException):
