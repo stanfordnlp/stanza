@@ -166,6 +166,12 @@ def get_con_dependencies(lang, package):
 
     return dependencies
 
+def get_pos_charlm_package(lang, package):
+    if lang in pos_charlms and package in pos_charlms[lang]:
+        return pos_charlms[lang][package]
+    else:
+        return default_charlms.get(lang, None)
+
 def get_pos_dependencies(lang, package):
     # TODO: group pretrains by the type of pretrain
     # that will greatly cut down on the number of number of copies of
@@ -179,10 +185,7 @@ def get_pos_dependencies(lang, package):
     else:
         dependencies = [{'model': 'pretrain', 'package': package}]
 
-    if lang in pos_charlms and package in pos_charlms[lang]:
-        charlm_package = pos_charlms[lang][package]
-    else:
-        charlm_package = default_charlms.get(lang, None)
+    charlm_package = get_pos_charlm_package(lang, package)
 
     if charlm_package is not None:
         dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
@@ -295,6 +298,13 @@ def process_dirs(args):
     print("Processed initial model directories.  Writing preliminary resources.json")
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
+def get_default_pos_package(lang, ud_package):
+    charlm_package = get_pos_charlm_package(lang, ud_package)
+    if charlm_package is not None:
+        return ud_package + "_charlm"
+    if lang in no_pretrain_languages:
+        return ud_package + "_nopretrain"
+    return ud_package + "_nocharlm"
 
 def process_defaults(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
@@ -373,6 +383,7 @@ def process_defaults(args):
                 elif processor == 'langid': package = 'ud' 
                 elif processor == 'tokenize' and lang in default_tokenizer: package = default_tokenizer[lang]
                 elif processor == 'lemma': package = ud_package + "_nocharlm"
+                elif processor == 'pos': package = get_default_pos_package(lang, ud_package)
                 else: package = ud_package
 
                 filename = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
