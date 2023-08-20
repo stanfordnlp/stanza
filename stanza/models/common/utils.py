@@ -480,3 +480,22 @@ def log_training_args(args, args_logger, name="training"):
     keys = sorted(args.keys())
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
     args_logger.info('ARGS USED AT %s TIME:\n%s\n', name.upper(), '\n'.join(log_lines))
+
+def embedding_name(args):
+    """
+    Return the generic name of the biggest embedding used by a model.
+
+    Used by POS and depparse, for example.
+
+    TODO: Probably will make the transformer names a bit more informative,
+    such as electra, roberta, etc.  Maybe even phobert for VI, for example
+    """
+    embedding = "nocharlm"
+    if args['wordvec_pretrain_file'] is None and args['wordvec_file'] is None:
+        embedding = "nopretrain"
+    if args['charlm'] and args['charlm_forward_file']:
+        embedding = "charlm"
+    if args['bert_model']:
+        embedding = "trans"
+
+    return embedding

@@ -94,7 +94,7 @@ def build_argparse():
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/depparse', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_parser.pt", help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
@@ -112,14 +112,14 @@ def parse_args(args=None):
     if args.wandb_name:
         args.wandb = True
 
+    args = vars(args)
     return args
 
 def main(args=None):
     args = parse_args(args=args)
 
-    utils.set_random_seed(args.seed)
+    utils.set_random_seed(args['seed'])
 
-    args = vars(args)
     logger.info("Running parser in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
@@ -129,12 +129,14 @@ def main(args=None):
 
 # TODO: refactor with tagger
 def model_file_name(args):
-    if args['save_name'] is not None:
-        save_name = args['save_name']
-    else:
-        save_name = args['shorthand'] + "_parser.pt"
+    embedding = utils.embedding_name(args)
+    model_file = args['save_name'].format(shorthand=args['shorthand'],
+                                          embedding=embedding)
+    model_dir = os.path.split(model_file)[0]
 
-    return os.path.join(args['save_dir'], save_name)
+    if not os.path.exists(os.path.join(args['save_dir'], model_file)) and os.path.exists(model_file):
+        return model_file
+    return os.path.join(args['save_dir'], model_file)
 
 # TODO: refactor with everywhere
 def load_pretrain(args):

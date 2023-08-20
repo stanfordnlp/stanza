@@ -141,14 +141,7 @@ def main(args=None):
         evaluate(args)
 
 def model_file_name(args):
-    embedding = "nocharlm"
-    if args['wordvec_pretrain_file'] is None and args['wordvec_file'] is None:
-        embedding = "nopretrain"
-    if args['charlm'] and args['charlm_forward_file']:
-        embedding = "charlm"
-    if args['bert_model']:
-        embedding = "trans"
-
+    embedding = utils.embedding_name(args)
     model_file = args['save_name'].format(shorthand=args['shorthand'],
                                           embedding=embedding)
     model_dir = os.path.split(model_file)[0]
