@@ -568,7 +568,8 @@ TRANSFORMERS = {
     # or hfl/chinese-electra-base-discriminator
     # or hfl/chinese-electra-180g-large-discriminator,
     #   which works better than the below roberta on constituency
-    "zh-hans": "hfl/chinese-roberta-wwm-ext",
+    # "zh-hans": "hfl/chinese-roberta-wwm-ext",
+    "zh-hans": "hfl/chinese-electra-180g-large-discriminator",
 }
 
 TRANSFORMER_LAYERS = {
@@ -606,7 +607,7 @@ TRANSFORMER_NICKNAMES = {
     "dbmdz/electra-base-italian-xxl-cased-discriminator": "electra",
 
     # pl
-    "hfl/chinese-roberta-wwm-ext": "roberta",
+    "allegro/herbert-base-cased": "herbert",
 
     # pt
     "neuralmind/bert-large-portuguese-cased": "bert",
@@ -619,6 +620,6 @@ TRANSFORMER_NICKNAMES = {
     "vinai/phobert-large": "phobert-large",
 
     # zh
-    "allegro/herbert-base-cased": "herbert",
-    "hfl/chinese-electra-180g-large-discriminator": "electra",
+    "hfl/chinese-roberta-wwm-ext": "roberta",
+    "hfl/chinese-electra-180g-large-discriminator": "electra-large",
 }
