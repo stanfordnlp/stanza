@@ -42,6 +42,12 @@ DATASET_EXTRA_ARGS = {
 
 logger = logging.getLogger('stanza')
 
+def add_ner_args(parser):
+    add_charlm_args(parser)
+
+    parser.add_argument('--use_bert', default=False, action="store_true", help='Use the default transformer for this language')
+
+
 def build_pretrain_args(language, dataset, charlm="default", extra_args=None, model_dir=DEFAULT_MODEL_DIR):
     """
     Returns one list with the args for this language & dataset's charlm and pretrained embedding
@@ -94,10 +100,7 @@ def run_treebank(mode, paths, treebank, short_name,
         #   --charlm --charlm_shorthand vi_conll17
         #   --dropout 0.6 --word_dropout 0.1 --locked_dropout 0.1 --char_dropout 0.1
         dataset_args = DATASET_EXTRA_ARGS.get(short_name, [])
-        if language in common.BERT:
-            bert_args = ['--bert_model', common.BERT.get(language)]
-        else:
-            bert_args = []
+        bert_args = common.choose_transformer(language, command_args, extra_args)
 
         train_args = ['--train_file', train_file,
                       '--eval_file', dev_file,
@@ -128,7 +131,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_treebank, "ner", "nertagger", add_charlm_args, ner_tagger.build_argparse())
+    common.main(run_treebank, "ner", "nertagger", add_ner_args, ner_tagger.build_argparse())
 
 if __name__ == "__main__":
     main()

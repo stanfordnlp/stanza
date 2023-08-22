@@ -57,11 +57,8 @@ def run_dataset(mode, paths, treebank, short_name,
 
     default_args = wordvec_args + charlm_args
 
-    if command_args.use_bert and '--bert_model' not in extra_args:
-        if language in common.BERT:
-            default_args.extend(['--bert_model', common.BERT.get(language)])
-        else:
-            logger.error("Transformer requested, but no default transformer for %s  Specify one using --bert_model" % language)
+    bert_args = common.choose_transformer(language, command_args, extra_args)
+    default_args += bert_args
 
     if mode == Mode.TRAIN:
         train_args = ['--save_name', "%s_classifier.pt" % short_name,

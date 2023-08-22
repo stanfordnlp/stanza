@@ -4,7 +4,7 @@ import os
 from stanza.models import parser
 
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_depparse_charlm
+from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_depparse_charlm, choose_transformer
 from stanza.utils.training.run_pos import wordvec_args
 
 from stanza.resources.default_packages import default_charlms, depparse_charlms
@@ -25,9 +25,7 @@ def build_model_filename(paths, short_name, command_args, extra_args):
     charlm = choose_depparse_charlm(short_language, dataset, command_args.charlm)
     charlm_args = build_charlm_args(short_language, charlm)
 
-    bert_args = []
-    if command_args.use_bert and '--bert_model' not in extra_args and short_language in common.BERT:
-        bert_args = ['--bert_model', common.BERT.get(short_language)]
+    bert_args = choose_transformer(short_language, command_args, extra_args, warn=False)
 
     train_args = ["--shorthand", short_name,
                   "--mode", "train"]
@@ -59,12 +57,7 @@ def run_treebank(mode, paths, treebank, short_name,
     charlm = choose_depparse_charlm(short_language, dataset, command_args.charlm)
     charlm_args = build_charlm_args(short_language, charlm)
 
-    bert_args = []
-    if command_args.use_bert and '--bert_model' not in extra_args:
-        if short_language in common.BERT:
-            bert_args = ['--bert_model', common.BERT.get(short_language)]
-        else:
-            logger.error("Transformer requested, but no default transformer for %s  Specify one using --bert_model" % short_language)
+    bert_args = choose_transformer(short_language, command_args, extra_args)
 
     if mode == Mode.TRAIN:
         if not os.path.exists(train_file):
