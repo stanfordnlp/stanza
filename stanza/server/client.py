@@ -20,8 +20,7 @@ import uuid
 
 from datetime import datetime
 from pathlib import Path
-
-from six.moves.urllib.parse import urlparse
+from urllib.parse import urlparse
 
 from stanza.protobuf import Document, parseFromDelimitedString, writeToDelimitedString, to_text
 __author__ = 'arunchaganty, kelvinguu, vzhong, wmonroe4'
