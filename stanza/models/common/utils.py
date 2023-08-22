@@ -20,6 +20,7 @@ import numpy as np
 
 from stanza.models.common.constant import lcode2lang
 import stanza.models.common.seq2seq_constant as constant
+from stanza.resources.default_packages import TRANSFORMER_NICKNAMES
 import stanza.utils.conll18_ud_eval as ud_eval
 from stanza.utils.conll18_ud_eval import UDError
 
@@ -496,6 +497,9 @@ def embedding_name(args):
     if args['charlm'] and args['charlm_forward_file']:
         embedding = "charlm"
     if args['bert_model']:
-        embedding = "trans"
+        if args['bert_model'] in TRANSFORMER_NICKNAMES:
+            embedding = TRANSFORMER_NICKNAMES[args['bert_model']]
+        else:
+            embedding = "transformer"
 
     return embedding

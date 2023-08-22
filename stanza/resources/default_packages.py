@@ -530,6 +530,14 @@ TRANSFORMERS = {
     # Musixmatch/umberto-commoncrawl-cased-v1:             98.56   98.45   98.13   97.62
     "it": "dbmdz/electra-base-italian-xxl-cased-discriminator",
 
+    # https://huggingface.co/allegro/herbert-base-cased
+    # Scores by entity on the NKJP NER task:
+    # no bert (dev/test): 88.64/88.75
+    # herbert-base-cased (dev/test): 91.48/91.02,
+    # herbert-large-cased (dev/test): 92.25/91.62
+    # sdadas/polish-roberta-large-v2 (dev/test): 92.66/91.22
+    "pl": "allegro/herbert-base-cased",
+
     # experiments on the cintil conparse dataset
     # ran a variety of transformer settings
     # found the following dev set scores after 400 iterations:
@@ -561,14 +569,6 @@ TRANSFORMERS = {
     # or hfl/chinese-electra-180g-large-discriminator,
     #   which works better than the below roberta on constituency
     "zh-hans": "hfl/chinese-roberta-wwm-ext",
-
-    # https://huggingface.co/allegro/herbert-base-cased
-    # Scores by entity on the NKJP NER task:
-    # no bert (dev/test): 88.64/88.75
-    # herbert-base-cased (dev/test): 91.48/91.02,
-    # herbert-large-cased (dev/test): 92.25/91.62
-    # sdadas/polish-roberta-large-v2 (dev/test): 92.66/91.22
-    "pl": "allegro/herbert-base-cased",
 }
 
 TRANSFORMER_LAYERS = {
@@ -577,3 +577,48 @@ TRANSFORMER_LAYERS = {
     "vi": 7,
 }
 
+TRANSFORMER_NICKNAMES = {
+    # da
+    "vesteinn/ScandiBERT": "scandibert",
+
+    # de
+    "dbmdz/bert-base-german-cased": "bert",
+
+    # en
+    "google/electra-large-discriminator": "electra",
+
+    # fa
+    "HooshvareLab/bert-base-parsbert-uncased": "parsbert",
+
+    # fi
+    "TurkuNLP/bert-base-finnish-cased-v1": "bert",
+
+    # he
+    "imvladikon/alephbertgimmel-base-512" : "alephbertgimmel",
+
+    # hy
+    "xlm-roberta-base": "roberta",
+
+    # id
+    "indolem/indobert-base-uncased": "indobert",
+
+    # it
+    "dbmdz/electra-base-italian-xxl-cased-discriminator": "electra",
+
+    # pl
+    "hfl/chinese-roberta-wwm-ext": "roberta",
+
+    # pt
+    "neuralmind/bert-large-portuguese-cased": "bert",
+
+    # tr
+    "dbmdz/bert-base-turkish-128k-cased": "bert",
+
+    # vi
+    "vinai/phobert-base": "phobert-base",
+    "vinai/phobert-large": "phobert-large",
+
+    # zh
+    "allegro/herbert-base-cased": "herbert",
+    "hfl/chinese-electra-180g-large-discriminator": "electra",
+}
