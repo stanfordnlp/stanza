@@ -244,10 +244,7 @@ def get_depparse_dependencies(lang, package):
     else:
         dependencies = [{'model': 'pretrain', 'package': package}]
 
-    if lang in depparse_charlms and package in depparse_charlms[lang]:
-        charlm_package = depparse_charlms[lang][package]
-    else:
-        charlm_package = default_charlms.get(lang, None)
+    charlm_package = get_depparse_charlm_package(lang, package)
 
     if charlm_package is not None:
         dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
@@ -267,7 +264,10 @@ def get_ner_dependencies(lang, package):
     if pretrain_package is not None:
         dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
 
-    charlm_package = get_depparse_charlm_package(lang, package)
+    if lang not in ner_charlms or package not in ner_charlms[lang]:
+        charlm_package = default_charlms.get(lang, None)
+    else:
+        charlm_package = ner_charlms[lang][package]
 
     if charlm_package is not None:
         dependencies = dependencies + [{'model': 'forward_charlm', 'package': charlm_package},
