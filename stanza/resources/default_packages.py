@@ -586,7 +586,9 @@ TRANSFORMER_NICKNAMES = {
     "dbmdz/bert-base-german-cased": "bert",
 
     # en
-    "google/electra-large-discriminator": "electra",
+    "bert-base-multilingual-cased": "mbert",
+    "xlm-roberta-large": "xlm-roberta-large",
+    "google/electra-large-discriminator": "electra-large",
 
     # fa
     "HooshvareLab/bert-base-parsbert-uncased": "parsbert",
