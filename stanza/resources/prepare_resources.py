@@ -19,7 +19,7 @@ import zipfile
 
 from stanza import __resources_version__
 from stanza.models.common.constant import lcode2lang, two_to_three_letters
-from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, specific_default_pretrains, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms
+from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, specific_default_pretrains, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms, lemma_charlms
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -167,15 +167,18 @@ def get_con_dependencies(lang, package):
     return dependencies
 
 def get_pos_charlm_package(lang, package):
+    pieces = package.split("_", 1)
+    if len(pieces) > 1:
+        if pieces[1] == 'nocharlm':
+            return None
+        package = pieces[0]
+
     if lang in pos_charlms and package in pos_charlms[lang]:
         return pos_charlms[lang][package]
     else:
         return default_charlms.get(lang, None)
 
 def get_pos_dependencies(lang, package):
-    # TODO: group pretrains by the type of pretrain
-    # that will greatly cut down on the number of number of copies of
-    # pretrains we have floating around
     if lang in no_pretrain_languages:
         dependencies = []
     elif lang in pos_pretrains and package in pos_pretrains[lang]:
@@ -192,6 +195,44 @@ def get_pos_dependencies(lang, package):
         dependencies.append({'model': 'backward_charlm', 'package': charlm_package})
 
     return dependencies
+
+# TODO: refactor
+def get_lemma_charlm_package(lang, package):
+    pieces = package.split("_", 1)
+    if len(pieces) > 1:
+        if pieces[1] == 'nocharlm':
+            return None
+        package = pieces[0]
+
+    if lang in lemma_charlms and package in lemma_charlms[lang]:
+        return lemma_charlms[lang][package]
+    else:
+        return default_charlms.get(lang, None)
+
+def get_lemma_dependencies(lang, package):
+    dependencies = []
+
+    charlm_package = get_lemma_charlm_package(lang, package)
+
+    if charlm_package is not None:
+        dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
+        dependencies.append({'model': 'backward_charlm', 'package': charlm_package})
+
+    return dependencies
+
+
+# TODO: refactor
+def get_depparse_charlm_package(lang, package):
+    pieces = package.split("_", 1)
+    if len(pieces) > 1:
+        if pieces[1] == 'nocharlm':
+            return None
+        package = pieces[0]
+
+    if lang in depparse_charlms and package in depparse_charlms[lang]:
+        return depparse_charlms[lang][package]
+    else:
+        return default_charlms.get(lang, None)
 
 def get_depparse_dependencies(lang, package):
     if lang in no_pretrain_languages:
@@ -226,10 +267,7 @@ def get_ner_dependencies(lang, package):
     if pretrain_package is not None:
         dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
 
-    if lang not in ner_charlms or package not in ner_charlms[lang]:
-        charlm_package = default_charlms.get(lang, None)
-    else:
-        charlm_package = ner_charlms[lang][package]
+    charlm_package = get_depparse_charlm_package(lang, package)
 
     if charlm_package is not None:
         dependencies = dependencies + [{'model': 'forward_charlm', 'package': charlm_package},
@@ -280,6 +318,8 @@ def process_dirs(args):
             dependencies = None
             if processor == 'depparse':
                 dependencies = get_depparse_dependencies(lang, package)
+            elif processor == 'lemma':
+                dependencies = get_lemma_dependencies(lang, package)
             elif processor == 'pos':
                 dependencies = get_pos_dependencies(lang, package)
             elif processor == 'ner':
@@ -300,6 +340,14 @@ def process_dirs(args):
 
 def get_default_pos_package(lang, ud_package):
     charlm_package = get_pos_charlm_package(lang, ud_package)
+    if charlm_package is not None:
+        return ud_package + "_charlm"
+    if lang in no_pretrain_languages:
+        return ud_package + "_nopretrain"
+    return ud_package + "_nocharlm"
+
+def get_default_depparse_package(lang, ud_package):
+    charlm_package = get_depparse_charlm_package(lang, ud_package)
     if charlm_package is not None:
         return ud_package + "_charlm"
     if lang in no_pretrain_languages:
@@ -384,6 +432,7 @@ def process_defaults(args):
                 elif processor == 'tokenize' and lang in default_tokenizer: package = default_tokenizer[lang]
                 elif processor == 'lemma': package = ud_package + "_nocharlm"
                 elif processor == 'pos': package = get_default_pos_package(lang, ud_package)
+                elif processor == 'depparse': package = get_default_depparse_package(lang, ud_package)
                 else: package = ud_package
 
                 filename = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
