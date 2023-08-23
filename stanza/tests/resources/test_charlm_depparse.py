@@ -11,7 +11,8 @@ def test_list_depparse():
     # if this test fails, find a different language which isn't in depparse_charlms
     assert "af" not in depparse_charlms
     assert "af" in default_charlms
-    assert "af_afribooms" in models
+    assert "af_afribooms_charlm" in models
+    assert "af_afribooms_nocharlm" in models
 
     # assert that it's picking up the models which do have specific charlms that aren't None
     # again, first make sure the default assumptions are true
@@ -22,6 +23,10 @@ def test_list_depparse():
     assert "craft" in depparse_charlms["en"]
     assert "mimic" in depparse_charlms["en"]
     # now, check the results
-    assert "en_ewt" in models
-    assert "en_mimic" in models
-    assert "en_craft" not in models
+    assert "en_ewt_charlm" in models
+    assert "en_ewt_nocharlm" in models
+    assert "en_mimic_charlm" in models
+    # haven't yet trained w/ and w/o for the bio models
+    assert "en_mimic_nocharlm" not in models
+    assert "en_craft_charlm" not in models
+    assert "en_craft_nocharlm" in models
