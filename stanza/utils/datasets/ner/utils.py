@@ -14,7 +14,7 @@ import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 
 SHARDS = ('train', 'dev', 'test')
 
-def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="bio", shard_names=SHARDS):
+def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="bio", shard_names=SHARDS, shards=SHARDS):
     """
     Convert BIO files to json
 
@@ -22,7 +22,7 @@ def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="b
     the same directory as the output files, in which case you can pass
     in same path for both base_input_path and base_output_path.
     """
-    for input_shard, output_shard in zip(shard_names, SHARDS):
+    for input_shard, output_shard in zip(shard_names, shards):
         input_filename = os.path.join(base_input_path, '%s.%s.%s' % (short_name, input_shard, suffix))
         if not os.path.exists(input_filename):
             alt_filename = os.path.join(base_input_path, '%s.%s' % (input_shard, suffix))
@@ -58,7 +58,7 @@ def write_sentences(output_filename, dataset):
                 fout.write("%s\t%s\n" % word)
             fout.write("\n")
 
-def write_dataset(datasets, output_dir, short_name, suffix="bio"):
+def write_dataset(datasets, output_dir, short_name, suffix="bio", shard_names=SHARDS, shards=SHARDS):
     """
     write all three pieces of a dataset to output_dir
 
@@ -68,14 +68,14 @@ def write_dataset(datasets, output_dir, short_name, suffix="bio"):
 
     after writing to .bio files, the files will be converted to .json
     """
-    for shard, dataset in zip(SHARDS, datasets):
+    for shard, dataset in zip(shard_names, datasets):
         output_filename = os.path.join(output_dir, "%s.%s.%s" % (short_name, shard, suffix))
         write_sentences(output_filename, dataset)
 
-    convert_bio_to_json(output_dir, output_dir, short_name, suffix)
+    convert_bio_to_json(output_dir, output_dir, short_name, suffix, shard_names=shard_names, shards=shards)
 
 
-def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comments=True, keep_broken_tags=False, keep_all_columns=False):
+def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comments=True, keep_broken_tags=False, keep_all_columns=False, separator="\t"):
     """
     Read sentences from a TSV file
 
@@ -99,11 +99,11 @@ def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comme
         if skip_comments and line.startswith("#"):
             continue
 
-        pieces = line.split("\t")
+        pieces = line.split(separator)
         try:
             word = pieces[text_column]
         except IndexError as e:
-            raise IndexError("Could not find word index %d at line %d" % (text_column, line_idx)) from e
+            raise IndexError("Could not find word index %d at line %d |%s|" % (text_column, line_idx, line)) from e
         if word == '\x96':
             # this happens in GermEval2014 for some reason
             continue
@@ -113,7 +113,7 @@ def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comme
             if keep_broken_tags:
                 tag = None
             else:
-                raise IndexError("Could not find tag index %d at line %d" % (annotation_column, line_idx)) from e
+                raise IndexError("Could not find tag index %d at line %d |%s|" % (annotation_column, line_idx, line)) from e
         if remap_fn:
             tag = remap_fn(tag)
 
