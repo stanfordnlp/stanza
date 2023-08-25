@@ -46,7 +46,7 @@ def read_entities(filename):
                     entities.append(current_entity)
                     current_entity = []
                     previous_label = None
-                entities.append(token.text)
+                current_entity.append(token.text)
                 if token.ner.startswith("S-"):
                     entities.append(current_entity)
                     current_entity = []
