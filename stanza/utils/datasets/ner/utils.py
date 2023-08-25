@@ -10,6 +10,7 @@ import json
 import os
 import random
 
+from stanza.models.common.doc import Document
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 
 SHARDS = ('train', 'dev', 'test')
@@ -265,3 +266,54 @@ def read_prefix_file(destination_file):
             prefix_map[destination] = prefixes
 
     return prefix_map
+
+def read_bioes_entities(filename):
+    """
+    Read entities from a file, return a list of (text, label)
+
+    Should work on both BIOES and BIO
+    """
+    with open(filename) as fin:
+        doc = Document(json.load(fin))
+
+    entities = []
+    for sentence in doc.sentences:
+        current_entity = []
+        previous_label = None
+        for token in sentence.tokens:
+            if token.ner == 'O' or token.ner.startswith("E-"):
+                if token.ner.startswith("E-"):
+                    current_entity.append(token.text)
+                if current_entity:
+                    assert previous_label is not None
+                    entities.append((current_entity, previous_label))
+                    current_entity = []
+                    previous_label = None
+            elif token.ner.startswith("I-"):
+                if previous_label is not None and previous_label != 'O' and previous_label[2:] != token.ner[2:]:
+                    if current_entity:
+                        assert previous_label is not None
+                        entities.append((current_entity, previous_label))
+                        current_entity = []
+                        previous_label = token.ner[2:]
+                current_entity.append(token.text)
+            elif token.ner.startswith("B-") or token.ner.startswith("S-"):
+                if current_entity:
+                    assert previous_label is not None
+                    entities.append((current_entity, previous_label))
+                    current_entity = []
+                    previous_label = None
+                current_entity.append(token.text)
+                previous_label = token.ner[2:]
+                if token.ner.startswith("S-"):
+                    assert previous_label is not None
+                    entities.append(current_entity)
+                    current_entity = []
+                    previous_label = None
+            previous_label = token.ner
+        if current_entity:
+            assert previous_label is not None
+            entities.append((current_entity, previous_label))
+    entities = [(tuple(x[0]), x[1]) for x in entities]
+    return entities
+
