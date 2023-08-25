@@ -18,7 +18,10 @@ def parse_args():
     args = parser.parse_args()
     return args
 
-def read_entities(doc):
+def read_entities(filename):
+    with open(filename) as fin:
+        doc = Document(json.load(fin))
+
     entities = []
     for sentence in doc.sentences:
         current_entity = []
@@ -55,12 +58,8 @@ def read_entities(doc):
     return entities
 
 def report_known_entities(train_file, test_file):
-    with open(train_file) as fin:
-        train_doc = Document(json.load(fin))
-        train_entities = read_entities(train_doc)
-    with open(test_file) as fin:
-        test_doc = Document(json.load(fin))
-        test_entities = read_entities(test_doc)
+    train_entities = read_entities(train_file)
+    test_entities = read_entities(test_file)
 
     train_entities = set(train_entities)
     total_score = sum(1 for x in test_entities if x in train_entities)
