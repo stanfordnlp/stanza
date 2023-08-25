@@ -36,8 +36,8 @@ EXPECTED_RESULT = """
       "text": "encore",
       "lemma": "encore",
       "upos": "ADV",
-      "head": 3,
-      "deprel": "advmod",
+      "head": 1,
+      "deprel": "fixed",
       "start_char": 6,
       "end_char": 12
     },
