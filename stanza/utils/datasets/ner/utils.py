@@ -267,7 +267,7 @@ def read_prefix_file(destination_file):
 
     return prefix_map
 
-def read_bioes_entities(filename):
+def read_json_entities(filename):
     """
     Read entities from a file, return a list of (text, label)
 
@@ -310,7 +310,9 @@ def read_bioes_entities(filename):
                     entities.append(current_entity)
                     current_entity = []
                     previous_label = None
-            previous_label = token.ner
+            else:
+                raise RuntimeError("Expected BIO(ES) format in the json file!")
+            previous_label = token.ner[2:]
         if current_entity:
             assert previous_label is not None
             entities.append((current_entity, previous_label))

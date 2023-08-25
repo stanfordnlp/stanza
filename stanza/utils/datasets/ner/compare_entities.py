@@ -8,7 +8,7 @@ the number of entities in one dataset on another
 
 import argparse
 
-from stanza.utils.datasets.ner.utils import read_bioes_entities
+from stanza.utils.datasets.ner.utils import read_json_entities
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Report the coverage of one NER file on another.")
@@ -18,8 +18,8 @@ def parse_args():
     return args
 
 def report_known_entities(train_file, test_file):
-    train_entities = read_bioes_entities(train_file)
-    test_entities = read_bioes_entities(test_file)
+    train_entities = read_json_entities(train_file)
+    test_entities = read_json_entities(test_file)
 
     train_entities = set(x[0] for x in train_entities)
     total_score = sum(1 for x in test_entities if x[0] in train_entities)
