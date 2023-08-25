@@ -83,7 +83,6 @@ setup(
         'numpy', 
         'protobuf>=3.15.0',
         'requests', 
-        'six', 
         'torch>=1.3.0',
         'tqdm',
     ],

@@ -20,6 +20,7 @@ import numpy as np
 
 from stanza.models.common.constant import lcode2lang
 import stanza.models.common.seq2seq_constant as constant
+from stanza.resources.default_packages import TRANSFORMER_NICKNAMES
 import stanza.utils.conll18_ud_eval as ud_eval
 from stanza.utils.conll18_ud_eval import UDError
 
@@ -480,3 +481,25 @@ def log_training_args(args, args_logger, name="training"):
     keys = sorted(args.keys())
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
     args_logger.info('ARGS USED AT %s TIME:\n%s\n', name.upper(), '\n'.join(log_lines))
+
+def embedding_name(args):
+    """
+    Return the generic name of the biggest embedding used by a model.
+
+    Used by POS and depparse, for example.
+
+    TODO: Probably will make the transformer names a bit more informative,
+    such as electra, roberta, etc.  Maybe even phobert for VI, for example
+    """
+    embedding = "nocharlm"
+    if args['wordvec_pretrain_file'] is None and args['wordvec_file'] is None:
+        embedding = "nopretrain"
+    if args['charlm'] and args['charlm_forward_file']:
+        embedding = "charlm"
+    if args['bert_model']:
+        if args['bert_model'] in TRANSFORMER_NICKNAMES:
+            embedding = TRANSFORMER_NICKNAMES[args['bert_model']]
+        else:
+            embedding = "transformer"
+
+    return embedding

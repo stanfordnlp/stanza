@@ -677,6 +677,13 @@ class LSTMModel(BaseModel, nn.Module):
         lines.extend(self.get_norms())
         logger.info("\n".join(lines))
 
+    def log_shapes(self):
+        lines = ["NORMS FOR MODEL PARAMTERS"]
+        for name, param in self.named_parameters():
+            if param.requires_grad:
+                lines.append("{} {}".format(name, param.shape))
+        logger.info("\n".join(lines))
+
     def initial_word_queues(self, tagged_word_lists):
         """
         Produce initial word queues out of the model's LSTMs for use in the tagged word lists.

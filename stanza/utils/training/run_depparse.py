@@ -4,7 +4,7 @@ import os
 from stanza.models import parser
 
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_charlm
+from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_depparse_charlm, choose_transformer
 from stanza.utils.training.run_pos import wordvec_args
 
 from stanza.resources.default_packages import default_charlms, depparse_charlms
@@ -15,6 +15,30 @@ def add_depparse_args(parser):
     add_charlm_args(parser)
 
     parser.add_argument('--use_bert', default=False, action="store_true", help='Use the default transformer for this language')
+
+#  TODO: refactor with run_pos
+def build_model_filename(paths, short_name, command_args, extra_args):
+    short_language, dataset = short_name.split("_", 1)
+
+    # TODO: can avoid downloading the charlm at this point, since we
+    # might not even be training
+    charlm = choose_depparse_charlm(short_language, dataset, command_args.charlm)
+    charlm_args = build_charlm_args(short_language, charlm)
+
+    bert_args = choose_transformer(short_language, command_args, extra_args, warn=False)
+
+    train_args = ["--shorthand", short_name,
+                  "--mode", "train"]
+    # TODO: also, this downloads the wordvec, which we might not want to do yet
+    train_args = train_args + wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args + extra_args
+    if command_args.save_name is not None:
+        train_args.extend(["--save_name", command_args.save_name])
+    if command_args.save_dir is not None:
+        train_args.extend(["--save_dir", command_args.save_dir])
+    args = parser.parse_args(train_args)
+    save_name = parser.model_file_name(args)
+    return save_name
+
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
@@ -30,15 +54,10 @@ def run_treebank(mode, paths, treebank, short_name,
     test_gold_file = f"{depparse_dir}/{short_name}.test.gold.conllu"
     test_pred_file = temp_output_file if temp_output_file else f"{depparse_dir}/{short_name}.test.pred.conllu"
 
-    charlm = choose_charlm(short_language, dataset, command_args.charlm, default_charlms, depparse_charlms)
+    charlm = choose_depparse_charlm(short_language, dataset, command_args.charlm)
     charlm_args = build_charlm_args(short_language, charlm)
 
-    bert_args = []
-    if command_args.use_bert and '--bert_model' not in extra_args:
-        if short_language in common.BERT:
-            bert_args = ['--bert_model', common.BERT.get(short_language)]
-        else:
-            logger.error("Transformer requested, but no default transformer for %s  Specify one using --bert_model" % short_language)
+    bert_args = choose_transformer(short_language, command_args, extra_args)
 
     if mode == Mode.TRAIN:
         if not os.path.exists(train_file):
@@ -104,7 +123,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_treebank, "depparse", "parser", add_depparse_args, sub_argparse=parser.build_argparse())
+    common.main(run_treebank, "depparse", "parser", add_depparse_args, sub_argparse=parser.build_argparse(), build_model_filename=build_model_filename, choose_charlm_method=choose_depparse_charlm)
 
 if __name__ == "__main__":
     main()

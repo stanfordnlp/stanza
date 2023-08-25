@@ -3,8 +3,8 @@ Defines a base class that can be used to annotate.
 """
 import io
 from multiprocessing import Process
-from six.moves.BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
-from six.moves import http_client as HTTPStatus
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from http import client as HTTPStatus
 
 from stanza.protobuf import Document, parseFromDelimitedString, writeToDelimitedString
 

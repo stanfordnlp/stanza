@@ -290,21 +290,20 @@ def add_dependencies(resources, lang, processor_list):
     [['pos', (ModelSpecification(processor='pos', package='gsd', dependencies=(('pretrain', 'gsd'),)),)],
      ['depparse', (ModelSpecification(processor='depparse', package='gsd', dependencies=(('pretrain', 'gsd'),)),)]]
     """
-    default_dependencies = resources[lang].get('default_dependencies', {})
+    lang_resources = resources[lang]
     for item in processor_list:
         processor, model_specs = item
         new_model_specs = []
         for model_spec in model_specs:
-            dependencies = default_dependencies.get(processor, None)
             # skip dependency checking for external variants of processors and identity lemmatizer
             if not any([
                     model_spec.package in PROCESSOR_VARIANTS[processor],
                     processor == LEMMA and model_spec.package == 'identity'
                 ]):
-                dependencies = resources[lang].get(processor, {}).get(model_spec.package, {}).get('dependencies', dependencies)
-            if dependencies:
+                dependencies = lang_resources.get(processor, {}).get(model_spec.package, {}).get('dependencies', [])
                 dependencies = [(dependency['model'], dependency['package']) for dependency in dependencies]
                 model_spec = model_spec._replace(dependencies=tuple(dependencies))
+                logger.debug("Found dependencies %s for processor %s model %s", dependencies, processor, model_spec.package)
             new_model_specs.append(model_spec)
         item[1] = tuple(new_model_specs)
     return processor_list

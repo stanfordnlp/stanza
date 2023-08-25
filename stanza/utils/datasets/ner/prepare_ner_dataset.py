@@ -353,6 +353,15 @@ ArmTDP-NER is an Armenian NER dataset
 
 OntoNotes 5 contains a Chinese NER dataset
   - https://catalog.ldc.upenn.edu/LDC2013T19
+
+en_conllpp is a test set from 2020 newswire
+  - https://arxiv.org/abs/2212.09747
+  - https://github.com/ShuhengL/acl2023_conllpp
+  - Do CoNLL-2003 Named Entity Taggers Still Work Well in 2023?
+    Shuheng Liu, Alan Ritter
+  - git clone the repo in $NERBASE
+  - then run
+    python3 stanza/utils/datasets/ner/prepare_ner_dataset.py en_conllpp
 """
 
 import glob
@@ -1023,10 +1032,27 @@ def process_armtdp(paths, short_name):
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
+def process_en_conllpp(paths, short_name):
+    """
+    This is ONLY a test set
+
+    the test set has entities start with I- instead of B- unless they
+    are in the middle of a sentence, but that should be find, as
+    process_tags in the NER model converts those to B- in a BIOES
+    conversion
+    """
+    base_input_path = os.path.join(paths["NERBASE"], "acl2023_conllpp", "dataset", "conllpp.txt")
+    base_output_path = paths["NER_DATA_DIR"]
+    sentences = read_tsv(base_input_path, 0, 3, separator=None)
+    sentences = [sent for sent in sentences if len(sent) > 1 or sent[0][0] != '-DOCSTART-']
+    write_dataset([sentences], base_output_path, short_name, shard_names=["test"], shards=["test"])
+
+
 DATASET_MAPPING = {
     "bn_daffodil":       process_bn_daffodil,
     "da_ddt":            process_da_ddt,
     "de_germeval2014":   process_de_germeval2014,
+    "en_conllpp":        process_en_conllpp,
     "en_foreign-4class": process_en_foreign_4class,
     "en_foreign-8class": process_en_foreign_8class,
     "fa_arman":          process_fa_arman,

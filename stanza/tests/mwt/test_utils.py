@@ -32,12 +32,13 @@ def test_resplit_keep_tokens(pipeline):
     assert doc.sentences[0].tokens[1].words[1].text == "n't"
 
     assert len(doc.sentences[1].tokens) == 2
-    # the GUM MWT splits "I can't" into three segments
-    # but they aren't "I - ca - n't", unfortunately
+    # updated GUM MWT splits "I can't" into three segments
+    # the way we want, "I - ca - n't"
+    # previously it would split "I - can - 't"
     assert len(doc.sentences[1].tokens[0].words) == 3
     assert doc.sentences[1].tokens[0].words[0].text == "I"
-    assert doc.sentences[1].tokens[0].words[1].text == "can"
-    assert doc.sentences[1].tokens[0].words[2].text == "'t"
+    assert doc.sentences[1].tokens[0].words[1].text == "ca"
+    assert doc.sentences[1].tokens[0].words[2].text == "n't"
 
 
 def test_resplit_no_keep_tokens(pipeline):

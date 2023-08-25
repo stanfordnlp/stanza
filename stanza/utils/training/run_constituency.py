@@ -20,6 +20,8 @@ logger = logging.getLogger('stanza')
 def add_constituency_args(parser):
     add_charlm_args(parser)
 
+    parser.add_argument('--use_bert', default=False, action="store_true", help='Use the default transformer for this language')
+
     parser.add_argument('--parse_text', dest='mode', action='store_const', const="parse_text", help='Parse a text file')
 
 def run_treebank(mode, paths, treebank, short_name,
@@ -55,10 +57,8 @@ def run_treebank(mode, paths, treebank, short_name,
     charlm_args = build_charlm_args(language, charlm, base_args=False)
 
     default_args = retag_args + wordvec_args + charlm_args
-    if language in common.BERT:
-        default_args.extend(['--bert_model', common.BERT.get(language)])
-        if language in common.BERT_LAYERS:
-            default_args.extend(['--bert_hidden_layers', str(common.BERT_LAYERS.get(language))])
+    bert_args = common.choose_transformer(language, command_args, extra_args, warn=True, layers=True)
+    default_args = default_args + bert_args
 
     if mode == Mode.TRAIN:
         train_args = ['--train_file', train_file,
