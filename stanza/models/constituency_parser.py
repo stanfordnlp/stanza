@@ -656,6 +656,7 @@ def build_argparse():
     parser.add_argument('--no_lattn_combined_input', dest='lattn_combined_input', action='store_false', help="Don't combine all inputs for the lattn, not just the pattn")
 
     parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
+    parser.add_argument('--log_shapes', default=False, action='store_true', help='Log the parameters shapes at the beginning')
     parser.add_argument('--watch_regex', default=None, help='regex to describe which weights and biases to output, if any')
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
