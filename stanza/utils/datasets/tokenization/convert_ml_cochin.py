@@ -174,11 +174,11 @@ def split_sentences(sentences):
 
     return train, dev, test
 
-def main(input_dir, tokenizer_dir):
+def main(input_dir, tokenizer_dir, relabeled_dir="relabeled_tsv", split_data=True):
     random.seed(1006)
 
     input_dir = os.path.join(input_dir, "malayalam", "cochin_ner")
-    relabeled_dir = os.path.join(input_dir, "relabeled_tsv")
+    relabeled_dir = os.path.join(input_dir, relabeled_dir)
     tsv_files = list_relabeled_files(relabeled_dir)
 
     original_text = read_original_text(input_dir)
@@ -191,12 +191,18 @@ def main(input_dir, tokenizer_dir):
         sentences.extend(new_sentences)
 
     print("Found %d sentences" % len(sentences))
-    splits = split_sentences(sentences)
-    SHARDS = ("train", "dev", "test")
+
+    if split_data:
+        splits = split_sentences(sentences)
+        SHARDS = ("train", "dev", "test")
+    else:
+        splits = [sentences]
+        SHARDS = ["train"]
+
     for split, shard in zip(splits, SHARDS):
         output_filename = os.path.join(tokenizer_dir, "ml_cochin.%s.gold.conllu" % shard)
         print("Writing %d sentences to %s" % (len(split), output_filename))
-        with open(output_filename, "w") as fout:
+        with open(output_filename, "w", encoding="utf-8") as fout:
             for sentence in split:
                 word_idx = 1
                 for token in sentence:
@@ -219,5 +225,5 @@ if __name__ == '__main__':
     paths = default_paths.get_default_paths()
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
     input_dir = paths["STANZA_EXTERN_DIR"]
-    main(input_dir, tokenizer_dir)
+    main(input_dir, tokenizer_dir, "relabeled_tsv_v2", False)
 
