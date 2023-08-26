@@ -27,8 +27,6 @@ def wordvec_args(short_language, dataset, extra_args):
         logger.warning("No known word vectors for language {}  If those vectors can be found, please update the training scripts.".format(short_language))
         return ["--no_pretrain"]
     else:
-        # for POS and depparse, there is a separate copy of the pretrain for each of the datasets
-        # TODO: unify those into one pretrain
         if short_language in pos_pretrains and dataset in pos_pretrains[short_language]:
             dataset_pretrains = pos_pretrains
         elif short_language in specific_default_pretrains:
