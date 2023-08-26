@@ -100,12 +100,15 @@ default_treebanks = {
 
 no_pretrain_languages = set([
     "cop",
+    "olo",
     "orv",
     "pcm",
     "qaf",   # the QAF treebank is code switched and Romanized, so not easy to reuse existing resources
     "qpm",   # have talked about deriving this from a language neighborinig to Pomak, but that hasn't happened yet
     "qtd",
     "swl",
+
+    "multilingual", # special case so that all languages with a default treebank are represented somewhere
 ])
 
 
@@ -163,6 +166,7 @@ specific_default_pretrains = {
     "lzh":     "fasttextwiki",
     "mr":      "fasttextwiki",
     "mt":      "fasttextwiki",
+    "my":      "ucsy",
     "myv":     "mokha",
     "nb":      "conll17",
     "nl":      "conll17",
@@ -172,6 +176,7 @@ specific_default_pretrains = {
     "ro":      "conll17",
     "ru":      "conll17",
     "sa":      "fasttext157",
+    "sd":      "isra",
     "sk":      "conll17",
     "sl":      "conll17",
     "sme":     "fasttextwiki",
@@ -179,6 +184,7 @@ specific_default_pretrains = {
     "sv":      "conll17",
     "ta":      "fasttextwiki",
     "te":      "fasttextwiki",
+    "th":      "fasttext157",
     "tr":      "conll17",
     "ug":      "conll17",
     "uk":      "conll17",
