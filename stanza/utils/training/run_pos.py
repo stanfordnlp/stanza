@@ -5,7 +5,7 @@ import os
 
 from stanza.models import tagger
 
-from stanza.resources.default_packages import no_pretrain_languages, pos_pretrains, default_pretrains, specific_default_pretrains
+from stanza.resources.default_packages import no_pretrain_languages, pos_pretrains, default_pretrains
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_pos_charlm, find_wordvec_pretrain
 
@@ -29,10 +29,8 @@ def wordvec_args(short_language, dataset, extra_args):
     else:
         if short_language in pos_pretrains and dataset in pos_pretrains[short_language]:
             dataset_pretrains = pos_pretrains
-        elif short_language in specific_default_pretrains:
-            dataset_pretrains = {}
         else:
-            dataset_pretrains = {short_language: {dataset: dataset}}
+            dataset_pretrains = {}
         wordvec_pretrain = find_wordvec_pretrain(short_language, default_pretrains, dataset_pretrains, dataset)
         return ["--wordvec_pretrain_file", wordvec_pretrain]
 
