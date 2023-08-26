@@ -19,7 +19,7 @@ import zipfile
 
 from stanza import __resources_version__
 from stanza.models.common.constant import lcode2lang, two_to_three_letters
-from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, specific_default_pretrains, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms, lemma_charlms
+from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms, lemma_charlms
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -152,10 +152,7 @@ def split_model_name(model):
 def get_con_dependencies(lang, package):
     # so far, this invariant is true:
     # constituency models use the default pretrain and charlm for the language
-    if lang in specific_default_pretrains:
-        pretrain_package = specific_default_pretrains[lang]
-    else:
-        pretrain_package = default_treebanks[lang]
+    pretrain_package = default_pretrains[lang]
     dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
 
     # sometimes there is no charlm for a language that has constituency, though
@@ -183,10 +180,10 @@ def get_pos_dependencies(lang, package):
         dependencies = []
     elif lang in pos_pretrains and package in pos_pretrains[lang]:
         dependencies = [{'model': 'pretrain', 'package': pos_pretrains[lang][package]}]
-    elif lang in specific_default_pretrains:
-        dependencies = [{'model': 'pretrain', 'package': specific_default_pretrains[lang]}]
+    elif lang in default_pretrains:
+        dependencies = [{'model': 'pretrain', 'package': default_pretrains[lang]}]
     else:
-        dependencies = [{'model': 'pretrain', 'package': package}]
+        raise RuntimeError("pretrain not specified for lang %s package %s" % (lang, package))
 
     charlm_package = get_pos_charlm_package(lang, package)
 
@@ -239,10 +236,10 @@ def get_depparse_dependencies(lang, package):
         dependencies = []
     elif lang in depparse_pretrains and package in depparse_pretrains[lang]:
         dependencies = [{'model': 'pretrain', 'package': depparse_pretrains[lang][package]}]
-    elif lang in specific_default_pretrains:
-        dependencies = [{'model': 'pretrain', 'package': specific_default_pretrains[lang]}]
+    elif lang in default_pretrains:
+        dependencies = [{'model': 'pretrain', 'package': default_pretrains[lang]}]
     else:
-        dependencies = [{'model': 'pretrain', 'package': package}]
+        raise RuntimeError("pretrain not specified for lang %s package %s" % (lang, package))
 
     charlm_package = get_depparse_charlm_package(lang, package)
 
@@ -257,10 +254,8 @@ def get_ner_dependencies(lang, package):
 
     if lang in ner_pretrains and package in ner_pretrains[lang]:
         pretrain_package = ner_pretrains[lang][package]
-    elif lang in specific_default_pretrains:
-        pretrain_package = specific_default_pretrains[lang]
     else:
-        pretrain_package = default_treebanks[lang]
+        pretrain_package = default_pretrains[lang]
     if pretrain_package is not None:
         dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
 
@@ -283,10 +278,7 @@ def get_sentiment_dependencies(lang, package):
     sentiment models use the default pretrain for the language
     also, they all use the default charlm for a language
     """
-    if lang in specific_default_pretrains:
-        pretrain_package = specific_default_pretrains[lang]
-    else:
-        pretrain_package = default_treebanks[lang]
+    pretrain_package = default_pretrains[lang]
     dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
 
     charlm_package = default_charlms.get(lang, None)
