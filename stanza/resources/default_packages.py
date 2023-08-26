@@ -206,6 +206,7 @@ pos_pretrains = {
     "en": {
         "craft":            "biomed",
         "genia":            "biomed",
+        "mimic":            "mimic",
     },
 }
 
