@@ -63,6 +63,7 @@ def build_argparse(sub_argparse=None):
     parser.add_argument('--save_name', type=str, default=None, help="Base name for saving models.  If set, will override the model's default.")
 
     parser.add_argument('--charlm_only', action='store_true', default=False, help='When asking for ud_all, filter the ones which have charlms')
+    parser.add_argument('--transformer_only', action='store_true', default=False, help='When asking for ud_all, filter the ones for languages where we have transformers')
 
     parser.add_argument('--force', dest='force', action='store_true', default=False, help='Retrain existing models')
     return parser
@@ -120,6 +121,9 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
                 logger.info("Filtering ud_all treebanks to only those which can use charlm for this model")
                 ud_treebanks = [x for x in ud_treebanks
                                 if choose_charlm_method(*treebank_to_short_name(x).split("_", 1), 'default') is not None]
+            if command_args.transformer_only:
+                logger.info("Filtering ud_all treebanks to only those which can use a transformer for this model")
+                ud_treebanks = [x for x in ud_treebanks if treebank_to_short_name(x).split("_")[0] in TRANSFORMERS]
             logger.info("Expanding %s to %s", treebank, " ".join(ud_treebanks))
             treebanks.extend(ud_treebanks)
         else:
