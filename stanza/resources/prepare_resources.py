@@ -19,7 +19,7 @@ import zipfile
 
 from stanza import __resources_version__
 from stanza.models.common.constant import lcode2lang, two_to_three_letters
-from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms, lemma_charlms
+from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms, lemma_charlms, known_nicknames
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -163,14 +163,33 @@ def get_con_dependencies(lang, package):
 
     return dependencies
 
-def get_pretrain_package(lang, package, model_pretrains, default_pretrains):
-    pieces = package.split("_", 1)
-    if len(pieces) > 1:
-        if pieces[1] == 'nopretrain':
-            return None
-        package = pieces[0]
+def split_package(package):
+    if package.endswith("_finetuned"):
+        package = package[:-10]
 
-    if lang in no_pretrain_languages:
+    if package.endswith("_nopretrain"):
+        package = package[:-11]
+        return package, False, False
+    if package.endswith("_nocharlm"):
+        package = package[:-9]
+        return package, True, False
+    if package.endswith("_charlm"):
+        package = package[:-7]
+        return package, True, True
+    for nickname in known_nicknames():
+        if package.endswith(nickname):
+            # +1 for the underscore
+            package = package[:-(len(nickname)+1)]
+            return package, True, True
+
+    # guess it was a model which wasn't built with the new naming convention of putting the pretrain type at the end
+    # assume WV and charlm... if the language / package doesn't allow for one, that should be caught later
+    return package, True, True
+
+def get_pretrain_package(lang, package, model_pretrains, default_pretrains):
+    package, uses_pretrain, _ = split_package(package)
+
+    if not uses_pretrain or lang in no_pretrain_languages:
         return None
     elif lang in model_pretrains and package in model_pretrains[lang]:
         return model_pretrains[lang][package]
@@ -181,7 +200,7 @@ def get_pretrain_package(lang, package, model_pretrains, default_pretrains):
 
 
 def get_pos_charlm_package(lang, package):
-    pieces = package.split("_", 1)
+    pieces = package.rsplit("_", 1)
     if len(pieces) > 1:
         if pieces[1] == 'nocharlm':
             return None
@@ -208,7 +227,7 @@ def get_pos_dependencies(lang, package):
 
 # TODO: refactor
 def get_lemma_charlm_package(lang, package):
-    pieces = package.split("_", 1)
+    pieces = package.rsplit("_", 1)
     if len(pieces) > 1:
         if pieces[1] == 'nocharlm':
             return None
@@ -233,7 +252,7 @@ def get_lemma_dependencies(lang, package):
 
 # TODO: refactor
 def get_depparse_charlm_package(lang, package):
-    pieces = package.split("_", 1)
+    pieces = package.rsplit("_", 1)
     if len(pieces) > 1:
         if pieces[1] == 'nocharlm':
             return None

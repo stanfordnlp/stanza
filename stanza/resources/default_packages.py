@@ -632,3 +632,14 @@ TRANSFORMER_NICKNAMES = {
     "hfl/chinese-roberta-wwm-ext": "roberta",
     "hfl/chinese-electra-180g-large-discriminator": "electra-large",
 }
+
+def known_nicknames():
+    """
+    Return a set of all the transformer nicknames
+    """
+    nicknames = set(value for key, value in TRANSFORMER_NICKNAMES.items())
+
+    # previously unspecific transformers get "transformer" as the nickname
+    nicknames.add("transformer")
+
+    return nicknames
