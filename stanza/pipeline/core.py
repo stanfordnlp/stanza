@@ -391,6 +391,10 @@ class Pipeline:
         assert any([isinstance(doc, str), isinstance(doc, list),
                     isinstance(doc, Document)]), 'input should be either str, list or Document'
 
+        # empty bulk process
+        if isinstance(doc, list) and len(doc) == 0:
+            return []
+
         # determine whether we are in bulk processing mode for multiple documents
         bulk=(isinstance(doc, list) and len(doc) > 0 and isinstance(doc[0], Document))
 

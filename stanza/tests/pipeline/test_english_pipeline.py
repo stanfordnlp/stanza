@@ -202,6 +202,11 @@ class TestEnglishPipeline:
         processed = pipeline.bulk_process(docs)
         assert "\n\n".join(["{:C}".format(doc) for doc in processed]) == EN_DOC_CONLLU_GOLD_MULTIDOC
 
+    def test_empty_bulk_process(self, pipeline):
+        """ Previously we had a bug where an empty document list would cause a crash """
+        processed = pipeline.bulk_process([])
+        assert processed == []
+
     def test_stream(self, pipeline):
         """ Test the streaming interface to the Pipeline """
         # Test all of the documents in one batch
