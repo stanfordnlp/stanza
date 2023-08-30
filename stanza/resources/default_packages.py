@@ -537,6 +537,15 @@ TRANSFORMERS = {
     # Musixmatch/umberto-commoncrawl-cased-v1:             98.56   98.45   98.13   97.62
     "it": "dbmdz/electra-base-italian-xxl-cased-discriminator",
 
+    # could also try:
+    # l3cube-pune/marathi-bert-v2
+    #  or
+    # https://huggingface.co/l3cube-pune/hindi-marathi-dev-roberta
+    # l3cube-pune/hindi-marathi-dev-roberta
+    #
+    # no evidence of the best transformer to use yet
+    "mr": "l3cube-pune/marathi-roberta",
+
     # https://huggingface.co/allegro/herbert-base-cased
     # Scores by entity on the NKJP NER task:
     # no bert (dev/test): 88.64/88.75
@@ -614,6 +623,9 @@ TRANSFORMER_NICKNAMES = {
 
     # it
     "dbmdz/electra-base-italian-xxl-cased-discriminator": "electra",
+
+    # mr
+    "l3cube-pune/marathi-roberta": "l3cube-roberta",
 
     # pl
     "allegro/herbert-base-cased": "herbert",
