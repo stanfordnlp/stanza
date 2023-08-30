@@ -276,6 +276,14 @@ def read_json_entities(filename):
     with open(filename) as fin:
         doc = Document(json.load(fin))
 
+        return list_doc_entities(doc)
+
+def list_doc_entities(doc):
+    """
+    Return a list of (text, label)
+
+    Should work on both BIOES and BIO
+    """
     entities = []
     for sentence in doc.sentences:
         current_entity = []
