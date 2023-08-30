@@ -86,6 +86,20 @@ A couple experiments which have been tried with little noticeable impact:
     As part of this, we tried to randomly reinitialize the transitions
     if the transition embedding had gone to 0, which often happens
     This didn't help at all
+  - We tried something akin to attention with just the query vector
+    over the bert embeddings as a way to mix them, but that did not
+    improve scores.
+    Example, with a self.bert_layer_mix of size bert_dim x 1:
+        mixed_bert_embeddings = []
+        for feature in bert_embeddings:
+            weighted_feature = self.bert_layer_mix(feature.transpose(1, 2))
+            weighted_feature = torch.softmax(weighted_feature, dim=1)
+            weighted_feature = torch.matmul(feature, weighted_feature).squeeze(2)
+            mixed_bert_embeddings.append(weighted_feature)
+        bert_embeddings = mixed_bert_embeddings
+    It seems just finetuning the transformer is already enough
+    (in general, no need to mix layers at all when finetuning bert embeddings)
+
 
 The code breakdown is as follows:
 
