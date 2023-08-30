@@ -290,7 +290,7 @@ def read_json_entities(filename):
                     current_entity = []
                     previous_label = None
             elif token.ner.startswith("I-"):
-                if previous_label is not None and previous_label != 'O' and previous_label[2:] != token.ner[2:]:
+                if previous_label is not None and previous_label != 'O' and previous_label != token.ner[2:]:
                     if current_entity:
                         assert previous_label is not None
                         entities.append((current_entity, previous_label))

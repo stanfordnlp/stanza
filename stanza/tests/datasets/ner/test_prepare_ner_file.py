@@ -49,8 +49,7 @@ def check_json_file(doc, raw_text, expected_sentences, expected_tokens):
             assert token.text == word
             assert token.ner == tag
 
-
-def run_test(tmp_path, raw_text, expected_sentences, expected_tokens):
+def write_and_convert(tmp_path, raw_text):
     bio_file = tmp_path / "test.bio"
     with open(bio_file, "w", encoding="utf-8") as fout:
         fout.write(raw_text)
@@ -61,6 +60,10 @@ def run_test(tmp_path, raw_text, expected_sentences, expected_tokens):
     with open(json_file) as fin:
         doc = Document(json.load(fin))
 
+    return doc
+
+def run_test(tmp_path, raw_text, expected_sentences, expected_tokens):
+    doc = write_and_convert(tmp_path, raw_text)
     check_json_file(doc, raw_text, expected_sentences, expected_tokens)
 
 def test_simple(tmp_path):
