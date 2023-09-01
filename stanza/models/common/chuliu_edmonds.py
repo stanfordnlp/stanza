@@ -3,8 +3,24 @@
 import numpy as np
 
 def tarjan(tree):
-    """"""
+    """
+    Finds the cycles in a dependency graph
 
+    The input should be a numpy array of integers,
+    where in the standard use case,
+    tree[i] is the head of node i.
+
+    tree[0] == 0 to represent the root
+
+    so for example, for the English sentence "This is a test",
+    the input is
+
+    [0 4 4 4 0]
+
+    "Arthritis makes my hip hurt"
+
+    [0 2 0 4 2 2]
+    """
     indices = -np.ones_like(tree)
     lowlinks = -np.ones_like(tree)
     onstack = np.zeros_like(tree, dtype=bool)
