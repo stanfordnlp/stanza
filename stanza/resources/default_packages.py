@@ -466,6 +466,14 @@ TRANSFORMERS = {
     #    98.75  100.00   98.75   98.30
     #  camembert-base
     #    98.78  100.00   98.77   98.33
+    #
+    # GSD depparse dev set results for French:
+    #  No bert:
+    #    95.83 94.52 91.34 91.10 91.34
+    #  camembert/camembert-large
+    #    96.80 95.71 93.37 93.13 93.37
+    #  TODO: the rest of the chart
+    "fr": "camembert/camembert-large",
 
     # a couple possibilities to experiment with for Hebrew
     # dev scores for POS and depparse
@@ -611,6 +619,12 @@ TRANSFORMER_NICKNAMES = {
 
     # fi
     "TurkuNLP/bert-base-finnish-cased-v1": "bert",
+
+    # fr
+    "benjamin/roberta-base-wechsel-french": "wechsel-roberta",
+    "camembert-base": "camembert-base",
+    "camembert/camembert-large": "camembert-large",
+    "dbmdz/electra-base-french-europeana-cased-discriminator": "dbmdz-electra",
 
     # he
     "imvladikon/alephbertgimmel-base-512" : "alephbertgimmel",
