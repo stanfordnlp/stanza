@@ -3,8 +3,7 @@
 import numpy as np
 
 def tarjan(tree):
-    """
-    Finds the cycles in a dependency graph
+    """Finds the cycles in a dependency graph
 
     The input should be a numpy array of integers,
     where in the standard use case,
@@ -20,6 +19,14 @@ def tarjan(tree):
     "Arthritis makes my hip hurt"
 
     [0 2 0 4 2 2]
+
+    The return is a list of cycles, where in cycle has True if the
+    node at that index is participating in the cycle.
+    So, for example, the previous examples both return empty lists,
+    whereas an input of
+      np.array([0, 3, 1, 2])
+    has an output of
+      [np.array([False,  True,  True,  True])]
     """
     indices = -np.ones_like(tree)
     lowlinks = -np.ones_like(tree)
