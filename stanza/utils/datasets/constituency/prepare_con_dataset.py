@@ -167,10 +167,13 @@ import random
 import sys
 import tempfile
 
+from tqdm import tqdm
+
 from stanza.models.constituency import parse_tree
 import stanza.utils.default_paths as default_paths
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.parse_tree import Tree
+from stanza.server import tsurgeon
 from stanza.utils.datasets.constituency import utils
 from stanza.utils.datasets.constituency.convert_alt import convert_alt
 from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
@@ -413,10 +416,17 @@ def process_ptb3_revised(paths, dataset_name, *args):
     label_map = {"ADJ-PRD": "ADJP-PRD"}
 
     train_trees = []
-    for i in range(2, 22):
+    for i in tqdm(range(2, 22)):
         new_trees = tree_reader.read_directory(os.path.join(bracket_dir, "%02d" % i))
         new_trees = [t.remap_constituent_labels(label_map) for t in new_trees]
         train_trees.extend(new_trees)
+
+    move_tregex = "_ROOT_ <1 __=home <2 /^[.]$/=move"
+    move_tsurgeon = "move move >-1 home"
+
+    print("Moving sentence final punctuation if necessary")
+    with tsurgeon.Tsurgeon() as tsurgeon_processor:
+        train_trees = [tsurgeon_processor.process(tree, move_tregex, move_tsurgeon)[0] for tree in tqdm(train_trees)]
 
     dev_trees = tree_reader.read_directory(os.path.join(bracket_dir, "22"))
     dev_trees = [t.remap_constituent_labels(label_map) for t in dev_trees]
