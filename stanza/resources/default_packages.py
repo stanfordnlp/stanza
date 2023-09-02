@@ -638,6 +638,9 @@ TRANSFORMER_NICKNAMES = {
     # it
     "dbmdz/electra-base-italian-xxl-cased-discriminator": "electra",
 
+    # ja
+    "rinna/japanese-roberta-base": "rinna-roberta",
+
     # mr
     "l3cube-pune/marathi-roberta": "l3cube-roberta",
 
