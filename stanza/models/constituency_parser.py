@@ -161,6 +161,7 @@ Some alternate optimizer methods:
 import argparse
 import logging
 import os
+import re
 
 import torch
 
@@ -413,7 +414,7 @@ def build_argparse():
     parser.add_argument('--eval_batch_size', type=int, default=50, help='How many trees to batch when running eval')
 
     parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default="{shorthand}_constituency.pt", help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_{finetune}_constituency.pt", help="File name to save the model")
     parser.add_argument('--save_each_name', type=str, default=None, help="Save each model in sequence to this pattern.  Mostly for testing")
 
     parser.add_argument('--seed', type=int, default=1234)
@@ -680,10 +681,15 @@ def build_argparse():
     return parser
 
 def build_model_filename(args):
+    embedding = utils.embedding_name(args)
+    maybe_finetune = "finetuned" if args['bert_finetune'] or args['stage1_bert_finetune'] else ""
     model_save_file = args['save_name'].format(shorthand=args['shorthand'],
+                                               embedding=embedding,
+                                               finetune=maybe_finetune,
                                                transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
                                                trans_layers=args['bert_hidden_layers'],
                                                seed=args['seed'])
+    model_save_file = re.sub("_+", "_", model_save_file)
     logger.info("Expanded save_name: %s", model_save_file)
 
     model_dir = os.path.split(model_save_file)[0]

@@ -494,7 +494,7 @@ def embedding_name(args):
     embedding = "nocharlm"
     if args['wordvec_pretrain_file'] is None and args['wordvec_file'] is None:
         embedding = "nopretrain"
-    if args['charlm'] and args['charlm_forward_file']:
+    if args.get('charlm', True) and (args['charlm_forward_file'] or args['charlm_backward_file']):
         embedding = "charlm"
     if args['bert_model']:
         if args['bert_model'] in TRANSFORMER_NICKNAMES:

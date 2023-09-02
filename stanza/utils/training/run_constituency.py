@@ -24,10 +24,52 @@ def add_constituency_args(parser):
 
     parser.add_argument('--parse_text', dest='mode', action='store_const', const="parse_text", help='Parse a text file')
 
-def run_treebank(mode, paths, treebank, short_name,
-                 temp_output_file, command_args, extra_args):
+def build_wordvec_args(short_language, dataset, extra_args):
+    if '--wordvec_pretrain_file' not in extra_args:
+        # will throw an error if the pretrain can't be found
+        wordvec_pretrain = find_wordvec_pretrain(short_language, default_pretrains)
+        wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]
+    else:
+        wordvec_args = []
+
+    return wordvec_args
+
+def build_default_args(paths, short_language, dataset, command_args, extra_args):
+    if short_language in RETAG_METHOD:
+        retag_args = ["--retag_method", RETAG_METHOD[short_language]]
+    else:
+        retag_args = []
+
+    wordvec_args = build_wordvec_args(short_language, dataset, extra_args)
+
+    charlm = choose_charlm(short_language, dataset, command_args.charlm, default_charlms, {})
+    charlm_args = build_charlm_args(short_language, charlm, base_args=False)
+
+    bert_args = common.choose_transformer(short_language, command_args, extra_args, warn=True, layers=True)
+    default_args = retag_args + wordvec_args + charlm_args + bert_args
+
+    return default_args
+
+def build_model_filename(paths, short_name, command_args, extra_args):
+    short_language, dataset = short_name.split("_", 1)
+
+    default_args = build_default_args(paths, short_language, dataset, command_args, extra_args)
+
+    train_args = ["--shorthand", short_name,
+                  "--mode", "train"]
+    train_args = train_args + default_args
+    if command_args.save_name is not None:
+        train_args.extend(["--save_name", command_args.save_name])
+    if command_args.save_dir is not None:
+        train_args.extend(["--save_dir", command_args.save_dir])
+    args = constituency_parser.parse_args(train_args)
+    save_name = constituency_parser.model_file_name(args)
+    return save_name
+
+
+def run_treebank(mode, paths, treebank, short_name, temp_output_file, command_args, extra_args):
     constituency_dir = paths["CONSTITUENCY_DATA_DIR"]
-    language, dataset = short_name.split("_")
+    short_language, dataset = short_name.split("_")
 
     train_file = os.path.join(constituency_dir, f"{short_name}_train.mrg")
     dev_file   = os.path.join(constituency_dir, f"{short_name}_dev.mrg")
@@ -41,24 +83,7 @@ def run_treebank(mode, paths, treebank, short_name,
             logger.error(f"Unable to build the data.  Please correctly build the files in {train_file}, {dev_file}, {test_file} and then try again.")
             raise
 
-    if language in RETAG_METHOD:
-        retag_args = ["--retag_method", RETAG_METHOD[language]]
-    else:
-        retag_args = []
-
-    if '--wordvec_pretrain_file' not in extra_args:
-        # will throw an error if the pretrain can't be found
-        wordvec_pretrain = find_wordvec_pretrain(language, default_pretrains)
-        wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]
-    else:
-        wordvec_args = []
-
-    charlm = choose_charlm(language, dataset, command_args.charlm, default_charlms, {})
-    charlm_args = build_charlm_args(language, charlm, base_args=False)
-
-    default_args = retag_args + wordvec_args + charlm_args
-    bert_args = common.choose_transformer(language, command_args, extra_args, warn=True, layers=True)
-    default_args = default_args + bert_args
+    default_args = build_default_args(paths, short_language, dataset, command_args, extra_args)
 
     if mode == Mode.TRAIN:
         train_args = ['--train_file', train_file,
@@ -93,7 +118,7 @@ def run_treebank(mode, paths, treebank, short_name,
         constituency_parser.main(text_args)
 
 def main():
-    common.main(run_treebank, "constituency", "constituency", add_constituency_args, sub_argparse=constituency_parser.build_argparse())
+    common.main(run_treebank, "constituency", "constituency", add_constituency_args, sub_argparse=constituency_parser.build_argparse(), build_model_filename=build_model_filename)
 
 if __name__ == "__main__":
     main()
