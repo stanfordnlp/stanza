@@ -35,22 +35,9 @@ def tarjan(tree):
     _index = [0]
     cycles = []
     #-------------------------------------------------------------
-    def strong_connect(i):
-        _index[0] += 1
-        index = _index[-1]
-        indices[i] = lowlinks[i] = index - 1
-        stack.append(i)
-        onstack[i] = True
-        dependents = np.where(np.equal(tree, i))[0]
-        for j in dependents:
-            if indices[j] == -1:
-                strong_connect(j)
-                lowlinks[i] = min(lowlinks[i], lowlinks[j])
-            elif onstack[j]:
-                lowlinks[i] = min(lowlinks[i], indices[j])
-
-        # There's a cycle!
+    def maybe_pop_cycle(i):
         if lowlinks[i] == indices[i]:
+            # There's a cycle!
             cycle = np.zeros_like(indices, dtype=bool)
             while stack[-1] != i:
                 j = stack.pop()
@@ -61,7 +48,26 @@ def tarjan(tree):
             cycle[i] = True
             if cycle.sum() > 1:
                 cycles.append(cycle)
-        return
+
+    def initialize_strong_connect(i):
+        _index[0] += 1
+        index = _index[-1]
+        indices[i] = lowlinks[i] = index - 1
+        stack.append(i)
+        onstack[i] = True
+
+    def strong_connect(i):
+        initialize_strong_connect(i)
+        dependents = iter(np.where(np.equal(tree, i))[0])
+        for j in dependents:
+            if indices[j] == -1:
+                strong_connect(j)
+                lowlinks[i] = min(lowlinks[i], lowlinks[j])
+            elif onstack[j]:
+                lowlinks[i] = min(lowlinks[i], indices[j])
+
+        maybe_pop_cycle(i)
+
     #-------------------------------------------------------------
     for i in range(len(tree)):
         if indices[i] == -1:
