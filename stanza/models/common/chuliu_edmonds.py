@@ -57,16 +57,64 @@ def tarjan(tree):
         onstack[i] = True
 
     def strong_connect(i):
-        initialize_strong_connect(i)
-        dependents = iter(np.where(np.equal(tree, i))[0])
-        for j in dependents:
-            if indices[j] == -1:
-                strong_connect(j)
+        # this ridiculous atrocity is because somehow people keep
+        # coming up with graphs which overflow python's call stack
+        # so instead we make our own call stack and turn the recursion
+        # into a loop
+        # see for example
+        #   https://github.com/stanfordnlp/stanza/issues/962
+        #   https://github.com/spraakbanken/sparv-pipeline/issues/166
+        # in an ideal world this block of code would look like this
+        #    initialize_strong_connect(i)
+        #    dependents = iter(np.where(np.equal(tree, i))[0])
+        #    for j in dependents:
+        #        if indices[j] == -1:
+        #            strong_connect(j)
+        #            lowlinks[i] = min(lowlinks[i], lowlinks[j])
+        #        elif onstack[j]:
+        #            lowlinks[i] = min(lowlinks[i], indices[j])
+        #
+        #     maybe_pop_cycle(i)
+        call_stack = [(i, None, None)]
+        while len(call_stack) > 0:
+            i, dependents_iterator, j = call_stack.pop()
+            if dependents_iterator is None: # first time getting here for this i
+                initialize_strong_connect(i)
+                dependents_iterator = iter(np.where(np.equal(tree, i))[0])
+            else: # been here before.  j was the dependent we were just considering
                 lowlinks[i] = min(lowlinks[i], lowlinks[j])
-            elif onstack[j]:
-                lowlinks[i] = min(lowlinks[i], indices[j])
-
-        maybe_pop_cycle(i)
+            for j in dependents_iterator:
+                if indices[j] == -1:
+                    # have to remember where we were...
+                    # put the current iterator & its state on the "call stack"
+                    # we will come back to it later
+                    call_stack.append((i, dependents_iterator, j))
+                    # also, this is what we do next...
+                    call_stack.append((j, None, None))
+                    # this will break this iterator for now
+                    # the next time through, we will continue progressing this iterator
+                    break
+                elif onstack[j]:
+                    lowlinks[i] = min(lowlinks[i], indices[j])
+            else:
+                # this is an intended use of for/else
+                # please stop filing git issues on obscure language features
+                # we finished iterating without a break
+                # and can finally resolve any possible cycles
+                maybe_pop_cycle(i)
+            # at this point, there are two cases:
+            #
+            # we iterated all the way through an iterator (the else in the for/else)
+            # and have resolved any possible cycles.  can then proceed to the previous
+            # iterator we were considering (or finish, if there are no others)
+            # OR
+            # we have hit a break in the iteration over the dependents
+            # for a node
+            # and we need to dig deeper into the graph and resolve the dependent's dependents
+            # before we can continue the previous node
+            #
+            # either way, we check to see if there are unfinished subtrees
+            # when that is finally done, we can return
 
     #-------------------------------------------------------------
     for i in range(len(tree)):
