@@ -551,7 +551,9 @@ TRANSFORMERS = {
     # https://huggingface.co/l3cube-pune/hindi-marathi-dev-roberta
     # l3cube-pune/hindi-marathi-dev-roberta
     #
-    # no evidence of the best transformer to use yet
+    # depparse ufal dev scores:
+    #  no transformer              74.89 63.70 57.43 53.01 57.43
+    #  l3cube-pune/marathi-roberta 76.48 66.21 61.20 57.60 61.20
     "mr": "l3cube-pune/marathi-roberta",
 
     # https://huggingface.co/allegro/herbert-base-cased
