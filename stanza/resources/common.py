@@ -177,6 +177,8 @@ def add_mwt(processors, resources, lang):
     If tokenize is in the list, but mwt is not, and there is a corresponding
     tokenize and mwt pair in the resources file, mwt is added so no missing
     mwt errors are raised.
+
+    TODO: how does this handle EWT in English?
     """
     value = processors[TOKENIZE]
     if value == "default" and MWT in resources[lang]['default_processors']:
