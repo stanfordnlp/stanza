@@ -149,20 +149,6 @@ def split_model_name(model):
     lang, package = model.split('_', 1)
     return lang, package, processor
 
-def get_con_dependencies(lang, package):
-    # so far, this invariant is true:
-    # constituency models use the default pretrain and charlm for the language
-    pretrain_package = default_pretrains[lang]
-    dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
-
-    # sometimes there is no charlm for a language that has constituency, though
-    charlm_package = default_charlms.get(lang, None)
-    if charlm_package is not None:
-        dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
-        dependencies.append({'model': 'backward_charlm', 'package': charlm_package})
-
-    return dependencies
-
 def split_package(package):
     if package.endswith("_finetuned"):
         package = package[:-10]
@@ -191,25 +177,40 @@ def get_pretrain_package(lang, package, model_pretrains, default_pretrains):
 
     if not uses_pretrain or lang in no_pretrain_languages:
         return None
-    elif lang in model_pretrains and package in model_pretrains[lang]:
+    elif model_pretrains is not None and lang in model_pretrains and package in model_pretrains[lang]:
         return model_pretrains[lang][package]
     elif lang in default_pretrains:
         return default_pretrains[lang]
 
     raise RuntimeError("pretrain not specified for lang %s package %s" % (lang, package))
 
+def get_charlm_package(lang, package, model_charlms, default_charlms):
+    package, _, uses_charlm = split_package(package)
 
-def get_pos_charlm_package(lang, package):
-    pieces = package.rsplit("_", 1)
-    if len(pieces) > 1:
-        if pieces[1] == 'nocharlm':
-            return None
-        package = pieces[0]
+    if not uses_charlm:
+        return None
 
-    if lang in pos_charlms and package in pos_charlms[lang]:
-        return pos_charlms[lang][package]
+    if model_charlms is not None and lang in model_charlms and package in model_charlms[lang]:
+        return model_charlms[lang][package]
     else:
         return default_charlms.get(lang, None)
+
+def get_con_dependencies(lang, package):
+    # so far, this invariant is true:
+    # constituency models use the default pretrain and charlm for the language
+    # sometimes there is no charlm for a language that has constituency, though
+    pretrain_package = get_pretrain_package(lang, package, None, default_pretrains)
+    dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
+
+    charlm_package = default_charlms.get(lang, None)
+    if charlm_package is not None:
+        dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
+        dependencies.append({'model': 'backward_charlm', 'package': charlm_package})
+
+    return dependencies
+
+def get_pos_charlm_package(lang, package):
+    return get_charlm_package(lang, package, pos_charlms, default_charlms)
 
 def get_pos_dependencies(lang, package):
     dependencies = []
@@ -225,18 +226,8 @@ def get_pos_dependencies(lang, package):
 
     return dependencies
 
-# TODO: refactor
 def get_lemma_charlm_package(lang, package):
-    pieces = package.rsplit("_", 1)
-    if len(pieces) > 1:
-        if pieces[1] == 'nocharlm':
-            return None
-        package = pieces[0]
-
-    if lang in lemma_charlms and package in lemma_charlms[lang]:
-        return lemma_charlms[lang][package]
-    else:
-        return default_charlms.get(lang, None)
+    return get_charlm_package(lang, package, lemma_charlms, default_charlms)
 
 def get_lemma_dependencies(lang, package):
     dependencies = []
@@ -250,18 +241,8 @@ def get_lemma_dependencies(lang, package):
     return dependencies
 
 
-# TODO: refactor
 def get_depparse_charlm_package(lang, package):
-    pieces = package.rsplit("_", 1)
-    if len(pieces) > 1:
-        if pieces[1] == 'nocharlm':
-            return None
-        package = pieces[0]
-
-    if lang in depparse_charlms and package in depparse_charlms[lang]:
-        return depparse_charlms[lang][package]
-    else:
-        return default_charlms.get(lang, None)
+    return get_charlm_package(lang, package, depparse_charlms, default_charlms)
 
 def get_depparse_dependencies(lang, package):
     dependencies = []
@@ -277,6 +258,9 @@ def get_depparse_dependencies(lang, package):
 
     return dependencies
 
+def get_ner_charlm_package(lang, package):
+    return get_charlm_package(lang, package, ner_charlms, default_charlms)
+
 def get_ner_dependencies(lang, package):
     dependencies = []
 
@@ -284,14 +268,11 @@ def get_ner_dependencies(lang, package):
     if pretrain_package is not None:
         dependencies.append({'model': 'pretrain', 'package': pretrain_package})
 
-    if lang not in ner_charlms or package not in ner_charlms[lang]:
-        charlm_package = default_charlms.get(lang, None)
-    else:
-        charlm_package = ner_charlms[lang][package]
-
+    charlm_package = get_ner_charlm_package(lang, package)
     if charlm_package is not None:
-        dependencies = dependencies + [{'model': 'forward_charlm', 'package': charlm_package},
-                                       {'model': 'backward_charlm', 'package': charlm_package}]
+        dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
+        dependencies.append({'model': 'backward_charlm', 'package': charlm_package})
+
     return dependencies
 
 def get_sentiment_dependencies(lang, package):
@@ -303,7 +284,7 @@ def get_sentiment_dependencies(lang, package):
     sentiment models use the default pretrain for the language
     also, they all use the default charlm for a language
     """
-    pretrain_package = default_pretrains[lang]
+    pretrain_package = get_pretrain_package(lang, package, None, default_pretrains)
     dependencies = [{'model': 'pretrain', 'package': pretrain_package}]
 
     charlm_package = default_charlms.get(lang, None)
