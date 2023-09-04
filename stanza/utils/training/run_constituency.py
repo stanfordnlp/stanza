@@ -63,7 +63,7 @@ def build_model_filename(paths, short_name, command_args, extra_args):
     if command_args.save_dir is not None:
         train_args.extend(["--save_dir", command_args.save_dir])
     args = constituency_parser.parse_args(train_args)
-    save_name = constituency_parser.model_file_name(args)
+    save_name = constituency_parser.build_model_filename(args)
     return save_name
 
 
