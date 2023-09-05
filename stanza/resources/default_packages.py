@@ -548,6 +548,16 @@ TRANSFORMERS = {
     # Musixmatch/umberto-commoncrawl-cased-v1:             98.56   98.45   98.13   97.62
     "it": "dbmdz/electra-base-italian-xxl-cased-discriminator",
 
+    # for Japanese
+    # there are others that would also work,
+    # but they require different tokenizers instead of being
+    # plug & play
+    #
+    # Constitutency scores on ALT (in-order)
+    # no bert: 90.68 dev, 91.40 test
+    # rinna:   91.54 dev, 91.89 test
+    "ja": "rinna/japanese-roberta-base",
+
     # could also try:
     # l3cube-pune/marathi-bert-v2
     #  or
