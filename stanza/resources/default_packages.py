@@ -423,6 +423,9 @@ TRANSFORMERS = {
     #
     "en": "google/electra-large-discriminator",
 
+    # TODO need to test, possibly compare with others
+    "es": "bertin-project/bertin-roberta-base-spanish",
+
     # NER scores for a couple Persian options:
     # none:
     # dev:  2022-04-23 01:44:53 INFO: fa_arman 79.46
@@ -615,6 +618,9 @@ TRANSFORMER_NICKNAMES = {
     "bert-base-multilingual-cased": "mbert",
     "xlm-roberta-large": "xlm-roberta-large",
     "google/electra-large-discriminator": "electra-large",
+
+    # es
+    "bertin-project/bertin-roberta-base-spanish": "bertin-roberta",
 
     # fa
     "HooshvareLab/bert-base-parsbert-uncased": "parsbert",
