@@ -76,14 +76,16 @@ default_sentiment = {
 
 # also, a few languages (very few, currently) have constituency parser models
 default_constituency = {
-    "da": "arboretum",
-    "en": "wsj",
+    "da": "arboretum_charlm",
+    "en": "ptb3-revised_charlm",
     "es": "combined",
-    "it": "turin",
+    "id": "icon_charlm",
+    "it": "vit_charlm",
     "ja": "alt",
     "pt": "cintil",
-    "tr": "starlang",
-    #"zh-hans": "ctb",
+    #"tr": "starlang",
+    "vi": "vlsp22_charlm",
+    "zh-hans": "ctb-51_charlm",
 }
 
 # an alternate tokenizer for languages which aren't trained from a base UD source
