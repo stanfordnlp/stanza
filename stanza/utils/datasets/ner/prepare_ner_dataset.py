@@ -268,6 +268,12 @@ Thai-NNER is another Thai NER dataset, from 2022
     Weerayut Buaphet, Can Udomcharoenchaikit, Peerat Limkonchotiwat,
     Attapol Rutherford, and Sarana Nutanong
   - git clone the data to $NERBASE/thai
+  - On the git repo, there should be a link to a more complete version
+    of the dataset.  For example, in Sep. 2023 it is here:
+    https://github.com/vistec-AI/Thai-NNER#dataset
+    The Google drive it goes to has "postproc".
+    Put the train.json, dev.json, and test.json in
+    $NERBASE/thai/Thai-NNER/data/scb-nner-th-2022/postproc/
   - Then run
     pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset th_nner22
 
