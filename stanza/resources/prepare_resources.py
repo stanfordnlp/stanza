@@ -78,7 +78,7 @@ default_sentiment = {
 default_constituency = {
     "da": "arboretum_charlm",
     "en": "ptb3-revised_charlm",
-    "es": "combined",
+    "es": "combined_charlm",
     "id": "icon_charlm",
     "it": "vit_charlm",
     "ja": "alt_charlm",
