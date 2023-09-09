@@ -50,6 +50,7 @@ The Ukrainian model and its score [was provided by gawy](https://github.com/stan
 | Spanish           |   es   | AnCora          | 4         | 88.6  | <i class="fas fa-minus" style="color:#a0332c"></i> |                                    | [<i class="fas fa-file-alt"></i>](http://clic.ub.edu/corpus/en) |
 | Swedish           |   sv   | SUC3 (shuffled) | 8         | 85.66 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.0</b> | [<i class="fas fa-file-alt"></i>](https://spraakbanken.gu.se/en/resources/suc3) |
 | Swedish           |   sv   | SUC3 (licensed) | 8         | 82.54 | <i class="fas fa-minus" style="color:#a0332c"></i> | <b style="color:#33a02c">1.4.0</b> | [<i class="fas fa-file-alt"></i>](https://spraakbanken.gu.se/en/resources/suc3) |
+| Thai              |   th   | LST20           | 10        | 79.65 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.1</b> | [<i class="fas fa-file-alt"></i>](https://arxiv.org/ftp/arxiv/papers/2008/2008.05055.pdf) |
 | Turkish           |   tr   | Starlang        | 5         | 81.65 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.0</b> | [<i class="fas fa-file-alt"></i>](https://ieeexplore.ieee.org/document/9259873) |
 | Ukrainian         |   uk   | languk          | 4         | 86.05 | <i class="fas fa-check" style="color:#33a02c"></i> |                                    | [<i class="fas fa-file-alt"></i>](https://github.com/lang-uk/ner-uk) [<i class="fas fa-file-alt"></i>](https://github.com/gawy/stanza-lang-uk/releases/tag/v0.9)  |
 | Vietnamese        |   vi   | VLSP            | 4         | 82.44 | <i class="fas fa-check" style="color:#33a02c"></i> | 1.2.1                              | [<i class="fas fa-file-alt"></i>](https://vlsp.org.vn/vlsp2018/eval/ner) |
@@ -93,4 +94,5 @@ We have provided links to all NER datasets used to train the released models on 
 - The Persian Arman dataset uses 6 tags: `event`, `fac`, `loc`, `org`, `pers`, `pro`
 - The Polish NKJP dataset uses 6 tags: `date`, `geogName`, `orgName`, `persName`, `placeName`, `time`
 - The Sindhi SiNER dataset uses 11 tags: `ART`, `EVENT`, `FAC`, `GPE`, `LANGUAGE`, `LOC`, `NORP`, `ORG`, `OTHERS`, `PERSON`, `TITLE`
+- The Thai LST20 dataset uses 10 tags: Person (`PER`), Title (`TTL`), Designator (`DES`), Organization (`ORG`), Location (`LOC`), Brand (`BRN`), Date and time (`DTM`), Measurement unit (`MEA`), Number (`NUM`), and Terminology (`TRM`)
 - The Turkish Starlang dataset uses 5 tags: `LOCATION`, `MONEY`, `ORGANIZATION`, `PERSON`, `TIME`
