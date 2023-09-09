@@ -127,6 +127,25 @@ The following table lists all UD models supported by Stanza and pretrained on th
 
 ## Other Available Models for Tokenization
 
+### Myanmar
+
+The [Asian Language Treebank Project](https://www2.nict.go.jp/astrec-att/member/mutiyama/ALT/) has a Myanmar dataset.
+We used this dataset to build a tokenizer for Myanmar.
+
+Stanza includes a script which converts the trees and the officially proposed train/dev/split to an ersatz UD dataset:
+
+https://github.com/stanfordnlp/stanza/blob/v1.5.1/stanza/utils/datasets/tokenization/convert_my_alt.py
+
+### Sindhi
+
+The NLP team at [ISRA](https://isra.edu.pk/) graciously provided us with several passages of tokenized Sindhi text.
+We used this to add a tokenizer for Sindhi to Stanza.  This is particularly useful in that it
+allows us to incorporate a Sindhi NER model.
+
+With permission, we are currently [hosting the Sindhi tokenization data on StanfordNLP's github](https://github.com/stanfordnlp/sindhi-tokenization).
+
+### Thai
+
 We have trained a couple Thai tokenizer models based on publicly
 available datasets.  The Inter-BEST dataset had some strange sentence
 tokenization according to the authors of pythainlp, so we used their
