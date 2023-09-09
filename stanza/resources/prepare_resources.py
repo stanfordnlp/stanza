@@ -18,7 +18,7 @@ import shutil
 import zipfile
 
 from stanza import __resources_version__
-from stanza.models.common.constant import lcode2lang, two_to_three_letters
+from stanza.models.common.constant import lcode2lang, two_to_three_letters, three_to_two_letters
 from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms, lemma_charlms, known_nicknames
 
 def parse_args():
@@ -482,6 +482,8 @@ def process_lcode(args):
         resources_new[lang_name.lower()] = {'alias': lang.lower()}
         if lang.lower() in two_to_three_letters:
             resources_new[two_to_three_letters[lang.lower()]] = {'alias': lang.lower()}
+        elif lang.lower() in three_to_two_letters:
+            resources_new[three_to_two_letters[lang.lower()]] = {'alias': lang.lower()}
     print("Processed lcode aliases.  Writing resources.json")
     json.dump(resources_new, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
