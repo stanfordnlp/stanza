@@ -14,6 +14,8 @@ The default models for two languages, EN and IT, are "combined".  The goal is to
 | Language | Datasets | Other |
 | :------- | :------------ | :------ |
 | English | EWT, GUM, GUMReddit, PUD, Pronouns | |
+| French  | GSD, ParisStories, Rhapsodie, Sequoia | |
+| Hebrew  | IAHLTwiki | [HTB fork from IAHLT](https://github.com/IAHLT/UD_Hebrew) |
 | Italian | ISDT, VIT, PoSTWITA, and TWITTIRO | [MWT list from Prof. Attardi](https://github.com/stanfordnlp/handparsed-treebank/blob/master/italian-mwt/italian.mwt) |
 
 Other data sets would be added, or combined models for other languages
