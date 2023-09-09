@@ -74,7 +74,7 @@ We have provided links to all NER datasets used to train the released models on 
 
 - **Myanmar**: The Myanmar dataset is by special request from [UCSY](https://arxiv.org/ftp/arxiv/papers/1903/1903.04739.pdf).
 
-- **Swedish**: The [SUC3 dataset] has two versions, one with the entries shuffled and another using the original ordering of the data.  We make the shuffled version the default in order to expand the coverage of the model.
+- **Swedish**: The [SUC3 dataset](https://spraakbanken.gu.se/en/resources/suc3) has two versions, one with the entries shuffled and another using the original ordering of the data.  We make the shuffled version the default in order to expand the coverage of the model.
 
 - **Vietnamese**: The Vietnamese VLSP dataset is available by [request from VLSP](https://vlsp.org.vn/vlsp2018/eval/ner).
 
