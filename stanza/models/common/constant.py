@@ -200,7 +200,6 @@ lcode2lang_raw = [
     ("frr", "North_Frisian"),
     ("nd",  "North_Ndebele"),
     ("sme", "North_Sami"),
-    ("se",  "Northern_Sami"),
     ("nso", "Northern_Sotho"),
     ("nb",  "Norwegian_Bokmaal"),
     ("nn",  "Norwegian_Nynorsk"),
@@ -346,20 +345,38 @@ two_to_three_letters_raw = (
     ("xh",  "xho"),
     ("yo",  "yor"),
     ("zu",  "zul"),
+
+    # this is a weird case where a 2 letter code was available,
+    # but UD used the 3 letter code instead
+    ("se",  "sme"),
 )
 
 for two, three in two_to_three_letters_raw:
-    assert two in lcode2lang
-    assert three not in lcode2lang
-    assert three not in lang2lcode
-    lang2lcode[three] = two
-    lcode2lang[three] = lcode2lang[two]
+    if two in lcode2lang:
+        assert two in lcode2lang
+        assert three not in lcode2lang
+        assert three not in lang2lcode
+        lang2lcode[three] = two
+        lcode2lang[three] = lcode2lang[two]
+    elif three in lcode2lang:
+        assert three in lcode2lang
+        assert two not in lcode2lang
+        assert two not in lang2lcode
+        lang2lcode[two] = three
+        lcode2lang[two] = lcode2lang[three]
+    else:
+        raise AssertionError("Found a proposed alias %s -> %s when neither code was already known" % (two, three))
 
 two_to_three_letters = {
     two: three for two, three in two_to_three_letters_raw
 }
 
+three_to_two_letters = {
+    three: two for two, three in two_to_three_letters_raw
+}
+
 assert len(two_to_three_letters) == len(two_to_three_letters_raw)
+assert len(three_to_two_letters) == len(two_to_three_letters_raw)
 
 # additional useful code to language mapping
 # added after dict invert to avoid conflict
