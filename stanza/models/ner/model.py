@@ -235,7 +235,7 @@ class NERTagger(nn.Module):
         lstm_outputs = pack(lstm_outputs).data
         logits = pad(self.tag_clf(lstm_outputs)).contiguous()
         loss, trans = self.crit(logits, word_mask, tags)
-        
+
         return loss, logits, trans
 
     @staticmethod
