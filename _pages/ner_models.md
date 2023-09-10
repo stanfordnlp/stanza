@@ -3,7 +3,7 @@ layout: page
 title: NER Models
 keywords: ner models
 permalink: '/ner_models.html'
-nav_order: 5
+nav_order: 6
 parent: Models
 datatable: true
 ---
