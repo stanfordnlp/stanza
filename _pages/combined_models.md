@@ -9,7 +9,7 @@ parent: Models
 
 ## Combined models
 
-The default models for two languages, EN and IT, are "combined".  The goal is to get better coverage of the language, hopefully without sacrificing consistency in the annotation scheme.  In each case, the data used to train the models is a combination of multiple UD datasets.
+The default models for some languages are "combined".  The goal is to get better coverage of the language, hopefully without sacrificing consistency in the annotation scheme.  In each case, the data used to train the models is a combination of multiple UD datasets.
 
 | Language | Datasets | Other |
 | :------- | :------------ | :------ |
@@ -25,6 +25,8 @@ Spanish GSD and AnCora use the same general annotation scheme, but
 sentence splits are annotated differently, and some of the features
 are noticeably different.  Hopefully over time we can resolve some of
 those issues and expand the models.
+
+Whether or not this was a good idea was explored [in a GURT paper from Georgetown](https://arxiv.org/abs/2302.00636)
 
 ## Data augmentation
 
