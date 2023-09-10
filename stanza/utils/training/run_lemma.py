@@ -22,7 +22,7 @@ from stanza.models import identity_lemmatizer
 from stanza.models import lemmatizer
 
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_lemma_charlm
+from stanza.utils.training.common import Mode, add_charlm_args, build_lemma_charlm_args, choose_lemma_charlm
 
 from stanza.utils.datasets.prepare_lemma_treebank import check_lemmas
 
@@ -54,8 +54,7 @@ def build_model_filename(paths, short_name, command_args, extra_args):
 
     # TODO: can avoid downloading the charlm at this point, since we
     # might not even be training
-    charlm = choose_lemma_charlm(short_language, dataset, command_args.charlm)
-    charlm_args = build_charlm_args(short_language, charlm)
+    charlm_args = build_lemma_charlm_args(short_language, dataset, command_args.charlm)
 
     train_args = ["--train_file", train_file,
                   "--shorthand", short_name,
@@ -78,8 +77,7 @@ def run_treebank(mode, paths, treebank, short_name,
     test_gold_file = f"{lemma_dir}/{short_name}.test.gold.conllu"
     test_pred_file = temp_output_file if temp_output_file else f"{lemma_dir}/{short_name}.test.pred.conllu"
 
-    charlm = choose_lemma_charlm(short_language, dataset, command_args.charlm)
-    charlm_args = build_charlm_args(short_language, charlm)
+    charlm_args = build_lemma_charlm_args(short_language, dataset, command_args.charlm)
 
     if not os.path.exists(train_file):
         logger.error("Treebank %s is not prepared for training the lemmatizer.  Could not find any training data at %s  Skipping..." % (treebank, train_file))
