@@ -84,6 +84,23 @@
                 table.fixedHeader.adjust();
             });
         });
+
+        $('table.ud2-12-datatable').each(function() {
+            let table = $(this).DataTable({
+                paging: false,
+                fixedColumns: {
+                    left: 2
+                },
+                fixedHeader: true,
+                scrollX: true,
+                stateSave: true,
+                createdRow: function ( row, data, index ) { conditional_formatting(row, data, index, 1)}
+            });
+
+            $('div.main-content-wrap').on('scroll', function () {
+                table.fixedHeader.adjust();
+            });
+        });
     })
   </script>
   {% endif %}
