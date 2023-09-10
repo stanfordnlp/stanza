@@ -132,12 +132,13 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
                   '--output_file', lemma_output,
                   '--shorthand', short_name,
                   '--mode', 'predict']
-    lemma_charlm_args = build_lemma_charlm_args(short_language, package, command_args.charlm)
-    lemma_args = lemma_args + lemma_charlm_args + extra_args
     if check_lemmas(lemma_train_file):
+        lemma_charlm_args = build_lemma_charlm_args(short_language, package, command_args.charlm)
+        lemma_args = lemma_args + lemma_charlm_args + extra_args
         logger.info("Running lemmatizer step with args: {}".format(lemma_args))
         lemmatizer.main(lemma_args)
     else:
+        lemma_args = lemma_args + extra_args
         logger.info("No lemmas in training data")
         logger.info("Running identity lemmatizer step with args: {}".format(lemma_args))
         identity_lemmatizer.main(lemma_args)
