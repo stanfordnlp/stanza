@@ -111,7 +111,11 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
                 '--output_file', pos_output,
                 '--lang', short_language,
                 '--shorthand', short_name,
-                '--mode', 'predict']
+                '--mode', 'predict',
+                # the MWT is not preserving the tags,
+                # so we don't ask the tagger to report a score
+                # the ETE will score the whole thing at the end
+                '--no_gold_labels']
 
     pos_charlm_args = build_pos_charlm_args(short_language, package, command_args.charlm)
 
