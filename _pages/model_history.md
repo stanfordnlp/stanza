@@ -9,6 +9,10 @@ parent: Resources
 
 This page contains links to downloadable models for all historical versions of Stanza. Note that model versions prior to 0.2.0 (inclusive) require the StanfordNLP package (`pip install stanfordnlp`), and those after require the Stanza package (`pip install stanza`).
 
+### 1.5.1
+
+All UD models rebuilt with UD 2.12
+
 ### 1.4.0
 
 Upgraded English constituency parser and other conparse models.  NER models for JA, MY
@@ -18,6 +22,8 @@ Upgraded English constituency parser and other conparse models.  NER models for 
 English constituency parser added.  No charlm or bert integration yet,
 so the scores were quite low relative to state of the art.
 Multilingual langid model added.
+
+All UD models rebuilt with UD 2.8
 
 ### 1.2.3
 
