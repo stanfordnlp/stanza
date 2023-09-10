@@ -24,6 +24,7 @@ BLEX       |     73.20 |     72.79 |     73.00 |     72.86
 import argparse
 
 from stanza.utils.training.run_ete import RESULTS_STRING
+from stanza.models.common.constant import pretty_langcode_to_lang
 from stanza.models.common.short_name_to_treebank import short_name_to_treebank
 
 EXPECTED_ORDER = ["Tokens", "Sentences", "Words", "UPOS", "XPOS", "UFeats", "AllTags", "Lemmas", "UAS", "LAS", "CLAS", "MLAS", "BLEX"]
@@ -67,11 +68,15 @@ while index < len(lines):
 
     block = [x.split("|") for x in block]
     assert all(x[0].strip() == y for x, y in zip(block, EXPECTED_ORDER)), "output format changed?"
-    block = [short_name_to_treebank(short_name)] + [x[3].strip() for x in block]
+    lcode = short_name.split("_", 1)[0]
+    language = pretty_langcode_to_lang(lcode)
+    treebank = short_name_to_treebank(short_name)
+    dataset = treebank.split("-")[-1]
+    block = [language, "[%s](%s)" % (dataset, "https://github.com/UniversalDependencies/%s" % treebank)] + [x[3].strip() for x in block]
     blocks.append(block)
 
-avg = [sum(float(x[i]) for x in blocks) / len(blocks) for i in range(1, len(EXPECTED_ORDER) + 1)]
-avg = ["Macro Avg"] + ["%.2f" % x for x in avg]
+avg = [sum(float(x[i]) for x in blocks) / len(blocks) for i in range(2, len(EXPECTED_ORDER) + 2)]
+avg = ["Macro Avg", ""] + ["%.2f" % x for x in avg]
 blocks = [avg] + blocks
 
 chart = ["|%s|" % "  |  ".join(x) for x in blocks]

@@ -465,6 +465,15 @@ def langcode_to_lang(lcode):
     else:
         return lcode
 
+def pretty_langcode_to_lang(lcode):
+    lang = langcode_to_lang(lcode)
+    lang = lang.replace("_", " ")
+    if lang == 'Simplified Chinese':
+        lang = 'Chinese (Simplified)'
+    elif lang == 'Traditional Chinese':
+        lang = 'Chinese (Traditional)'
+    return lang
+
 def lang_to_langcode(lang):
     if lang in lang2lcode:
         lcode = lang2lcode[lang]
