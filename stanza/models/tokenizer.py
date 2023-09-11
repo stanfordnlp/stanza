@@ -88,6 +88,10 @@ def build_argparse():
     utils.add_device_args(parser)
     parser.add_argument('--seed', type=int, default=1234)
 
+    parser.add_argument('--charlm', action='store_true', help="Turn on contextualized char embedding using pretrained character-level language model.")
+    parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
+    parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
+
     parser.add_argument('--use_mwt', dest='use_mwt', default=None, action='store_true', help='Whether or not to include mwt output layers.  If set to None, this will be determined by examining the training data for MWTs')
     parser.add_argument('--no_use_mwt', dest='use_mwt', action='store_false', help='Whether or not to include mwt output layers')
 
@@ -166,7 +170,7 @@ def train(args):
         args['use_mwt'] = train_batches.has_mwt()
         logger.info("Found {}mwts in the training data.  Setting use_mwt to {}".format(("" if args['use_mwt'] else "no "), args['use_mwt']))
 
-    trainer = Trainer(args=args, vocab=vocab, lexicon=lexicon, dictionary=dictionary, device=args['device'])
+    trainer = Trainer(args=args, vocab=vocab, lexicon=lexicon, dictionary=dictionary, device=args['device'], foundation_cache=None)
 
     if args['load_name'] is not None:
         load_name = os.path.join(args['save_dir'], args['load_name'])
@@ -236,7 +240,7 @@ def train(args):
 
 def evaluate(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
-    trainer = Trainer(model_file=args['load_name'] or args['save_name'], device=args['device'])
+    trainer = Trainer(args=args, model_file=args['load_name'] or args['save_name'], device=args['device'], foundation_cache=None)
     loaded_args, vocab = trainer.args, trainer.vocab
 
     for k in loaded_args:

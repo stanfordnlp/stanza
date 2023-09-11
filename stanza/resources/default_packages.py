@@ -333,6 +333,8 @@ depparse_charlms = copy.deepcopy(pos_charlms)
 
 lemma_charlms = copy.deepcopy(pos_charlms)
 
+tokenizer_charlms = copy.deepcopy(pos_charlms)
+
 ner_charlms = {
     "en": {
         "conll03": "1billion",

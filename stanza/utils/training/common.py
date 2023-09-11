@@ -9,7 +9,7 @@ import tempfile
 
 from enum import Enum
 
-from stanza.resources.default_packages import default_charlms, lemma_charlms, pos_charlms, depparse_charlms, TRANSFORMERS, TRANSFORMER_LAYERS
+from stanza.resources.default_packages import default_charlms, lemma_charlms, tokenizer_charlms, pos_charlms, depparse_charlms, TRANSFORMERS, TRANSFORMER_LAYERS
 from stanza.models.common.constant import treebank_to_short_name
 from stanza.models.common.utils import ud_scores
 from stanza.resources.common import download, DEFAULT_MODEL_DIR, UnknownLanguageError
@@ -303,14 +303,15 @@ def find_charlm_file(direction, language, charlm, model_dir=DEFAULT_MODEL_DIR):
 
     raise FileNotFoundError(f"Cannot find {direction} charlm in either {saved_path} or {resource_path}  Attempted downloading {charlm} but that did not work")
 
-def build_charlm_args(language, charlm, base_args=True, model_dir=DEFAULT_MODEL_DIR):
+def build_charlm_args(language, charlm, base_args=True, model_dir=DEFAULT_MODEL_DIR, use_backward_model=True):
     """
     If specified, return forward and backward charlm args
     """
     if charlm:
         try:
             forward = find_charlm_file('forward', language, charlm, model_dir=model_dir)
-            backward = find_charlm_file('backward', language, charlm, model_dir=model_dir)
+            if use_backward_model:
+                backward = find_charlm_file('backward', language, charlm, model_dir=model_dir)
         except FileNotFoundError as e:
             # if we couldn't find sd_isra when training an SD model,
             # for example, but isra exists, we try to download the
@@ -319,15 +320,17 @@ def build_charlm_args(language, charlm, base_args=True, model_dir=DEFAULT_MODEL_
                 short_charlm = charlm[len(language)+1:]
                 try:
                     forward = find_charlm_file('forward', language, short_charlm, model_dir=model_dir)
-                    backward = find_charlm_file('backward', language, short_charlm, model_dir=model_dir)
+                    if use_backward_model:
+                        backward = find_charlm_file('backward', language, short_charlm, model_dir=model_dir)
                 except FileNotFoundError as e2:
                     raise FileNotFoundError("Tried to find charlm %s, which doesn't exist.  Also tried %s, but didn't find that either" % (charlm, short_charlm)) from e
                 logger.warning("Was asked to find charlm %s, which does not exist.  Did find %s though", charlm, short_charlm)
             else:
                 raise
 
-        char_args = ['--charlm_forward_file', forward,
-                     '--charlm_backward_file', backward]
+        char_args = ['--charlm_forward_file', forward]
+        if use_backward_model:
+            char_args += ['--charlm_backward_file', backward]
         if not base_args:
             return char_args
         return ['--charlm',
@@ -377,6 +380,13 @@ def choose_lemma_charlm(short_language, dataset, charlm):
     """
     return choose_charlm(short_language, dataset, charlm, default_charlms, lemma_charlms)
 
+def choose_tokenizer_charlm(short_language, dataset, charlm):
+    """
+    charlm == "default" means the default charlm for this dataset or language
+    charlm == None is no charlm
+    """
+    return choose_charlm(short_language, dataset, charlm, default_charlms, tokenizer_charlms)
+
 def choose_transformer(short_language, command_args, extra_args, warn=True, layers=False):
     """
     Choose a transformer using the default options for this language
@@ -405,4 +415,9 @@ def build_lemma_charlm_args(short_language, dataset, charlm, base_args=True, mod
 def build_depparse_charlm_args(short_language, dataset, charlm, base_args=True, model_dir=DEFAULT_MODEL_DIR):
     charlm = choose_depparse_charlm(short_language, dataset, charlm)
     charlm_args = build_charlm_args(short_language, charlm, base_args, model_dir)
+    return charlm_args
+
+def build_tokenizer_charlm_args(short_language, dataset, charlm, base_args=True, model_dir=DEFAULT_MODEL_DIR):
+    charlm = choose_tokenizer_charlm(short_language, dataset, charlm)
+    charlm_args = build_charlm_args(short_language, charlm, base_args, model_dir, use_backward_model=False)
     return charlm_args

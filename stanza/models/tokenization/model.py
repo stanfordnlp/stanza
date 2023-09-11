@@ -3,23 +3,38 @@ import torch.nn.functional as F
 import torch.nn as nn
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, PackedSequence
 
+from stanza.models.common.char_model import CharacterLanguageModelWordAdapter
+from stanza.models.common.foundation_cache import load_charlm
+
 class Tokenizer(nn.Module):
-    def __init__(self, args, nchars, emb_dim, hidden_dim, dropout, feat_dropout):
+    def __init__(self, args, nchars, emb_dim, hidden_dim, dropout, feat_dropout, foundation_cache=None):
         super().__init__()
+
+        self.unsaved_modules = []
 
         self.args = args
         feat_dim = args['feat_dim']
 
         self.embeddings = nn.Embedding(nchars, emb_dim, padding_idx=0)
 
-        self.rnn = nn.LSTM(emb_dim + feat_dim, hidden_dim, num_layers=self.args['rnn_layers'], bidirectional=True, batch_first=True, dropout=dropout if self.args['rnn_layers'] > 1 else 0)
+        self.input_dim = emb_dim + feat_dim
+
+        charmodel = None
+        if args is not None and args.get('charlm_forward_file', None):
+            charmodel_forward = load_charlm(args['charlm_forward_file'], foundation_cache=foundation_cache)
+            charmodels = nn.ModuleList([charmodel_forward])
+            charmodel = CharacterLanguageModelWordAdapter(charmodels)
+            self.input_dim += charmodel.hidden_dim()
+        self.add_unsaved_module("charmodel", charmodel)
+
+        self.rnn = nn.LSTM(self.input_dim, hidden_dim, num_layers=self.args['rnn_layers'], bidirectional=True, batch_first=True, dropout=dropout if self.args['rnn_layers'] > 1 else 0)
 
         if self.args['conv_res'] is not None:
             self.conv_res = nn.ModuleList()
             self.conv_sizes = [int(x) for x in self.args['conv_res'].split(',')]
 
             for si, size in enumerate(self.conv_sizes):
-                l = nn.Conv1d(emb_dim + feat_dim, hidden_dim * 2, size, padding=size//2, bias=self.args.get('hier_conv_res', False) or (si == 0))
+                l = nn.Conv1d(self.input_dim, hidden_dim * 2, size, padding=size//2, bias=self.args.get('hier_conv_res', False) or (si == 0))
                 self.conv_res.append(l)
 
             if self.args.get('hier_conv_res', False):
@@ -42,8 +57,17 @@ class Tokenizer(nn.Module):
 
         self.toknoise = nn.Dropout(self.args['tok_noise'])
 
-    def forward(self, x, feats, lengths):
+    def add_unsaved_module(self, name, module):
+        self.unsaved_modules += [name]
+        setattr(self, name, module)
+
+    def forward(self, x, feats, lengths, raw=None):
         emb = self.embeddings(x)
+
+        if self.charmodel is not None and raw is not None:
+            char_emb = self.charmodel(raw, wrap=False)
+            emb = torch.cat([emb, char_emb], axis=2)
+
         emb = self.dropout(emb)
         feats = self.dropout_feat(feats)
 

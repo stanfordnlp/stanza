@@ -283,8 +283,9 @@ class CharacterLanguageModelWordAdapter(nn.Module):
         super().__init__()
         self.charlms = charlms
 
-    def forward(self, words):
-        words = [CHARLM_START + x + CHARLM_END for x in words]
+    def forward(self, words, wrap=True):
+        if wrap:
+            words = [CHARLM_START + x + CHARLM_END for x in words]
         padded_reps = []
         for charlm in self.charlms:
             rep = charlm.per_char_representation(words)
