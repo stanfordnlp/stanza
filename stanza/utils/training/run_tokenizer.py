@@ -25,9 +25,12 @@ import os
 from stanza.models import tokenizer
 from stanza.utils.avg_sent_len import avg_sent_len
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode
+from stanza.utils.training.common import Mode, add_charlm_args, build_tokenizer_charlm_args
 
 logger = logging.getLogger('stanza')
+
+def add_tokenizer_args(parser):
+    add_charlm_args(parser)
 
 def uses_dictionary(short_language):
     """
@@ -44,7 +47,7 @@ def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
 
-    short_language = short_name.split("_")[0]
+    short_language, dataset = short_name.split("_", 1)
     label_type = "--label_file"
     label_file = f"{tokenize_dir}/{short_name}-ud-train.toklabels"
     dev_type = "--txt_file"
@@ -69,6 +72,8 @@ def run_treebank(mode, paths, treebank, short_name,
     train_pred = temp_output_file if temp_output_file else f"{tokenize_dir}/{short_name}.train.pred.conllu"
     dev_pred = temp_output_file if temp_output_file else f"{tokenize_dir}/{short_name}.dev.pred.conllu"
     test_pred = temp_output_file if temp_output_file else f"{tokenize_dir}/{short_name}.test.pred.conllu"
+
+    charlm_args = build_tokenizer_charlm_args(short_language, dataset, command_args.charlm)
 
     if mode == Mode.TRAIN:
         seqlen = str(math.ceil(avg_sent_len(label_file) * 3 / 100) * 100)
@@ -118,7 +123,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_treebank, "tokenize", "tokenizer", sub_argparse=tokenizer.build_argparse())
+    common.main(run_treebank, "tokenize", "tokenizer", add_tokenizer_args, sub_argparse=tokenizer.build_argparse())
         
 if __name__ == "__main__":
     main()

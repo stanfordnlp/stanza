@@ -42,7 +42,8 @@ class TokenizeProcessor(UDProcessor):
         if config.get('pretokenized'):
             self._trainer = None
         else:
-            self._trainer = Trainer(model_file=config['model_path'], device=device)
+            args = {'charlm_forward_file': config.get('forward_charlm_path', None)}
+            self._trainer = Trainer(args=args, model_file=config['model_path'], device=device, foundation_cache=pipeline.foundation_cache)
 
         # get and typecheck the postprocessor
         postprocessor = config.get('postprocessor')
