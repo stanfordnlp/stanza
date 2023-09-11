@@ -53,7 +53,7 @@ def run_treebank(mode, paths, treebank, short_name,
     test_gold_file = f"{depparse_dir}/{short_name}.test.gold.conllu"
     test_pred_file = temp_output_file if temp_output_file else f"{depparse_dir}/{short_name}.test.pred.conllu"
 
-    charlm_args = build_depparse_charlm_args(short_language, dataset, charlm)
+    charlm_args = build_depparse_charlm_args(short_language, dataset, command_args.charlm)
 
     bert_args = choose_transformer(short_language, command_args, extra_args)
 
