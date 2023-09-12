@@ -82,7 +82,7 @@ def build_argparse():
     parser.add_argument('--shuffle_steps', type=int, default=100, help="Step interval to shuffle each paragraph in the generator")
     parser.add_argument('--eval_steps', type=int, default=200, help="Step interval to evaluate the model on the dev set for early stopping")
     parser.add_argument('--max_steps_before_stop', type=int, default=5000, help='Early terminates after this many steps if the dev scores are not improving')
-    parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_tokenizer.pt", help="File name to save the model")
     parser.add_argument('--load_name', type=str, default=None, help="File name to load a saved model")
     parser.add_argument('--save_dir', type=str, default='saved_models/tokenize', help="Directory to save models in")
     utils.add_device_args(parser)
@@ -110,11 +110,13 @@ def parse_args(args=None):
     return args
 
 def model_file_name(args):
-    if args['save_name'] is not None:
-        save_name = args['save_name']
-    else:
-        save_name = args['shorthand'] + "_tokenizer.pt"
+    embedding = "nocharlm"
+    if args['charlm'] and args['charlm_forward_file']:
+        embedding = "charlm"
+    save_name = args['save_name'].format(shorthand=args['shorthand'],
+                                         embedding=embedding)
 
+    logger.info("Saving to: %s", save_name)
     if not os.path.exists(os.path.join(args['save_dir'], save_name)) and os.path.exists(save_name):
         return save_name
     return os.path.join(args['save_dir'], save_name)
