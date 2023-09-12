@@ -32,6 +32,27 @@ logger = logging.getLogger('stanza')
 def add_tokenizer_args(parser):
     add_charlm_args(parser)
 
+
+def build_model_filename(paths, short_name, command_args, extra_args):
+    short_language, dataset = short_name.split("_", 1)
+
+    # TODO: can avoid downloading the charlm at this point, since we
+    # might not even be training
+    charlm_args = build_tokenizer_charlm_args(short_language, dataset, command_args.charlm)
+
+    train_args = ["--shorthand", short_name,
+                  "--mode", "train"]
+    train_args = train_args + charlm_args + extra_args
+    if command_args.save_name is not None:
+        train_args.extend(["--save_name", command_args.save_name])
+    if command_args.save_dir is not None:
+        train_args.extend(["--save_dir", command_args.save_dir])
+    args = tokenizer.parse_args(train_args)
+    save_name = tokenizer.model_file_name(args)
+    return save_name
+
+
+
 def uses_dictionary(short_language):
     """
     Some of the languages (as shown here) have external dictionaries
@@ -83,14 +104,14 @@ def run_treebank(mode, paths, treebank, short_name,
                       ["--dev_conll_gold", dev_gold, "--conll_file", dev_pred, "--shorthand", short_name])
         if uses_dictionary(short_language):
             train_args = train_args + ["--use_dictionary"]
-        train_args = train_args + extra_args
+        train_args = train_args + charlm_args + extra_args
         logger.info("Running train step with args: {}".format(train_args))
         tokenizer.main(train_args)
     
     if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
         dev_args = ["--mode", "predict", dev_type, dev_file, "--lang", short_language,
                     "--conll_file", dev_pred, "--shorthand", short_name, "--mwt_json_file", dev_mwt]
-        dev_args = dev_args + extra_args
+        dev_args = dev_args + charlm_args + extra_args
         logger.info("Running dev step with args: {}".format(dev_args))
         tokenizer.main(dev_args)
 
@@ -103,7 +124,7 @@ def run_treebank(mode, paths, treebank, short_name,
     if mode == Mode.SCORE_TEST or mode == Mode.TRAIN:
         test_args = ["--mode", "predict", test_type, test_file, "--lang", short_language,
                      "--conll_file", test_pred, "--shorthand", short_name, "--mwt_json_file", test_mwt]
-        test_args = test_args + extra_args
+        test_args = test_args + charlm_args + extra_args
         logger.info("Running test step with args: {}".format(test_args))
         tokenizer.main(test_args)
 
@@ -123,7 +144,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_treebank, "tokenize", "tokenizer", add_tokenizer_args, sub_argparse=tokenizer.build_argparse())
-        
+    common.main(run_treebank, "tokenize", "tokenizer", add_tokenizer_args, sub_argparse=tokenizer.build_argparse(), build_model_filename=build_model_filename)
+
 if __name__ == "__main__":
     main()
