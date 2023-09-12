@@ -92,7 +92,7 @@ def run_treebank(mode, paths, treebank, short_name,
         results = common.run_eval_script_tokens(dev_gold, dev_pred)
         logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
 
-    if mode == Mode.SCORE_TEST:
+    if mode == Mode.SCORE_TEST or mode == Mode.TRAIN:
         test_args = ["--mode", "predict", test_type, test_file, "--lang", short_language,
                      "--conll_file", test_pred, "--shorthand", short_name, "--mwt_json_file", test_mwt]
         test_args = test_args + extra_args
