@@ -72,11 +72,13 @@ while index < len(lines):
     language = pretty_langcode_to_lang(lcode)
     treebank = short_name_to_treebank(short_name)
     dataset = treebank.split("-")[-1]
-    block = [language, "[%s](%s)" % (dataset, "https://github.com/UniversalDependencies/%s" % treebank)] + [x[3].strip() for x in block]
+    block = [language, lcode, "[%s](%s)" % (dataset, "https://github.com/UniversalDependencies/%s" % treebank)] + [x[3].strip() for x in block]
     blocks.append(block)
 
-avg = [sum(float(x[i]) for x in blocks) / len(blocks) for i in range(2, len(EXPECTED_ORDER) + 2)]
-avg = ["Macro Avg", ""] + ["%.2f" % x for x in avg]
+PREFIX = ["Macro Avg", "", ""]
+
+avg = [sum(float(x[i]) for x in blocks) / len(blocks) for i in range(len(PREFIX), len(EXPECTED_ORDER) + len(PREFIX))]
+avg = ["Macro Avg", "", ""] + ["%.2f" % x for x in avg]
 blocks = [avg] + blocks
 
 chart = ["|%s|" % "  |  ".join(x) for x in blocks]
