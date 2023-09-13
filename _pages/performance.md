@@ -34,6 +34,20 @@ page. For details on how we handled treebanks with no training data,
 please refer to
 [our CoNLL 2018 system description paper](https://nlp.stanford.edu/pubs/qi2018universal.pdf).
 
+If the models for a particular dataset are the default for that
+language, it is marked with a green checkmark:
+<i class="fas fa-check" style="color:#33a02c"></i>
+For languages which have a "combined" family of models, that will be
+the default, and those models are not represented in this table.
+
+License information for models built from the UD data is unclear, but
+users are encouraged to click on the git links below and check the
+license for the relevant data if they are unsure of the licenses for
+the data used to build these models.
+To the extent that The Trustees of Leland Stanford Junior University
+have ownership and rights over these language packs, all these Stanza
+language packs are made available under the
+[Open Data Commons Attribution License v1.0](https://www.opendatacommons.org/licenses/by/1.0/).
 
 
 | Language | lcode | Treebank | Default | Tokens | Sentences | Words | UPOS | XPOS | UFeats | AllTags | Lemmas | UAS | LAS | CLAS | MLAS | BLEX |
