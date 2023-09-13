@@ -50,7 +50,7 @@ language packs are made available under the
 [Open Data Commons Attribution License v1.0](https://www.opendatacommons.org/licenses/by/1.0/).
 
 
-| Language | lcode | Treebank | Default | Tokens | Sentences | Words | UPOS | XPOS | UFeats | AllTags | Lemmas | UAS | LAS | CLAS | MLAS | BLEX |
+| Language | Treebank | lcode | Default | Tokens | Sentences | Words | UPOS | XPOS | UFeats | AllTags | Lemmas | UAS | LAS | CLAS | MLAS | BLEX |
 | :---- | :---- |:------- | :---: | :----- | :-------- | :---- | :--- | :--- | :----- | :------ | :----- | :-- | :-- | :--- | :--- | :--- |
 |Macro Avg  |    |    |    |  99.50  |  89.23  |  98.95  |  94.68  |  94.39  |  91.66  |  89.10  |  94.28  |  83.68  |  79.02  |  74.81  |  67.47  |  71.29|
 |Afrikaans  |  [AfriBooms](https://github.com/UniversalDependencies/UD_Afrikaans-AfriBooms)  |  af  |  <i class="fas fa-check" style="color:#33a02c"></i>  |  99.99  |  99.65  |  99.99  |  98.60  |  95.77  |  98.41  |  95.66  |  98.29  |  89.54  |  86.14  |  80.10  |  76.71  |  77.53|
