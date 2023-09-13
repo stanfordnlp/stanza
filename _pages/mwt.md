@@ -103,3 +103,9 @@ token boundaries, and a `Pipeline` with a minimum of a tokenizer and
 MWT processor, and retokenizes the text, returning a Stanza
 `Document`.  An example usage
 [is in the unit test for this method](https://github.com/stanfordnlp/stanza/blob/5b3c8b31a9cd238127d6db873b825832051ec3df/stanza/tests/mwt/test_utils.py#L22)
+
+If further processing is needed, this `Document` can be passed to
+another pipeline which uses the
+[`tokenize_pretokenized`](https://stanfordnlp.github.io/stanza/tokenize.html#start-with-pretokenized-text)
+flag, in which case the second pipeline will respect the tokenization
+and MWT boundaries in the `Document`.

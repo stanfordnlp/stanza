@@ -198,6 +198,40 @@ id: 4   text: too
 id: 5   text: !
 ```
 
+Stanza will also accept a pretokenized `Document` for further processing with this flag:
+
+```python
+import stanza
+
+nlp_tokenized = stanza.Pipeline(lang='en', processors='tokenize', tokenize_pretokenized=True)
+nlp_pos = stanza.Pipeline(lang='en', processors='tokenize,pos', tokenize_pretokenized=True)
+doc = nlp_tokenized('This is token.ization done my way!\nSentence split, too!')
+doc = nlp_pos(doc)
+print("{:C}".format(doc))
+
+for i, sentence in enumerate(doc.sentences):
+    print(sentence)
+```
+
+This will output the following (results may vary based on POS model used):
+
+```
+# text = This is token.ization done my way!
+# sent_id = 0
+1       This    _       PRON    DT      Number=Sing|PronType=Dem        0       _       _       start_char=0|end_char=4
+2       is      _       AUX     VBZ     Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin   1       _       _       start_char=5|end_char=7
+3       token.ization   _       PROPN   NNP     Number=Sing     2       _       _       start_char=8|end_char=21
+4       done    _       VERB    VBN     Tense=Past|VerbForm=Part        3       _       _       start_char=22|end_char=26
+5       my      _       PRON    PRP$    Case=Gen|Number=Sing|Person=1|Poss=Yes|PronType=Prs     4       _       _       start_char=27|end_char=29
+6       way!    _       NOUN    NN      Number=Sing     5       _       _       start_char=30|end_char=34
+
+# text = Sentence split, too!
+# sent_id = 1
+1       Sentence        _       NOUN    NN      Number=Sing     0       _       _       start_char=35|end_char=43
+2       split,  _       ADJ     JJ      Degree=Pos      1       _       _       start_char=44|end_char=50
+3       too!    _       PUNCT   .       _       2       _       _       start_char=51|end_char=55
+```
+
 ### Use spaCy for Fast Tokenization and Sentence Segmentation
 
 {% include alerts.html %}
