@@ -80,11 +80,6 @@ PREFIX = ["Macro Avg", "", ""]
 avg = [sum(float(x[i]) for x in blocks) / len(blocks) for i in range(len(PREFIX), len(EXPECTED_ORDER) + len(PREFIX))]
 avg = ["Macro Avg", "", ""] + ["%.2f" % x for x in avg]
 blocks = sorted(blocks)
-for line_idx in range(len(blocks)-2, -1, -1):
-    if blocks[line_idx+1][0] == blocks[line_idx][0]:
-        blocks[line_idx+1][0] = ""
-        blocks[line_idx+1][1] = ""
-
 blocks = [avg] + blocks
 
 chart = ["|%s|" % "  |  ".join(x) for x in blocks]
