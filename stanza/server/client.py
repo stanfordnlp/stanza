@@ -699,6 +699,11 @@ class CoreNLPClient(RobustService):
 
         This will require a new CoreNLP release, 4.5.5 or later
         """
+        # since we're using requests ourself,
+        # check if the server has started or not
+        if self.start_server is not StartServer.DONT_START:
+            self.ensure_alive()
+
         if properties is None:
             properties = {}
         # the only thing the scenegraph knows how to use is text
