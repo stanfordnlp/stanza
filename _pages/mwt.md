@@ -88,3 +88,18 @@ word: .         parent token: .
 ## Training-Only Options
 
 Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/main/stanza/models/mwt_expander.py#L22) of the MWT expander.
+
+## Resplitting tokens with MWT
+
+In some circumstances, you may want to use the MWT processor to
+resplit known tokens.  For example, we had an instance where an
+Italian dataset included token boundaries, but the words were not
+separated into clitics.  For this, we provide a utility function
+
+`[resplit_mwt](https://github.com/stanfordnlp/stanza/blob/5b3c8b31a9cd238127d6db873b825832051ec3df/stanza/models/mwt/utils.py#L7)`
+
+This function takes a list of list of string, representing the known
+token boundaries, and a `Pipeline` with a minimum of a tokenizer and
+MWT processor, and retokenizes the text, returning a Stanza
+`Document`.  An example usage
+[is in the unit test for this method](https://github.com/stanfordnlp/stanza/blob/5b3c8b31a9cd238127d6db873b825832051ec3df/stanza/tests/mwt/test_utils.py#L22)
