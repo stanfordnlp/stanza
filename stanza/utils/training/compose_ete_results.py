@@ -19,13 +19,20 @@ LAS        |     83.57 |     83.56 |     83.57 |     83.63
 CLAS       |     76.88 |     76.45 |     76.66 |     76.52
 MLAS       |     72.28 |     71.87 |     72.07 |     71.94
 BLEX       |     73.20 |     72.79 |     73.00 |     72.86
+
+
+Turns them into a markdown table.
+
+Included is an attempt to mark the default packages with a green check.
+  <i class="fas fa-check" style="color:#33a02c"></i>
 """
 
 import argparse
 
-from stanza.utils.training.run_ete import RESULTS_STRING
 from stanza.models.common.constant import pretty_langcode_to_lang
 from stanza.models.common.short_name_to_treebank import short_name_to_treebank
+from stanza.utils.training.run_ete import RESULTS_STRING
+from stanza.resources.default_packages import default_treebanks
 
 EXPECTED_ORDER = ["Tokens", "Sentences", "Words", "UPOS", "XPOS", "UFeats", "AllTags", "Lemmas", "UAS", "LAS", "CLAS", "MLAS", "BLEX"]
 
@@ -68,17 +75,22 @@ while index < len(lines):
 
     block = [x.split("|") for x in block]
     assert all(x[0].strip() == y for x, y in zip(block, EXPECTED_ORDER)), "output format changed?"
-    lcode = short_name.split("_", 1)[0]
+    lcode, short_dataset = short_name.split("_", 1)
     language = pretty_langcode_to_lang(lcode)
     treebank = short_name_to_treebank(short_name)
-    dataset = treebank.split("-")[-1]
-    block = [language, lcode, "[%s](%s)" % (dataset, "https://github.com/UniversalDependencies/%s" % treebank)] + [x[3].strip() for x in block]
+    long_dataset = treebank.split("-")[-1]
+
+    checkmark = ""
+    if default_treebanks[lcode] == short_dataset:
+        checkmark = '<i class="fas fa-check" style="color:#33a02c"></i>'
+
+    block = [language, lcode, "[%s](%s)" % (long_dataset, "https://github.com/UniversalDependencies/%s" % treebank), checkmark] + [x[3].strip() for x in block]
     blocks.append(block)
 
-PREFIX = ["Macro Avg", "", ""]
+PREFIX = ["Macro Avg", "", "", ""]
 
 avg = [sum(float(x[i]) for x in blocks) / len(blocks) for i in range(len(PREFIX), len(EXPECTED_ORDER) + len(PREFIX))]
-avg = ["Macro Avg", "", ""] + ["%.2f" % x for x in avg]
+avg = PREFIX + ["%.2f" % x for x in avg]
 blocks = sorted(blocks)
 blocks = [avg] + blocks
 
