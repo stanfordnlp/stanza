@@ -368,3 +368,84 @@ in the language of interest.  For example, the pattern for English is
 `"(?i:that|what|which|who|whom|whose)"`.  Note that most languages are
 not yet supported by name, but we are more than happy to receive
 contributions for how to find relative pronouns in other languages.
+
+## SceneGraph
+
+An older StanfordNLP project,
+[SceneGraph](https://nlp.stanford.edu/software/scenegraph-parser.shtml),
+ships with CoreNLP as well.  This can be accessed via the `scenegraph`
+method on the Client.
+
+A short example:
+
+``` python
+"""
+Very short demo for the SceneGraph interface in the CoreNLP server
+
+Requires CoreNLP >= 4.5.5, Stanza >= 1.5.1
+"""
+
+import json
+
+from stanza.server import CoreNLPClient
+
+# start_server=None if you have the server running in another process on the same host
+# you can start it with whatever normal options CoreNLPClient has
+#
+# preload=False avoids having the server unnecessarily load annotators
+# if you don't plan on using them
+with CoreNLPClient(preload=False) as client:
+    result = client.scenegraph("Jennifer's antennae are on her head.")
+    print(json.dumps(result, indent=2))
+```
+
+The result of this is
+
+```
+{
+  "id": -1,
+  "url": "",
+  "phrase": "Jennifer's antennae are on her head.",
+  "attributes": [],
+  "relationships": [
+    {
+      "predicate": "have",
+      "subject": 0,
+      "object": 1,
+      "text": [
+        "Jennifer",
+        "have",
+        "antennae"
+      ]
+    },
+    {
+      "predicate": "on",
+      "subject": 1,
+      "object": 2,
+      "text": [
+        "antennae",
+        "on",
+        "head"
+      ]
+    }
+  ],
+  "objects": [
+    {
+      "names": [
+        "Jennifer"
+      ]
+    },
+    {
+      "names": [
+        "antennae"
+      ]
+    },
+    {
+      "names": [
+        "head"
+      ]
+    }
+  ]
+}
+```
+
