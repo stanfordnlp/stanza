@@ -276,6 +276,8 @@ def main():
     elif args.input_dir:
         if not args.output_dir:
             raise ValueError("Cannot process multiple files without knowing where to send them - please set --output_dir in order to use --input_dir")
+        if not os.path.exists(args.output_dir):
+            os.makedirs(args.output_dir)
         def read_docs():
             for doc_filename in os.listdir(args.input_dir):
                 if args.input_filter:
