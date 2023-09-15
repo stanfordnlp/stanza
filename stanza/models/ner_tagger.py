@@ -153,10 +153,16 @@ def model_file_name(args):
     return os.path.join(args['save_dir'], save_name)
 
 def train(args):
-    utils.log_training_args(args, logger)
-
     model_file = model_file_name(args)
-    utils.ensure_dir(os.path.split(model_file)[0])
+
+    save_dir, save_name = os.path.split(model_file)
+    utils.ensure_dir(save_dir)
+    if args['save_dir'] is None:
+        args['save_dir'] = save_dir
+    if args['save_name'] is None:
+        args['save_name'] = save_name
+
+    utils.log_training_args(args, logger)
 
     pretrain = None
     vocab = None
