@@ -153,6 +153,8 @@ def model_file_name(args):
     return os.path.join(args['save_dir'], save_name)
 
 def train(args):
+    utils.log_training_args(args, logger)
+
     model_file = model_file_name(args)
     utils.ensure_dir(os.path.split(model_file)[0])
 
