@@ -65,7 +65,6 @@ def run_training(pretrain_file, tmp_path, *extra_args):
             "--wordvec_pretrain_file", pretrain_file,
             "--train_file", str(train_json),
             "--eval_file", str(dev_json),
-            "--lang", "en",
             "--shorthand", "en_test",
             "--max_steps", "100",
             "--save_dir", str(save_dir)]

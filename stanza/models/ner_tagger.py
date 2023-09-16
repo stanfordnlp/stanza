@@ -46,7 +46,6 @@ def build_argparse():
     parser.add_argument('--finetune_load_name', type=str, default=None, help='Model to load when finetuning')
     parser.add_argument('--train_classifier_only', action='store_true',
                         help='In case of applying Transfer-learning approach and training only the classifier layer this will freeze gradient propagation for all other layers.')
-    parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
 
     parser.add_argument('--hidden_dim', type=int, default=256)
