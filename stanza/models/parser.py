@@ -127,16 +127,8 @@ def main(args=None):
     else:
         evaluate(args)
 
-# TODO: refactor with tagger
 def model_file_name(args):
-    embedding = utils.embedding_name(args)
-    model_file = args['save_name'].format(shorthand=args['shorthand'],
-                                          embedding=embedding)
-    model_dir = os.path.split(model_file)[0]
-
-    if not os.path.exists(os.path.join(args['save_dir'], model_file)) and os.path.exists(model_file):
-        return model_file
-    return os.path.join(args['save_dir'], model_file)
+    return utils.standard_model_file_name(args, "parser")
 
 # TODO: refactor with everywhere
 def load_pretrain(args):
