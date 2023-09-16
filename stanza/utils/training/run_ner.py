@@ -63,6 +63,30 @@ def build_pretrain_args(language, dataset, charlm="default", extra_args=None, mo
 
     return charlm_args + wordvec_args
 
+
+# TODO: refactor?  tagger and depparse should be pretty similar
+def build_model_filename(paths, short_name, command_args, extra_args):
+    short_language, dataset = short_name.split("_", 1)
+
+    # TODO: can avoid downloading the charlm at this point, since we
+    # might not even be training
+    pretrain_args = build_pretrain_args(short_language, dataset, command_args.charlm, extra_args)
+    bert_args = common.choose_transformer(short_language, command_args, extra_args, warn=False)
+
+    dataset_args = DATASET_EXTRA_ARGS.get(short_name, [])
+
+    train_args = ["--shorthand", short_name,
+                  "--mode", "train"]
+    train_args = train_args + pretrain_args + bert_args + dataset_args + extra_args
+    if command_args.save_name is not None:
+        train_args.extend(["--save_name", command_args.save_name])
+    if command_args.save_dir is not None:
+        train_args.extend(["--save_dir", command_args.save_dir])
+    args = ner_tagger.parse_args(train_args)
+    save_name = ner_tagger.model_file_name(args)
+    return save_name
+
+
 # Technically NER datasets are not necessarily treebanks
 # (usually not, in fact)
 # However, to keep the naming consistent, we leave the
@@ -128,7 +152,7 @@ def run_treebank(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_treebank, "ner", "nertagger", add_ner_args, ner_tagger.build_argparse())
+    common.main(run_treebank, "ner", "nertagger", add_ner_args, ner_tagger.build_argparse(), build_model_filename=build_model_filename)
 
 if __name__ == "__main__":
     main()
