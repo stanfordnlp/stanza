@@ -11,6 +11,7 @@ import logging
 import lzma
 import os
 import random
+import re
 import sys
 import unicodedata
 import zipfile
@@ -516,8 +517,20 @@ def standard_model_file_name(args, model_type):
     turned into arguments in a format string
     """
     embedding = embedding_name(args)
+
+    finetune = ""
+    transformer_lr = ""
+    if args.get("bert_finetune", False):
+        finetune = "finetuned"
+        if "bert_learning_rate" in args:
+            transformer_lr = "{}".format(args["bert_learning_rate"])
+
     model_file = args['save_name'].format(shorthand=args['shorthand'],
-                                          embedding=embedding)
+                                          embedding=embedding,
+                                          finetune=finetune,
+                                          transformer_lr=transformer_lr)
+    model_file = re.sub("_+", "_", model_file)
+
     model_dir = os.path.split(model_file)[0]
 
     if not os.path.exists(os.path.join(args['save_dir'], model_file)) and os.path.exists(model_file):

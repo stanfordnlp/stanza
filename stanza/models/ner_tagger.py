@@ -98,7 +98,7 @@ def build_argparse():
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
     parser.add_argument('--save_dir', type=str, default='saved_models/ner', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_nertagger.pt", help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_{finetune}_nertagger.pt", help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
