@@ -683,9 +683,11 @@ def build_argparse():
 def build_model_filename(args):
     embedding = utils.embedding_name(args)
     maybe_finetune = "finetuned" if args['bert_finetune'] or args['stage1_bert_finetune'] else ""
+    transformer_finetune_begin = "%d" % args['bert_finetune_begin_epoch'] if args['bert_finetune_begin_epoch'] is not None else ""
     model_save_file = args['save_name'].format(shorthand=args['shorthand'],
                                                embedding=embedding,
                                                finetune=maybe_finetune,
+                                               transformer_finetune_begin=transformer_finetune_begin,
                                                transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
                                                trans_layers=args['bert_hidden_layers'],
                                                seed=args['seed'])
