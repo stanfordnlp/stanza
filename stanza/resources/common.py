@@ -428,6 +428,7 @@ def download_resources_json(model_dir=DEFAULT_MODEL_DIR,
                             resources_url=DEFAULT_RESOURCES_URL,
                             resources_branch=None,
                             resources_version=DEFAULT_RESOURCES_VERSION,
+                            resources_filepath=None,
                             proxies=None):
     """
     Downloads resources.json to obtain latest packages.
@@ -439,20 +440,23 @@ def download_resources_json(model_dir=DEFAULT_MODEL_DIR,
         resources_url = STANFORDNLP_RESOURCES_URL
     resources_url = f'{resources_url}/resources_{resources_version}.json'
     logger.debug('Downloading resource file from %s', resources_url)
+    if resources_filepath is None:
+        resources_filepath = os.path.join(model_dir, 'resources.json')
     # make request
     request_file(
         resources_url,
-        os.path.join(model_dir, 'resources.json'),
+        resources_filepath,
         proxies,
         raise_for_status=True
     )
 
 
-def load_resources_json(model_dir=DEFAULT_MODEL_DIR):
+def load_resources_json(model_dir=DEFAULT_MODEL_DIR, resources_filepath=None):
     """
     Unpack the resources json file from the given model_dir
     """
-    resources_filepath = os.path.join(model_dir, 'resources.json')
+    if resources_filepath is None:
+        resources_filepath = os.path.join(model_dir, 'resources.json')
     if not os.path.exists(resources_filepath):
         raise ResourcesFileNotFoundError(resources_filepath)
     with open(resources_filepath) as fin:
