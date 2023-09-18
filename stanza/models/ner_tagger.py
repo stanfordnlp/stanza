@@ -212,7 +212,7 @@ def train(args):
                 " ".join(sorted(set(i[2:] for i in train_tags if i[:2] in ('B-', 'I-', 'E-', 'S-')))))
 
     if args['finetune']:
-        utils.warn_missing_tags([i for i in trainer.vocab['tag']], train_batch.tags, "training set")
+        utils.warn_missing_tags([i for i in trainer.vocab['tag'].items(0)], train_batch.tags, "training set")
     utils.warn_missing_tags(train_batch.tags, dev_batch.tags, "dev set")
 
     # skip training if the language does not have training or dev data
@@ -349,7 +349,7 @@ def evaluate(args):
     with open(args['eval_file']) as fin:
         doc = Document(json.load(fin))
     batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True, bert_tokenizer=trainer.model.bert_tokenizer)
-    utils.warn_missing_tags([i for i in trainer.vocab['tag']], batch.tags, "eval_file")
+    utils.warn_missing_tags([i for i in trainer.vocab['tag'].items(0)], batch.tags, "eval_file")
 
     logger.info("Start evaluation...")
     preds = []

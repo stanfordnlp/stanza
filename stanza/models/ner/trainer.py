@@ -118,6 +118,8 @@ class Trainer(BaseTrainer):
         for i in range(bs):
             tags, _ = viterbi_decode(scores[i, :sentlens[i]], trans)
             tags = self.vocab['tag'].unmap(tags)
+            # for now, allow either TagVocab or CompositeVocab
+            tags = [x[0] if isinstance(x, list) else x for x in tags]
             tags = fix_singleton_tags(tags)
             tag_seqs += [tags]
 
@@ -185,7 +187,7 @@ class Trainer(BaseTrainer):
         Removes the S-, B-, etc, and does not include O
         """
         tags = set()
-        for tag in self.vocab['tag']:
+        for tag in self.vocab['tag'].items(0):
             if tag in VOCAB_PREFIX:
                 continue
             if tag == 'O':
