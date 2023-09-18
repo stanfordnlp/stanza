@@ -68,7 +68,10 @@ class DataLoader:
         else:
             charvocab = CharVocab(data, self.args['shorthand'])
         wordvocab = self.pretrain.vocab
-        # TODO: this should just read off the multi_ner instead of needing to do this
+        # TODO: even when reading the multi_ner, we are converting that
+        # to single tag entries.  those should be entire lists.
+        # then it will not be necessary to convert the tag_data
+        # could simply use idx=1
         tag_data = [[((x[1],),) for x in sentence] for sentence in data]
         tagvocab = CompositeVocab(tag_data, self.args['shorthand'], idx=0, sep=None)
         ignore = None
@@ -149,9 +152,20 @@ class DataLoader:
             yield self.__getitem__(i)
 
     def load_doc(self, doc):
-        data = doc.get([TEXT, NER], as_sentences=True, from_token=True)
+        # preferentially load the MULTI_NER in case we are training /
+        # testing a model with multiple layers of tags
+        data = doc.get([TEXT, NER, MULTI_NER], as_sentences=True, from_token=True)
+        data = [[[token[0], token[2]] if token[2] else [token[0], (token[1],)] for token in sentence] for sentence in data]
         if self.preprocess_tags: # preprocess tags
+            # TODO: instead, process_tags should expect multiple columns of tags
+            # and properly process each of them
+            data = [[[token[0], token[1][0]] for token in sentence] for sentence in data]
             data = process_tags(data, self.args.get('scheme', 'bio'))
+            data = [[[token[0], (token[1],)] for token in sentence] for sentence in data]
+        # TODO: downstream stuff like the scoring evaluation should handle multi_ner
+        # the missing tag function in ner_tagger.py will also need to work with
+        # multiple dimensions of tags
+        data = [[[token[0], token[1][0]] for token in sentence] for sentence in data]
         return data
 
     def process_chars(self, sents):
