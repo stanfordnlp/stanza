@@ -120,7 +120,7 @@ class NERTagger(nn.Module):
         self.taggerlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']), requires_grad=False)
 
         # tag classifier
-        num_tag = len(self.vocab['tag'])
+        num_tag = self.vocab['tag'].lens()[0]
         self.tag_clf = nn.Linear(self.args['hidden_dim']*2, num_tag)
         self.tag_clf.bias.data.zero_()
 
@@ -234,6 +234,8 @@ class NERTagger(nn.Module):
         lstm_outputs = self.lockeddrop(lstm_outputs)
         lstm_outputs = pack(lstm_outputs).data
         logits = pad(self.tag_clf(lstm_outputs)).contiguous()
+        # TODO: this will have to update in order to use multiple layers
+        tags = tags[:, :, 0]
         loss, trans = self.crit(logits, word_mask, tags)
 
         return loss, logits, trans

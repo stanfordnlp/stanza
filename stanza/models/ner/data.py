@@ -5,8 +5,8 @@ import torch
 from stanza.models.common.bert_embedding import filter_data
 from stanza.models.common.data import map_to_ids, get_long_tensor, sort_all
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX
-from stanza.models.pos.vocab import CharVocab, WordVocab
-from stanza.models.ner.vocab import TagVocab, MultiVocab
+from stanza.models.pos.vocab import CharVocab, CompositeVocab, WordVocab
+from stanza.models.ner.vocab import MultiVocab
 from stanza.models.common.doc import *
 from stanza.models.ner.utils import process_tags
 
@@ -68,7 +68,9 @@ class DataLoader:
         else:
             charvocab = CharVocab(data, self.args['shorthand'])
         wordvocab = self.pretrain.vocab
-        tagvocab = TagVocab(data, self.args['shorthand'], idx=1)
+        # TODO: this should just read off the multi_ner instead of needing to do this
+        tag_data = [[((x[1],),) for x in sentence] for sentence in data]
+        tagvocab = CompositeVocab(tag_data, self.args['shorthand'], idx=0, sep=None)
         ignore = None
         if self.args['emb_finetune_known_only']:
             if self.args['lowercase']:
@@ -93,7 +95,8 @@ class DataLoader:
         for sent in data:
             processed_sent = [[w[0] for w in sent]]
             processed_sent += [[vocab['char'].map([char_case(x) for x in w[0]]) for w in sent]]
-            processed_sent += [vocab['tag'].map([w[1] for w in sent])]
+            # TODO: this is where we would pass in multiple tags and/or empty fields
+            processed_sent += [vocab['tag'].map([(w[1],) for w in sent])]
             processed.append(processed_sent)
         return processed
 
@@ -109,7 +112,7 @@ class DataLoader:
         batch = self.data[key]
         batch_size = len(batch)
         batch = list(zip(*batch))
-        assert len(batch) == 3 # words: List[List[int]], chars: List[List[List[int]]], tags: List[List[int]]
+        assert len(batch) == 3 # words: List[List[int]], chars: List[List[List[int]]], tags: List[List[List[int]]]
 
         # sort sentences by lens for easy RNN operations
         sentlens = [len(x) for x in batch[0]]
