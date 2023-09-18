@@ -185,6 +185,7 @@ class Pipeline:
                  resources_url=DEFAULT_RESOURCES_URL,
                  resources_branch=None,
                  resources_version=DEFAULT_RESOURCES_VERSION,
+                 resources_filepath=None,
                  proxies=None,
                  foundation_cache=None,
                  device=None,
@@ -212,6 +213,7 @@ class Pipeline:
                                     resources_url=resources_url,
                                     resources_branch=resources_branch,
                                     resources_version=resources_version,
+                                    resources_filepath=resources_filepath,
                                     proxies=proxies)
 
         # process different pipeline parameters
@@ -219,7 +221,7 @@ class Pipeline:
 
         # Load resources.json to obtain latest packages.
         logger.debug('Loading resource file...')
-        resources = load_resources_json(self.dir)
+        resources = load_resources_json(self.dir, resources_filepath)
         if lang in resources:
             if 'alias' in resources[lang]:
                 logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
