@@ -361,11 +361,16 @@ def get_default_depparse_package(lang, ud_package):
 def process_default_zips(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
     for lang in resources:
-        if all(k in ("backward_charlm", "forward_charlm", "pretrain") for k in resources[lang].keys()):
-            print(f'Skipping empty resources for language {lang}')
+        # check url, alias, and lang_name in case we are rerunning this step on an already built resources.json
+        if lang == 'url':
             continue
-        if lang not in default_treebanks: 
+        if 'alias' in resources[lang]:
+            continue
+        if all(k in ("backward_charlm", "forward_charlm", "pretrain", "lang_name") for k in resources[lang].keys()):
+            continue
+        if lang not in default_treebanks:
             raise AssertionError(f'{lang} not in default treebanks!!!')
+
         print(f'Preparing default models for language {lang}')
 
         pretrains_needed = set()
@@ -466,6 +471,12 @@ def process_default_zips(args):
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
 def get_default_processors(resources, lang):
+    """
+    Build a default package for this language
+
+    Will add each of pos, lemma, depparse, etc if those are available
+    Uses the existing models scraped from the language directories into resources.json, as relevant
+    """
     if lang == "multilingual":
         return {"langid": "ud"}
 
@@ -513,9 +524,13 @@ def get_default_processors(resources, lang):
     return default_processors
 
 def process_packages(args):
+    """
+    Build a package for a language's default processors and all of the treebanks specifically used for that language
+    """
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
 
     for lang in resources:
+        # check url, alias, and lang_name in case we are rerunning this step on an already built resources.json
         if lang == 'url':
             continue
         if 'alias' in resources[lang]:
