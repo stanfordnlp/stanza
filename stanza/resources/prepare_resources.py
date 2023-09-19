@@ -19,6 +19,7 @@ import zipfile
 
 from stanza import __resources_version__
 from stanza.models.common.constant import lcode2lang, two_to_three_letters, three_to_two_letters
+from stanza.resources.default_packages import PACKAGES
 from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms, lemma_charlms, known_nicknames
 from stanza.utils.get_tqdm import get_tqdm
 
@@ -462,7 +463,12 @@ def process_defaults(args):
                     raise FileNotFoundError(f"Could not find an expected model file for {lang} {processor} {package} : {filename}")
 
         default_md5 = get_md5(os.path.join(args.output_dir, lang, 'models', 'default.zip'))
+        # TODO: eventually we can remove default_processors
+        # For now, we want to keep this so that v1.5.1 is compatible
+        # with the next iteration of resources files
         resources[lang]['default_processors'] = default_processors
+        resources[lang][PACKAGES] = {}
+        resources[lang][PACKAGES]['default'] = default_processors
         resources[lang]['default_md5'] = default_md5
 
     print("Processed default model dependencies.  Writing resources.json")
