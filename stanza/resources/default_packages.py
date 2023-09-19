@@ -258,9 +258,6 @@ ner_pretrains = {
     "th": {
         "lst20": "fasttext157",
     },
-    "zh-hans": {
-        "ontonotes": "fasttextwiki",
-    }
 }
 
 
