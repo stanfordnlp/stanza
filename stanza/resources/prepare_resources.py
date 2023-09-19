@@ -358,7 +358,7 @@ def get_default_depparse_package(lang, ud_package):
         return ud_package + "_nopretrain"
     return ud_package + "_nocharlm"
 
-def process_defaults(args):
+def process_default_zips(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
     for lang in resources:
         if all(k in ("backward_charlm", "forward_charlm", "pretrain") for k in resources[lang].keys()):
@@ -372,7 +372,6 @@ def process_defaults(args):
 
         ud_package = default_treebanks[lang]
         os.chdir(os.path.join(args.output_dir, lang))
-        default_processors = {}
         if lang in allowed_empty_languages or lang in no_pretrain_languages:
             pass
         else:
@@ -386,6 +385,7 @@ def process_defaults(args):
             ner_dependencies = get_ner_dependencies(lang, ner_package)
             if ner_dependencies is not None:
                 pretrains_needed.update([dep['package'] for dep in ner_dependencies if dep['model'] == 'pretrain'])
+        # TODO: technically we should keep track of all the charlms the same way we do the pretrains
         if lang in default_charlms:
             charlm_package = default_charlms[lang]
         if lang in default_sentiment:
@@ -443,8 +443,6 @@ def process_defaults(args):
 
                 if os.path.exists(filename):
                     print("   Model {} package {}: file {}".format(processor, package, filename))
-                    if processor in ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'ner', 'sentiment', 'constituency', 'langid']:
-                        default_processors[processor] = package
                     zipf.write(filename=os.path.join("models", processor, package + '.pt'),
                                arcname=os.path.join(processor, package + '.pt'))
                 elif lang in allowed_empty_languages:
@@ -453,7 +451,6 @@ def process_defaults(args):
                 elif processor == 'lemma':
                     # a few languages use the identity lemmatizer -
                     # there might be a better way to encode that here
-                    default_processors[processor] = "identity"
                     print(" --Model {} package {}: no file {}, assuming identity lemmatizer".format(processor, package, filename))
                 elif processor == 'mwt':
                     # some languages don't have MWT, so skip ig
@@ -463,17 +460,82 @@ def process_defaults(args):
                     raise FileNotFoundError(f"Could not find an expected model file for {lang} {processor} {package} : {filename}")
 
         default_md5 = get_md5(os.path.join(args.output_dir, lang, 'models', 'default.zip'))
+        resources[lang]['default_md5'] = default_md5
+
+    print("Processed default model zips.  Writing resources.json")
+    json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
+
+def get_default_processors(resources, lang):
+    if lang == "multilingual":
+        return {"langid": "ud"}
+
+    default_package = default_treebanks[lang]
+    default_processors = {}
+    if lang in default_tokenizer:
+        default_processors['tokenize'] = default_tokenizer[lang]
+    else:
+        default_processors['tokenize'] = default_package
+
+    if 'mwt' in resources[lang] and default_processors['tokenize'] in resources[lang]['mwt']:
+        # if this doesn't happen, we just skip MWT
+        default_processors['mwt'] = default_package
+
+    if 'lemma' in resources[lang]:
+        expected_lemma = default_package + "_nocharlm"
+        if expected_lemma in resources[lang]['lemma']:
+            default_processors['lemma'] = expected_lemma
+    elif lang not in allowed_empty_languages:
+        default_processors['lemma'] = 'identity'
+
+    if 'pos' in resources[lang]:
+        default_processors['pos'] = get_default_pos_package(lang, default_package)
+        if default_processors['pos'] not in resources[lang]['pos']:
+            raise AssertionError("Expected POS model not in resources: %s" % default_processors['pos'])
+    elif lang not in allowed_empty_languages:
+        raise AssertionError("Expected to find POS models for language %s" % lang)
+
+    if 'depparse' in resources[lang]:
+        default_processors['depparse'] = get_default_depparse_package(lang, default_package)
+        if default_processors['depparse'] not in resources[lang]['depparse']:
+            raise AssertionError("Expected depparse model not in resources: %s" % default_processors['depparse'])
+    elif lang not in allowed_empty_languages:
+        raise AssertionError("Expected to find depparse models for language %s" % lang)
+
+    if lang in default_ners:
+        default_processors['ner'] = default_ners[lang]
+
+    if lang in default_sentiment:
+        default_processors['sentiment'] = default_sentiment[lang]
+
+    if lang in default_constituency:
+        default_processors['constituency'] = default_constituency[lang]
+
+    return default_processors
+
+def process_packages(args):
+    resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+
+    for lang in resources:
+        if lang == 'url':
+            continue
+        if 'alias' in resources[lang]:
+            continue
+        if all(k in ("backward_charlm", "forward_charlm", "pretrain", "lang_name") for k in resources[lang].keys()):
+            continue
+        if lang not in default_treebanks:
+            raise AssertionError(f'{lang} not in default treebanks!!!')
+
+        default_processors = get_default_processors(resources, lang)
+
         # TODO: eventually we can remove default_processors
         # For now, we want to keep this so that v1.5.1 is compatible
         # with the next iteration of resources files
         resources[lang]['default_processors'] = default_processors
         resources[lang][PACKAGES] = {}
         resources[lang][PACKAGES]['default'] = default_processors
-        resources[lang]['default_md5'] = default_md5
 
-    print("Processed default model dependencies.  Writing resources.json")
+    print("Processed packages.  Writing resources.json")
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
-
 
 def process_lcode(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
@@ -510,7 +572,8 @@ def main():
     args = parse_args()
     print("Converting models from %s to %s" % (args.input_dir, args.output_dir))
     process_dirs(args)
-    process_defaults(args)
+    process_default_zips(args)
+    process_packages(args)
     process_lcode(args)
     process_misc(args)
 
