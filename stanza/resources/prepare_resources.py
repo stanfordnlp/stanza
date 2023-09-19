@@ -20,6 +20,9 @@ import zipfile
 from stanza import __resources_version__
 from stanza.models.common.constant import lcode2lang, two_to_three_letters, three_to_two_letters
 from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms, lemma_charlms, known_nicknames
+from stanza.utils.get_tqdm import get_tqdm
+
+tqdm = get_tqdm()
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -304,7 +307,7 @@ def process_dirs(args):
     for model_dir in dirs:
         print(f"Processing models in {model_dir}")
         models = sorted(os.listdir(os.path.join(args.input_dir, model_dir)))
-        for model in models:
+        for model in tqdm(models):
             if not model.endswith('.pt'): continue
             # get processor
             lang, package, processor = split_model_name(model)
