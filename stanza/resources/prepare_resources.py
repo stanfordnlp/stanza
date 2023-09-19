@@ -300,6 +300,26 @@ def get_sentiment_dependencies(lang, package):
 
     return dependencies
 
+def get_dependencies(processor, lang, package):
+    """
+    Get the dependencies for a particular lang/package based on the package name
+
+    The package can include descriptors such as _nopretrain, _nocharlm, _charlm
+    which inform whether or not this particular model uses charlm or pretrain
+    """
+    if processor == 'depparse':
+        return get_depparse_dependencies(lang, package)
+    elif processor == 'lemma':
+        return get_lemma_dependencies(lang, package)
+    elif processor == 'pos':
+        return get_pos_dependencies(lang, package)
+    elif processor == 'ner':
+        return get_ner_dependencies(lang, package)
+    elif processor == 'sentiment':
+        return get_sentiment_dependencies(lang, package)
+    elif processor == 'constituency':
+        return get_con_dependencies(lang, package)
+    return {}
 
 def process_dirs(args):
     dirs = sorted(os.listdir(args.input_dir))
@@ -319,19 +339,7 @@ def process_dirs(args):
             # maintain md5
             md5 = get_md5(output_path)
             # maintain dependencies
-            dependencies = None
-            if processor == 'depparse':
-                dependencies = get_depparse_dependencies(lang, package)
-            elif processor == 'lemma':
-                dependencies = get_lemma_dependencies(lang, package)
-            elif processor == 'pos':
-                dependencies = get_pos_dependencies(lang, package)
-            elif processor == 'ner':
-                dependencies = get_ner_dependencies(lang, package)
-            elif processor == 'sentiment':
-                dependencies = get_sentiment_dependencies(lang, package)
-            elif processor == 'constituency':
-                dependencies = get_con_dependencies(lang, package)
+            dependencies = get_dependencies(processor, lang, package)
             # maintain resources
             if lang not in resources: resources[lang] = {}
             if processor not in resources[lang]: resources[lang][processor] = {}
