@@ -534,6 +534,43 @@ def process_packages(args):
         resources[lang][PACKAGES] = {}
         resources[lang][PACKAGES]['default'] = default_processors
 
+        # Now we loop over each of the tokenizers for this language
+        # ... we use this as a proxy for the available UD treebanks
+        # This loop also catches things such as "craft" which are
+        # included treebanks that aren't UD
+        # We then create a package in the packages dict for each of those treebanks
+        if 'tokenize' in resources[lang]:
+            for package in resources[lang]['tokenize']:
+                processors = {"tokenize": package}
+                if "mwt" in resources[lang] and package in resources[lang]["mwt"]:
+                    processors["mwt"] = package
+
+                if "pos" in resources[lang]:
+                    if package + "_charlm" in resources[lang]["pos"]:
+                        processors["pos"] = package + "_charlm"
+                    elif package + "_nocharlm" in resources[lang]["pos"]:
+                        processors["pos"] = package + "_nocharlm"
+
+                if "lemma" in resources[lang] and "pos" in processors:
+                    lemma_package = package + "_nocharlm"
+                    if lemma_package in resources[lang]["lemma"]:
+                        processors["lemma"] = lemma_package
+
+                if "depparse" in resources[lang] and "pos" in processors:
+                    depparse_package = None
+                    if package + "_charlm" in resources[lang]["depparse"]:
+                        depparse_package = package + "_charlm"
+                    elif package + "_nocharlm" in resources[lang]["depparse"]:
+                        depparse_package = package + "_nocharlm"
+                    # we want to set the lemma first if it's identity
+                    # THEN set the depparse
+                    if depparse_package is not None:
+                        if "lemma" not in processors:
+                            processors["lemma"] = "identity"
+                        processors["depparse"] = depparse_package
+
+                resources[lang][PACKAGES][package] = processors
+
     print("Processed packages.  Writing resources.json")
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
