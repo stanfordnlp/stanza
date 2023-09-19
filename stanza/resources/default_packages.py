@@ -8,6 +8,9 @@ causing a circular import
 
 import copy
 
+# all languages will have a map which represents the available packages
+PACKAGES = "packages"
+
 # default treebank for languages
 default_treebanks = {
     "af":      "afribooms",
