@@ -541,6 +541,8 @@ def process_lcode(args):
     for lang in resources:
         if lang == 'multilingual':
             continue
+        if 'alias' in resources[lang]:
+            continue
         if lang not in lcode2lang:
             print(lang + ' not found in lcode2lang!')
             continue
