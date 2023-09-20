@@ -108,21 +108,25 @@ allowed_empty_languages = [
 ]
 
 # map processor name to file ending
+# the order of this dict determines the order in which default.zip files are built
+# changing it will necessitate rebuilding all of the default.zip files
+# not a disaster, but it would involve a bunch of uploading
 processor_to_ending = {
     "tokenize": "tokenizer",
     "mwt": "mwt_expander",
-    "pos": "tagger",
     "lemma": "lemmatizer",
+    "pos": "tagger",
     "depparse": "parser",
-    "ner": "nertagger",
-    "sentiment": "sentiment",
-    "constituency": "constituency",
     "pretrain": "pretrain",
+    "ner": "nertagger",
     "forward_charlm": "forward_charlm",
     "backward_charlm": "backward_charlm",
+    "sentiment": "sentiment",
+    "constituency": "constituency",
     "langid": "langid"
 }
 ending_to_processor = {j: i for i, j in processor_to_ending.items()}
+PROCESSORS = list(processor_to_ending.keys())
 
 def ensure_dir(dir):
     Path(dir).mkdir(parents=True, exist_ok=True)
@@ -394,8 +398,7 @@ def process_default_zips(args):
                 models_needed[dependency['model']].add(dependency['package'])
 
         model_files = []
-        processors = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'pretrain', 'ner', 'forward_charlm', 'backward_charlm', 'sentiment', 'constituency', 'langid']
-        for processor in processors:
+        for processor in PROCESSORS:
             if processor in models_needed:
                 for package in sorted(models_needed[processor]):
                     filename = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
