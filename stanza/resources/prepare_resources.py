@@ -632,8 +632,8 @@ def main():
     args = parse_args()
     print("Converting models from %s to %s" % (args.input_dir, args.output_dir))
     process_dirs(args)
-    process_default_zips(args)
     process_packages(args)
+    process_default_zips(args)
     process_lcode(args)
     process_misc(args)
 
