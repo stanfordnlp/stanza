@@ -565,6 +565,8 @@ def process_misc(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
     resources['no'] = {'alias': 'nb'}
     resources['zh'] = {'alias': 'zh-hans'}
+    # This is intended to be unformatted.  expand_model_url in common.py will fill in the raw string
+    # with the appropriate values in order to find the needed model file on huggingface
     resources['url'] = 'https://huggingface.co/stanfordnlp/stanza-{lang}/resolve/v{resources_version}/models/{filename}'
     print("Finalized misc attributes.  Writing resources.json")
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
