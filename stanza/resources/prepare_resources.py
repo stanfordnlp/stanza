@@ -471,6 +471,34 @@ def get_default_processors(resources, lang):
 
     return default_processors
 
+def get_default_fast(resources, lang):
+    """
+    Build a packages entry which only has the nocharlm models
+
+    Will make it easy for people to use the lower tier of models
+
+    We do this by building the same default package as normal,
+    then switching everything out for the lower tier model when possible.
+    We also remove constituency, as it is super slow.
+    Note that in the case of a language which doesn't have a charlm,
+    that means we wind up building the same for default and default_nocharlm
+    """
+    default_processors = get_default_processors(resources, lang)
+
+    # this is a slow model and we don't have non-charlm versions of it yet
+    if 'constituency' in default_processors:
+        default_processors.pop('constituency')
+
+    for processor, model in default_processors.items():
+        if "_charlm" in model:
+            nocharlm = model.replace("_charlm", "_nocharlm")
+            if nocharlm not in resources[lang][processor]:
+                print("WARNING: wanted to use %s for %s default_fast processor %s, but that model does not exist" % (nocharlm, lang, processor))
+            else:
+                default_processors[processor] = nocharlm
+
+    return default_processors
+
 def process_packages(args):
     """
     Build a package for a language's default processors and all of the treebanks specifically used for that language
@@ -496,6 +524,10 @@ def process_packages(args):
         resources[lang]['default_processors'] = default_processors
         resources[lang][PACKAGES] = {}
         resources[lang][PACKAGES]['default'] = default_processors
+
+        if lang not in no_pretrain_languages and lang != "multilingual":
+            default_fast = get_default_fast(resources, lang)
+            resources[lang][PACKAGES]['default_fast'] = default_fast
 
         # Now we loop over each of the tokenizers for this language
         # ... we use this as a proxy for the available UD treebanks
