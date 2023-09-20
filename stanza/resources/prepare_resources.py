@@ -10,6 +10,7 @@ nlprun -a stanza-1.2 -q john "python3 -m stanza.resources.prepare_resources --in
 """
 
 import argparse
+from collections import defaultdict
 import json
 import os
 from pathlib import Path
@@ -381,96 +382,32 @@ def process_default_zips(args):
 
         print(f'Preparing default models for language {lang}')
 
-        pretrains_needed = set()
+        models_needed = defaultdict(set)
 
-        ud_package = default_treebanks[lang]
-        os.chdir(os.path.join(args.output_dir, lang))
-        if lang in allowed_empty_languages or lang in no_pretrain_languages:
-            pass
-        else:
-            pos_dependencies = get_pos_dependencies(lang, ud_package)
-            depparse_dependencies = get_depparse_dependencies(lang, ud_package)
-            pretrains_needed.update([dep['package'] for dep in pos_dependencies if dep['model'] == 'pretrain'])
-            pretrains_needed.update([dep['package'] for dep in depparse_dependencies if dep['model'] == 'pretrain'])
+        packages = resources[lang][PACKAGES]["default"]
+        for processor, package in packages.items():
+            if processor == 'lemma' and package == 'identity':
+                continue
+            models_needed[processor].add(package)
+            dependencies = get_dependencies(processor, lang, package)
+            for dependency in dependencies:
+                models_needed[dependency['model']].add(dependency['package'])
 
-        if lang in default_ners:
-            ner_package = default_ners[lang]
-            ner_dependencies = get_ner_dependencies(lang, ner_package)
-            if ner_dependencies is not None:
-                pretrains_needed.update([dep['package'] for dep in ner_dependencies if dep['model'] == 'pretrain'])
-        # TODO: technically we should keep track of all the charlms the same way we do the pretrains
-        if lang in default_charlms:
-            charlm_package = default_charlms[lang]
-        if lang in default_sentiment:
-            sentiment_package = default_sentiment[lang]
-            sentiment_dependencies = get_sentiment_dependencies(lang, package)
-            pretrains_needed.update([dep['package'] for dep in sentiment_dependencies if dep['model'] == 'pretrain'])
-        if lang in default_constituency:
-            constituency_package = default_constituency[lang]
-            constituency_dependencies = get_con_dependencies(lang, constituency_package)
-            pretrains_needed.update([dep['package'] for dep in constituency_dependencies if dep['model'] == 'pretrain'])
+        model_files = []
+        processors = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'pretrain', 'ner', 'forward_charlm', 'backward_charlm', 'sentiment', 'constituency', 'langid']
+        for processor in processors:
+            if processor in models_needed:
+                for package in sorted(models_needed[processor]):
+                    filename = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
+                    if os.path.exists(filename):
+                        print("   Model {} package {}: file {}".format(processor, package, filename))
+                        model_files.append((filename, processor, package))
+                    else:
+                        raise FileNotFoundError(f"Processor {processor} package {package} needed for {lang} but cannot be found at {filename}")
 
-        # pretrain doesn't really need to be here, but by putting it here,
-        # we preserve any existing default.zip files with no other changes
-        # when rebuilding the resources
-        processors = ['tokenize', 'mwt', 'lemma', 'pos', 'depparse', 'pretrain']
-        if lang in default_ners:
-            processors.append('ner')
-        if lang in default_charlms:
-            processors.extend(['forward_charlm', 'backward_charlm'])
-        if lang in default_sentiment:
-            processors.append('sentiment')
-        if lang in default_constituency:
-            processors.append('constituency')
-
-        if lang == 'multilingual':
-            processors = ['langid']
-
-        with zipfile.ZipFile(os.path.join('models', 'default.zip'), 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for processor in processors:
-                if processor == 'pretrain':
-                    for package in sorted(pretrains_needed):
-                        filename = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
-                        if os.path.exists(filename):
-                            print("   Model {} package {}: file {}".format(processor, package, filename))
-                            zipf.write(filename=os.path.join("models", processor, package + '.pt'),
-                                       arcname=os.path.join(processor, package + '.pt'))
-                        else:
-                            raise FileNotFoundError(f"Pretrain package {package} needed for {lang} but cannot be found at {filename}")
-
-                    # done specifically with pretrains
-                    continue
-
-                if processor == 'ner': package = ner_package
-                elif processor in ['forward_charlm', 'backward_charlm']: package = charlm_package
-                elif processor == 'sentiment': package = sentiment_package
-                elif processor == 'constituency': package = constituency_package
-                elif processor == 'langid': package = 'ud' 
-                elif processor == 'tokenize' and lang in default_tokenizer: package = default_tokenizer[lang]
-                elif processor == 'lemma': package = ud_package + "_nocharlm"
-                elif processor == 'pos': package = get_default_pos_package(lang, ud_package)
-                elif processor == 'depparse': package = get_default_depparse_package(lang, ud_package)
-                else: package = ud_package
-
-                filename = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
-
-                if os.path.exists(filename):
-                    print("   Model {} package {}: file {}".format(processor, package, filename))
-                    zipf.write(filename=os.path.join("models", processor, package + '.pt'),
-                               arcname=os.path.join(processor, package + '.pt'))
-                elif lang in allowed_empty_languages:
-                    # we don't have a lot of Thai or Myanmar support yet
-                    pass
-                elif processor == 'lemma':
-                    # a few languages use the identity lemmatizer -
-                    # there might be a better way to encode that here
-                    print(" --Model {} package {}: no file {}, assuming identity lemmatizer".format(processor, package, filename))
-                elif processor == 'mwt':
-                    # some languages don't have MWT, so skip ig
-                    # others have pos and depparse built with no pretrain
-                    print(" --Model {} package {}: no file {}, skipping".format(processor, package, filename))
-                else:
-                    raise FileNotFoundError(f"Could not find an expected model file for {lang} {processor} {package} : {filename}")
+        with zipfile.ZipFile(os.path.join(args.output_dir, lang, 'models', 'default.zip'), 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for filename, processor, package in model_files:
+                zipf.write(filename=filename, arcname=os.path.join(processor, package + '.pt'))
 
         default_md5 = get_md5(os.path.join(args.output_dir, lang, 'models', 'default.zip'))
         resources[lang]['default_md5'] = default_md5
