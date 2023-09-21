@@ -33,7 +33,7 @@ default_treebanks = {
     "fa":      "perdt",
     "fi":      "tdt",
     "fo":      "farpahc",
-    "fr":      "gsd",
+    "fr":      "combined",
     "fro":     "srcmf",
     "ga":      "idt",
     "gd":      "arcosg",
