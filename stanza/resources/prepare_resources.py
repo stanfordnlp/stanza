@@ -20,7 +20,7 @@ import zipfile
 
 from stanza import __resources_version__
 from stanza.models.common.constant import lcode2lang, two_to_three_letters, three_to_two_letters
-from stanza.resources.default_packages import PACKAGES
+from stanza.resources.default_packages import PACKAGES, TRANSFORMERS, TRANSFORMER_NICKNAMES
 from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms, lemma_charlms, known_nicknames
 from stanza.utils.get_tqdm import get_tqdm
 
@@ -471,6 +471,36 @@ def get_default_processors(resources, lang):
 
     return default_processors
 
+def get_default_best(resources, lang):
+    """
+    A package that, if available, uses charlm and transformer models for each processor
+    """
+    default_processors = get_default_processors(resources, lang)
+
+    if 'lemma' in default_processors and default_processors['lemma'] != 'identity':
+        lemma_model = default_processors['lemma']
+        lemma_model = lemma_model.replace('_nocharlm', '_charlm')
+        charlm_package = get_lemma_charlm_package(lang, lemma_model)
+        if charlm_package is not None:
+            if lemma_model in resources[lang]['lemma']:
+                default_processors['lemma'] = lemma_model
+            else:
+                print("WARNING: wanted to use %s for %s default_best lemma, but that model does not exist" % (lemma_model, lang))
+
+    transformer = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(lang, None), None)
+    if transformer is not None:
+        for processor in 'pos', 'depparse', 'constituency':
+            if processor not in default_processors:
+                continue
+
+            new_model = default_processors[processor].replace('_charlm', "_" + transformer).replace('_nocharlm', "_" + transformer)
+            if new_model in resources[lang][processor]:
+                default_processors[processor] = new_model
+            else:
+                print("WARNING: wanted to use %s for %s default_best %s, but that model does not exist" % (new_model, lang, processor))
+
+    return default_processors
+
 def get_default_fast(resources, lang):
     """
     Build a packages entry which only has the nocharlm models
@@ -528,6 +558,9 @@ def process_packages(args):
         if lang not in no_pretrain_languages and lang != "multilingual":
             default_fast = get_default_fast(resources, lang)
             resources[lang][PACKAGES]['default_fast'] = default_fast
+
+            default_best = get_default_best(resources, lang)
+            resources[lang][PACKAGES]['default_best'] = default_best
 
         # Now we loop over each of the tokenizers for this language
         # ... we use this as a proxy for the available UD treebanks
