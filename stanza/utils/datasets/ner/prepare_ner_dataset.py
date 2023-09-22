@@ -379,6 +379,14 @@ en_conllpp is a test set from 2020 newswire
   - git clone the repo in $NERBASE
   - then run
     python3 stanza/utils/datasets/ner/prepare_ner_dataset.py en_conllpp
+
+AQMAR is a small dataset of Arabic Wikipedia articles
+  - currently the split code is not here
+    will have to include it here later
+  - http://www.cs.cmu.edu/~ark/ArabicNER/
+  - there is a challenge for it here:
+    https://www.topcoder.com/challenges/f3cf483e-a95c-4a7e-83e8-6bdd83174d38
+  - alternatively, we just randomly split it ourselves
 """
 
 import glob
