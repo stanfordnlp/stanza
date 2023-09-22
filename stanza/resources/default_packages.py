@@ -287,6 +287,7 @@ default_charlms = {
     "nb": "conll17",
     "nl": "ccwiki",
     "pl": "oscar",
+    "pt": "oscar2023",
     "ru": "newswiki",
     "sd": "isra",
     "sv": "conll17",
@@ -666,7 +667,7 @@ TRANSFORMER_NICKNAMES = {
     "allegro/herbert-base-cased": "herbert",
 
     # pt
-    "neuralmind/bert-large-portuguese-cased": "bert",
+    "neuralmind/bert-large-portuguese-cased": "bertimbau",
 
     # tr
     "dbmdz/bert-base-turkish-128k-cased": "bert",
