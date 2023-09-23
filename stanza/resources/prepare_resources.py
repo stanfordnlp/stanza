@@ -87,7 +87,7 @@ default_constituency = {
     "id": "icon_charlm",
     "it": "vit_charlm",
     "ja": "alt_charlm",
-    "pt": "cintil_nocharlm",
+    "pt": "cintil_charlm",
     #"tr": "starlang_charlm",
     "vi": "vlsp22_charlm",
     "zh-hans": "ctb-51_charlm",
