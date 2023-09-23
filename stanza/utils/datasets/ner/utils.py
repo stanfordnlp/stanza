@@ -54,9 +54,12 @@ def write_sentences(output_filename, dataset):
     """
     os.makedirs(os.path.split(output_filename)[0], exist_ok=True)
     with open(output_filename, "w", encoding="utf-8") as fout:
-        for sentence in dataset:
-            for word in sentence:
-                fout.write("%s\t%s\n" % word)
+        for sent_idx, sentence in enumerate(dataset):
+            for word_idx, word in enumerate(sentence):
+                try:
+                    fout.write("%s\t%s\n" % word)
+                except TypeError:
+                    raise TypeError("Unable to process sentence %d word %d of file %s" % (sent_idx, word_idx, output_filename))
             fout.write("\n")
 
 def write_dataset(datasets, output_dir, short_name, suffix="bio", shard_names=SHARDS, shards=SHARDS):
