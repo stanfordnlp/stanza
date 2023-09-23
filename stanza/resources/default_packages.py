@@ -619,6 +619,11 @@ TRANSFORMER_LAYERS = {
 }
 
 TRANSFORMER_NICKNAMES = {
+    # ar
+    "asafaya/bert-base-arabic": "asafaya-bert",
+    "aubmindlab/araelectra-base-discriminator": "aubmind-electra",
+    "aubmindlab/bert-base-arabertv2": "aubmind-bert",
+
     # da
     "vesteinn/ScandiBERT": "scandibert",
 
