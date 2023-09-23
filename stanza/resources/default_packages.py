@@ -345,6 +345,19 @@ default transformers to use for various languages
 we try to document why we choose a particular model in each case
 """
 TRANSFORMERS = {
+    # We tested three candidate AR models on POS, Depparse, and NER
+    #
+    # POS: padt dev set scores, AllTags
+    # depparse: padt dev set scores, LAS
+    # NER: dev scores on a random split of AQMAR, entity scores
+    #
+    #                                             pos   depparse  ner
+    # none (pt & charlm only)                    94.08    83.49  84.19
+    # asafaya/bert-base-arabic                   95.10    84.96  85.98
+    # aubmindlab/bert-base-arabertv2             95.33    85.28  84.93
+    # aubmindlab/araelectra-base-discriminator   95.66    85.83  86.10
+    "ar": "aubmindlab/araelectra-base-discriminator",
+
     # https://huggingface.co/Maltehb/danish-bert-botxo
     # contrary to normal expectations, this hurts F1
     # on a dev split by about 1 F1
