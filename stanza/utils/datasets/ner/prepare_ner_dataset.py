@@ -381,12 +381,20 @@ en_conllpp is a test set from 2020 newswire
     python3 stanza/utils/datasets/ner/prepare_ner_dataset.py en_conllpp
 
 AQMAR is a small dataset of Arabic Wikipedia articles
-  - currently the split code is not here
-    will have to include it here later
   - http://www.cs.cmu.edu/~ark/ArabicNER/
+  - Recall-Oriented Learning of Named Entities in Arabic Wikipedia
+    Behrang Mohit, Nathan Schneider, Rishav Bhowmick, Kemal Oflazer, and Noah A. Smith.
+    In Proceedings of the 13th Conference of the European Chapter of
+    the Association for Computational Linguistics, Avignon, France,
+    April 2012.
+  - download the .zip file there and put it in
+    $NERBASE/arabic/AQMAR
   - there is a challenge for it here:
     https://www.topcoder.com/challenges/f3cf483e-a95c-4a7e-83e8-6bdd83174d38
   - alternatively, we just randomly split it ourselves
+  - currently, running the following reproduces the random split:
+    python3 stanza/utils/datasets/ner/prepare_ner_dataset.py ar_aqmar
+
 """
 
 import glob
@@ -403,6 +411,7 @@ import stanza.utils.default_paths as default_paths
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
 import stanza.utils.datasets.ner.conll_to_iob as conll_to_iob
+import stanza.utils.datasets.ner.convert_ar_aqmar as convert_ar_aqmar
 import stanza.utils.datasets.ner.convert_bn_daffodil as convert_bn_daffodil
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
@@ -1076,8 +1085,13 @@ def process_en_conllpp(paths, short_name):
     sentences = [sent for sent in sentences if len(sent) > 1 or sent[0][0] != '-DOCSTART-']
     write_dataset([sentences], base_output_path, short_name, shard_names=["test"], shards=["test"])
 
+def process_ar_aqmar(paths, short_name):
+    base_input_path = os.path.join(paths["NERBASE"], "arabic", "AQMAR", "AQMAR_Arabic_NER_corpus-1.0.zip")
+    base_output_path = paths["NER_DATA_DIR"]
+    convert_ar_aqmar.convert_shuffle(base_input_path, base_output_path, short_name)
 
 DATASET_MAPPING = {
+    "ar_aqmar":          process_ar_aqmar,
     "bn_daffodil":       process_bn_daffodil,
     "da_ddt":            process_da_ddt,
     "de_germeval2014":   process_de_germeval2014,
