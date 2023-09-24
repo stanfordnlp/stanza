@@ -39,7 +39,7 @@ def parse_args():
 # default ner for languages
 default_ners = {
     "af": "nchlt",
-    "ar": "aqmar",
+    "ar": "aqmar_charlm",
     "bg": "bsnlp19",
     "da": "ddt",
     "de": "germeval2014",
