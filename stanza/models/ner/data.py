@@ -68,11 +68,7 @@ class DataLoader:
         else:
             charvocab = CharVocab(data, self.args['shorthand'])
         wordvocab = self.pretrain.vocab
-        # TODO: even when reading the multi_ner, we are converting that
-        # to single tag entries.  those should be entire lists.
-        # then it will not be necessary to convert the tag_data
-        # could simply use idx=1
-        tag_data = [[((x[1],),) for x in sentence] for sentence in data]
+        tag_data = [[(x[1],) for x in sentence] for sentence in data]
         tagvocab = CompositeVocab(tag_data, self.args['shorthand'], idx=0, sep=None)
         ignore = None
         if self.args['emb_finetune_known_only']:
@@ -95,11 +91,10 @@ class DataLoader:
             char_case = lambda x: x.lower()
         else:
             char_case = lambda x: x
-        for sent in data:
+        for sent_idx, sent in enumerate(data):
             processed_sent = [[w[0] for w in sent]]
             processed_sent += [[vocab['char'].map([char_case(x) for x in w[0]]) for w in sent]]
-            # TODO: this is where we would pass in multiple tags and/or empty fields
-            processed_sent += [vocab['tag'].map([(w[1],) for w in sent])]
+            processed_sent += [vocab['tag'].map([w[1] for w in sent])]
             processed.append(processed_sent)
         return processed
 
@@ -159,10 +154,6 @@ class DataLoader:
         if self.preprocess_tags: # preprocess tags
             data = process_tags(data, self.args.get('scheme', 'bio'))
             data = normalize_empty_tags(data)
-        # TODO: downstream stuff like the scoring evaluation should handle multi_ner
-        # the missing tag function in ner_tagger.py will also need to work with
-        # multiple dimensions of tags
-        data = [[[token[0], token[1][0]] for token in sentence] for sentence in data]
         return data
 
     def process_chars(self, sents):
