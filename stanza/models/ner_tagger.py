@@ -146,6 +146,20 @@ def load_pretrain(args):
 def model_file_name(args):
     return utils.standard_model_file_name(args, "nertagger")
 
+def get_known_tags(tags):
+    """
+    Tags are stored in the dataset as a list of list of tags
+
+    This returns a sorted list for each column of tags in the dataset
+    """
+    max_columns = max(len(word) for sent in tags for word in sent)
+    known_tags = [set() for _ in range(max_columns)]
+    for sent in tags:
+        for word in sent:
+            for tag_idx, tag in enumerate(word):
+                known_tags[tag_idx].add(tag)
+    return [sorted(x) for x in known_tags]
+
 def train(args):
     model_file = model_file_name(args)
 
@@ -205,11 +219,16 @@ def train(args):
         raise ValueError("File %s exists but has no usable dev data" % args['train_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
     dev_gold_tags = dev_batch.tags
+    # TODO: when we add multiple layers of tags to the scorer,
+    # this will need to change
+    dev_gold_tags = [[x[0] for x in tags] for tags in dev_gold_tags]
 
-    train_tags = utils.get_known_tags(train_batch.tags)
-    logger.info("Tags present in training set:\n  Tags without BIES markers: %s\n  Tags with B-, I-, E-, or S-: %s",
-                " ".join(sorted(set(i for i in train_tags if i[:2] not in ('B-', 'I-', 'E-', 'S-')))),
-                " ".join(sorted(set(i[2:] for i in train_tags if i[:2] in ('B-', 'I-', 'E-', 'S-')))))
+    train_tags = get_known_tags(train_batch.tags)
+    for tag_idx, tags in enumerate(train_tags):
+        logger.info("Tags present in training set at column %d:\n  Tags without BIES markers: %s\n  Tags with B-, I-, E-, or S-: %s",
+                    tag_idx,
+                    " ".join(sorted(set(i for i in tags if i[:2] not in ('B-', 'I-', 'E-', 'S-')))),
+                    " ".join(sorted(set(i[2:] for i in tags if i[:2] in ('B-', 'I-', 'E-', 'S-')))))
 
     if args['finetune']:
         utils.warn_missing_tags([i for i in trainer.vocab['tag'].items(0)], train_batch.tags, "training set")
@@ -330,7 +349,8 @@ def write_ner_results(filename, batch, preds):
             # a namedtuple would make this cleaner without being much slower
             text = utils.unsort(b[0], b[5])
             for sentence in text:
-                sentence_gold = batch.tags[tag_idx]
+                # TODO: need to figure out which tags to output here
+                sentence_gold = [x[0] for x in batch.tags[tag_idx]]
                 sentence_pred = preds[tag_idx]
                 tag_idx += 1
                 for word, gold, pred in zip(sentence, sentence_gold, sentence_pred):
@@ -357,6 +377,10 @@ def evaluate(args):
         preds += trainer.predict(b)
 
     gold_tags = batch.tags
+    # TODO: when we add multiple layers of tags to the scorer,
+    # this will need to change
+    gold_tags = [[x[0] for x in tags] for tags in gold_tags]
+
     _, _, score = scorer.score_by_entity(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
     _, _, _, confusion = scorer.score_by_token(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
     logger.info("Weighted f1 for non-O tokens: %5f", confusion_to_weighted_f1(confusion, exclude=["O"]))
