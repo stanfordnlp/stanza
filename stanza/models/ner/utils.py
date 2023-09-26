@@ -120,35 +120,79 @@ def bio2_to_bioes(tags):
     return new_tags
 
 def process_tags(sentences, scheme):
-    res = []
-    # check if tag conversion is needed
-    convert_bio_to_bioes = False
-    convert_basic_to_bioes = False
-    is_bio = is_bio_scheme([x[1] for sent in sentences for x in sent])
-    is_basic = not is_bio and is_basic_scheme([x[1] for sent in sentences for x in sent])
-    if is_bio and scheme.lower() == 'bioes':
-        convert_bio_to_bioes = True
-        logger.debug("BIO tagging scheme found in input; converting into BIOES scheme...")
-    elif is_basic and scheme.lower() == 'bioes':
-        convert_basic_to_bioes = True
-        logger.debug("Basic tagging scheme found in input; converting into BIOES scheme...")
-    # process tags
-    for sent in sentences:
+    all_words = []
+    all_tags = []
+    converted_tuples = False
+    for sent_idx, sent in enumerate(sentences):
         words, tags = zip(*sent)
-        # NER field sanity checking
-        if any([x is None or x == '_' for x in tags]):
-            raise ValueError("NER tag not found for some input data.")
-        if convert_basic_to_bioes:
-            # if basic, convert tags -> bio -> bioes
-            tags = bio2_to_bioes(basic_to_bio(tags))
-        else:
-            # first ensure BIO2 scheme
-            tags = to_bio2(tags)
-            # then convert to BIOES
-            if convert_bio_to_bioes:
-                tags = bio2_to_bioes(tags)
-        res.append([(w,t) for w,t in zip(words, tags)])
-    return res
+        all_words.append(words)
+        # if we got one dimension tags w/o tuples or lists, make them tuples
+        # but we also check that the format is consistent,
+        # as otherwise the result being converted might be confusing
+        if not converted_tuples and any(tag is None or isinstance(tag, str) for tag in tags):
+            if sent_idx > 0:
+                raise ValueError("Got a mix of tags and lists of tags.  First non-list was in sentence %d" % sent_idx)
+            converted_tuples = True
+        if converted_tuples:
+            if not all(tag is None or isinstance(tag, str) for tag in tags):
+                raise ValueError("Got a mix of tags and lists of tags.  First tag as a list was in sentence %d" % sent_idx)
+            tags = [(tag,) for tag in tags]
+        all_tags.append(tags)
+
+    max_columns = max(len(x) for tags in all_tags for x in tags)
+    for sent_idx, tags in enumerate(all_tags):
+        if any(len(x) < max_columns for x in tags):
+            raise ValueError("NER tags not uniform in length at sentence %d.  TODO: extend those columns with O" % sent_idx)
+
+    all_convert_bio_to_bioes = []
+    all_convert_basic_to_bioes = []
+
+    for column_idx in range(max_columns):
+        # check if tag conversion is needed for each column
+        # we treat each column separately, although practically
+        # speaking it would be pretty weird for a dataset to have BIO
+        # in one column and basic in another, for example
+        convert_bio_to_bioes = False
+        convert_basic_to_bioes = False
+        tag_column = [x[column_idx] for sent in all_tags for x in sent]
+        is_bio = is_bio_scheme(tag_column)
+        is_basic = not is_bio and is_basic_scheme(tag_column)
+        if is_bio and scheme.lower() == 'bioes':
+            convert_bio_to_bioes = True
+            logger.debug("BIO tagging scheme found in input at column %d; converting into BIOES scheme..." % column_idx)
+        elif is_basic and scheme.lower() == 'bioes':
+            convert_basic_to_bioes = True
+            logger.debug("Basic tagging scheme found in input at column %d; converting into BIOES scheme..." % column_idx)
+        all_convert_bio_to_bioes.append(convert_bio_to_bioes)
+        all_convert_basic_to_bioes.append(convert_basic_to_bioes)
+
+    result = []
+    for words, tags in zip(all_words, all_tags):
+        # process tags
+        # tags is a list of each column of tags for each word in this sentence
+        # first, NER field sanity checking
+        if any(x is None or x == '_' for sentence_tags in tags for x in sentence_tags):
+            raise ValueError("Got blank tags for some of the words - cannot handle that yet!  TODO")
+        # copy the tags to a list so we can edit them
+        tags = [[x for x in sentence_tags] for sentence_tags in tags]
+        for column_idx, (convert_bio_to_bioes, convert_basic_to_bioes) in enumerate(zip(all_convert_bio_to_bioes, all_convert_basic_to_bioes)):
+            tag_column = [x[column_idx] for x in tags]
+            if convert_basic_to_bioes:
+                # if basic, convert tags -> bio -> bioes
+                tag_column = bio2_to_bioes(basic_to_bio(tag_column))
+            else:
+                # first ensure BIO2 scheme
+                tag_column = to_bio2(tag_column)
+                # then convert to BIOES
+                if convert_bio_to_bioes:
+                    tag_column = bio2_to_bioes(tag_column)
+            for tag_idx, tag in enumerate(tag_column):
+                tags[tag_idx][column_idx] = tag
+        result.append([(w,tuple(t)) for w,t in zip(words, tags)])
+
+    if converted_tuples:
+        result = [[(word[0], word[1][0]) for word in sentence] for sentence in result]
+    return result
 
 
 def decode_from_bioes(tags):
