@@ -6,22 +6,44 @@ from stanza.models.ner import utils
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
-WORDS       = [["Unban",   "Mox",  "Opal"], ["Ragavan",  "is",     "red"], ["Urza",   "Lord",  "High", "Artificer", "goes", "infinite", "with",  "Thopter",    "Sword"]]
-BIO_TAGS    = [["O",     "B-ART", "I-ART"], ["B-MONKEY", "O",  "B-COLOR"], ["B-PER", "I-PER", "I-PER", "I-PER",        "O",        "O",    "O", "B-WEAPON", "B-WEAPON"]]
-BIO_U_TAGS  = [["O",     "B_ART", "I_ART"], ["B_MONKEY", "O",  "B_COLOR"], ["B_PER", "I_PER", "I_PER", "I_PER",        "O",        "O",    "O", "B_WEAPON", "B_WEAPON"]]
-BIOES_TAGS  = [["O",     "B-ART", "E-ART"], ["S-MONKEY", "O",  "S-COLOR"], ["B-PER", "I-PER", "I-PER", "E-PER",        "O",        "O",    "O", "S-WEAPON", "S-WEAPON"]]
+WORDS       = [["Unban",   "Mox",   "Opal"], ["Ragavan",  "is",     "red"], ["Urza",   "Lord",  "High", "Artificer", "goes", "infinite", "with",  "Thopter",    "Sword"]]
+BIO_TAGS    = [["O",     "B-ART",  "I-ART"], ["B-MONKEY", "O",  "B-COLOR"], ["B-PER", "I-PER", "I-PER", "I-PER",        "O",        "O",    "O", "B-WEAPON", "B-WEAPON"]]
+BIO_U_TAGS  = [["O",     "B_ART",  "I_ART"], ["B_MONKEY", "O",  "B_COLOR"], ["B_PER", "I_PER", "I_PER", "I_PER",        "O",        "O",    "O", "B_WEAPON", "B_WEAPON"]]
+BIOES_TAGS  = [["O",     "B-ART",  "E-ART"], ["S-MONKEY", "O",  "S-COLOR"], ["B-PER", "I-PER", "I-PER", "E-PER",        "O",        "O",    "O", "S-WEAPON", "S-WEAPON"]]
 # note the problem with not using BIO tags - the consecutive tags for thopter/sword get treated as one item
-BASIC_TAGS  = [["O",       "ART",   "ART"], ["MONKEY",   "O",    "COLOR"], [  "PER",   "PER",   "PER",   "PER",        "O",        "O",    "O",   "WEAPON",   "WEAPON"]]
-BASIC_BIOES = [["O",     "B-ART", "E-ART"], ["S-MONKEY", "O",  "S-COLOR"], ["B-PER", "I-PER", "I-PER", "E-PER",        "O",        "O",    "O", "B-WEAPON", "E-WEAPON"]]
+BASIC_TAGS  = [["O",       "ART",    "ART"], ["MONKEY",   "O",    "COLOR"], [  "PER",   "PER",   "PER",   "PER",        "O",        "O",    "O",   "WEAPON",   "WEAPON"]]
+BASIC_BIOES = [["O",     "B-ART",  "E-ART"], ["S-MONKEY", "O",  "S-COLOR"], ["B-PER", "I-PER", "I-PER", "E-PER",        "O",        "O",    "O", "B-WEAPON", "E-WEAPON"]]
+ALT_BIO     = [["O",    "B-MANA", "I-MANA"], ["B-CRE",    "O",        "O"], ["B-CRE", "I-CRE", "I-CRE", "I-CRE",        "O",        "O",    "O",    "B-ART",    "B-ART"]]
+ALT_BIOES   = [["O",    "B-MANA", "E-MANA"], ["S-CRE",    "O",        "O"], ["B-CRE", "I-CRE", "I-CRE", "E-CRE",        "O",        "O",    "O",    "S-ART",    "S-ART"]]
 
 def check_reprocessed_tags(words, input_tags, expected_tags):
     sentences = [list(zip(x, y)) for x, y in zip(words, input_tags)]
     retagged = utils.process_tags(sentences=sentences, scheme="bioes")
+    # process_tags selectively returns tuples or strings based on the input
+    # so we don't need to fiddle with the expected output format here
     expected_retagged = [list(zip(x, y)) for x, y in zip(words, expected_tags)]
     assert retagged == expected_retagged
 
 def test_process_tags_bio():
     check_reprocessed_tags(WORDS, BIO_TAGS, BIOES_TAGS)
+    # check that the alternate version is correct as well
+    # that way we can independently check the two layer version
+    check_reprocessed_tags(WORDS, ALT_BIO, ALT_BIOES)
+
+def merge_tags(*tags):
+    merged_tags = [[tuple(x) for x in zip(*sentences)]   # combine tags such as ("O", "O"), ("B-ART", "B-MANA"), ...
+                   for sentences in zip(*tags)]          # ... for each set of sentences
+    return merged_tags
+
+def test_combined_tags_bio():
+    bio_tags = merge_tags(BIO_TAGS, ALT_BIO)
+    expected = merge_tags(BIOES_TAGS, ALT_BIOES)
+    check_reprocessed_tags(WORDS, bio_tags, expected)
+
+def test_combined_tags_mixed():
+    bio_tags = merge_tags(BIO_TAGS, ALT_BIOES)
+    expected = merge_tags(BIOES_TAGS, ALT_BIOES)
+    check_reprocessed_tags(WORDS, bio_tags, expected)
 
 def test_process_tags_basic():
     check_reprocessed_tags(WORDS, BASIC_TAGS, BASIC_BIOES)
