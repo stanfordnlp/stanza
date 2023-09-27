@@ -68,8 +68,8 @@ class NERTagger(nn.Module):
             input_size += self.args['word_emb_dim']
 
         # TODO: this, pos, depparse should all be refactored
-        # (the force_bert_saved option here handles that)
         # FIXME: possibly pos and depparse are all losing a finetuned transformer if loaded & saved
+        # (the force_bert_saved option here handles that)
         if self.args.get('bert_model', None):
             # first we load the transformer model and possibly turn off its requires_grad parameters ...
             if self.args.get('bert_finetune', False):
