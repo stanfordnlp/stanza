@@ -68,6 +68,7 @@ def run_training(pretrain_file, tmp_path, *extra_args):
             "--eval_file", str(dev_json),
             "--shorthand", "en_test",
             "--max_steps", "100",
+            "--eval_interval", "40",
             "--save_dir", str(save_dir)]
     args = args + list(extra_args)
 
