@@ -9,7 +9,7 @@ from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
 
-PUNCTUATION = """!"#%&'()*+, -./:;<=>?@[\]^_`{|}~"""
+PUNCTUATION = """!"#%&'()*+, -./:;<=>?@[\\]^_`{|}~"""
 MONEY_WORDS = {"million", "billion", "trillion", "millions", "billions", "trillions", "hundred", "hundreds",
                "lakh", "crore", # south asian english
                "tens", "of", "ten", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "couple"}
