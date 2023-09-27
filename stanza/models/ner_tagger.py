@@ -224,6 +224,7 @@ def train(args):
     dev_gold_tags = [[x[0] for x in tags] for tags in dev_gold_tags]
 
     train_tags = get_known_tags(train_batch.tags)
+    logger.info("Training data has %d columns of tags", len(train_tags))
     for tag_idx, tags in enumerate(train_tags):
         logger.info("Tags present in training set at column %d:\n  Tags without BIES markers: %s\n  Tags with B-, I-, E-, or S-: %s",
                     tag_idx,
