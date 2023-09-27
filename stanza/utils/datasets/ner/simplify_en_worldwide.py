@@ -120,7 +120,7 @@ def write_new_file(save_dir, input_path, old_file, simplify):
 def copy_and_simplify(base_path, simplify):
     with tempfile.TemporaryDirectory(dir=base_path) as tempdir:
         # Condense Labels
-        input_dir = os.path.join(base_path, "en-foreign-newswire")
+        input_dir = os.path.join(base_path, "en-worldwide-newswire")
         final_dir = os.path.join(base_path, "4class" if simplify else "8class")
         os.makedirs(tempdir, exist_ok=True)
         os.makedirs(final_dir, exist_ok=True)
@@ -135,7 +135,7 @@ def main(args=None):
     BASE_PATH = "C:\\Users\\SystemAdmin\\PycharmProjects\\General Code\\stanza source code"
     if not os.path.exists(BASE_PATH):
         paths = get_default_paths()
-        BASE_PATH = os.path.join(paths["NERBASE"], "en_foreign")
+        BASE_PATH = os.path.join(paths["NERBASE"], "en_worldwide")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--base_path', type=str, default=BASE_PATH, help="Where to find the raw data")

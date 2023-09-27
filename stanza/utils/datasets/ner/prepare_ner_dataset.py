@@ -345,12 +345,12 @@ SiNER is a Sindhi NER dataset
   - Then, prepare the dataset with this script:
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset sd_siner
 
-en_foreign-4class is an English non-US newswire dataset
+en_worldwide-4class is an English non-US newswire dataset
   - currently WIP.  annotated by MLTwist, collected at Stanford
   - the 4 class version is converted to the 4 classes in conll,
     then split into train/dev/test
-  - clone https://github.com/stanfordnlp/en-foreign-newswire
-    into $NERBASE/en_foreign
+  - clone https://github.com/stanfordnlp/en-worldwide-newswire
+    into $NERBASE/en_worldwide
 
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
@@ -428,7 +428,7 @@ import stanza.utils.datasets.ner.convert_starlang_ner as convert_starlang_ner
 import stanza.utils.datasets.ner.convert_nkjp as convert_nkjp
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 import stanza.utils.datasets.ner.convert_sindhi_siner as convert_sindhi_siner
-import stanza.utils.datasets.ner.simplify_en_foreign as simplify_en_foreign
+import stanza.utils.datasets.ner.simplify_en_worldwide as simplify_en_worldwide
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
 import stanza.utils.datasets.ner.convert_hy_armtdp as convert_hy_armtdp
@@ -1033,24 +1033,24 @@ def process_sd_siner(paths, short_name):
             raise FileNotFoundError("Found an SiNER directory at %s but the directory did not contain the dataset" % in_directory)
     convert_sindhi_siner.convert_sindhi_siner(in_filename, paths["NER_DATA_DIR"], short_name)
 
-def process_en_foreign_4class(paths, short_name):
-    simplify_en_foreign.main(args=['--simplify'])
+def process_en_worldwide_4class(paths, short_name):
+    simplify_en_worldwide.main(args=['--simplify'])
 
-    in_directory = os.path.join(paths["NERBASE"], "en_foreign", "4class")
+    in_directory = os.path.join(paths["NERBASE"], "en_worldwide", "4class")
     out_directory = paths["NER_DATA_DIR"]
 
-    destination_file = os.path.join(paths["NERBASE"], "en_foreign", "en-foreign-newswire", "regions.txt")
+    destination_file = os.path.join(paths["NERBASE"], "en_worldwide", "en-worldwide-newswire", "regions.txt")
     prefix_map = read_prefix_file(destination_file)
 
     random_shuffle_by_prefixes(in_directory, out_directory, short_name, prefix_map)
 
-def process_en_foreign_8class(paths, short_name):
-    simplify_en_foreign.main(args=['--no_simplify'])
+def process_en_worldwide_8class(paths, short_name):
+    simplify_en_worldwide.main(args=['--no_simplify'])
 
-    in_directory = os.path.join(paths["NERBASE"], "en_foreign", "8class")
+    in_directory = os.path.join(paths["NERBASE"], "en_worldwide", "8class")
     out_directory = paths["NER_DATA_DIR"]
 
-    destination_file = os.path.join(paths["NERBASE"], "en_foreign", "en-foreign-newswire", "regions.txt")
+    destination_file = os.path.join(paths["NERBASE"], "en_worldwide", "en-worldwide-newswire", "regions.txt")
     prefix_map = read_prefix_file(destination_file)
 
     random_shuffle_by_prefixes(in_directory, out_directory, short_name, prefix_map)
@@ -1096,8 +1096,8 @@ DATASET_MAPPING = {
     "da_ddt":            process_da_ddt,
     "de_germeval2014":   process_de_germeval2014,
     "en_conllpp":        process_en_conllpp,
-    "en_foreign-4class": process_en_foreign_4class,
-    "en_foreign-8class": process_en_foreign_8class,
+    "en_worldwide-4class": process_en_worldwide_4class,
+    "en_worldwide-8class": process_en_worldwide_8class,
     "fa_arman":          process_fa_arman,
     "fi_turku":          process_turku,
     "hi_hiner":          process_hiner,
