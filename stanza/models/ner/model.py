@@ -13,7 +13,7 @@ from stanza.models.common.dropout import WordDropout, LockedDropout
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanza.models.common.crf import CRFLoss
 from stanza.models.common.foundation_cache import load_bert
-from stanza.models.common.vocab import PAD_ID, UNK_ID
+from stanza.models.common.vocab import PAD_ID, UNK_ID, EMPTY_ID
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 
 logger = logging.getLogger('stanza')
@@ -120,12 +120,13 @@ class NERTagger(nn.Module):
         self.taggerlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']), requires_grad=False)
 
         # tag classifier
-        num_tag = self.vocab['tag'].lens()[0]
-        self.tag_clf = nn.Linear(self.args['hidden_dim']*2, num_tag)
-        self.tag_clf.bias.data.zero_()
-
-        # criterion
-        self.crit = CRFLoss(num_tag)
+        tag_lengths = self.vocab['tag'].lens()
+        self.num_output_layers = len(tag_lengths)
+        # TODO: add an option to connect the output of one layer to the input of the next layer
+        self.tag_clfs = nn.ModuleList([nn.Linear(self.args['hidden_dim']*2, num_tag) for num_tag in tag_lengths])
+        for tag_clf in self.tag_clfs:
+            tag_clf.bias.data.zero_()
+        self.crits = nn.ModuleList([CRFLoss(num_tag) for num_tag in tag_lengths])
 
         self.drop = nn.Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
@@ -233,10 +234,18 @@ class NERTagger(nn.Module):
         lstm_outputs = pad(lstm_outputs)
         lstm_outputs = self.lockeddrop(lstm_outputs)
         lstm_outputs = pack(lstm_outputs).data
-        logits = pad(self.tag_clf(lstm_outputs)).contiguous()
-        # TODO: this will have to update in order to use multiple layers
-        tags = tags[:, :, 0]
-        loss, trans = self.crit(logits, word_mask, tags)
+
+        loss = 0
+        logits = []
+        trans = []
+        for idx, (tag_clf, crit) in enumerate(zip(self.tag_clfs, self.crits)):
+            next_logits = pad(tag_clf(lstm_outputs)).contiguous()
+            # the tag_mask lets us avoid backprop on a blank tag
+            tag_mask = torch.eq(tags[:, :, idx], EMPTY_ID)
+            next_loss, next_trans = crit(next_logits, torch.bitwise_or(tag_mask, word_mask), tags[:, :, idx])
+            loss = loss + next_loss
+            logits.append(next_logits)
+            trans.append(next_trans)
 
         return loss, logits, trans
 
