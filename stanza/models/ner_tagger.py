@@ -231,6 +231,7 @@ def train(args):
                     " ".join(sorted(set(i[2:] for i in tags if i[:2] in ('B-', 'I-', 'E-', 'S-')))))
 
     if args['finetune']:
+        # TODO: here we need to check if the dataset has more tags than already in the model
         utils.warn_missing_tags([i for i in trainer.vocab['tag'].items(0)], train_batch.tags, "training set")
     utils.warn_missing_tags(train_batch.tags, dev_batch.tags, "dev set")
 
