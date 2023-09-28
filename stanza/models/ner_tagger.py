@@ -160,6 +160,31 @@ def get_known_tags(tags):
                 known_tags[tag_idx].add(tag)
     return [sorted(x) for x in known_tags]
 
+def warn_missing_tags(tag_vocab, data_tags, error_msg):
+    """
+    Check for tags missing from the tag_vocab.
+
+    Given a tag_vocab and the known tags in the format used by
+    ner.data, go through the tags in the dataset and look for any
+    which aren't in the tag_vocab.
+
+    error_msg is something like "training set" or "eval file" to
+    indicate where the missing tags came from.
+    """
+    tag_depth = max(max(len(tags) for tags in sentence) for sentence in data_tags)
+
+    if tag_depth != len(tag_vocab.lens()):
+        logger.warning("Test dataset has a different number of tag types compared to the model: %d vs %d", tag_depth, len(tag_vocab.lens()))
+    for tag_set_idx in range(min(tag_depth, len(tag_vocab.lens()))):
+        tag_set = tag_vocab.items(tag_set_idx)
+        if len(tag_vocab.lens()) > 1:
+            current_error_msg = error_msg + " tag set %d" % tag_set_idx
+        else:
+            current_error_msg = error_msg
+
+        current_tags = set([word[tag_set_idx] for sentence in data_tags for word in sentence])
+        utils.warn_missing_tags(tag_set, current_tags, current_error_msg)
+
 def train(args):
     model_file = model_file_name(args)
 
@@ -231,11 +256,6 @@ def train(args):
                     " ".join(sorted(set(i for i in tags if i[:2] not in ('B-', 'I-', 'E-', 'S-')))),
                     " ".join(sorted(set(i[2:] for i in tags if i[:2] in ('B-', 'I-', 'E-', 'S-')))))
 
-    if args['finetune']:
-        # TODO: here we need to check if the dataset has more tags than already in the model
-        utils.warn_missing_tags([i for i in trainer.vocab['tag'].items(0)], train_batch.tags, "training set")
-    utils.warn_missing_tags(train_batch.tags, dev_batch.tags, "dev set")
-
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
         logger.info("Skip training because no data available...")
@@ -245,6 +265,11 @@ def train(args):
     if trainer is None: # init if model was not loaded previously from file
         trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, device=args['device'],
                           train_classifier_only=args['train_classifier_only'])
+
+    if args['finetune']:
+        warn_missing_tags(trainer.vocab['tag'], train_batch.tags, "training set")
+    warn_missing_tags(trainer.vocab['tag'], dev_batch.tags, "dev set")
+
     logger.info(trainer.model)
 
     global_step = 0
@@ -371,7 +396,7 @@ def evaluate(args):
     with open(args['eval_file']) as fin:
         doc = Document(json.load(fin))
     batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True, bert_tokenizer=trainer.model.bert_tokenizer)
-    utils.warn_missing_tags([i for i in trainer.vocab['tag'].items(0)], batch.tags, "eval_file")
+    warn_missing_tags(trainer.vocab['tag'], batch.tags, "eval_file")
 
     logger.info("Start evaluation...")
     preds = []
