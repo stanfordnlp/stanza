@@ -471,7 +471,7 @@ def get_default_processors(resources, lang):
 
     return default_processors
 
-def get_default_best(resources, lang):
+def get_default_accurate(resources, lang):
     """
     A package that, if available, uses charlm and transformer models for each processor
     """
@@ -485,7 +485,7 @@ def get_default_best(resources, lang):
             if lemma_model in resources[lang]['lemma']:
                 default_processors['lemma'] = lemma_model
             else:
-                print("WARNING: wanted to use %s for %s default_best lemma, but that model does not exist" % (lemma_model, lang))
+                print("WARNING: wanted to use %s for %s default_accurate lemma, but that model does not exist" % (lemma_model, lang))
 
     transformer = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(lang, None), None)
     if transformer is not None:
@@ -497,7 +497,7 @@ def get_default_best(resources, lang):
             if new_model in resources[lang][processor]:
                 default_processors[processor] = new_model
             else:
-                print("WARNING: wanted to use %s for %s default_best %s, but that model does not exist" % (new_model, lang, processor))
+                print("WARNING: wanted to use %s for %s default_accurate %s, but that model does not exist" % (new_model, lang, processor))
 
     return default_processors
 
@@ -559,8 +559,8 @@ def process_packages(args):
             default_fast = get_default_fast(resources, lang)
             resources[lang][PACKAGES]['default_fast'] = default_fast
 
-            default_best = get_default_best(resources, lang)
-            resources[lang][PACKAGES]['default_best'] = default_best
+            default_accurate = get_default_accurate(resources, lang)
+            resources[lang][PACKAGES]['default_accurate'] = default_accurate
 
         # Now we loop over each of the tokenizers for this language
         # ... we use this as a proxy for the available UD treebanks
