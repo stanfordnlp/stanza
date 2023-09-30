@@ -179,6 +179,17 @@ def test_two_tag_training_c2_backprop(pretrain_file, tmp_path):
     assert not torch.allclose(trainer.model.tag_clfs[0].weight, new_trainer.model.tag_clfs[0].weight)
     assert torch.allclose(trainer.model.tag_clfs[1].weight, new_trainer.model.tag_clfs[1].weight)
 
+def test_connected_two_tag_training(pretrain_file, tmp_path):
+    trainer = run_two_tag_training(pretrain_file, tmp_path, "--connect_output_layers")
+    assert len(trainer.model.tag_clfs) == 2
+    assert len(trainer.model.crits) == 2
+    assert len(trainer.vocab['tag'].lens()) == 2
+
+    # this checks that with the connected output layers,
+    # the second output layer has its size increased
+    # by the number of tags known to the first output layer
+    assert trainer.model.tag_clfs[1].weight.shape[1] == trainer.vocab['tag'].lens()[0] + trainer.model.tag_clfs[0].weight.shape[1]
+
 def run_training(pretrain_file, tmp_path, *extra_args):
     train_json = tmp_path / "en_test.train.json"
     write_temp_file(train_json, EN_TRAIN_BIO)

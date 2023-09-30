@@ -89,6 +89,8 @@ def build_argparse():
     parser.add_argument('--lr_decay', type=float, default=0.5, help="LR decay rate.")
     parser.add_argument('--patience', type=int, default=3, help="Patience for LR decay.")
 
+    parser.add_argument('--connect_output_layers', action='store_true', default=False, help='Connect one output layer to the input of the next output layer.  By default, those layers are all separate')
+
     parser.add_argument('--ignore_tag_scores', type=str, default=None, help="Which tags to ignore, if any, when scoring dev & test sets")
 
     parser.add_argument('--max_steps', type=int, default=200000)
