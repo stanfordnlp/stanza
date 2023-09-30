@@ -72,6 +72,12 @@ class Trainer(BaseTrainer):
             self.vocab = vocab
             self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, foundation_cache=foundation_cache)
 
+        # if this wasn't set anywhere, we use a default of the 0th tagset
+        # we don't set this as a default in the options so that
+        # we can distinguish "intentionally set to 0" and "not set at all"
+        if self.args.get('predict_tagset', None) is None:
+            self.args['predict_tagset'] = 0
+
         if train_classifier_only:
             logger.info('Disabling gradient for non-classifier layers')
             exclude = ['tag_clf', 'crit']
@@ -119,6 +125,7 @@ class Trainer(BaseTrainer):
         if any(x.shape[0] != batch_size for x in logits):
             raise AssertionError("Expected all of the logits to have the same size")
         tag_seqs = []
+        predict_tagset = self.args['predict_tagset']
         for i in range(batch_size):
             # for each tag column in the output, decode the tag assignments
             tags = [viterbi_decode(x[i, :sentlens[i]], y)[0] for x, y in zip(logits, trans)]
@@ -127,9 +134,9 @@ class Trainer(BaseTrainer):
             # now unmap that to the tags in the vocab
             tags = self.vocab['tag'].unmap(tags)
             # for now, allow either TagVocab or CompositeVocab
-            # TODO: instead of using [0] want to have all of the tag columns
-            # that means fixing fix_singleton_tags and the upstream callers
-            tags = [x[0] if isinstance(x, list) else x for x in tags]
+            # TODO: we might want to return all of the predictions
+            # rather than a single column
+            tags = [x[predict_tagset] if isinstance(x, list) else x for x in tags]
             tags = fix_singleton_tags(tags)
             tag_seqs += [tags]
 
@@ -165,6 +172,11 @@ class Trainer(BaseTrainer):
             raise
         self.args = checkpoint['config']
         if args: self.args.update(args)
+        # if predict_tagset was not explicitly set in the args,
+        # we use the value the model was trained with
+        if self.args.get('predict_tagset', None) is None:
+            self.args['predict_tagset'] = checkpoint['config'].get('predict_tagset', None)
+
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
 
         emb_matrix=None

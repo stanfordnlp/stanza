@@ -90,6 +90,7 @@ def build_argparse():
     parser.add_argument('--patience', type=int, default=3, help="Patience for LR decay.")
 
     parser.add_argument('--connect_output_layers', action='store_true', default=False, help='Connect one output layer to the input of the next output layer.  By default, those layers are all separate')
+    parser.add_argument('--predict_tagset', type=int, default=None, help='Which tagset to predict if there are multiple tagsets.  Will default to 0.  Default of None allows the model to remember the value from training time, but be overridden at test time')
 
     parser.add_argument('--ignore_tag_scores', type=str, default=None, help="Which tags to ignore, if any, when scoring dev & test sets")
 
@@ -245,10 +246,6 @@ def train(args):
     if len(dev_doc.sentences) == 0:
         raise ValueError("File %s exists but has no usable dev data" % args['train_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
-    dev_gold_tags = dev_batch.tags
-    # TODO: when we add multiple layers of tags to the scorer,
-    # this will need to change
-    dev_gold_tags = [[x[0] for x in tags] for tags in dev_gold_tags]
 
     train_tags = get_known_tags(train_batch.tags)
     logger.info("Training data has %d columns of tags", len(train_tags))
@@ -271,6 +268,9 @@ def train(args):
     if args['finetune']:
         warn_missing_tags(trainer.vocab['tag'], train_batch.tags, "training set")
     warn_missing_tags(trainer.vocab['tag'], dev_batch.tags, "dev set")
+
+    # TODO: might still want to add multiple layers of tag evaluation to the scorer
+    dev_gold_tags = [[x[trainer.args['predict_tagset']] for x in tags] for tags in dev_batch.tags]
 
     logger.info(trainer.model)
 
@@ -367,7 +367,7 @@ def train(args):
 
     return trainer
 
-def write_ner_results(filename, batch, preds):
+def write_ner_results(filename, batch, preds, predict_tagset):
     if len(batch.tags) != len(preds):
         raise ValueError("Unexpected batch vs pred lengths: %d vs %d" % (len(batch.tags), len(preds)))
 
@@ -378,8 +378,8 @@ def write_ner_results(filename, batch, preds):
             # a namedtuple would make this cleaner without being much slower
             text = utils.unsort(b[0], b[5])
             for sentence in text:
-                # TODO: need to figure out which tags to output here
-                sentence_gold = [x[0] for x in batch.tags[tag_idx]]
+                # TODO: if we change the predict_tagset mechanism, will have to change this
+                sentence_gold = [x[predict_tagset] for x in batch.tags[tag_idx]]
                 sentence_pred = preds[tag_idx]
                 tag_idx += 1
                 for word, gold, pred in zip(sentence, sentence_gold, sentence_pred):
@@ -392,6 +392,7 @@ def evaluate(args):
 
     loaded_args, trainer, vocab = load_model(args, model_file)
     logger.debug("Loaded model for eval from %s", model_file)
+    logger.debug("Using the %d tagset for evaluation", loaded_args['predict_tagset'])
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
@@ -406,9 +407,8 @@ def evaluate(args):
         preds += trainer.predict(b)
 
     gold_tags = batch.tags
-    # TODO: when we add multiple layers of tags to the scorer,
-    # this will need to change
-    gold_tags = [[x[0] for x in tags] for tags in gold_tags]
+    # TODO: might still want to add multiple layers of tag evaluation to the scorer
+    gold_tags = [[x[trainer.args['predict_tagset']] for x in tags] for tags in gold_tags]
 
     _, _, score = scorer.score_by_entity(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
     _, _, _, confusion = scorer.score_by_token(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
@@ -418,7 +418,7 @@ def evaluate(args):
     logger.info("NER token confusion matrix:\n{}".format(format_confusion(confusion)))
 
     if args['eval_output_file']:
-        write_ner_results(args['eval_output_file'], batch, preds)
+        write_ner_results(args['eval_output_file'], batch, preds, trainer.args['predict_tagset'])
 
     return confusion
 
@@ -429,6 +429,8 @@ def load_model(args, model_file):
         charlm_args['charlm_forward_file'] = args['charlm_forward_file']
     if 'charlm_backward_file' in args:
         charlm_args['charlm_backward_file'] = args['charlm_backward_file']
+    if args['predict_tagset'] is not None:
+        charlm_args['predict_tagset'] = args['predict_tagset']
     pretrain = load_pretrain(args)
     trainer = Trainer(args=charlm_args, model_file=model_file, pretrain=pretrain, device=args['device'], train_classifier_only=args['train_classifier_only'])
     loaded_args, vocab = trainer.args, trainer.vocab
