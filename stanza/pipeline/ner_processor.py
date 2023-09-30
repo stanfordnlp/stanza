@@ -43,12 +43,31 @@ class NERProcessor(UDProcessor):
         charlm_backward_files = self._get_dependencies(config, 'backward_charlm_path')
         pretrain_files = self._get_dependencies(config, 'pretrain_path')
 
+        # allow predict_tagset to be specified as an int
+        # (which only applies to the first model)
+        # or as a string ";" separated list of ints
+        self._predict_tagset = {}
+        predict_tagset = config.get('predict_tagset', None)
+        if predict_tagset:
+            if isinstance(predict_tagset, int):
+                self._predict_tagset[0] = predict_tagset
+            else:
+                predict_tagset = predict_tagset.split(";")
+                for piece_idx, piece in enumerate(predict_tagset):
+                    if piece:
+                        self._predict_tagset[piece_idx] = int(piece)
+
         self.trainers = []
         for (model_path, pretrain_path, charlm_forward, charlm_backward) in zip(model_paths, pretrain_files, charlm_forward_files, charlm_backward_files):
             logger.debug("Loading %s with pretrain %s, forward charlm %s, backward charlm %s", model_path, pretrain_path, charlm_forward, charlm_backward)
             pretrain = pipeline.foundation_cache.load_pretrain(pretrain_path) if pretrain_path else None
             args = {'charlm_forward_file': charlm_forward,
                     'charlm_backward_file': charlm_backward}
+
+            predict_tagset = self._predict_tagset.get(len(self.trainers), None)
+            if predict_tagset is not None:
+                args['predict_tagset'] = predict_tagset
+
             trainer = Trainer(args=args, model_file=model_path, pretrain=pretrain, device=device, foundation_cache=pipeline.foundation_cache)
             self.trainers.append(trainer)
 
