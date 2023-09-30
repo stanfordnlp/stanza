@@ -122,8 +122,13 @@ class NERTagger(nn.Module):
         # tag classifier
         tag_lengths = self.vocab['tag'].lens()
         self.num_output_layers = len(tag_lengths)
-        # TODO: add an option to connect the output of one layer to the input of the next layer
-        self.tag_clfs = nn.ModuleList([nn.Linear(self.args['hidden_dim']*2, num_tag) for num_tag in tag_lengths])
+        if self.args.get('connect_output_layers'):
+            tag_clfs = [nn.Linear(self.args['hidden_dim']*2, tag_lengths[0])]
+            for prev_length, next_length in zip(tag_lengths[:-1], tag_lengths[1:]):
+                tag_clfs.append(nn.Linear(self.args['hidden_dim']*2 + prev_length, next_length))
+            self.tag_clfs = nn.ModuleList(tag_clfs)
+        else:
+            self.tag_clfs = nn.ModuleList([nn.Linear(self.args['hidden_dim']*2, num_tag) for num_tag in tag_lengths])
         for tag_clf in self.tag_clfs:
             tag_clf.bias.data.zero_()
         self.crits = nn.ModuleList([CRFLoss(num_tag) for num_tag in tag_lengths])
@@ -239,7 +244,13 @@ class NERTagger(nn.Module):
         logits = []
         trans = []
         for idx, (tag_clf, crit) in enumerate(zip(self.tag_clfs, self.crits)):
-            next_logits = pad(tag_clf(lstm_outputs)).contiguous()
+            if not self.args.get('connect_output_layers') or idx == 0:
+                next_logits = pad(tag_clf(lstm_outputs)).contiguous()
+            else:
+                # here we pack the output of the previous round, then append it
+                packed_logits = pack(next_logits).data
+                input_logits = torch.cat([lstm_outputs, packed_logits], axis=1)
+                next_logits = pad(tag_clf(input_logits)).contiguous()
             # the tag_mask lets us avoid backprop on a blank tag
             tag_mask = torch.eq(tags[:, :, idx], EMPTY_ID)
             next_loss, next_trans = crit(next_logits, torch.bitwise_or(tag_mask, word_mask), tags[:, :, idx])
