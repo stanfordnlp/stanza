@@ -60,8 +60,6 @@ def run_training(pretrain_file, tmp_path, *extra_args):
 
     save_dir = tmp_path / "models"
 
-    logger.error("ERROR")
-    logger.warning("WARNING")
     args = ["--data_dir", str(tmp_path),
             "--wordvec_pretrain_file", pretrain_file,
             "--train_file", str(train_json),
