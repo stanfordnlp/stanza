@@ -92,4 +92,3 @@ def test_evaluate(tmp_path):
         results = fin.read().strip()
 
     assert results == EN_EXPECTED_OUTPUT
-    print(results)
