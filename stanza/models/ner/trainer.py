@@ -9,7 +9,7 @@ from torch import nn
 
 from stanza.models.common.foundation_cache import NoTransformerFoundationCache
 from stanza.models.common.trainer import Trainer as BaseTrainer
-from stanza.models.common.vocab import VOCAB_PREFIX
+from stanza.models.common.vocab import VOCAB_PREFIX, VOCAB_PREFIX_SIZE
 from stanza.models.common import utils, loss
 from stanza.models.ner.model import NERTagger
 from stanza.models.ner.vocab import MultiVocab
@@ -129,6 +129,8 @@ class Trainer(BaseTrainer):
         for i in range(batch_size):
             # for each tag column in the output, decode the tag assignments
             tags = [viterbi_decode(x[i, :sentlens[i]], y)[0] for x, y in zip(logits, trans)]
+            # TODO: this is to patch that the model can sometimes predict < "O"
+            tags = [[x if x >= VOCAB_PREFIX_SIZE else VOCAB_PREFIX_SIZE for x in y] for y in tags]
             # that gives us N lists of |sent| tags, whereas we want |sent| lists of N tags
             tags = list(zip(*tags))
             # now unmap that to the tags in the vocab

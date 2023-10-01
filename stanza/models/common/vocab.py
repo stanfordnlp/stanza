@@ -13,6 +13,7 @@ EMPTY_ID = 2
 ROOT = '<ROOT>'
 ROOT_ID = 3
 VOCAB_PREFIX = [PAD, UNK, EMPTY, ROOT]
+VOCAB_PREFIX_SIZE = len(VOCAB_PREFIX)
 
 class BaseVocab:
     """ A base class for common vocabulary operations. Each subclass should at least 
