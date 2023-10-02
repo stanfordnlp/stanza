@@ -8,7 +8,7 @@ from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX
 from stanza.models.pos.vocab import CharVocab, CompositeVocab, WordVocab
 from stanza.models.ner.vocab import MultiVocab
 from stanza.models.common.doc import *
-from stanza.models.ner.utils import process_tags
+from stanza.models.ner.utils import process_tags, normalize_empty_tags
 
 logger = logging.getLogger('stanza')
 
@@ -158,6 +158,7 @@ class DataLoader:
         data = [[[token[0], token[2]] if token[2] else [token[0], (token[1],)] for token in sentence] for sentence in data]
         if self.preprocess_tags: # preprocess tags
             data = process_tags(data, self.args.get('scheme', 'bio'))
+            data = normalize_empty_tags(data)
         # TODO: downstream stuff like the scoring evaluation should handle multi_ner
         # the missing tag function in ner_tagger.py will also need to work with
         # multiple dimensions of tags
