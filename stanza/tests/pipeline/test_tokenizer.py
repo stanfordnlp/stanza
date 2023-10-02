@@ -60,6 +60,8 @@ EN_DOC_POSTPROCESSOR_COMBINED_TOKENS = """
 <Token id=5;words=[<Word id=5;text=.>]>
 """
 
+# ensure that the entry above has spaces somewhere to test that spaces work in between tokens
+
 EN_DOC_GOLD_NOSSPLIT_TOKENS = """
 <Token id=1;words=[<Word id=1;text=Joe>]>
 <Token id=2;words=[<Word id=2;text=Smith>]>
@@ -300,6 +302,9 @@ def test_pretokenized_multidoc():
 def test_postprocessor():
 
     def dummy_postprocessor(input):
+        # Importantly, EN_DOC_POSTPROCESSOR_COMBINED_LIST returns a few tokens joinde
+        # with space. As some languages (such as VN) contains tokens with space in between
+        # its important to have joined space tested as one of the tokens
         assert input == EN_DOC_POSTPROCESSOR_TOKENS_LIST
         return EN_DOC_POSTPROCESSOR_COMBINED_LIST
 
