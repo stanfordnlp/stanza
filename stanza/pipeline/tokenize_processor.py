@@ -10,6 +10,7 @@ import torch
 from stanza.models.tokenization.data import TokenizationDataset
 from stanza.models.tokenization.trainer import Trainer
 from stanza.models.tokenization.utils import output_predictions
+from stanza.pipeline import processor
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 from stanza.pipeline.registry import PROCESSOR_VARIANTS
@@ -40,6 +41,15 @@ class TokenizeProcessor(UDProcessor):
             self._trainer = None
         else:
             self._trainer = Trainer(model_file=config['model_path'], device=device)
+
+        # get and typecheck the postprocessor
+        postprocessor = config.get('postprocessor')
+        if postprocessor and callable(postprocessor):
+            self._postprocessor = postprocessor
+        elif not postprocessor:
+            self._postprocessor = None
+        else:
+            raise ValueError("Tokenizer recieved 'postprocessor' option of unrecognized type; postprocessor must be callable. Got %s" % postprocessor)
 
     def process_pre_tokenized_text(self, input_src):
         """
@@ -94,7 +104,8 @@ class TokenizeProcessor(UDProcessor):
                                                    max_seq_len,
                                                    orig_text=raw_text,
                                                    no_ssplit=self.config.get('no_ssplit', False),
-                                                   num_workers = self.config.get('num_workers', 0))
+                                                   num_workers = self.config.get('num_workers', 0),
+                                                   postprocessor = self._postprocessor)
 
         # replace excessively long tokens with <UNK> to avoid downstream GPU memory issues in POS
         for sentence in document:

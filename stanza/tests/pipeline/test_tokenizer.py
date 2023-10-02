@@ -35,6 +35,32 @@ EN_DOC_GOLD_TOKENS = """
 <Token id=6;words=[<Word id=6;text=beach>]>
 <Token id=7;words=[<Word id=7;text=.>]>
 """.strip()
+EN_DOC_POSTPROCESSOR_TOKENS_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], ['Joe', "'s", 'favorite', 'food', 'is', 'pizza', '.'], ['He', 'enjoys', 'going', 'to', 'the', 'beach', '.']]
+EN_DOC_POSTPROCESSOR_COMBINED_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], ['Joe\'s', 'favorite', 'food', 'is', 'pizza', '.'], ['He', 'enjoys', 'going', "to the beach", '.']]
+
+EN_DOC_POSTPROCESSOR_COMBINED_TOKENS = """
+<Token id=1;words=[<Word id=1;text=Joe>]>
+<Token id=2;words=[<Word id=2;text=Smith>]>
+<Token id=3;words=[<Word id=3;text=lives>]>
+<Token id=4;words=[<Word id=4;text=in>]>
+<Token id=5;words=[<Word id=5;text=California>]>
+<Token id=6;words=[<Word id=6;text=.>]>
+
+<Token id=1;words=[<Word id=1;text=Joe's>]>
+<Token id=2;words=[<Word id=2;text=favorite>]>
+<Token id=3;words=[<Word id=3;text=food>]>
+<Token id=4;words=[<Word id=4;text=is>]>
+<Token id=5;words=[<Word id=5;text=pizza>]>
+<Token id=6;words=[<Word id=6;text=.>]>
+
+<Token id=1;words=[<Word id=1;text=He>]>
+<Token id=2;words=[<Word id=2;text=enjoys>]>
+<Token id=3;words=[<Word id=3;text=going>]>
+<Token id=4;words=[<Word id=4;text=to the beach>]>
+<Token id=5;words=[<Word id=5;text=.>]>
+"""
+
+# ensure that the entry above has spaces somewhere to test that spaces work in between tokens
 
 EN_DOC_GOLD_NOSSPLIT_TOKENS = """
 <Token id=1;words=[<Word id=1;text=Joe>]>
@@ -272,6 +298,26 @@ def test_pretokenized_multidoc():
     doc = nlp([stanza.Document([], text=EN_DOC_PRETOKENIZED_LIST)])[0]
     assert EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
+
+def test_postprocessor():
+
+    def dummy_postprocessor(input):
+        # Importantly, EN_DOC_POSTPROCESSOR_COMBINED_LIST returns a few tokens joinde
+        # with space. As some languages (such as VN) contains tokens with space in between
+        # its important to have joined space tested as one of the tokens
+        assert input == EN_DOC_POSTPROCESSOR_TOKENS_LIST
+        return EN_DOC_POSTPROCESSOR_COMBINED_LIST
+
+    nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR,
+                             'lang': 'en',
+                             'tokenize_postprocessor': dummy_postprocessor})
+    doc = nlp(EN_DOC)
+    assert EN_DOC_POSTPROCESSOR_COMBINED_TOKENS.strip() == '\n\n'.join([sent.tokens_string() for sent in doc.sentences]).strip()
+
+def test_postprocessor_typeerror():
+    with pytest.raises(ValueError):
+        nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR, 'lang': 'en',
+                                'tokenize_postprocessor': "iamachicken"})
 
 def test_no_ssplit():
     nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR, 'lang': 'en',

@@ -316,7 +316,7 @@ def predict(trainer, data_generator, batch_size, max_seqlen, use_regex_tokens, n
 
     return all_preds, all_raw
 
-def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False, use_regex_tokens=True, num_workers=0):
+def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False, use_regex_tokens=True, num_workers=0, postprocessor=None):
     batch_size = trainer.args['batch_size']
     max_seqlen = max(1000, max_seqlen)
 
@@ -326,9 +326,115 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     skip_newline = trainer.args['skip_newline']
     oov_count, offset, doc = decode_predictions(vocab, mwt_dict, orig_text, all_raw, all_preds, no_ssplit, skip_newline, use_la_ittb_shorthand)
 
+    # If we are provided a postprocessor, we prepare a list of pre-tokenized words and mwt flags and
+    # call the postprocessor for analysis.
+    if postprocessor:
+        doc = postprocess_doc(doc, postprocessor, orig_text)
+
     if output_file: CoNLL.dict2conll(doc, output_file)
     return oov_count, offset, all_preds, doc
 
+def postprocess_doc(doc, postprocessor, orig_text=None):
+    """Applies a postprocessor on the doc"""
+
+    # get a list of all the words in the "draft" document to pass to the postprocessor
+    # the words array looks like [["words, "words", "words"], ["words, ("i_am_a_mwt", True), "I_am_not"]]
+    # and the postprocessor is expected to return in the same format
+    words = [[((word["text"], True)
+                if word.get("misc") == "MWT=Yes"
+                else word["text"]) for word in sentence]
+            for sentence in doc]
+    if not orig_text:
+        raw_text = "".join("".join(i) for i in all_raw) # template to compare the stitched text against
+    else:
+        raw_text = orig_text
+
+    # perform correction with the postprocessor
+    postprocessor_return = postprocessor(words)
+
+    # collect the words and MWTs seperately
+    corrected_words = []
+    corrected_mwts = []
+
+    # for each word, if its just a string (without the ("word", mwt_bool) format)
+    # we default that the word is not a MWT.
+    for sent in postprocessor_return:
+        sent_words = []
+        sent_mwts = []
+        for word in sent:
+            if type(word) == str:
+                sent_words.append(word)
+                sent_mwts.append(False)
+            else:
+                sent_words.append(word[0])
+                sent_mwts.append(word[1])
+        corrected_words.append(sent_words)
+        corrected_mwts.append(sent_mwts)
+
+    # check postprocessor output
+    token_lens = [len(i) for i in corrected_words]
+    mwt_lens = [len(i) for i in corrected_mwts]
+    assert token_lens == mwt_lens, "Postprocessor returned token and MWT lists of different length! Token list lengths %s, MWT list lengths %s" % (token_lens, mwt_lens)
+
+    # recassemble document. offsets and oov shouldn't change
+    doc = reassemble_doc_from_tokens(corrected_words, corrected_mwts, raw_text)
+
+    return doc
+
+def reassemble_doc_from_tokens(tokens, mwts, raw_text):
+    """Assemble a Stanza document list format from a list of string tokens, calculating offsets as needed.
+
+    Parameters
+    ----------
+    tokens : List[List[str]]
+        A list of sentences, which includes string tokens.
+    mwts : List[List[bool]]
+        Whether or not each of the tokens are MWTs to be analyzed by
+        the MWT raw.
+    parser_text : str
+        The raw text off of which we can compare offsets.
+
+    Returns
+    -------
+    List[List[Dict]]
+        List of words and their offsets, used as `doc`.
+    """
+
+    # oov count and offset stays the same; doc gets regenerated
+    new_offset = 0
+    corrected_doc = []
+
+    for sent_words, sent_mwts in zip(tokens, mwts):
+        sentence_doc = []
+
+        for indx, (word, mwt) in enumerate(zip(sent_words, sent_mwts)):
+            try:
+                offset_index = raw_text.index(word)
+            except ValueError as e:
+                sub_start = max(0, new_offset - 20)
+                sub_end = min(len(raw_text), new_offset + 20)
+                sub = raw_text[sub_start:sub_end]
+                raise ValueError("Could not find word |%s| starting from char_offset %d.  Surrounding text: |%s|. \n Hint: did you accidentally add/subtract a symbol/character such as a space when combining tokens?" % (word, new_offset, sub)) from e
+
+            wd = {
+                "id": (indx+1,), "text": word,
+                "start_char":  new_offset+offset_index,
+                "end_char":  new_offset+offset_index+len(word)
+            }
+            if mwt:
+                wd["misc"] = "MWT=Yes"
+
+            sentence_doc.append(wd)
+
+            # we crop the raw_text variable to prevent .index() from double-indexing an
+            # earlier token. essentially, for each word, we are only interested in its *offset*
+            # from the start of string
+            raw_text = raw_text[offset_index+len(word):]
+            new_offset += offset_index+len(word)
+
+        corrected_doc.append(sentence_doc)
+
+    return corrected_doc
 
 def decode_predictions(vocab, mwt_dict, orig_text, all_raw, all_preds, no_ssplit, skip_newline, use_la_ittb_shorthand):
     """
