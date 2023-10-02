@@ -329,50 +329,57 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     # If we are provided a postprocessor, we prepare a list of pre-tokenized words and mwt flags and
     # call the postprocessor for analysis. 
     if postprocessor:
-        # get a list of all the words in the "draft" document to pass to the postprocessor
-        # the words array looks like [["words, "words", "words"], ["words, ("i_am_a_mwt", True), "I_am_not"]]
-        # and the postprocessor is expected to return in the same format
-        words = [[((word["text"], True)
-                   if word.get("misc") == "MWT=Yes"
-                   else word["text"]) for word in sentence]
-                for sentence in doc]
-        if not orig_text:
-            raw_text = "".join("".join(i) for i in all_raw) # template to compare the stitched text against
-        else:
-            raw_text = orig_text
-
-        # perform correction with the postprocessor
-        postprocessor_return = postprocessor(words)
-
-        # collect the words and MWTs seperately
-        corrected_words = []
-        corrected_mwts = []
-
-        # for each word, if its just a string (without the ("word", mwt_bool) format)
-        # we default that the word is not a MWT. 
-        for sent in postprocessor_return:
-            sent_words = []
-            sent_mwts = []
-            for word in sent:
-                if type(word) == str:
-                    sent_words.append(word)
-                    sent_mwts.append(False)
-                else:
-                    sent_words.append(word[0])
-                    sent_mwts.append(word[1])
-            corrected_words.append(sent_words)
-            corrected_mwts.append(sent_mwts)
-        
-        # check postprocessor output
-        token_lens = [len(i) for i in corrected_words]
-        mwt_lens = [len(i) for i in corrected_mwts]
-        assert token_lens == mwt_lens, "Postprocessor returned token and MWT lists of different length! Token list lengths %s, MWT list lengths %s" % (token_lens, mwt_lens)
-
-        # recassemble document. offsets and oov shouldn't change
-        doc = reassemble_doc_from_tokens(corrected_words, corrected_mwts, raw_text)
+        doc = postprocess_doc(doc, postprocessor, orig_text)
 
     if output_file: CoNLL.dict2conll(doc, output_file)
     return oov_count, offset, all_preds, doc
+
+def postprocess_doc(doc, postprocessor, orig_text=None):
+    """Applies a postprocessor on the doc"""
+    
+    # get a list of all the words in the "draft" document to pass to the postprocessor
+    # the words array looks like [["words, "words", "words"], ["words, ("i_am_a_mwt", True), "I_am_not"]]
+    # and the postprocessor is expected to return in the same format
+    words = [[((word["text"], True)
+                if word.get("misc") == "MWT=Yes"
+                else word["text"]) for word in sentence]
+            for sentence in doc]
+    if not orig_text:
+        raw_text = "".join("".join(i) for i in all_raw) # template to compare the stitched text against
+    else:
+        raw_text = orig_text
+
+    # perform correction with the postprocessor
+    postprocessor_return = postprocessor(words)
+
+    # collect the words and MWTs seperately
+    corrected_words = []
+    corrected_mwts = []
+
+    # for each word, if its just a string (without the ("word", mwt_bool) format)
+    # we default that the word is not a MWT. 
+    for sent in postprocessor_return:
+        sent_words = []
+        sent_mwts = []
+        for word in sent:
+            if type(word) == str:
+                sent_words.append(word)
+                sent_mwts.append(False)
+            else:
+                sent_words.append(word[0])
+                sent_mwts.append(word[1])
+        corrected_words.append(sent_words)
+        corrected_mwts.append(sent_mwts)
+
+    # check postprocessor output
+    token_lens = [len(i) for i in corrected_words]
+    mwt_lens = [len(i) for i in corrected_mwts]
+    assert token_lens == mwt_lens, "Postprocessor returned token and MWT lists of different length! Token list lengths %s, MWT list lengths %s" % (token_lens, mwt_lens)
+
+    # recassemble document. offsets and oov shouldn't change
+    doc = reassemble_doc_from_tokens(corrected_words, corrected_mwts, raw_text)
+
+    return doc
 
 def reassemble_doc_from_tokens(tokens, mwts, raw_text):
     """Assemble a Stanza document list format from a list of string tokens, calculating offsets as needed.
