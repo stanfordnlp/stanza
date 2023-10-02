@@ -4,7 +4,12 @@ Utility functions for dealing with NER tagging.
 
 import logging
 
+from stanza.models.common.vocab import EMPTY
+
 logger = logging.getLogger('stanza')
+
+EMPTY_TAG = ('_', '-', '', None)
+EMPTY_OR_O_TAG = tuple(list(EMPTY_TAG) + ['O'])
 
 def is_basic_scheme(all_tags):
     """
@@ -33,7 +38,7 @@ def is_bio_scheme(all_tags):
         True if the tagging scheme is BIO, otherwise False
     """
     for tag in all_tags:
-        if tag == 'O':
+        if tag in EMPTY_OR_O_TAG:
             continue
         elif len(tag) > 2 and tag[:2] in ('B-', 'I-', 'B_', 'I_'):
             continue
@@ -54,7 +59,7 @@ def to_bio2(tags):
     """
     new_tags = []
     for i, tag in enumerate(tags):
-        if tag == 'O':
+        if tag in EMPTY_OR_O_TAG:
             new_tags.append(tag)
         elif tag[0] == 'I':
             if i == 0 or tags[i-1] == 'O' or tags[i-1][1:] != tag[1:]:
@@ -78,7 +83,7 @@ def basic_to_bio(tags):
     """
     new_tags = []
     for i, tag in enumerate(tags):
-        if tag == 'O':
+        if tag in EMPTY_OR_O_TAG:
             new_tags.append(tag)
         elif i == 0 or tags[i-1] == 'O' or tags[i-1] != tag:
             new_tags.append('B-' + tag)
@@ -99,7 +104,7 @@ def bio2_to_bioes(tags):
     """
     new_tags = []
     for i, tag in enumerate(tags):
-        if tag == 'O':
+        if tag in EMPTY_OR_O_TAG:
             new_tags.append(tag)
         else:
             if len(tag) < 2:
@@ -119,7 +124,24 @@ def bio2_to_bioes(tags):
                     raise Exception(f"Invalid IOB tag found: {tag}")
     return new_tags
 
+def normalize_empty_tags(sentences):
+    """
+    If any tags are None, _, -, or blank, turn them into EMPTY
+
+    The input should be a list(sentence) of list(word) of tuple(text, list(tag))
+    which is the typical format for the data at the time data.py is preprocessing the tags
+    """
+    new_sentences = [[(word[0], tuple(EMPTY if x in EMPTY_TAG else x for x in word[1])) for word in sentence]
+                     for sentence in sentences]
+    return new_sentences
+
 def process_tags(sentences, scheme):
+    """
+    Convert tags in these sentences to bioes
+
+    We allow empty tags ('_', '-', None), which will represent tags
+    that do not get any gradient when training
+    """
     all_words = []
     all_tags = []
     converted_tuples = False
@@ -170,9 +192,6 @@ def process_tags(sentences, scheme):
     for words, tags in zip(all_words, all_tags):
         # process tags
         # tags is a list of each column of tags for each word in this sentence
-        # first, NER field sanity checking
-        if any(x is None or x == '_' for sentence_tags in tags for x in sentence_tags):
-            raise ValueError("Got blank tags for some of the words - cannot handle that yet!  TODO")
         # copy the tags to a list so we can edit them
         tags = [[x for x in sentence_tags] for sentence_tags in tags]
         for column_idx, (convert_bio_to_bioes, convert_basic_to_bioes) in enumerate(zip(all_convert_bio_to_bioes, all_convert_basic_to_bioes)):

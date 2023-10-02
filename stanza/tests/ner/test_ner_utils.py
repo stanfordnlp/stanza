@@ -2,6 +2,7 @@ import pytest
 
 from stanza.tests import *
 
+from stanza.models.common.vocab import EMPTY
 from stanza.models.ner import utils
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
@@ -15,6 +16,15 @@ BASIC_TAGS  = [["O",       "ART",    "ART"], ["MONKEY",   "O",    "COLOR"], [  "
 BASIC_BIOES = [["O",     "B-ART",  "E-ART"], ["S-MONKEY", "O",  "S-COLOR"], ["B-PER", "I-PER", "I-PER", "E-PER",        "O",        "O",    "O", "B-WEAPON", "E-WEAPON"]]
 ALT_BIO     = [["O",    "B-MANA", "I-MANA"], ["B-CRE",    "O",        "O"], ["B-CRE", "I-CRE", "I-CRE", "I-CRE",        "O",        "O",    "O",    "B-ART",    "B-ART"]]
 ALT_BIOES   = [["O",    "B-MANA", "E-MANA"], ["S-CRE",    "O",        "O"], ["B-CRE", "I-CRE", "I-CRE", "E-CRE",        "O",        "O",    "O",    "S-ART",    "S-ART"]]
+NONE_BIO    = [["O",    "B-MANA", "I-MANA"], [None,      None,       None], ["B-CRE", "I-CRE", "I-CRE", "I-CRE",        "O",        "O",    "O",    "B-ART",    "B-ART"]]
+NONE_BIOES  = [["O",    "B-MANA", "E-MANA"], [None,      None,       None], ["B-CRE", "I-CRE", "I-CRE", "E-CRE",        "O",        "O",    "O",    "S-ART",    "S-ART"]]
+EMPTY_BIO   = [["O",    "B-MANA", "I-MANA"], [EMPTY,     EMPTY,     EMPTY], ["B-CRE", "I-CRE", "I-CRE", "I-CRE",        "O",        "O",    "O",    "B-ART",    "B-ART"]]
+
+def test_normalize_empty_tags():
+    sentences = [[(word[0], (word[1],)) for word in zip(*sentence)] for sentence in zip(WORDS, NONE_BIO)]
+    new_sentences = utils.normalize_empty_tags(sentences)
+    expected = [[(word[0], (word[1],)) for word in zip(*sentence)] for sentence in zip(WORDS, EMPTY_BIO)]
+    assert new_sentences == expected
 
 def check_reprocessed_tags(words, input_tags, expected_tags):
     sentences = [list(zip(x, y)) for x, y in zip(words, input_tags)]
@@ -29,6 +39,10 @@ def test_process_tags_bio():
     # check that the alternate version is correct as well
     # that way we can independently check the two layer version
     check_reprocessed_tags(WORDS, ALT_BIO, ALT_BIOES)
+
+def test_process_tags_with_none():
+    # if there is a block of tags with None in them, the Nones should be skipped over
+    check_reprocessed_tags(WORDS, NONE_BIO, NONE_BIOES)
 
 def merge_tags(*tags):
     merged_tags = [[tuple(x) for x in zip(*sentences)]   # combine tags such as ("O", "O"), ("B-ART", "B-MANA"), ...
