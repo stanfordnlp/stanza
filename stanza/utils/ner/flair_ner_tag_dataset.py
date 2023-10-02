@@ -58,12 +58,12 @@ def main():
 
     if not args.filename:
         args.filename = ["data/ner/en_conll03.test.json",
-                         "data/ner/en_foreign-4class.test.json",
-                         "data/ner/en_foreign-4class-africa.test.json",
-                         "data/ner/en_foreign-4class-asia.test.json",
-                         "data/ner/en_foreign-4class-indigenous.test.json",
-                         "data/ner/en_foreign-4class-latam.test.json",
-                         "data/ner/en_foreign-4class-middle_east.test.json"]
+                         "data/ner/en_worldwide-4class.test.json",
+                         "data/ner/en_worldwide-4class-africa.test.json",
+                         "data/ner/en_worldwide-4class-asia.test.json",
+                         "data/ner/en_worldwide-4class-indigenous.test.json",
+                         "data/ner/en_worldwide-4class-latam.test.json",
+                         "data/ner/en_worldwide-4class-middle_east.test.json"]
 
     print("Processing the files: %s" % ",".join(args.filename))
 
