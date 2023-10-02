@@ -30,6 +30,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', type=str, default="/u/nlp/software/stanza/models/current-models-%s" % __resources_version__, help='Input dir for various models.  Defaults to the recommended home on the nlp cluster')
     parser.add_argument('--output_dir', type=str, default="/u/nlp/software/stanza/models/%s" % __resources_version__, help='Output dir for various models.')
+    parser.add_argument('--packages_only', action='store_true', default=False, help='Only build the package maps instead of rebuilding everything')
     args = parser.parse_args()
     args.input_dir = os.path.abspath(args.input_dir)
     args.output_dir = os.path.abspath(args.output_dir)
@@ -640,11 +641,13 @@ def process_misc(args):
 def main():
     args = parse_args()
     print("Converting models from %s to %s" % (args.input_dir, args.output_dir))
-    process_dirs(args)
+    if not args.packages_only:
+        process_dirs(args)
     process_packages(args)
-    process_default_zips(args)
-    process_lcode(args)
-    process_misc(args)
+    if not args.packages_only:
+        process_default_zips(args)
+        process_lcode(args)
+        process_misc(args)
 
 
 if __name__ == '__main__':
