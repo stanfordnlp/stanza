@@ -18,6 +18,8 @@ def resplit_mwt(tokens, pipeline, keep_tokens=True):
     between running the tokenize model and breaking the text into tokens,
     we can update all_preds to use the original token boundaries
     (if and only if keep_tokens == True)
+
+    This method returns a Document with just the tokens and words annotated.
     """
     if "tokenize" not in pipeline.processors:
         raise ValueError("Need a Pipeline with a valid tokenize processor")

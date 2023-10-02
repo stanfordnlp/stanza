@@ -269,8 +269,6 @@ class CharacterLanguageModel(nn.Module):
 class CharacterLanguageModelWordAdapter(nn.Module):
     """
     Adapts a character model to return embeddings for each character in a word
-
-    TODO: multiple charlms, eg, forward & back
     """
     def __init__(self, charlms):
         super().__init__()

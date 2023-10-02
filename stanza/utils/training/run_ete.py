@@ -31,7 +31,7 @@ from stanza.models import tokenizer
 from stanza.models.common.constant import treebank_to_short_name
 
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, build_charlm_args, choose_pos_charlm
+from stanza.utils.training.common import Mode, build_pos_charlm_args, build_lemma_charlm_args, build_depparse_charlm_args
 from stanza.utils.training.run_lemma import check_lemmas
 from stanza.utils.training.run_mwt import check_mwt
 from stanza.utils.training.run_pos import wordvec_args
@@ -46,7 +46,7 @@ def add_args(parser):
     common.add_charlm_args(parser)
 
 def run_ete(paths, dataset, short_name, command_args, extra_args):
-    short_language, package = short_name.split("_")
+    short_language, package = short_name.split("_", 1)
 
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
     mwt_dir      = paths["MWT_DATA_DIR"]
@@ -103,19 +103,21 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
 
     # Run the POS step
     # TODO: add batch args
+    # TODO: add transformer args
     logger.info("-----  POS        ----------")
     pos_output = f"{ete_dir}/{short_name}.{dataset}.pos.conllu"
     pos_args = ['--wordvec_dir', wordvec_dir,
                 '--eval_file', mwt_output,
                 '--output_file', pos_output,
-                '--lang', short_name,
+                '--lang', short_language,
                 '--shorthand', short_name,
-                '--mode', 'predict']
+                '--mode', 'predict',
+                # the MWT is not preserving the tags,
+                # so we don't ask the tagger to report a score
+                # the ETE will score the whole thing at the end
+                '--no_gold_labels']
 
-    # TODO: refactor these args.  Possibly just put this in common as a single function call,
-    # build_charlm_args_pos or something like that
-    pos_charlm = choose_pos_charlm(short_language, package, command_args.charlm)
-    pos_charlm_args = build_charlm_args(short_language, charlm)
+    pos_charlm_args = build_pos_charlm_args(short_language, package, command_args.charlm)
 
     pos_args = pos_args + wordvec_args(short_language, package, extra_args) + pos_charlm_args + extra_args
     logger.info("Running pos step with args: {}".format(pos_args))
@@ -128,13 +130,15 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
     lemma_output = f"{ete_dir}/{short_name}.{dataset}.lemma.conllu"
     lemma_args = ['--eval_file', pos_output,
                   '--output_file', lemma_output,
-                  '--lang', short_name,
+                  '--shorthand', short_name,
                   '--mode', 'predict']
-    lemma_args = lemma_args + extra_args
     if check_lemmas(lemma_train_file):
+        lemma_charlm_args = build_lemma_charlm_args(short_language, package, command_args.charlm)
+        lemma_args = lemma_args + lemma_charlm_args + extra_args
         logger.info("Running lemmatizer step with args: {}".format(lemma_args))
         lemmatizer.main(lemma_args)
     else:
+        lemma_args = lemma_args + extra_args
         logger.info("No lemmas in training data")
         logger.info("Running identity lemmatizer step with args: {}".format(lemma_args))
         identity_lemmatizer.main(lemma_args)
@@ -153,7 +157,8 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
                      '--lang', short_name,
                      '--shorthand', short_name,
                      '--mode', 'predict']
-    depparse_args = depparse_args + wordvec_args(short_language, package, extra_args) + extra_args
+    depparse_charlm_args = build_depparse_charlm_args(short_language, package, command_args.charlm)
+    depparse_args = depparse_args + wordvec_args(short_language, package, extra_args) + depparse_charlm_args + extra_args
     logger.info("Running depparse step with args: {}".format(depparse_args))
     parser.main(depparse_args)
 

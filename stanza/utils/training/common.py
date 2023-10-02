@@ -374,3 +374,18 @@ def choose_transformer(short_language, command_args, extra_args, warn=True, laye
             logger.error("Transformer requested, but no default transformer for %s  Specify one using --bert_model" % short_language)
 
     return bert_args
+
+def build_pos_charlm_args(short_language, dataset, charlm, base_args=True, model_dir=DEFAULT_MODEL_DIR):
+    charlm = choose_pos_charlm(short_language, dataset, charlm)
+    charlm_args = build_charlm_args(short_language, charlm, base_args, model_dir)
+    return charlm_args
+
+def build_lemma_charlm_args(short_language, dataset, charlm, base_args=True, model_dir=DEFAULT_MODEL_DIR):
+    charlm = choose_lemma_charlm(short_language, dataset, charlm)
+    charlm_args = build_charlm_args(short_language, charlm, base_args, model_dir)
+    return charlm_args
+
+def build_depparse_charlm_args(short_language, dataset, charlm, base_args=True, model_dir=DEFAULT_MODEL_DIR):
+    charlm = choose_depparse_charlm(short_language, dataset, charlm)
+    charlm_args = build_charlm_args(short_language, charlm, base_args, model_dir)
+    return charlm_args

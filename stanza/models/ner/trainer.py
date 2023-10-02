@@ -7,6 +7,7 @@ import logging
 import torch
 from torch import nn
 
+from stanza.models.common.foundation_cache import NoTransformerFoundationCache
 from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.models.common import utils, loss
@@ -78,7 +79,7 @@ class Trainer(BaseTrainer):
                 if pname.split('.')[0] not in exclude:
                     p.requires_grad = False
         self.model = self.model.to(device)
-        self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'], momentum=self.args['momentum'])
+        self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'], momentum=self.args['momentum'], bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
@@ -158,7 +159,12 @@ class Trainer(BaseTrainer):
         if pretrain is not None:
             emb_matrix = pretrain.emb
 
-        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache)
+        force_bert_saved = False
+        if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
+            logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
+            foundation_cache = NoTransformerFoundationCache(foundation_cache)
+            force_bert_saved = True
+        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, force_bert_saved=force_bert_saved)
         self.model.load_state_dict(checkpoint['model'], strict=False)
 
         # there is a possible issue with the delta embeddings.

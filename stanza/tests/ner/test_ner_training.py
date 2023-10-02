@@ -8,6 +8,7 @@ import torch
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
 from stanza.models import ner_tagger
+from stanza.models.ner.trainer import Trainer
 from stanza.tests import TEST_WORKING_DIR
 from stanza.utils.datasets.ner.prepare_ner_file import process_dataset
 
@@ -59,15 +60,13 @@ def run_training(pretrain_file, tmp_path, *extra_args):
 
     save_dir = tmp_path / "models"
 
-    logger.error("ERROR")
-    logger.warning("WARNING")
     args = ["--data_dir", str(tmp_path),
             "--wordvec_pretrain_file", pretrain_file,
             "--train_file", str(train_json),
             "--eval_file", str(dev_json),
-            "--lang", "en",
             "--shorthand", "en_test",
             "--max_steps", "100",
+            "--eval_interval", "40",
             "--save_dir", str(save_dir)]
     args = args + list(extra_args)
 
@@ -98,7 +97,25 @@ def test_train_model_cpu(pretrain_file, tmp_path):
     device = next(model.parameters()).device
     assert str(device).startswith("cpu")
 
+def model_file_has_bert(filename):
+    checkpoint = torch.load(filename, lambda storage, loc: storage)
+    return any(x.startswith("bert_model.") for x in checkpoint['model'].keys())
 
 def test_with_bert(pretrain_file, tmp_path):
-    run_training(pretrain_file, tmp_path, '--bert_model', 'hf-internal-testing/tiny-bert')
+    trainer = run_training(pretrain_file, tmp_path, '--bert_model', 'hf-internal-testing/tiny-bert')
+    model_file = os.path.join(trainer.args['save_dir'], trainer.args['save_name'])
+    assert not model_file_has_bert(model_file)
 
+def test_with_bert_finetune(pretrain_file, tmp_path):
+    trainer = run_training(pretrain_file, tmp_path, '--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune')
+    model_file = os.path.join(trainer.args['save_dir'], trainer.args['save_name'])
+    assert model_file_has_bert(model_file)
+
+    foo_save_filename = os.path.join(tmp_path, "foo_" + trainer.args['save_name'])
+    bar_save_filename = os.path.join(tmp_path, "bar_" + trainer.args['save_name'])
+    trainer.save(foo_save_filename)
+    assert model_file_has_bert(foo_save_filename)
+
+    reloaded_trainer = Trainer(args=trainer.args, model_file=foo_save_filename)
+    reloaded_trainer.save(bar_save_filename)
+    assert model_file_has_bert(bar_save_filename)

@@ -17,9 +17,9 @@ import zipfile
 from tqdm.auto import tqdm
 
 from stanza.utils.helper_func import make_table
-from stanza.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, \
-    NER, SENTIMENT
+from stanza.pipeline._constants import TOKENIZE, MWT, POS, LEMMA, DEPPARSE, NER, SENTIMENT
 from stanza.pipeline.registry import PIPELINE_NAMES, PROCESSOR_VARIANTS
+from stanza.resources.default_packages import PACKAGES
 from stanza._version import __resources_version__
 
 logger = logging.getLogger('stanza')
@@ -181,12 +181,10 @@ def add_mwt(processors, resources, lang):
     TODO: how does this handle EWT in English?
     """
     value = processors[TOKENIZE]
-    if value == "default" and MWT in resources[lang]['default_processors']:
-        logger.warning("Language %s package default expects mwt, which has been added", lang)
-        processors[MWT] = 'default'
-    elif (value in resources[lang][TOKENIZE]
-          and MWT in resources[lang]
-          and value in resources[lang][MWT]):
+    if value in resources[lang][PACKAGES] and MWT in resources[lang][PACKAGES][value]:
+        logger.warning("Language %s package %s expects mwt, which has been added", lang, value)
+        processors[MWT] = value
+    elif (value in resources[lang][TOKENIZE] and MWT in resources[lang] and value in resources[lang][MWT]):
         logger.warning("Language %s package %s expects mwt, which has been added", lang, value)
         processors[MWT] = value
 
@@ -224,11 +222,11 @@ def maintain_processor_list(resources, lang, package, processors, allow_pretrain
                     logger.debug(f'Found {key}: {value}.')
                     processor_list[key].append(value)
                 # allow values to be default in some cases
-                elif key in resources[lang].get('default_processors', {}) and value == 'default':
+                elif value in resources[lang][PACKAGES] and key in resources[lang][PACKAGES][value]:
                     logger.debug(
-                        f'Found {key}: {resources[lang]["default_processors"][key]}.'
+                        f'Found {key}: {resources[lang][PACKAGES][value][key]}.'
                     )
-                    processor_list[key].append(resources[lang]['default_processors'][key])
+                    processor_list[key].append(resources[lang][PACKAGES][value][key])
                 # allow processors to be set to variants that we didn't implement
                 elif value in PROCESSOR_VARIANTS[key]:
                     logger.debug(
@@ -258,8 +256,8 @@ def maintain_processor_list(resources, lang, package, processors, allow_pretrain
     # resolve package
     if package:
         logger.debug(f'Processing parameter "package"...')
-        if package == 'default':
-            for key, value in resources[lang]['default_processors'].items():
+        if package in resources[lang][PACKAGES]:
+            for key, value in resources[lang][PACKAGES][package].items():
                 if key not in processor_list:
                     logger.debug(f'Found {key}: {value}.')
                     processor_list[key].append(value)
@@ -428,6 +426,7 @@ def download_resources_json(model_dir=DEFAULT_MODEL_DIR,
                             resources_url=DEFAULT_RESOURCES_URL,
                             resources_branch=None,
                             resources_version=DEFAULT_RESOURCES_VERSION,
+                            resources_filepath=None,
                             proxies=None):
     """
     Downloads resources.json to obtain latest packages.
@@ -439,20 +438,23 @@ def download_resources_json(model_dir=DEFAULT_MODEL_DIR,
         resources_url = STANFORDNLP_RESOURCES_URL
     resources_url = f'{resources_url}/resources_{resources_version}.json'
     logger.debug('Downloading resource file from %s', resources_url)
+    if resources_filepath is None:
+        resources_filepath = os.path.join(model_dir, 'resources.json')
     # make request
     request_file(
         resources_url,
-        os.path.join(model_dir, 'resources.json'),
+        resources_filepath,
         proxies,
         raise_for_status=True
     )
 
 
-def load_resources_json(model_dir=DEFAULT_MODEL_DIR):
+def load_resources_json(model_dir=DEFAULT_MODEL_DIR, resources_filepath=None):
     """
     Unpack the resources json file from the given model_dir
     """
-    resources_filepath = os.path.join(model_dir, 'resources.json')
+    if resources_filepath is None:
+        resources_filepath = os.path.join(model_dir, 'resources.json')
     if not os.path.exists(resources_filepath):
         raise ResourcesFileNotFoundError(resources_filepath)
     with open(resources_filepath) as fin:

@@ -46,7 +46,6 @@ def build_argparse():
     parser.add_argument('--finetune_load_name', type=str, default=None, help='Model to load when finetuning')
     parser.add_argument('--train_classifier_only', action='store_true',
                         help='In case of applying Transfer-learning approach and training only the classifier layer this will freeze gradient propagation for all other layers.')
-    parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
 
     parser.add_argument('--hidden_dim', type=int, default=256)
@@ -78,6 +77,9 @@ def build_argparse():
 
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
+    parser.add_argument('--bert_finetune', default=False, action='store_true', help='Finetune the bert (or other transformer)')
+    parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
+    parser.add_argument('--bert_learning_rate', default=1.0, type=float, help='Scale the learning rate for transformer finetuning by this much')
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='sgd', help='sgd, adagrad, adam or adamax.')
@@ -96,7 +98,7 @@ def build_argparse():
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
     parser.add_argument('--save_dir', type=str, default='saved_models/ner', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_{finetune}_nertagger.pt", help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
@@ -141,20 +143,19 @@ def load_pretrain(args):
         pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
     return pretrain
 
-# TODO: refactor with the same thing in tagger.py and elsewhere
 def model_file_name(args):
-    if args['save_name'] is not None:
-        save_name = args['save_name']
-    else:
-        save_name = args['shorthand'] + "_nertagger.pt"
-
-    if not os.path.exists(os.path.join(args['save_dir'], save_name)) and os.path.exists(save_name):
-        return save_name
-    return os.path.join(args['save_dir'], save_name)
+    return utils.standard_model_file_name(args, "nertagger")
 
 def train(args):
     model_file = model_file_name(args)
-    utils.ensure_dir(os.path.split(model_file)[0])
+
+    save_dir, save_name = os.path.split(model_file)
+    utils.ensure_dir(save_dir)
+    if args['save_dir'] is None:
+        args['save_dir'] = save_dir
+    args['save_name'] = save_name
+
+    utils.log_training_args(args, logger)
 
     pretrain = None
     vocab = None

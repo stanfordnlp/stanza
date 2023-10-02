@@ -4,7 +4,7 @@ import os
 from stanza.models import parser
 
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, add_charlm_args, build_charlm_args, choose_depparse_charlm, choose_transformer
+from stanza.utils.training.common import Mode, add_charlm_args, build_depparse_charlm_args, choose_depparse_charlm, choose_transformer
 from stanza.utils.training.run_pos import wordvec_args
 
 from stanza.resources.default_packages import default_charlms, depparse_charlms
@@ -22,8 +22,7 @@ def build_model_filename(paths, short_name, command_args, extra_args):
 
     # TODO: can avoid downloading the charlm at this point, since we
     # might not even be training
-    charlm = choose_depparse_charlm(short_language, dataset, command_args.charlm)
-    charlm_args = build_charlm_args(short_language, charlm)
+    charlm_args = build_depparse_charlm_args(short_language, dataset, command_args.charlm)
 
     bert_args = choose_transformer(short_language, command_args, extra_args, warn=False)
 
@@ -54,8 +53,7 @@ def run_treebank(mode, paths, treebank, short_name,
     test_gold_file = f"{depparse_dir}/{short_name}.test.gold.conllu"
     test_pred_file = temp_output_file if temp_output_file else f"{depparse_dir}/{short_name}.test.pred.conllu"
 
-    charlm = choose_depparse_charlm(short_language, dataset, command_args.charlm)
-    charlm_args = build_charlm_args(short_language, charlm)
+    charlm_args = build_depparse_charlm_args(short_language, dataset, command_args.charlm)
 
     bert_args = choose_transformer(short_language, command_args, extra_args)
 

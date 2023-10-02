@@ -11,6 +11,7 @@ import logging
 import lzma
 import os
 import random
+import re
 import sys
 import unicodedata
 import zipfile
@@ -503,3 +504,35 @@ def embedding_name(args):
             embedding = "transformer"
 
     return embedding
+
+def standard_model_file_name(args, model_type):
+    """
+    Returns a model file name based on some common args found in the various models.
+
+    The expectation is that the args will have something like
+
+      parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_parser.pt", help="File name to save the model")
+
+    Then the model shorthand, embedding type, and other args will be
+    turned into arguments in a format string
+    """
+    embedding = embedding_name(args)
+
+    finetune = ""
+    transformer_lr = ""
+    if args.get("bert_finetune", False):
+        finetune = "finetuned"
+        if "bert_learning_rate" in args:
+            transformer_lr = "{}".format(args["bert_learning_rate"])
+
+    model_file = args['save_name'].format(shorthand=args['shorthand'],
+                                          embedding=embedding,
+                                          finetune=finetune,
+                                          transformer_lr=transformer_lr)
+    model_file = re.sub("_+", "_", model_file)
+
+    model_dir = os.path.split(model_file)[0]
+
+    if not os.path.exists(os.path.join(args['save_dir'], model_file)) and os.path.exists(model_file):
+        return model_file
+    return os.path.join(args['save_dir'], model_file)
