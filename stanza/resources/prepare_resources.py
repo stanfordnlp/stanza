@@ -174,11 +174,12 @@ def split_package(package):
     if package.endswith("_charlm"):
         package = package[:-7]
         return package, True, True
-    for nickname in known_nicknames():
-        if package.endswith(nickname):
-            # +1 for the underscore
-            package = package[:-(len(nickname)+1)]
-            return package, True, True
+    underscore = package.rfind("_")
+    if underscore >= 0:
+        # +1 to skip the underscore
+        nickname = package[underscore+1:]
+        if nickname in known_nicknames():
+            return package[:underscore], True, True
 
     # guess it was a model which wasn't built with the new naming convention of putting the pretrain type at the end
     # assume WV and charlm... if the language / package doesn't allow for one, that should be caught later
