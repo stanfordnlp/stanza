@@ -10,7 +10,6 @@ import torch
 from stanza.models.tokenization.data import TokenizationDataset
 from stanza.models.tokenization.trainer import Trainer
 from stanza.models.tokenization.utils import output_predictions
-from stanza.pipeline import processor
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 from stanza.pipeline.registry import PROCESSOR_VARIANTS
