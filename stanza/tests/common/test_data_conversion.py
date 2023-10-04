@@ -134,7 +134,7 @@ def test_write_russian_doc(tmp_path):
     check_russian_doc(doc)
     CoNLL.write_doc2conll(doc, filename)
 
-    with open(filename) as fin:
+    with open(filename, encoding="utf-8") as fin:
         text = fin.read()
 
     # the conll docs have to end with \n\n
