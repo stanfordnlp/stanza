@@ -149,7 +149,7 @@ class CompositeVocab(BaseVocab):
                 items.append("{}={}".format(k, self._id2unit[k][v]))
             else:
                 items.append(self._id2unit[k][v])
-        if self.sep:
+        if self.sep is not None:
             res = self.sep.join(items)
             if res == "":
                 res = "_"
