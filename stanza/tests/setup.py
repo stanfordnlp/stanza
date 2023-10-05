@@ -41,6 +41,8 @@ stanza.download(lang='en', model_dir=models_dir, logging_level='info')
 stanza.download(lang="en", model_dir=models_dir, package=None, processors={"ner":"ncbi_disease"})
 stanza.download(lang='fr', model_dir=models_dir, logging_level='info')
 stanza.download(lang='zh', model_dir=models_dir, logging_level='info')
+# useful not just for verifying RtL, but because the default Arabic has a unique style of xpos tags
+stanza.download(lang='ar', model_dir=models_dir, logging_level='info')
 stanza.download(lang='multilingual', model_dir=models_dir, logging_level='info')
 
 logger.info("DOWNLOADING CORENLP")
