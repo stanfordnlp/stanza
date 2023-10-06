@@ -421,7 +421,8 @@ class Sentence(StanzaObject):
         # enhanced_dependencies represents the DEPS column
         # this is a networkx MultiDiGraph
         # with edges from the parent to the dependent
-        self._enhanced_dependencies = nx.MultiDiGraph()
+        # however, we set it to None until needed, as it is somewhat slow
+        self._enhanced_dependencies = None
         self._process_tokens(tokens)
 
     def _process_tokens(self, tokens):
@@ -462,7 +463,7 @@ class Sentence(StanzaObject):
         """
         Whether or not the enhanced dependencies are part of this sentence
         """
-        return len(self._enhanced_dependencies) > 0
+        return self._enhanced_dependencies is not None and len(self._enhanced_dependencies) > 0
 
     @property
     def index(self):
@@ -1074,7 +1075,7 @@ class Word(StanzaObject):
     def deps(self):
         """ Access the dependencies of this word. """
         graph = self._sent._enhanced_dependencies
-        if not graph.has_node(self.id):
+        if graph is None or not graph.has_node(self.id):
             return None
 
         data = []
@@ -1095,6 +1096,14 @@ class Word(StanzaObject):
     def deps(self, value):
         """ Set the word's dependencies value. """
         graph = self._sent._enhanced_dependencies
+        # if we don't have a graph, and we aren't trying to set any actual
+        # dependencies, we can save the time of doing anything else
+        if graph is None and value is None:
+            return
+
+        if graph is None:
+            graph = nx.MultiDiGraph()
+            self._sent._enhanced_dependencies = graph
         # need to make a new list: cannot iterate and delete at the same time
         if graph.has_node(self.id):
             in_edges = list(graph.in_edges(self.id))
@@ -1108,12 +1117,9 @@ class Word(StanzaObject):
         if all(isinstance(x, str) for x in value):
             value = [x.split(":", maxsplit=1) for x in value]
         for parent, dep in value:
-            if "." in parent:
-                parent = tuple(map(int, parent.split(".", maxsplit=1)))
-            else:
-                # parents which aren't empty nodes still get tuples
-                # this makes it easier to sort when writing them back out
-                parent = (int(parent),)
+            # parents which aren't empty nodes (labeled X.Y in CoNLLU format)
+            # still get tuples this makes it easier to sort when writing them back out
+            parent = tuple(map(int, parent.split(".", maxsplit=1)))
             graph.add_edge(parent, self.id, dep)
 
     @property
