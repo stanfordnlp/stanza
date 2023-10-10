@@ -409,10 +409,14 @@ def augment_apos(sents):
     """
     If there are no instances of ’ in the dataset, but there are instances of ',
     we replace some fraction of ' with ’ so that the tokenizer will recognize it.
+
+    # TODO: we could do it the other way around as well
     """
     has_unicode_apos = False
     has_ascii_apos = False
-    for sent in sents:
+    for sent_idx, sent in enumerate(sents):
+        if len(sent) == 0:
+            raise AssertionError("Got a blank sentence in position %d!" % sent_idx)
         for line in sent:
             if line.startswith("# text"):
                 if line.find("'") >= 0:
@@ -421,7 +425,7 @@ def augment_apos(sents):
                     has_unicode_apos = True
                 break
         else:
-            raise ValueError("Cannot find '# text'")
+            raise ValueError("Cannot find '# text' in sentences %d.  First line: %s" % (sent_idx, sent[0]))
 
     if has_unicode_apos or not has_ascii_apos:
         return sents
