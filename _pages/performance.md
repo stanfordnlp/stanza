@@ -52,7 +52,7 @@ language packs are made available under the
 
 | Language | Treebank | lcode | Default | Tokens | Sentences | Words | UPOS | XPOS | UFeats | AllTags | Lemmas | UAS | LAS | CLAS | MLAS | BLEX |
 | :---- | :---- |:------- | :---: | :----- | :-------- | :---- | :--- | :--- | :----- | :------ | :----- | :-- | :-- | :--- | :--- | :--- |
-|&#8203;Macro Avg  |    |    |    |  99.50  |  89.23  |  98.95  |  94.68  |  94.39  |  91.66  |  89.10  |  94.28  |  83.68  |  79.02  |  74.81  |  67.47  |  71.29|
+|&#8203;Macro Avg  | &#8203;   | &#8203;   |    |  99.50  |  89.23  |  98.95  |  94.68  |  94.39  |  91.66  |  89.10  |  94.28  |  83.68  |  79.02  |  74.81  |  67.47  |  71.29|
 |Afrikaans  |  [AfriBooms](https://github.com/UniversalDependencies/UD_Afrikaans-AfriBooms)  |  af  |  <i class="fas fa-check" style="color:#33a02c"></i>  |  99.99  |  99.65  |  99.99  |  98.60  |  95.77  |  98.41  |  95.66  |  98.29  |  89.54  |  86.14  |  80.10  |  76.71  |  77.53|
 |Ancient Greek  |  [PROIEL](https://github.com/UniversalDependencies/UD_Ancient_Greek-PROIEL)  |  grc  |  <i class="fas fa-check" style="color:#33a02c"></i>  |  100.00  |  52.00  |  100.00  |  97.42  |  97.82  |  92.30  |  91.06  |  97.18  |  82.77  |  79.02  |  72.47  |  63.94  |  70.00|
 |Ancient Greek  |  [Perseus](https://github.com/UniversalDependencies/UD_Ancient_Greek-Perseus)  |  grc  |    |  99.99  |  98.93  |  99.99  |  92.41  |  85.13  |  91.11  |  84.81  |  87.86  |  79.46  |  73.97  |  67.99  |  53.93  |  57.20|
