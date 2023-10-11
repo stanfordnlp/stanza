@@ -185,6 +185,7 @@ def random_shuffle_files(input_dir, input_files, output_dir, short_name):
         datasets.append(dataset)
 
     write_dataset(datasets, output_dir, short_name)
+    return len(train_files), len(dev_files), len(test_files)
 
 def random_shuffle_by_prefixes(input_dir, output_dir, short_name, prefix_map):
     input_files = os.listdir(input_dir)
@@ -204,11 +205,19 @@ def random_shuffle_by_prefixes(input_dir, output_dir, short_name, prefix_map):
         #print("Assigning %s to %s because of %s" % (filename, division, prefix))
         file_divisions[division].append(filename)
 
+    num_train_files = 0
+    num_dev_files = 0
+    num_test_files = 0
     for division in file_divisions.keys():
         print()
         print("Processing %d files from %s" % (len(file_divisions[division]), division))
-        random_shuffle_files(input_dir, file_divisions[division], output_dir, "%s-%s" % (short_name, division))
+        d_train, d_dev, d_test = random_shuffle_files(input_dir, file_divisions[division], output_dir, "%s-%s" % (short_name, division))
+        num_train_files += d_train
+        num_dev_files += d_dev
+        num_test_files += d_test
 
+    print()
+    print("After shuffling: Train files: %d  Dev files: %d  Test files: %d" % (num_train_files, num_dev_files, num_test_files))
     dataset_divisions = ["%s-%s" % (short_name, division) for division in file_divisions]
     combine_dataset(output_dir, output_dir, dataset_divisions, short_name)
 
