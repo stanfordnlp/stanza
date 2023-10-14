@@ -19,8 +19,7 @@ def test_basic_reading():
     # empty args for building the data object
     args = tagger.parse_args(args=[])
 
-    train_data, _ = CoNLL.conll2dict(input_str=TRAIN_DATA)
-    train_doc = Document(train_data)
+    train_doc = CoNLL.conll2doc(input_str=TRAIN_DATA)
 
     data = DataLoader(train_doc, args['batch_size'], args, None)
     assert data.has_upos
@@ -34,8 +33,7 @@ def test_no_xpos():
     # empty args for building the data object
     args = tagger.parse_args(args=[])
 
-    train_data, _ = CoNLL.conll2dict(input_str=TRAIN_DATA_NO_XPOS)
-    train_doc = Document(train_data)
+    train_doc = CoNLL.conll2doc(input_str=TRAIN_DATA_NO_XPOS)
 
     data = DataLoader(train_doc, args['batch_size'], args, None)
     assert data.has_upos
@@ -49,8 +47,7 @@ def test_no_upos():
     # empty args for building the data object
     args = tagger.parse_args(args=[])
 
-    train_data, _ = CoNLL.conll2dict(input_str=TRAIN_DATA_NO_UPOS)
-    train_doc = Document(train_data)
+    train_doc = CoNLL.conll2doc(input_str=TRAIN_DATA_NO_UPOS)
 
     data = DataLoader(train_doc, args['batch_size'], args, None)
     assert not data.has_upos
@@ -64,8 +61,7 @@ def test_no_feats():
     # empty args for building the data object
     args = tagger.parse_args(args=[])
 
-    train_data, _ = CoNLL.conll2dict(input_str=TRAIN_DATA_NO_FEATS)
-    train_doc = Document(train_data)
+    train_doc = CoNLL.conll2doc(input_str=TRAIN_DATA_NO_FEATS)
 
     data = DataLoader(train_doc, args['batch_size'], args, None)
     assert data.has_upos
