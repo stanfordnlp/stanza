@@ -19,7 +19,7 @@ import torch
 from torch import nn, optim
 
 import stanza.models.pos.data as data
-from stanza.models.pos.data import DataLoader
+from stanza.models.pos.data import Dataset
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos import scorer
 from stanza.models.common import utils
@@ -197,8 +197,9 @@ def train(args):
         logger.info("Augmented data size: {}".format(len(train_data)))
         train_doc = Document(train_data)
         train_docs.append(train_doc)
-    vocab = DataLoader.init_vocab(train_docs, args)
-    train_batches = [DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
+    vocab = Dataset.init_vocab(train_docs, args)
+# , args['batch_size']
+    train_batches = [Dataset(train_doc, args, pretrain, vocab=vocab, evaluation=False)
                      for train_doc in train_docs]
     # here we make sure the model will learn to output _ for empty columns
     if not any(train_batch.has_upos for train_batch in train_batches):
@@ -211,7 +212,8 @@ def train(args):
         for train_batch in train_batches:
             train_batch.has_feats = True
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
-    dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+# args['batch_size']
+    dev_batch = Dataset(dev_doc, args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
     eval_type = get_eval_type(dev_batch)
 
