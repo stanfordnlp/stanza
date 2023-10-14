@@ -34,16 +34,6 @@ def wordvec_args(short_language, dataset, extra_args):
         wordvec_pretrain = find_wordvec_pretrain(short_language, default_pretrains, dataset_pretrains, dataset)
         return ["--wordvec_pretrain_file", wordvec_pretrain]
 
-def pos_batch_size(short_name):
-    if short_name == 'de_hdt':
-        # 'UD_German-HDT'
-        return "2000"
-    elif short_name == 'hr_set':
-        # 'UD_Croatian-SET'
-        return "3000"
-    else:
-        return "5000"
-
 def build_model_filename(paths, short_name, command_args, extra_args):
     short_language, dataset = short_name.split("_", 1)
 
@@ -92,13 +82,9 @@ def run_treebank(mode, paths, treebank, short_name,
                 logger.error("TRAIN FILE NOT FOUND: %s ... skipping" % train_piece)
                 return
 
-        # some languages need reduced batch size
-        batch_size = pos_batch_size(short_name)
-
         train_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
                       "--train_file", train_file,
                       "--output_file", dev_pred_file,
-                      "--batch_size", batch_size,
                       "--lang", short_language,
                       "--shorthand", short_name,
                       "--mode", "train"]

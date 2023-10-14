@@ -19,7 +19,7 @@ import torch
 from torch import nn, optim
 
 import stanza.models.pos.data as data
-from stanza.models.pos.data import DataLoader
+from stanza.models.pos.data import Dataset
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos import scorer
 from stanza.models.common import utils
@@ -102,7 +102,7 @@ def build_argparse():
     parser.add_argument('--fix_eval_interval', dest='adapt_eval_interval', action='store_false', \
             help="Use fixed evaluation interval for all treebanks, otherwise by default the interval will be increased for larger treebanks.")
     parser.add_argument('--max_steps_before_stop', type=int, default=3000, help='Changes learning method or early terminates after this many steps if the dev scores are not improving')
-    parser.add_argument('--batch_size', type=int, default=5000)
+    parser.add_argument('--batch_size', type=int, default=50)
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
@@ -113,7 +113,7 @@ def build_argparse():
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
 
-    parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%%')
+    parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 50%%')
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
@@ -122,6 +122,9 @@ def build_argparse():
 def parse_args(args=None):
     parser = build_argparse()
     args = parser.parse_args(args=args)
+
+    if args.augment_nopunct is None:
+        args.augment_nopunct = 0.5
 
     if args.wandb_name:
         args.wandb = True
@@ -199,46 +202,45 @@ def train(args):
         logger.info("Reading %s" % train_file)
         # train_data is now a list of sentences, where each sentence is a
         # list of words, in which each word is a dict of conll attributes
-        train_data, _, _ = CoNLL.conll2dict(input_file=train_file)
-        # possibly augment the training data with some amount of fake data
-        # based on the options chosen
-        logger.info("Original data size: {}".format(len(train_data)))
-        train_data.extend(augment_punct(train_data, args['augment_nopunct'],
-                                        keep_original_sentences=False))
-        logger.info("Augmented data size: {}".format(len(train_data)))
-        train_doc = Document(train_data)
-        train_docs.append(train_doc)
+        train_file_data, _, _ = CoNLL.conll2dict(input_file=train_file)
+        logger.info("Train File {}, Data Size: {}".format(train_file, len(train_file_data)))
+        train_docs.append(Document(train_file_data))
     # we want to ensure that the model is able te output _ for empty columns,
     # but create batches whereby if a doc has upos/xpos tags we include them all.
     # therefore, we create seperate datasets and loaders for each input training file,
     # which will ensure the system be able to see batches with both upos available
     # and upos unavailable depending on what the availability in the file is.
-    vocab = DataLoader.init_vocab(train_docs, args)
-    train_batches = [DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
-                     for train_doc in train_docs]
+    vocab = Dataset.init_vocab(train_docs, args)
+    train_data = [Dataset(i, args, pretrain, vocab=vocab, evaluation=False)
+                  for i in train_docs]
     # here we make sure the model will learn to output _ for empty columns
     # if *any* dataset has data for the upos, xpos, or feature column,
     # we consider that data enough to train the model on that column
     # otherwise, we want to train the model to always output blanks
-    if not any(train_batch.has_upos for train_batch in train_batches):
-        for train_batch in train_batches:
-            train_batch.has_upos = True
-    if not any(train_batch.has_xpos for train_batch in train_batches):
-        for train_batch in train_batches:
-            train_batch.has_xpos = True
-    if not any(train_batch.has_feats for train_batch in train_batches):
-        for train_batch in train_batches:
-            train_batch.has_feats = True
+    if not any(td.has_upos for td in train_data):
+        for td in train_data:
+            td.has_upos = True
+    if not any(td.has_xpos for td in train_data):
+        for td in train_data:
+            td.has_xpos = True
+    if not any(td.has_feats for td in train_data):
+        for td in train_data:
+            td.has_feats = True
+    # calculate the batches
+    train_batches = [i.to_loader(batch_size=args["batch_size"], shuffle=True)
+                     for i in train_data]
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
-    dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    dev_data = Dataset(dev_doc, args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    dev_batch = dev_data.to_loader(batch_size=args["batch_size"])
 
-    eval_type = get_eval_type(dev_batch)
+    eval_type = get_eval_type(dev_data)
 
     # pred and gold path
     system_pred_file = args['output_file']
 
     # skip training if the language does not have training or dev data
-    if sum(len(train_batch) for train_batch in train_batches) == 0 or len(dev_batch) == 0:
+    # sum(...) to check if all of the training files are empty
+    if sum(len(td) for td in train_data) == 0 or len(dev_data) == 0:
         logger.info("Skip training because no data available...")
         return
 
@@ -262,7 +264,7 @@ def train(args):
     format_str = 'Finished STEP {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
 
     if args['adapt_eval_interval']:
-        args['eval_interval'] = utils.get_adaptive_eval_interval(dev_batch.num_examples, 2000, args['eval_interval'])
+        args['eval_interval'] = utils.get_adaptive_eval_interval(dev_data.num_examples, 2000, args['eval_interval'])
         logger.info("Evaluating the model every {} steps...".format(args['eval_interval']))
 
     if args['save_each']:
@@ -281,7 +283,8 @@ def train(args):
         # this allows us to mix batches which have or don't have individual training columns,
         # such as if XPOS or UPOS are missing from a training file,
         # as we shuffle all of those batches together
-        all_train_batches = [x for train_batch in train_batches for x in train_batch]
+        # the downside being that it loses the efficiency benefit of the pytorch dataloader
+        all_train_batches = [x for train_batch in train_batches for x in iter(train_batch)]
         random.shuffle(all_train_batches)
         for i, batch in enumerate(all_train_batches):
             start_time = time.time()
@@ -298,12 +301,14 @@ def train(args):
                 # eval on dev
                 logger.info("Evaluating on dev set...")
                 dev_preds = []
+                indices = []
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
-                dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
-                dev_batch.doc.set([UPOS, XPOS, FEATS], [y for x in dev_preds for y in x])
-                CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
+                    indices.extend(batch[-1])
+                dev_preds = utils.unsort(dev_preds, indices)
+                dev_data.doc.set([UPOS, XPOS, FEATS], [y for x in dev_preds for y in x])
+                CoNLL.write_doc2conll(dev_data.doc, system_pred_file)
 
                 _, _, dev_score = scorer.score(system_pred_file, args['eval_file'], eval_type=eval_type)
 
@@ -351,12 +356,6 @@ def train(args):
 
         if do_break: break
 
-        for train_batch in train_batches:
-            # we shuffle the order of all of the batches at the start of an iteration
-            # but this step shuffles the datapoints ins the batches, so the batches are different
-            # shuffle the batches themselves is useful to mix together batches from multiple DataLoader objects
-            train_batch.reshuffle()
-
     logger.info("Training ended with {} steps.".format(global_step))
 
     if args['wandb']:
@@ -393,22 +392,25 @@ def evaluate(args):
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = CoNLL.conll2doc(input_file=args['eval_file'])
-    batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
-    eval_type = get_eval_type(batch)
-    if len(batch) > 0:
+    dev_data = Dataset(doc, loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    dev_batch = dev_data.to_loader(batch_size=args['batch_size'])
+    eval_type = get_eval_type(dev_data)
+    if len(dev_batch) > 0:
         logger.info("Start evaluation...")
         preds = []
+        indices = []
         with torch.no_grad():
-            for i, b in enumerate(batch):
+            for b in dev_batch:
                 preds += trainer.predict(b)
+                indices.extend(b[-1])
     else:
         # skip eval if dev data does not exist
         preds = []
-    preds = utils.unsort(preds, batch.data_orig_idx)
+    preds = utils.unsort(preds, indices)
 
     # write to file and score
-    batch.doc.set([UPOS, XPOS, FEATS], [y for x in preds for y in x])
-    CoNLL.write_doc2conll(batch.doc, system_pred_file)
+    dev_data.doc.set([UPOS, XPOS, FEATS], [y for x in preds for y in x])
+    CoNLL.write_doc2conll(dev_data.doc, system_pred_file)
 
     if args['gold_labels']:
         _, _, score = scorer.score(system_pred_file, args['eval_file'], eval_type=eval_type)
