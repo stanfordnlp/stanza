@@ -7,7 +7,7 @@ import torch
 from stanza.models.common import doc
 from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import VOCAB_PREFIX, CompositeVocab
-from stanza.models.pos.data import DataLoader
+from stanza.models.pos.data import Dataset
 from stanza.models.pos.trainer import Trainer
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
