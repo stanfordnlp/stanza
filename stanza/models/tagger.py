@@ -19,7 +19,7 @@ import torch
 from torch import nn, optim
 
 import stanza.models.pos.data as data
-from stanza.models.pos.data import DataLoader
+from stanza.models.pos.data import Dataset
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos import scorer
 from stanza.models.common import utils
@@ -191,35 +191,41 @@ def train(args):
         train_data, _, _ = CoNLL.conll2dict(input_file=train_file)
         # possibly augment the training data with some amount of fake data
         # based on the options chosen
-        logger.info("Original data size: {}".format(len(train_data)))
-        train_data.extend(augment_punct(train_data, args['augment_nopunct'],
-                                        keep_original_sentences=False))
-        logger.info("Augmented data size: {}".format(len(train_data)))
-        train_doc = Document(train_data)
-        train_docs.append(train_doc)
-    vocab = DataLoader.init_vocab(train_docs, args)
-    train_batches = [DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
-                     for train_doc in train_docs]
+        logger.info("Train File {}, Data Size: {}".format(train_file, len(train_file_data)))
+        train_docs.append(Document(train_file_data))
+    # we want to ensure that the model is able te output _ for empty columns, but
+    # create batches whereby if a doc has upos/xpos tags we include them all. therefore,
+    # we create seperate datasets and loaders for each input training file, which will
+    # ensure the system be able to see batches with both upos available and upos
+    # unavailable depending on what the availability in the file is.
+    vocab = Dataset.init_vocab(train_docs, args)
+    train_data = [Dataset(i, args, pretrain, vocab=vocab, evaluation=False)
+                  for i in train_docs]
     # here we make sure the model will learn to output _ for empty columns
-    if not any(train_batch.has_upos for train_batch in train_batches):
-        for train_batch in train_batches:
-            train_batch.has_upos = True
-    if not any(train_batch.has_xpos for train_batch in train_batches):
-        for train_batch in train_batches:
-            train_batch.has_xpos = True
-    if not any(train_batch.has_feats for train_batch in train_batches):
-        for train_batch in train_batches:
-            train_batch.has_feats = True
+    if not any(td.has_upos for td in train_data):
+        for td in train_data:
+            td.has_upos = True
+    if not any(td.has_xpos for td in train_data):
+        for td in train_data:
+            td.has_xpos = True
+    if not any(td.has_feats for td in train_data):
+        for td in train_data:
+            td.has_feats = True
+    # calculate the batches
+    train_batches = [i.to_loader(batch_size=args["batch_size"], shuffle=True)
+                     for i in train_data]
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
-    dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    dev_data = Dataset(dev_doc, args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    # we want to put the entirety of the dev data into one batch
+    dev_batch = [next(iter(dev_data.to_loader(batch_size=len(dev_data), shuffle=True)))]
 
-    eval_type = get_eval_type(dev_batch)
+    eval_type = get_eval_type(dev_data)
 
     # pred and gold path
     system_pred_file = args['output_file']
 
     # skip training if the language does not have training or dev data
-    if sum(len(train_batch) for train_batch in train_batches) == 0 or len(dev_batch) == 0:
+    if len(train_data) == 0 or len(dev_data) == 0:
         logger.info("Skip training because no data available...")
         return
 
@@ -243,7 +249,7 @@ def train(args):
     format_str = 'Finished STEP {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
 
     if args['adapt_eval_interval']:
-        args['eval_interval'] = utils.get_adaptive_eval_interval(dev_batch.num_examples, 2000, args['eval_interval'])
+        args['eval_interval'] = utils.get_adaptive_eval_interval(dev_data.num_examples, 2000, args['eval_interval'])
         logger.info("Evaluating the model every {} steps...".format(args['eval_interval']))
 
     using_amsgrad = False
@@ -252,7 +258,8 @@ def train(args):
     train_loss = 0
     while True:
         do_break = False
-        all_train_batches = [x for train_batch in train_batches for x in train_batch]
+        # we know merge all train batches together into one giant list
+        all_train_batches = [x for train_batch in train_batches for x in iter(train_batch)]
         random.shuffle(all_train_batches)
         for i, batch in enumerate(all_train_batches):
             start_time = time.time()
@@ -269,12 +276,16 @@ def train(args):
                 # eval on dev
                 logger.info("Evaluating on dev set...")
                 dev_preds = []
+                indicies = []
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
-                dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
-                dev_batch.doc.set([UPOS, XPOS, FEATS], [y for x in dev_preds for y in x])
-                CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
+                    indicies.extend(batch[-1])
+                dev_preds = utils.unsort(dev_preds, indicies)
+                # if len(dev_preds) == 0:
+                    # breakpoint()
+                dev_data.doc.set([UPOS, XPOS, FEATS], [y for x in dev_preds for y in x])
+                CoNLL.write_doc2conll(dev_data.doc, system_pred_file)
 
                 _, _, dev_score = scorer.score(system_pred_file, args['eval_file'], eval_type=eval_type)
 
@@ -318,12 +329,6 @@ def train(args):
 
         if do_break: break
 
-        for train_batch in train_batches:
-            # we shuffle the order of all of the batches at the start of an iteration
-            # but this step shuffles the datapoints ins the batches, so the batches are different
-            # shuffle the batches themselves is useful to mix together batches from multiple DataLoader objects
-            train_batch.reshuffle()
-
     logger.info("Training ended with {} steps.".format(global_step))
 
     if args['wandb']:
@@ -360,13 +365,13 @@ def evaluate(args):
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = CoNLL.conll2doc(input_file=args['eval_file'])
-    batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    batch = iterDataset(doc, loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True).to_loader(batch_size=args['batch_size'], shuffle=True)
     eval_type = get_eval_type(batch)
     if len(batch) > 0:
         logger.info("Start evaluation...")
         preds = []
         with torch.no_grad():
-            for i, b in enumerate(batch):
+            for i, b in enumerate(iter(batch)):
                 preds += trainer.predict(b)
     else:
         # skip eval if dev data does not exist
