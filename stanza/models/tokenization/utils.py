@@ -327,7 +327,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
     oov_count, offset, doc = decode_predictions(vocab, mwt_dict, orig_text, all_raw, all_preds, no_ssplit, skip_newline, use_la_ittb_shorthand)
 
     # If we are provided a postprocessor, we prepare a list of pre-tokenized words and mwt flags and
-    # call the postprocessor for analysis. 
+    # call the postprocessor for analysis.
     if postprocessor:
         doc = postprocess_doc(doc, postprocessor, orig_text)
 
@@ -336,7 +336,7 @@ def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, ma
 
 def postprocess_doc(doc, postprocessor, orig_text=None):
     """Applies a postprocessor on the doc"""
-    
+
     # get a list of all the words in the "draft" document to pass to the postprocessor
     # the words array looks like [["words, "words", "words"], ["words, ("i_am_a_mwt", True), "I_am_not"]]
     # and the postprocessor is expected to return in the same format
@@ -357,7 +357,7 @@ def postprocess_doc(doc, postprocessor, orig_text=None):
     corrected_mwts = []
 
     # for each word, if its just a string (without the ("word", mwt_bool) format)
-    # we default that the word is not a MWT. 
+    # we default that the word is not a MWT.
     for sent in postprocessor_return:
         sent_words = []
         sent_mwts = []
@@ -409,7 +409,7 @@ def reassemble_doc_from_tokens(tokens, mwts, raw_text):
 
         for indx, (word, mwt) in enumerate(zip(sent_words, sent_mwts)):
             try:
-                offset_index = raw_text.index(word) 
+                offset_index = raw_text.index(word)
             except ValueError as e:
                 sub_start = max(0, new_offset - 20)
                 sub_end = min(len(raw_text), new_offset + 20)

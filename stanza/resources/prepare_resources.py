@@ -30,6 +30,8 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_dir', type=str, default="/u/nlp/software/stanza/models/current-models-%s" % __resources_version__, help='Input dir for various models.  Defaults to the recommended home on the nlp cluster')
     parser.add_argument('--output_dir', type=str, default="/u/nlp/software/stanza/models/%s" % __resources_version__, help='Output dir for various models.')
+    parser.add_argument('--packages_only', action='store_true', default=False, help='Only build the package maps instead of rebuilding everything')
+    parser.add_argument('--lang', type=str, default=None, help='Only process this language.  If left blank, will prepare all languages.  To use this argument, a previous prepared resources with all of the languages is necessary.')
     args = parser.parse_args()
     args.input_dir = os.path.abspath(args.input_dir)
     args.output_dir = os.path.abspath(args.output_dir)
@@ -173,11 +175,12 @@ def split_package(package):
     if package.endswith("_charlm"):
         package = package[:-7]
         return package, True, True
-    for nickname in known_nicknames():
-        if package.endswith(nickname):
-            # +1 for the underscore
-            package = package[:-(len(nickname)+1)]
-            return package, True, True
+    underscore = package.rfind("_")
+    if underscore >= 0:
+        # +1 to skip the underscore
+        nickname = package[underscore+1:]
+        if nickname in known_nicknames():
+            return package[:underscore], True, True
 
     # guess it was a model which wasn't built with the new naming convention of putting the pretrain type at the end
     # assume WV and charlm... if the language / package doesn't allow for one, that should be caught later
@@ -329,6 +332,12 @@ def get_dependencies(processor, lang, package):
 def process_dirs(args):
     dirs = sorted(os.listdir(args.input_dir))
     resources = {}
+    if args.lang:
+        resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+        # this one language gets overridden
+        # if this is not done, and we reuse the old resources,
+        # any models which were deleted will still be in the resources
+        resources[args.lang] = {}
 
     for model_dir in dirs:
         print(f"Processing models in {model_dir}")
@@ -337,6 +346,9 @@ def process_dirs(args):
             if not model.endswith('.pt'): continue
             # get processor
             lang, package, processor = split_model_name(model)
+            if args.lang and lang != args.lang:
+                continue
+
             # copy file
             input_path = os.path.join(args.input_dir, model_dir, model)
             output_path = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
@@ -383,6 +395,9 @@ def process_default_zips(args):
             continue
         if lang not in default_treebanks:
             raise AssertionError(f'{lang} not in default treebanks!!!')
+
+        if args.lang and lang != args.lang:
+            continue
 
         print(f'Preparing default models for language {lang}')
 
@@ -546,6 +561,9 @@ def process_packages(args):
         if lang not in default_treebanks:
             raise AssertionError(f'{lang} not in default treebanks!!!')
 
+        if args.lang and lang != args.lang:
+            continue
+
         default_processors = get_default_processors(resources, lang)
 
         # TODO: eventually we can remove default_processors
@@ -640,11 +658,13 @@ def process_misc(args):
 def main():
     args = parse_args()
     print("Converting models from %s to %s" % (args.input_dir, args.output_dir))
-    process_dirs(args)
+    if not args.packages_only:
+        process_dirs(args)
     process_packages(args)
-    process_default_zips(args)
-    process_lcode(args)
-    process_misc(args)
+    if not args.packages_only:
+        process_default_zips(args)
+        process_lcode(args)
+        process_misc(args)
 
 
 if __name__ == '__main__':

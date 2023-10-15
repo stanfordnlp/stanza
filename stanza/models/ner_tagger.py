@@ -89,6 +89,9 @@ def build_argparse():
     parser.add_argument('--lr_decay', type=float, default=0.5, help="LR decay rate.")
     parser.add_argument('--patience', type=int, default=3, help="Patience for LR decay.")
 
+    parser.add_argument('--connect_output_layers', action='store_true', default=False, help='Connect one output layer to the input of the next output layer.  By default, those layers are all separate')
+    parser.add_argument('--predict_tagset', type=int, default=None, help='Which tagset to predict if there are multiple tagsets.  Will default to 0.  Default of None allows the model to remember the value from training time, but be overridden at test time')
+
     parser.add_argument('--ignore_tag_scores', type=str, default=None, help="Which tags to ignore, if any, when scoring dev & test sets")
 
     parser.add_argument('--max_steps', type=int, default=200000)
@@ -145,6 +148,45 @@ def load_pretrain(args):
 
 def model_file_name(args):
     return utils.standard_model_file_name(args, "nertagger")
+
+def get_known_tags(tags):
+    """
+    Tags are stored in the dataset as a list of list of tags
+
+    This returns a sorted list for each column of tags in the dataset
+    """
+    max_columns = max(len(word) for sent in tags for word in sent)
+    known_tags = [set() for _ in range(max_columns)]
+    for sent in tags:
+        for word in sent:
+            for tag_idx, tag in enumerate(word):
+                known_tags[tag_idx].add(tag)
+    return [sorted(x) for x in known_tags]
+
+def warn_missing_tags(tag_vocab, data_tags, error_msg):
+    """
+    Check for tags missing from the tag_vocab.
+
+    Given a tag_vocab and the known tags in the format used by
+    ner.data, go through the tags in the dataset and look for any
+    which aren't in the tag_vocab.
+
+    error_msg is something like "training set" or "eval file" to
+    indicate where the missing tags came from.
+    """
+    tag_depth = max(max(len(tags) for tags in sentence) for sentence in data_tags)
+
+    if tag_depth != len(tag_vocab.lens()):
+        logger.warning("Test dataset has a different number of tag types compared to the model: %d vs %d", tag_depth, len(tag_vocab.lens()))
+    for tag_set_idx in range(min(tag_depth, len(tag_vocab.lens()))):
+        tag_set = tag_vocab.items(tag_set_idx)
+        if len(tag_vocab.lens()) > 1:
+            current_error_msg = error_msg + " tag set %d" % tag_set_idx
+        else:
+            current_error_msg = error_msg
+
+        current_tags = set([word[tag_set_idx] for sentence in data_tags for word in sentence])
+        utils.warn_missing_tags(tag_set, current_tags, current_error_msg)
 
 def train(args):
     model_file = model_file_name(args)
@@ -204,16 +246,14 @@ def train(args):
     if len(dev_doc.sentences) == 0:
         raise ValueError("File %s exists but has no usable dev data" % args['train_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True)
-    dev_gold_tags = dev_batch.tags
 
-    train_tags = utils.get_known_tags(train_batch.tags)
-    logger.info("Tags present in training set:\n  Tags without BIES markers: %s\n  Tags with B-, I-, E-, or S-: %s",
-                " ".join(sorted(set(i for i in train_tags if i[:2] not in ('B-', 'I-', 'E-', 'S-')))),
-                " ".join(sorted(set(i[2:] for i in train_tags if i[:2] in ('B-', 'I-', 'E-', 'S-')))))
-
-    if args['finetune']:
-        utils.warn_missing_tags([i for i in trainer.vocab['tag']], train_batch.tags, "training set")
-    utils.warn_missing_tags(train_batch.tags, dev_batch.tags, "dev set")
+    train_tags = get_known_tags(train_batch.tags)
+    logger.info("Training data has %d columns of tags", len(train_tags))
+    for tag_idx, tags in enumerate(train_tags):
+        logger.info("Tags present in training set at column %d:\n  Tags without BIES markers: %s\n  Tags with B-, I-, E-, or S-: %s",
+                    tag_idx,
+                    " ".join(sorted(set(i for i in tags if i[:2] not in ('B-', 'I-', 'E-', 'S-')))),
+                    " ".join(sorted(set(i[2:] for i in tags if i[:2] in ('B-', 'I-', 'E-', 'S-')))))
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
@@ -224,6 +264,14 @@ def train(args):
     if trainer is None: # init if model was not loaded previously from file
         trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, device=args['device'],
                           train_classifier_only=args['train_classifier_only'])
+
+    if args['finetune']:
+        warn_missing_tags(trainer.vocab['tag'], train_batch.tags, "training set")
+    warn_missing_tags(trainer.vocab['tag'], dev_batch.tags, "dev set")
+
+    # TODO: might still want to add multiple layers of tag evaluation to the scorer
+    dev_gold_tags = [[x[trainer.args['predict_tagset']] for x in tags] for tags in dev_batch.tags]
+
     logger.info(trainer.model)
 
     global_step = 0
@@ -319,7 +367,7 @@ def train(args):
 
     return trainer
 
-def write_ner_results(filename, batch, preds):
+def write_ner_results(filename, batch, preds, predict_tagset):
     if len(batch.tags) != len(preds):
         raise ValueError("Unexpected batch vs pred lengths: %d vs %d" % (len(batch.tags), len(preds)))
 
@@ -330,7 +378,8 @@ def write_ner_results(filename, batch, preds):
             # a namedtuple would make this cleaner without being much slower
             text = utils.unsort(b[0], b[5])
             for sentence in text:
-                sentence_gold = batch.tags[tag_idx]
+                # TODO: if we change the predict_tagset mechanism, will have to change this
+                sentence_gold = [x[predict_tagset] for x in batch.tags[tag_idx]]
                 sentence_pred = preds[tag_idx]
                 tag_idx += 1
                 for word, gold, pred in zip(sentence, sentence_gold, sentence_pred):
@@ -343,13 +392,14 @@ def evaluate(args):
 
     loaded_args, trainer, vocab = load_model(args, model_file)
     logger.debug("Loaded model for eval from %s", model_file)
+    logger.debug("Using the %d tagset for evaluation", loaded_args['predict_tagset'])
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     with open(args['eval_file']) as fin:
         doc = Document(json.load(fin))
     batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True, bert_tokenizer=trainer.model.bert_tokenizer)
-    utils.warn_missing_tags([i for i in trainer.vocab['tag']], batch.tags, "eval_file")
+    warn_missing_tags(trainer.vocab['tag'], batch.tags, "eval_file")
 
     logger.info("Start evaluation...")
     preds = []
@@ -357,6 +407,9 @@ def evaluate(args):
         preds += trainer.predict(b)
 
     gold_tags = batch.tags
+    # TODO: might still want to add multiple layers of tag evaluation to the scorer
+    gold_tags = [[x[trainer.args['predict_tagset']] for x in tags] for tags in gold_tags]
+
     _, _, score = scorer.score_by_entity(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
     _, _, _, confusion = scorer.score_by_token(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
     logger.info("Weighted f1 for non-O tokens: %5f", confusion_to_weighted_f1(confusion, exclude=["O"]))
@@ -365,7 +418,7 @@ def evaluate(args):
     logger.info("NER token confusion matrix:\n{}".format(format_confusion(confusion)))
 
     if args['eval_output_file']:
-        write_ner_results(args['eval_output_file'], batch, preds)
+        write_ner_results(args['eval_output_file'], batch, preds, trainer.args['predict_tagset'])
 
     return confusion
 
@@ -376,6 +429,8 @@ def load_model(args, model_file):
         charlm_args['charlm_forward_file'] = args['charlm_forward_file']
     if 'charlm_backward_file' in args:
         charlm_args['charlm_backward_file'] = args['charlm_backward_file']
+    if args['predict_tagset'] is not None:
+        charlm_args['predict_tagset'] = args['predict_tagset']
     pretrain = load_pretrain(args)
     trainer = Trainer(args=charlm_args, model_file=model_file, pretrain=pretrain, device=args['device'], train_classifier_only=args['train_classifier_only'])
     loaded_args, vocab = trainer.args, trainer.vocab

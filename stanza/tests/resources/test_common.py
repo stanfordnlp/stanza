@@ -50,12 +50,12 @@ def test_download_non_default():
     If that layout changes on purpose, this test will fail and will need to be updated
     """
     with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-        stanza.download("en", model_dir=test_dir, processors="ner", package="ontonotes", verbose=False)
+        stanza.download("en", model_dir=test_dir, processors="ner", package="ontonotes_charlm", verbose=False)
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
         assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain']
-        assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes.pt']
+        assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes_charlm.pt']
         for i in en_dir_listing:
             assert len(os.listdir(os.path.join(en_dir, i))) == 1
 
@@ -74,12 +74,12 @@ def test_download_two_models():
     which download two different charlms
     """
     with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-        stanza.download("en", model_dir=test_dir, processors="ner", package={"ner": ["ontonotes", "anatem"]}, verbose=False)
+        stanza.download("en", model_dir=test_dir, processors="ner", package={"ner": ["ontonotes_charlm", "anatem"]}, verbose=False)
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
         assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain']
-        assert sorted(os.listdir(os.path.join(en_dir, 'ner'))) == ['anatem.pt', 'ontonotes.pt']
+        assert sorted(os.listdir(os.path.join(en_dir, 'ner'))) == ['anatem.pt', 'ontonotes_charlm.pt']
         for i in en_dir_listing:
             assert len(os.listdir(os.path.join(en_dir, i))) == 2
 

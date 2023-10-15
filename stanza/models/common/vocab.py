@@ -1,5 +1,6 @@
 from copy import copy
 from collections import Counter, OrderedDict
+from collections.abc import Iterable
 import os
 import pickle
 
@@ -12,6 +13,7 @@ EMPTY_ID = 2
 ROOT = '<ROOT>'
 ROOT_ID = 3
 VOCAB_PREFIX = [PAD, UNK, EMPTY, ROOT]
+VOCAB_PREFIX_SIZE = len(VOCAB_PREFIX)
 
 class BaseVocab:
     """ A base class for common vocabulary operations. Each subclass should at least 
@@ -111,7 +113,7 @@ class CompositeVocab(BaseVocab):
 
     def unit2parts(self, unit):
         # unpack parts of a unit
-        if self.sep == "":
+        if not self.sep:
             parts = [x for x in unit]
         else:
             parts = unit.split(self.sep)
@@ -137,6 +139,9 @@ class CompositeVocab(BaseVocab):
             return [self._unit2id[i].get(parts[i], UNK_ID) if i < len(parts) else EMPTY_ID for i in range(len(self._unit2id))]
 
     def id2unit(self, id):
+        # special case: allow single ids for vocabs with length 1
+        if len(self._id2unit) == 1 and not isinstance(id, Iterable):
+            id = (id,)
         items = []
         for v, k in zip(id, self._id2unit.keys()):
             if v == EMPTY_ID: continue
@@ -144,10 +149,13 @@ class CompositeVocab(BaseVocab):
                 items.append("{}={}".format(k, self._id2unit[k][v]))
             else:
                 items.append(self._id2unit[k][v])
-        res = self.sep.join(items)
-        if res == "":
-            res = "_"
-        return res
+        if self.sep is not None:
+            res = self.sep.join(items)
+            if res == "":
+                res = "_"
+            return res
+        else:
+            return items
 
     def build_vocab(self):
         allunits = [w[self.idx] for sent in self.data for w in sent]
@@ -190,6 +198,9 @@ class CompositeVocab(BaseVocab):
 
     def lens(self):
         return [len(self._unit2id[k]) for k in self._unit2id]
+
+    def items(self, idx):
+        return self._id2unit[idx]
 
 class BaseMultiVocab:
     """ A convenient vocab container that can store multiple BaseVocab instances, and support 

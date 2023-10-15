@@ -128,7 +128,7 @@ class TestMultiNERProcessor:
         """
         A reusable pipeline with TWO ner models
         """
-        return stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,ner", package={"ner": ["ncbi_disease", "ontonotes"]})
+        return stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,ner", package={"ner": ["ncbi_disease", "ontonotes_charlm"]})
 
     def test_multi_example(self, pipeline):
         doc = pipeline("John Bauer works at Stanford and has hip arthritis.  He works for Chris Manning")

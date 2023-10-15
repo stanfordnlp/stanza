@@ -82,6 +82,9 @@ class CRFLoss(nn.Module):
         """
         start_inputs = inputs[:,0,:] # bs x nc
         rest_inputs = inputs[:,1:,:]
+        # TODO: technically we need to pay attention to the initial
+        # value being masked.  Currently we do compensate for the
+        # entire row being masked at the end of the operation
         rest_masks = masks[:,1:]
         alphas = start_inputs # bs x nc
         trans = self._transitions.unsqueeze(0) # 1 x nc x nc
@@ -94,6 +97,11 @@ class CRFLoss(nn.Module):
             new_alphas.masked_scatter_(m, alphas.masked_select(m))
             alphas = new_alphas
         log_norm = log_sum_exp(alphas, dim=1)
+
+        # if any row was entirely masked, we just turn its log denominator to 0
+        # eg, the empty summation for the denominator will be 1, and its log will be 0
+        all_masked = torch.all(masks, dim=1)
+        log_norm = log_norm * torch.logical_not(all_masked)
         return log_norm
 
 def viterbi_decode(scores, transition_params):
