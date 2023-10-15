@@ -173,7 +173,7 @@ class Dataset:
         # which upos. For instance, sometimes we'd like to mask out ending
         # sentence punctuation. The mask is True if we want to remove the element
         upos = sample.upos if self.has_upos else None
-        if not self.has_upos: # and if not eval?
+        if not self.has_upos and upos is not None: # and if not eval?
             # perform actual masking
             mask = self.__mask(upos)
         else:
@@ -227,9 +227,12 @@ class Dataset:
         # flatten everything else (because they seem to contain
         # only one sentence each. TODO are we sure about this @John)
         words = [i[0] for i in words]
-        upos = [i[0] for i in upos]
-        xpos = [i[0] for i in xpos]
-        ufeats = [i[0] for i in ufeats]
+        if None not in upos:
+            upos = [i[0] for i in upos]
+        if None not in xpos:
+            xpos = [i[0] for i in xpos]
+        if None not in ufeats:
+            ufeats = [i[0] for i in ufeats]
         pretrained = [i[0] for i in pretrained]
 
         # sort sentences by lens for easy RNN operations
@@ -247,9 +250,18 @@ class Dataset:
 
         # We now pad everything
         words = get_long_tensor(words, batch_size)
-        upos = get_long_tensor(upos, batch_size)
-        xpos = get_long_tensor(xpos, batch_size)
-        ufeats = get_long_tensor(ufeats, batch_size)
+        if None not in upos:
+            upos = get_long_tensor(upos, batch_size)
+        else:
+            upos = None
+        if None not in xpos:
+            xpos = get_long_tensor(xpos, batch_size)
+        else:
+            xpos = None
+        if None not in ufeats:
+            ufeats = get_long_tensor(ufeats, batch_size)
+        else:
+            ufeats = None
         pretrained = get_long_tensor(pretrained, batch_size)
         wordchars = get_long_tensor(wordchars, len(word_lens))
 

@@ -67,19 +67,23 @@ class POSProcessor(UDProcessor):
         return values
 
     def process(self, document):
-        batch = DataLoader(
-            document, self.config['batch_size'], self.config, self.pretrain, vocab=self.vocab, evaluation=True,
+        dataset = Dataset(
+            document, self.config, self.pretrain, vocab=self.vocab, evaluation=True,
             sort_during_eval=True)
+        batch = iter(dataset.to_loader(batch_size=self.config['batch_size']))
         preds = []
 
+        idx = []
         with torch.no_grad():
             if self._tqdm:
                 for i, b in enumerate(tqdm(batch)):
+                    idx.extend(b[-1])
                     preds += self.trainer.predict(b)
             else:
                 for i, b in enumerate(batch):
+                    idx.extend(b[-1])
                     preds += self.trainer.predict(b)
 
-        preds = unsort(preds, batch.data_orig_idx)
-        batch.doc.set([doc.UPOS, doc.XPOS, doc.FEATS], [y for x in preds for y in x])
-        return batch.doc
+        preds = unsort(preds, idx)
+        dataset.doc.set([doc.UPOS, doc.XPOS, doc.FEATS], [y for x in preds for y in x])
+        return dataset.doc
