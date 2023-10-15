@@ -14,18 +14,6 @@ from stanza.models.common.doc import *
 
 logger = logging.getLogger('stanza')
 
-# # sort sentences by lens for easy RNN operations
-# lens = [len(x) for x in batch[0]]
-# batch, orig_idx = sort_all(batch, lens)
-
-# # sort words by lens for easy char-RNN operations
-# batch_words = [w for sent in batch[1] for w in sent]
-# word_lens = [len(x) for x in batch_words]
-# batch_words, word_orig_idx = sort_all([batch_words], word_lens)
-# batch_words = batch_words[0]
-# word_lens = [len(x) for x in batch_words]
-
-
 DataSample = namedtuple("DataSample", "word char upos xpos feats pretrain text")
 
 class Dataset:
@@ -108,6 +96,9 @@ class Dataset:
     def __mask(self, upos):
         """Returns a torch boolean about which elements should be masked out"""
 
+        # creates temporary tensor to operate on
+        upos = torch.tensor(upos)
+
         # creates all false mask
         mask = ~upos.bool()
 
@@ -134,31 +125,64 @@ class Dataset:
         return mask
 
     def __getitem__(self, key):
-        """ Get a batch with index. """
+        """Retrieves a sample from the dataset.
 
+        Retrieves a sample from the dataset. This function, for the
+        most part, is spent performing ad-hoc data augmentation and
+        restoration. It recieves a DataSample object from the storage,
+        and returns an almost-identical DataSample object that may
+        have been augmented with /possibly/ (depending on augment_punct
+        settings) PUNCT chopped.
+
+        **Important Note**
+        ------------------
+        If you would like to load the data into a model, please convert
+        this Dataset object into a DataLoader via self.to_loader(). Then,
+        you can use the resulting object like any other PyTorch data
+        loader. As masks are calculated ad-hoc given the batch, the samples
+        returned from this object doesn't have the appropriate masking.
+
+        Motivation
+        ----------
+        Why is this here? Every time you call next(iter(dataloader)), it calls
+        this function. Therefore, if we augmented each sample on each iteration,
+        the model will see dynamically generated augmentation.
+        Furthermore, PyTorch dataloader handles shuffling natively. 
+
+        Parameters
+        ----------
+        key : int
+            the integer ID to from which to retrieve the key.
+
+        Returns
+        -------
+        DataSample
+            The sample of data you requested, with augmentation.
+        """
+        
         # get a sample of the input data
         sample = self.data[key]
 
         # convert to tensors
         words = sample.word
-        words = torch.tensor(words)
 
         # some data augmentation requires constructing a mask based on
         # which upos. For instance, sometimes we'd like to mask out ending
         # sentence punctuation. The mask is True if we want to remove the element
-        upos = torch.tensor(sample.upos) if self.has_upos else None
-        if self.has_upos: # and if not eval?
+        upos = sample.upos if self.has_upos else None
+        if not self.has_upos: # and if not eval?
             # perform actual masking
             mask = self.__mask(upos)
         else:
             # dummy mask that's all false 
-            mask = torch.zeros_like(words, dtype=torch.bool)
+            mask = torch.zeros_like(get_long_tensor(words, max([len(i)
+                                                                for i in words])),
+                                    dtype=torch.bool)
         mask_index = mask.nonzero()
-
         # convert rest to tensors
-        xpos =  torch.tensor(sample.xpos)if self.has_xpos else None
-        ufeats = torch.tensor(sample.feats) if self.has_feats else None
-        pretrained = torch.tensor(sample.pretrain)
+        xpos =  sample.xpos if self.has_xpos else None
+        ufeats = sample.feats if self.has_feats else None
+        pretrained = sample.pretrain
 
         # and deal with char
         char = sample.char.copy()
@@ -172,25 +196,63 @@ class Dataset:
             pretrained[mask[0]][mask[1]] = PAD_ID
             del char[mask[0]][mask[1]] # to avoid screwing up word len
             
-        # calculate sentence lengths
-        sentlens = [len(x) for x in sample.word]
+        # get each character from the input sentnece
+        chars = [w for sent in char for w in sent]
 
-        # flatten and pad characters
-        batch_words = [w for sent in char for w in sent]
-        word_lens = [len(x) for x in batch_words]
-        batch_words = batch_words[0]
-        wordchars = get_long_tensor(batch_words, len(word_lens))
-
-        # calculate output masks
-        wordchars_mask = torch.eq(char, PAD_ID)
-        words_mask = torch.eq(words, PAD_ID)
-
-        # return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, orig_idx, word_orig_idx, sentlens, word_lens, text
-        return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, sentlens, word_lens, text
+        return DataSample(words, chars, upos, xpos, ufeats, pretrained, sample[6])
 
     def __iter__(self):
         for i in range(self.__len__()):
             yield self.__getitem__(i)
+
+    def to_loader(self, **kwargs):
+        """Converts self to a DataLoader """
+
+        return DL(self,
+                  collate_fn=Dataset.__collate_fn,
+                  **kwargs)
+
+    @staticmethod
+    def __collate_fn(data):
+        """Function used by DataLoader to pack data"""
+        (words, wordchars, upos, xpos, ufeats, pretrained, text) = zip(*data)
+
+        # collate_fn is given a list of length batch size
+        batch_size = len(data)
+
+        # flatten everything else (because they seem to contain
+        # only one sentence each. TODO are we sure about this @John)
+        words = [i[0] for i in words]
+        upos = [i[0] for i in upos]
+        xpos = [i[0] for i in xpos]
+        ufeats = [i[0] for i in ufeats]
+        pretrained = [i[0] for i in pretrained]
+
+        # sort sentences by lens for easy RNN operations
+        lens = [len(x) for x in words]
+        (words, upos, xpos,
+         ufeats, pretrained, text), orig_idx = sort_all((words, upos, xpos,
+                                                         ufeats, pretrained, text), lens)
+
+        # combine all words into one large list, and sort for easy charRNN ops
+        wordchars = sum(wordchars, [])
+        word_lens = [len(x) for x in wordchars]
+        (wordchars,), word_orig_idx = sort_all([wordchars], word_lens)
+
+        # We now pad everything
+        words = get_long_tensor(words, batch_size)
+        upos = get_long_tensor(upos, batch_size)
+        xpos = get_long_tensor(xpos, batch_size)
+        ufeats = get_long_tensor(ufeats, batch_size)
+        pretrained = get_long_tensor(pretrained, batch_size)
+        wordchars = get_long_tensor(wordchars, len(word_lens))
+
+        # and finally create masks for the padding indicies 
+        words_mask = torch.eq(words, PAD_ID)
+        wordchars_mask = torch.eq(wordchars, PAD_ID)
+
+        return (words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats,
+                pretrained, orig_idx, word_orig_idx, lens, word_lens, text)
 
     @staticmethod
     def load_doc(doc):

@@ -183,45 +183,44 @@ def train(args):
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    train_docs = []
+    train_data = []
     for train_file in args['train_file'].split(";"):
         logger.info("Reading %s" % train_file)
         # train_data is now a list of sentences, where each sentence is a
         # list of words, in which each word is a dict of conll attributes
-        train_data, _ = CoNLL.conll2dict(input_file=train_file)
+        train_file_data, _ = CoNLL.conll2dict(input_file=train_file)
         # possibly augment the training data with some amount of fake data
         # based on the options chosen
-        logger.info("Original data size: {}".format(len(train_data)))
-        train_data.extend(augment_punct(train_data, args['augment_nopunct'],
-                                        keep_original_sentences=False))
-        logger.info("Augmented data size: {}".format(len(train_data)))
-        train_doc = Document(train_data)
-        train_docs.append(train_doc)
-    vocab = Dataset.init_vocab(train_docs, args)
+        logger.info("Train File {}, Data Size: {}".format(train_file, len(train_file_data)))
+        train_data += train_file_data
+    logger.info("Full training dataset size: {}".format(len(train_data)))
+    train_doc = Document(train_data)
+    vocab = Dataset.init_vocab([train_doc], args)
 # , args['batch_size']
-    train_batches = [Dataset(train_doc, args, pretrain, vocab=vocab, evaluation=False)
-                     for train_doc in train_docs]
+    train_data = Dataset(train_doc, args, pretrain, vocab=vocab, evaluation=False)
+    train_batches = train_data.to_loader(batch_size=args["batch_size"],
+                                         shuffle=True)
+    tmp = next(iter(train_batches))
+    breakpoint()
     # here we make sure the model will learn to output _ for empty columns
-    if not any(train_batch.has_upos for train_batch in train_batches):
-        for train_batch in train_batches:
-            train_batch.has_upos = True
-    if not any(train_batch.has_xpos for train_batch in train_batches):
-        for train_batch in train_batches:
-            train_batch.has_xpos = True
-    if not any(train_batch.has_feats for train_batch in train_batches):
-        for train_batch in train_batches:
-            train_batch.has_feats = True
+    if not train_data.has_upos:
+        train_data.has_upos = True
+    if not train_data.has_xpos:
+        train_data.has_xpos = True
+    if not train_data.has_feats:
+        train_data.has_feats = True
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
 # args['batch_size']
-    dev_batch = Dataset(dev_doc, args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    dev_data = Dataset(dev_doc, args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
-    eval_type = get_eval_type(dev_batch)
+    eval_type = get_eval_type(dev_data)
 
     # pred and gold path
     system_pred_file = args['output_file']
+    breakpoint()
 
     # skip training if the language does not have training or dev data
-    if sum(len(train_batch) for train_batch in train_batches) == 0 or len(dev_batch) == 0:
+    if len(train_data) == 0 or len(dev_data) == 0:
         logger.info("Skip training because no data available...")
         return
 
