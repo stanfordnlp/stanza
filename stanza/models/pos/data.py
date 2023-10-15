@@ -51,7 +51,10 @@ class Dataset:
             data = random.sample(data, keep)
             logger.debug("Subsample training set with rate {:g}".format(args['sample_train']))
 
-        self.data = self.preprocess(data, self.vocab, self.pretrain_vocab, args)
+        data = self.preprocess(data, self.vocab, self.pretrain_vocab, args)
+
+        self.data = data
+
         # shuffle for training
         if self.shuffled:
             random.shuffle(data)
@@ -199,7 +202,7 @@ class Dataset:
         # get each character from the input sentnece
         chars = [w for sent in char for w in sent]
 
-        return DataSample(words, chars, upos, xpos, ufeats, pretrained, sample[6])
+        return DataSample(words, chars, upos, xpos, ufeats, pretrained, sample[6]), key
 
     def __iter__(self):
         for i in range(self.__len__()):
@@ -215,6 +218,7 @@ class Dataset:
     @staticmethod
     def __collate_fn(data):
         """Function used by DataLoader to pack data"""
+        (data, idx) = zip(*data)
         (words, wordchars, upos, xpos, ufeats, pretrained, text) = zip(*data)
 
         # collate_fn is given a list of length batch size
@@ -233,11 +237,13 @@ class Dataset:
         (words, upos, xpos,
          ufeats, pretrained, text), orig_idx = sort_all((words, upos, xpos,
                                                          ufeats, pretrained, text), lens)
+        lens = [len(x) for x in words] # we need to reinterpret lengths for the RNN
 
         # combine all words into one large list, and sort for easy charRNN ops
         wordchars = sum(wordchars, [])
         word_lens = [len(x) for x in wordchars]
         (wordchars,), word_orig_idx = sort_all([wordchars], word_lens)
+        word_lens = [len(x) for x in wordchars] # we need to reinterpret lengths for the RNN
 
         # We now pad everything
         words = get_long_tensor(words, batch_size)
@@ -252,7 +258,7 @@ class Dataset:
         wordchars_mask = torch.eq(wordchars, PAD_ID)
 
         return (words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats,
-                pretrained, orig_idx, word_orig_idx, lens, word_lens, text)
+                pretrained, orig_idx, word_orig_idx, lens, word_lens, text, idx)
 
     @staticmethod
     def load_doc(doc):
