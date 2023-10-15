@@ -53,16 +53,24 @@ class CoNLL:
         Output: a list of list of dictionaries for each token in each sentence in the document.
         """
         doc_dict = []
+        doc_empty = []
         for sent_idx, sent_conll in enumerate(doc_conll):
             sent_dict = []
+            sent_empty = []
             for token_idx, token_conll in enumerate(sent_conll):
                 try:
                     token_dict = CoNLL.convert_conll_token(token_conll)
                 except ValueError as e:
                     raise ValueError("Could not process sentence %d token %d: %s" % (sent_idx, token_idx, str(e))) from e
-                sent_dict.append(token_dict)
+                if '.' in token_dict[ID]:
+                    token_dict[ID] = tuple(int(x) for x in token_dict[ID].split(".", maxsplit=1))
+                    sent_empty.append(token_dict)
+                else:
+                    token_dict[ID] = tuple(int(x) for x in token_dict[ID].split("-", maxsplit=1))
+                    sent_dict.append(token_dict)
             doc_dict.append(sent_dict)
-        return doc_dict
+            doc_empty.append(sent_empty)
+        return doc_dict, doc_empty
 
     @staticmethod
     def convert_conll_token(token_conll):
@@ -76,8 +84,6 @@ class CoNLL:
             if value != '_':
                 if field == HEAD:
                     token_dict[field] = int(value)
-                elif field == ID:
-                    token_dict[field] = tuple(int(x) for x in value.split('-'))
                 else:
                     token_dict[field] = value
             # special case if text is '_'
@@ -104,14 +110,14 @@ class CoNLL:
             with open(input_file, encoding='utf-8') as fin:
                 doc_conll, doc_comments = CoNLL.load_conll(fin, ignore_gapping)
 
-        doc_dict = CoNLL.convert_conll(doc_conll)
-        return doc_dict, doc_comments
+        doc_dict, doc_empty = CoNLL.convert_conll(doc_conll)
+        return doc_dict, doc_comments, doc_empty
 
     @staticmethod
     def conll2doc(input_file=None, input_str=None, ignore_gapping=True, zip_file=None):
-        doc_dict, doc_comments = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file)
-        return Document(doc_dict, text=None, comments=doc_comments)
-    
+        doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file)
+        return Document(doc_dict, text=None, comments=doc_comments, empty_sentences=doc_empty)
+
     @staticmethod
     def dict2conll(doc_dict, filename):
         """
