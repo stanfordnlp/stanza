@@ -151,7 +151,7 @@ def write_sentences_to_conllu(filename, sents):
                 print(line, file=outfile)
             print("", file=outfile)
 
-def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=False):
+def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=False, env_var="UDBASE"):
     """
     For a given treebank, dataset, extension, look for the exact filename to use.
 
@@ -167,7 +167,7 @@ def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=Fa
     files = glob.glob(filename)
     if len(files) == 0:
         if fail:
-            raise FileNotFoundError("Could not find any treebank files which matched {}".format(filename))
+            raise FileNotFoundError("Could not find any treebank files which matched {}\nIf you have the data elsewhere, you can change the base directory for the search by changing the {} environment variable".format(filename, env_var))
         else:
             return None
     elif len(files) == 1:

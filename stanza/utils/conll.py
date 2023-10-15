@@ -3,7 +3,6 @@ Utility functions for the loading and conversion of CoNLL-format files.
 """
 import os
 import io
-import warnings
 from zipfile import ZipFile
 
 from stanza.models.common.doc import Document
@@ -54,16 +53,24 @@ class CoNLL:
         Output: a list of list of dictionaries for each token in each sentence in the document.
         """
         doc_dict = []
+        doc_empty = []
         for sent_idx, sent_conll in enumerate(doc_conll):
             sent_dict = []
+            sent_empty = []
             for token_idx, token_conll in enumerate(sent_conll):
                 try:
                     token_dict = CoNLL.convert_conll_token(token_conll)
                 except ValueError as e:
                     raise ValueError("Could not process sentence %d token %d: %s" % (sent_idx, token_idx, str(e))) from e
-                sent_dict.append(token_dict)
+                if '.' in token_dict[ID]:
+                    token_dict[ID] = tuple(int(x) for x in token_dict[ID].split(".", maxsplit=1))
+                    sent_empty.append(token_dict)
+                else:
+                    token_dict[ID] = tuple(int(x) for x in token_dict[ID].split("-", maxsplit=1))
+                    sent_dict.append(token_dict)
             doc_dict.append(sent_dict)
-        return doc_dict
+            doc_empty.append(sent_empty)
+        return doc_dict, doc_empty
 
     @staticmethod
     def convert_conll_token(token_conll):
@@ -77,8 +84,6 @@ class CoNLL:
             if value != '_':
                 if field == HEAD:
                     token_dict[field] = int(value)
-                elif field == ID:
-                    token_dict[field] = tuple(int(x) for x in value.split('-'))
                 else:
                     token_dict[field] = value
             # special case if text is '_'
@@ -105,44 +110,13 @@ class CoNLL:
             with open(input_file, encoding='utf-8') as fin:
                 doc_conll, doc_comments = CoNLL.load_conll(fin, ignore_gapping)
 
-        doc_dict = CoNLL.convert_conll(doc_conll)
-        return doc_dict, doc_comments
+        doc_dict, doc_empty = CoNLL.convert_conll(doc_conll)
+        return doc_dict, doc_comments, doc_empty
 
     @staticmethod
     def conll2doc(input_file=None, input_str=None, ignore_gapping=True, zip_file=None):
-        doc_dict, doc_comments = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file)
-        return Document(doc_dict, text=None, comments=doc_comments)
-    
-    @staticmethod
-    def convert_dict(doc_dict):
-        """ Convert the dictionary format input data to the CoNLL-U format output data. This is the reverse function of
-        `convert_conll`.
-
-        Input: dictionary format data, which is a list of list of dictionaries for each token in each sentence in the data.
-        Output: CoNLL-U format data, which is a list of list of list for each token in each sentence in the data.
-
-        TODO: remove in the next release
-        """
-        doc = Document(doc_dict)
-        doc_conll = CoNLL.doc2conll(doc, include_comments=False)
-        doc_conll = [[x.split("\t") for x in sentence] for sentence in doc_conll]
-        warnings.warn('convert_dict is deprecated.  Please use "{:C}".format(doc) and use the text format directly', stacklevel=2)
-        return doc_conll
-
-    @staticmethod
-    def conll_as_string(doc):
-        """
-        Dump the loaded CoNLL-U format list data to string.
-
-        TODO: remove in the next release
-        """
-        return_string = ""
-        for sent in doc:
-            for ln in sent:
-                return_string += ("\t".join(ln)+"\n")
-            return_string += "\n"
-        warnings.warn('conll_as_string is deprecated.  Please use "{:C}".format(doc) and use the text format directly', stacklevel=2)
-        return return_string
+        doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file)
+        return Document(doc_dict, text=None, comments=doc_comments, empty_sentences=doc_empty)
 
     @staticmethod
     def dict2conll(doc_dict, filename):
@@ -152,35 +126,6 @@ class CoNLL:
         doc = Document(doc_dict)
         CoNLL.write_doc2conll(doc, filename)
 
-
-    @staticmethod
-    def doc2conll(doc, include_comments=True):
-        """
-        Convert a Document object to a list of list of strings
-
-        Each sentence is represented by a list of strings: first the comments, then the converted tokens
-
-        TODO: remove in the next release
-        """
-        doc_conll = []
-        for sentence in doc.sentences:
-            sent_conll = list(sentence.comments) if include_comments else []
-            for token in sentence.tokens:
-                sent_conll.extend(token.to_conll_text().split("\n"))
-            doc_conll.append(sent_conll)
-
-        warnings.warn('doc2conll is deprecated.  Please use "{:C}".format(doc) and use the text format directly', stacklevel=2)
-        return doc_conll
-
-    @staticmethod
-    def doc2conll_text(doc):
-        """
-        Convert a Document to a big block of text.
-
-        TODO: remove in the next release
-        """
-        warnings.warn('doc2conll_text is deprecated.  Please use "{:C}".format(doc)', stacklevel=2)
-        return "{:C}".format(doc)
 
     @staticmethod
     def write_doc2conll(doc, filename, mode='w', encoding='utf-8'):

@@ -39,8 +39,10 @@ DICT = [[{'id': (1,), 'text': 'Nous', 'lemma': 'il', 'upos': 'PRON', 'feats': 'N
          {'id': (9,), 'text': '.', 'lemma': '.', 'upos': 'PUNCT', 'head': 3, 'deprel': 'punct', 'misc': 'start_char=36|end_char=37'}]]
 
 def test_conll_to_dict():
-    dicts = CoNLL.convert_conll(CONLL)
+    dicts, empty = CoNLL.convert_conll(CONLL)
     assert dicts == DICT
+    assert len(dicts) == len(empty)
+    assert all(len(x) == 0 for x in empty)
 
 def test_dict_to_conll():
     document = Document(DICT)
@@ -110,6 +112,7 @@ def check_russian_doc(doc):
         assert expected_id == sentence.sent_id
         assert sent_idx == sentence.index
         assert len(sentence.comments) == 3
+        assert not sentence.has_enhanced_dependencies()
 
     sentences = "{:C}".format(doc)
     sentences = sentences.split("\n\n")
@@ -134,7 +137,7 @@ def test_write_russian_doc(tmp_path):
     check_russian_doc(doc)
     CoNLL.write_doc2conll(doc, filename)
 
-    with open(filename) as fin:
+    with open(filename, encoding="utf-8") as fin:
         text = fin.read()
 
     # the conll docs have to end with \n\n
@@ -287,6 +290,7 @@ def test_mwt_ner_conversion():
     assert len(doc.sentences) == 1
     sentence = doc.sentences[0]
     assert len(sentence.tokens) == 5
+    assert not sentence.has_enhanced_dependencies()
     EXPECTED_NER = ["O", "O", "S-PERSON", "O", "O"]
     EXPECTED_WORDS = [1, 1, 2, 1, 1]
     for token, ner, expected_words in zip(sentence.tokens, EXPECTED_NER, EXPECTED_WORDS):
@@ -325,6 +329,7 @@ def test_deps_conversion():
     assert len(doc.sentences) == 1
     sentence = doc.sentences[0]
     assert len(sentence.tokens) == 10
+    assert sentence.has_enhanced_dependencies()
 
     word = doc.sentences[0].words[3]
     assert word.deps == "3:obj|9:nsubj"
@@ -345,22 +350,48 @@ ESTONIAN_EMPTY_DEPS = """
 7	...	...	PUNCT	Z	_	3	punct	5.1:punct	_
 """.strip()
 
+ESTONIAN_EMPTY_END_DEPS = """
+# sent_id = ewtb2_000035_15
+# text = Ja paari aasta pärast rôômalt maasikatele ...
+1	Ja	ja	CCONJ	J	_	3	cc	5.1:cc	_
+2	paari	paar	NUM	N	Case=Gen|Number=Sing|NumForm=Word|NumType=Card	3	nummod	3:nummod	_
+3	aasta	aasta	NOUN	S	Case=Gen|Number=Sing	0	root	5.1:obl	_
+4	pärast	pärast	ADP	K	AdpType=Post	3	case	3:case	_
+5	rôômalt	rõõmsalt	ADV	D	Typo=Yes	3	advmod	5.1:advmod	Orphan=Yes|CorrectForm=rõõmsalt
+5.1	panna	panema	VERB	V	VerbForm=Inf	_	_	0:root	Empty=5.1
+""".strip()
+
 def test_empty_deps_conversion():
     """
-    Ideally we would be able to read & recreate the dependencies
-
-    Currently that is not possible.  Perhaps it should be fixed.
-    At the very least, we shouldn't fail horribly when reading this
+    Check that we can read and then output a sentence with empty dependencies
     """
-    doc = CoNLL.conll2doc(input_str=ESTONIAN_EMPTY_DEPS)
+    check_empty_deps_conversion(ESTONIAN_EMPTY_DEPS, 7)
+
+def test_empty_deps_at_end_conversion():
+    """
+    The empty deps conversion should also work if the empty dep is at the end
+    """
+    check_empty_deps_conversion(ESTONIAN_EMPTY_END_DEPS, 5)
+
+def check_empty_deps_conversion(input_str, expected_words):
+    doc = CoNLL.conll2doc(input_str=input_str, ignore_gapping=False)
     assert len(doc.sentences) == 1
+    assert len(doc.sentences[0].tokens) == expected_words
+    assert len(doc.sentences[0].words) == expected_words
+    assert len(doc.sentences[0].empty_words) == 1
+
     sentence = doc.sentences[0]
     conll = "{:C}".format(doc)
-    #assert len(sentence.tokens) == 10
+    assert conll == input_str
 
-    #word = doc.sentences[0].words[3]
-    #assert word.deps == "3:obj|9:nsubj"
+    sentence_dict = doc.sentences[0].to_dict()
+    assert len(sentence_dict) == expected_words + 1
+    # currently this is true for both of the examples we run
+    assert sentence_dict[5]['id'] == (5, 1)
 
-    #conll = "{:C}".format(doc)
-    #assert conll == ESTONIAN_EMPTY_DOCS
-
+    # redo the above checks to make sure
+    # there are no weird bugs in the accessors
+    assert len(doc.sentences) == 1
+    assert len(doc.sentences[0].tokens) == expected_words
+    assert len(doc.sentences[0].words) == expected_words
+    assert len(doc.sentences[0].empty_words) == 1

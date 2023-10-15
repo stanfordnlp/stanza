@@ -188,7 +188,7 @@ def train(args):
         logger.info("Reading %s" % train_file)
         # train_data is now a list of sentences, where each sentence is a
         # list of words, in which each word is a dict of conll attributes
-        train_file_data, _ = CoNLL.conll2dict(input_file=train_file)
+        train_file_data, _, _ = CoNLL.conll2dict(input_file=train_file)
         # possibly augment the training data with some amount of fake data
         # based on the options chosen
         logger.info("Train File {}, Data Size: {}".format(train_file, len(train_file_data)))

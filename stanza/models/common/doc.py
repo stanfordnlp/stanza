@@ -3,10 +3,13 @@ Basic data structures
 """
 
 import io
+from itertools import repeat
 import re
 import json
 import pickle
 import warnings
+
+import networkx as nx
 
 from stanza.models.common.stanza_object import StanzaObject
 from stanza.models.ner.utils import decode_from_bioes
@@ -41,7 +44,7 @@ class Document(StanzaObject):
     """ A document class that stores attributes of a document and carries a list of sentences.
     """
 
-    def __init__(self, sentences, text=None, comments=None):
+    def __init__(self, sentences, text=None, comments=None, empty_sentences=None):
         """ Construct a document given a list of sentences in the form of lists of CoNLL-U dicts.
 
         Args:
@@ -55,7 +58,7 @@ class Document(StanzaObject):
         self._num_tokens = 0
         self._num_words = 0
 
-        self._process_sentences(sentences, comments)
+        self._process_sentences(sentences, comments, empty_sentences)
         self._ents = []
         if self._text is not None:
             self.build_ents()
@@ -130,11 +133,13 @@ class Document(StanzaObject):
         """ Set the list of entities in this document. """
         self._ents = value
 
-    def _process_sentences(self, sentences, comments=None):
+    def _process_sentences(self, sentences, comments=None, empty_sentences=None):
         self.sentences = []
-        for sent_idx, tokens in enumerate(sentences):
+        if empty_sentences is None:
+            empty_sentences = repeat([])
+        for sent_idx, (tokens, empty_words) in enumerate(zip(sentences, empty_sentences)):
             try:
-                sentence = Sentence(tokens, doc=self)
+                sentence = Sentence(tokens, doc=self, empty_words=empty_words)
             except ValueError as e:
                 raise ValueError("Could not process document at sentence %d: %s" % (sent_idx, str(e))) from e
             self.sentences.append(sentence)
@@ -283,8 +288,10 @@ class Document(StanzaObject):
                 if not m and not n:
                     for word in token.words:
                         token.id = (idx_w, )
+                        # delete dependency information
+                        word.deps = None
+                        word.head, word.deprel = None, None
                         word.id = idx_w
-                        word.head, word.deprel = None, None # delete dependency information
                 else:
                     expanded = [x for x in expansions[idx_e].split(' ') if len(x) > 0]
                     idx_e += 1
@@ -294,7 +301,7 @@ class Document(StanzaObject):
                     token.id = (idx_w, idx_w_end)
                     token.words = []
                     for i, e_word in enumerate(expanded):
-                        token.words.append(Word({ID: idx_w + i, TEXT: e_word}))
+                        token.words.append(Word(sentence, {ID: idx_w + i, TEXT: e_word}))
                     idx_w = idx_w_end
 
             # reprocess the words using the new tokens
@@ -399,7 +406,7 @@ class Sentence(StanzaObject):
     """ A sentence class that stores attributes of a sentence and carries a list of tokens.
     """
 
-    def __init__(self, tokens, doc=None):
+    def __init__(self, tokens, doc=None, empty_words=None):
         """ Construct a sentence given a list of tokens in the form of CoNLL-U dicts.
         """
         self._tokens = []
@@ -414,7 +421,17 @@ class Sentence(StanzaObject):
         # sentence in a CoNLL-U file.  Can be empty
         self._comments = []
 
+        # enhanced_dependencies represents the DEPS column
+        # this is a networkx MultiDiGraph
+        # with edges from the parent to the dependent
+        # however, we set it to None until needed, as it is somewhat slow
+        self._enhanced_dependencies = None
         self._process_tokens(tokens)
+
+        if empty_words is not None:
+            self._empty_words = [Word(self, entry) for entry in empty_words]
+        else:
+            self._empty_words = []
 
     def _process_tokens(self, tokens):
         st, en = -1, -1
@@ -426,9 +443,9 @@ class Sentence(StanzaObject):
                 entry[ID] = (entry[ID], )
             if len(entry.get(ID)) > 1: # if this token is a multi-word token
                 st, en = entry[ID]
-                self.tokens.append(Token(entry))
+                self.tokens.append(Token(self, entry))
             else: # else this token is a word
-                new_word = Word(entry)
+                new_word = Word(self, entry)
                 if len(self.words) > 0 and self.words[-1].id == new_word.id:
                     # this can happen in the following context:
                     # a document was created with MWT=Yes to mark that a token should be split
@@ -445,16 +462,16 @@ class Sentence(StanzaObject):
                 if idx <= en:
                     self.tokens[-1].words.append(new_word)
                 else:
-                    self.tokens.append(Token(entry, words=[new_word]))
+                    self.tokens.append(Token(self, entry, words=[new_word]))
                 new_word.parent = self.tokens[-1]
 
-        # add back-pointers for words and tokens to the sentence
-        for w in self.words:
-            w.sent = self
-        for t in self.tokens:
-            t.sent = self
-
         self.rebuild_dependencies()
+
+    def has_enhanced_dependencies(self):
+        """
+        Whether or not the enhanced dependencies are part of this sentence
+        """
+        return self._enhanced_dependencies is not None and len(self._enhanced_dependencies) > 0
 
     @property
     def index(self):
@@ -554,6 +571,16 @@ class Sentence(StanzaObject):
     def words(self, value):
         """ Set the list of words for this sentence. """
         self._words = value
+
+    @property
+    def empty_words(self):
+        """ Access the list of words for this sentence. """
+        return self._empty_words
+
+    @empty_words.setter
+    def empty_words(self, value):
+        """ Set the list of words for this sentence. """
+        self._empty_words = value
 
     @property
     def ents(self):
@@ -671,7 +698,7 @@ class Sentence(StanzaObject):
             if word.head == 0:
                 # make a word for the ROOT
                 word_entry = {ID: 0, TEXT: "ROOT"}
-                head = Word(word_entry)
+                head = Word(self, word_entry)
             else:
                 # id is index in words list + 1
                 head = self.words[word.head - 1]
@@ -724,24 +751,41 @@ class Sentence(StanzaObject):
         """ Dumps the sentence into a list of dictionary for each token in the sentence.
         """
         ret = []
-        for token in self.tokens:
+        empty_idx = 0
+        for token_idx, token in enumerate(self.tokens):
+            while empty_idx < len(self._empty_words) and self._empty_words[empty_idx].id[0] < token.id[0]:
+                ret.append(self._empty_words[empty_idx].to_dict())
+                empty_idx += 1
             ret += token.to_dict()
+        for empty_word in self._empty_words[empty_idx:]:
+            ret.append(empty_word.to_dict())
         return ret
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
 
     def __format__(self, spec):
+        if spec != 'c' and spec != 'C':
+            return str(self)
+
+        pieces = []
+        empty_idx = 0
+        for token_idx, token in enumerate(self.tokens):
+            while empty_idx < len(self._empty_words) and self._empty_words[empty_idx].id[0] < token.id[0]:
+                pieces.append(self._empty_words[empty_idx].to_conll_text())
+                empty_idx += 1
+            pieces.append(token.to_conll_text())
+        for empty_word in self._empty_words[empty_idx:]:
+            pieces.append(empty_word.to_conll_text())
+
         if spec == 'c':
-            return "\n".join(token.to_conll_text() for token in self.tokens)
+            return "\n".join(pieces)
         elif spec == 'C':
-            tokens = "\n".join(token.to_conll_text() for token in self.tokens)
+            tokens = "\n".join(pieces)
             if len(self.comments) > 0:
                 text = "\n".join(self.comments)
                 return text + "\n" + tokens
             return tokens
-        else:
-            return str(self)
 
 def init_from_misc(unit):
     """Create attributes by parsing from the `misc` field.
@@ -770,7 +814,7 @@ def init_from_misc(unit):
     unit._misc = "|".join(remaining_values)
 
 
-def dict_to_conll_text(token_dict):
+def dict_to_conll_text(token_dict, id_connector="-"):
     token_conll = ['_' for i in range(FIELD_NUM)]
     misc = []
     for key in token_dict:
@@ -786,7 +830,7 @@ def dict_to_conll_text(token_dict):
             if token_dict[key]:
                 misc.append(token_dict[key])
         elif key == ID:
-            token_conll[FIELD_TO_IDX[key]] = '-'.join([str(x) for x in token_dict[key]]) if isinstance(token_dict[key], tuple) else str(token_dict[key])
+            token_conll[FIELD_TO_IDX[key]] = id_connector.join([str(x) for x in token_dict[key]]) if isinstance(token_dict[key], tuple) else str(token_dict[key])
         elif key in FIELD_TO_IDX:
             token_conll[FIELD_TO_IDX[key]] = str(token_dict[key])
     if misc:
@@ -794,7 +838,7 @@ def dict_to_conll_text(token_dict):
     else:
         token_conll[FIELD_TO_IDX[MISC]] = '_'
     # when a word (not mwt token) without head is found, we insert dummy head as required by the UD eval script
-    if '-' not in token_conll[FIELD_TO_IDX[ID]] and HEAD not in token_dict:
+    if '-' not in token_conll[FIELD_TO_IDX[ID]] and '.' not in token_conll[FIELD_TO_IDX[ID]] and HEAD not in token_dict:
         token_conll[FIELD_TO_IDX[HEAD]] = str(int(token_dict[ID] if isinstance(token_dict[ID], int) else token_dict[ID][0]) - 1) # evaluation script requires head: int
     return "\t".join(token_conll)
 
@@ -805,8 +849,10 @@ class Token(StanzaObject):
     a (multi-word) token might be expanded into multiple words that carry syntactic annotations.
     """
 
-    def __init__(self, token_entry, words=None):
-        """ Construct a token given a dictionary format token entry. Optionally link itself to the corresponding words.
+    def __init__(self, sentence, token_entry, words=None):
+        """
+        Construct a token given a dictionary format token entry. Optionally link itself to the corresponding words.
+        The owning sentence must be passed in.
         """
         self._id = token_entry.get(ID)
         self._text = token_entry.get(TEXT)
@@ -818,7 +864,7 @@ class Token(StanzaObject):
         self._words = words if words is not None else []
         self._start_char = token_entry.get(START_CHAR, None)
         self._end_char = token_entry.get(END_CHAR, None)
-        self._sent = None
+        self._sent = sentence
 
         if self._misc is not None:
             init_from_misc(self)
@@ -946,17 +992,20 @@ class Token(StanzaObject):
     def _is_null(self, value):
         return (value is None) or (value == '_')
 
+    def is_mwt(self):
+        return len(self.words) > 1
+
 class Word(StanzaObject):
     """ A word class that stores attributes of a word.
     """
 
-    def __init__(self, word_entry):
+    def __init__(self, sentence, word_entry):
         """ Construct a word given a dictionary format word entry.
         """
         self._id = word_entry.get(ID, None)
         if isinstance(self._id, tuple):
-            assert len(self._id) == 1
-            self._id = self._id[0]
+            if len(self._id) == 1:
+                self._id = self._id[0]
         self._text = word_entry.get(TEXT, None)
 
         assert self._id is not None and self._text is not None, 'id and text should be included for the word. {}'.format(word_entry)
@@ -967,15 +1016,18 @@ class Word(StanzaObject):
         self._feats = word_entry.get(FEATS, None)
         self._head = word_entry.get(HEAD, None)
         self._deprel = word_entry.get(DEPREL, None)
-        self._deps = word_entry.get(DEPS, None)
         self._misc = word_entry.get(MISC, None)
         self._start_char = word_entry.get(START_CHAR, None)
         self._end_char = word_entry.get(END_CHAR, None)
         self._parent = None
-        self._sent = None
+        self._sent = sentence
 
         if self._misc is not None:
             init_from_misc(self)
+
+        # use the setter, which will go up to the sentence and set the
+        # dependencies on that graph
+        self.deps = word_entry.get(DEPS, None)
 
     @property
     def id(self):
@@ -1060,12 +1112,53 @@ class Word(StanzaObject):
     @property
     def deps(self):
         """ Access the dependencies of this word. """
-        return self._deps
+        graph = self._sent._enhanced_dependencies
+        if graph is None or not graph.has_node(self.id):
+            return None
+
+        data = []
+        predecessors = sorted(list(graph.predecessors(self.id)))
+        for parent in predecessors:
+            deps = sorted(list(graph.get_edge_data(parent, self.id)))
+            for dep in deps:
+                if len(parent) == 1:
+                    data.append("%d:%s" % (parent[0], dep))
+                else:
+                    data.append("%d.%d:%s" % (parent[0], parent[1], dep))
+        if not data:
+            return None
+
+        return "|".join(data)
 
     @deps.setter
     def deps(self, value):
         """ Set the word's dependencies value. """
-        self._deps = value if self._is_null(value) == False else None
+        graph = self._sent._enhanced_dependencies
+        # if we don't have a graph, and we aren't trying to set any actual
+        # dependencies, we can save the time of doing anything else
+        if graph is None and value is None:
+            return
+
+        if graph is None:
+            graph = nx.MultiDiGraph()
+            self._sent._enhanced_dependencies = graph
+        # need to make a new list: cannot iterate and delete at the same time
+        if graph.has_node(self.id):
+            in_edges = list(graph.in_edges(self.id))
+            graph.remove_edges_from(in_edges)
+
+        if value is None:
+            return
+
+        if isinstance(value, str):
+            value = value.split("|")
+        if all(isinstance(x, str) for x in value):
+            value = [x.split(":", maxsplit=1) for x in value]
+        for parent, dep in value:
+            # parents which aren't empty nodes (labeled X.Y in CoNLLU format)
+            # still get tuples this makes it easier to sort when writing them back out
+            parent = tuple(map(int, parent.split(".", maxsplit=1)))
+            graph.add_edge(parent, self.id, dep)
 
     @property
     def misc(self):
@@ -1137,7 +1230,7 @@ class Word(StanzaObject):
         Turn a word into a conll representation (10 column tab separated)
         """
         token_dict = self.to_dict()
-        return dict_to_conll_text(token_dict)
+        return dict_to_conll_text(token_dict, '.')
 
     def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR]):
         """ Dumps the word into a dictionary.

@@ -161,7 +161,7 @@ def train(args):
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    train_data, _ = CoNLL.conll2dict(input_file=args['train_file'])
+    train_data, _, _ = CoNLL.conll2dict(input_file=args['train_file'])
     # possibly augment the training data with some amount of fake data
     # based on the options chosen
     logger.info("Original data size: {}".format(len(train_data)))

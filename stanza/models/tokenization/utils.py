@@ -84,11 +84,12 @@ def create_lexicon(shorthand=None, train_path=None, external_path=None):
         if not os.path.isfile(train_path):
             raise FileNotFoundError(f"Cannot open train set at {train_path}")
 
-        doc_conll,_ = CoNLL.conll2dict(input_file=train_path)
+        train_doc = CoNLL.conll2doc(input_file=train_path)
 
-        for sent_conll in doc_conll:
-            for token_conll in sent_conll:
-                word = token_conll['text'].lower()
+        for train_sent in train_doc.sentences:
+            train_words = [x.text for x in train_sent.tokens if x.is_mwt()] + [x.text for x in train_sent.words]
+            for word in train_words:
+                word = word.lower()
                 if check_valid_word(shorthand, word) and word not in lexicon:
                     lexicon.add(word)
                     length_freq.append(len(word))

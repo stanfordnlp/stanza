@@ -87,7 +87,7 @@ while index < len(lines):
     block = [language, "[%s](%s)" % (long_dataset, "https://github.com/UniversalDependencies/%s" % treebank), lcode, checkmark] + [x[3].strip() for x in block]
     blocks.append(block)
 
-PREFIX = ["Macro Avg", "", "", ""]
+PREFIX = ["&#8203;Macro Avg", "&#8203;", "&#8203;", ""]
 
 avg = [sum(float(x[i]) for x in blocks) / len(blocks) for i in range(len(PREFIX), len(EXPECTED_ORDER) + len(PREFIX))]
 avg = PREFIX + ["%.2f" % x for x in avg]
