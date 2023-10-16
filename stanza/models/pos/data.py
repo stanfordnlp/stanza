@@ -111,7 +111,7 @@ class Dataset:
 
         augment_nopunct = self.args.get("augment_nopunct")
 
-        if not augment_nopunct:
+        if augment_nopunct is None:
             # default augment to 30%
             augment_nopunct = 0.3
 
