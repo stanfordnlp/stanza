@@ -172,7 +172,7 @@ class Dataset:
         # which upos. For instance, sometimes we'd like to mask out ending
         # sentence punctuation. The mask is True if we want to remove the element
         upos = sample.upos if self.has_upos else None
-        if not self.has_upos and upos is not None: # and if not eval?
+        if not self.has_upos and upos is not None and (not self.eval):
             # perform actual masking
             mask = self.__mask(upos)
         else:
