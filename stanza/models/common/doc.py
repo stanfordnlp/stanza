@@ -1117,12 +1117,12 @@ class Word(StanzaObject):
             return None
 
         data = []
-        predecessors = sorted(list(graph.predecessors(self.id)))
+        predecessors = sorted(list(graph.predecessors(self.id)), key=lambda x: x if isinstance(x, tuple) else (x,))
         for parent in predecessors:
             deps = sorted(list(graph.get_edge_data(parent, self.id)))
             for dep in deps:
-                if len(parent) == 1:
-                    data.append("%d:%s" % (parent[0], dep))
+                if isinstance(parent, int):
+                    data.append("%d:%s" % (parent, dep))
                 else:
                     data.append("%d.%d:%s" % (parent[0], parent[1], dep))
         if not data:
@@ -1155,9 +1155,12 @@ class Word(StanzaObject):
         if all(isinstance(x, str) for x in value):
             value = [x.split(":", maxsplit=1) for x in value]
         for parent, dep in value:
-            # parents which aren't empty nodes (labeled X.Y in CoNLLU format)
-            # still get tuples this makes it easier to sort when writing them back out
+            # we have to match the format of the IDs.  since the IDs
+            # of the words are int if they aren't empty words, we need
+            # to convert single int IDs into int instead of tuple
             parent = tuple(map(int, parent.split(".", maxsplit=1)))
+            if len(parent) == 1:
+                parent = parent[0]
             graph.add_edge(parent, self.id, dep)
 
     @property
