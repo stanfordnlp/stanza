@@ -183,7 +183,7 @@ def train(args):
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    train_data = []
+    train_docs = []
     for train_file in args['train_file'].split(";"):
         logger.info("Reading %s" % train_file)
         # train_data is now a list of sentences, where each sentence is a
@@ -192,21 +192,28 @@ def train(args):
         # possibly augment the training data with some amount of fake data
         # based on the options chosen
         logger.info("Train File {}, Data Size: {}".format(train_file, len(train_file_data)))
-        train_data += train_file_data
-    logger.info("Full training dataset size: {}".format(len(train_data)))
-    train_doc = Document(train_data)
-    vocab = Dataset.init_vocab([train_doc], args)
-# , args['batch_size']
-    train_data = Dataset(train_doc, args, pretrain, vocab=vocab, evaluation=False)
-    train_batches = train_data.to_loader(batch_size=args["batch_size"],
-                                         shuffle=True)
+        train_docs.append(Document(train_file_data))
+    # we want to ensure that the model is able te output _ for empty columns, but
+    # create batches whereby if a doc has upos/xpos tags we include them all. therefore,
+    # we create seperate datasets and loaders for each input training file, which will
+    # ensure the system be able to see batches with both upos available and upos
+    # unavailable depending on what the availability in the file is.
+    vocab = Dataset.init_vocab(train_docs, args)
+    train_data = [Dataset(i, args, pretrain, vocab=vocab, evaluation=False)
+                  for i in train_docs]
     # here we make sure the model will learn to output _ for empty columns
-    if not train_data.has_upos:
-        train_data.has_upos = True
-    if not train_data.has_xpos:
-        train_data.has_xpos = True
-    if not train_data.has_feats:
-        train_data.has_feats = True
+    if not any(td.has_upos for td in train_data):
+        for td in train_data:
+            td.has_upos = True
+    if not any(td.has_xpos for td in train_data):
+        for td in train_data:
+            td.has_xpos = True
+    if not any(td.has_feats for td in train_data):
+        for td in train_data:
+            td.has_feats = True
+    # calculate the batches
+    train_batches = [i.to_loader(batch_size=args["batch_size"], shuffle=True)
+                     for i in train_data]
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_data = Dataset(dev_doc, args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
     # we want to put the entirety of the dev data into one batch
@@ -251,9 +258,10 @@ def train(args):
     train_loss = 0
     while True:
         do_break = False
-        # note: iter(train_batches) performs reshuffling if shuffle
-        # is on by default. no need to shuffle again per batch
-        for i, batch in enumerate(iter(train_batches)):
+        # we know merge all train batches together into one giant list
+        all_train_batches = [x for train_batch in train_batches for x in iter(train_batch)]
+        random.shuffle(all_train_batches)
+        for i, batch in enumerate(all_train_batches):
             start_time = time.time()
             global_step += 1
             loss = trainer.update(batch, eval=False) # update step
