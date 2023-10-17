@@ -202,6 +202,9 @@ def train(args):
     train_data = [Dataset(i, args, pretrain, vocab=vocab, evaluation=False)
                   for i in train_docs]
     # here we make sure the model will learn to output _ for empty columns
+    # if *any* dataset has data for the upos, xpos, or feature column,
+    # we consider that data enough to train the model on that column
+    # otherwise, we want to train the model to always output blanks
     if not any(td.has_upos for td in train_data):
         for td in train_data:
             td.has_upos = True
@@ -258,7 +261,11 @@ def train(args):
     train_loss = 0
     while True:
         do_break = False
-        # we know merge all train batches together into one giant list
+        # we now merge all train batches together into one giant list
+        # this allows us to mix batches which have or don't have individual training columns,
+        # such as if XPOS or UPOS are missing from a training file,
+        # as we shuffle all of those batches together
+        # the downside being that it loses the efficiency benefit of the pytorch dataloader
         all_train_batches = [x for train_batch in train_batches for x in iter(train_batch)]
         random.shuffle(all_train_batches)
         for i, batch in enumerate(all_train_batches):
