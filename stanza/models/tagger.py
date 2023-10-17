@@ -283,12 +283,12 @@ def train(args):
                 # eval on dev
                 logger.info("Evaluating on dev set...")
                 dev_preds = []
-                indicies = []
+                indices = []
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
-                    indicies.extend(batch[-1])
-                dev_preds = utils.unsort(dev_preds, indicies)
+                    indices.extend(batch[-1])
+                dev_preds = utils.unsort(dev_preds, indices)
                 # if len(dev_preds) == 0:
                     # breakpoint()
                 dev_data.doc.set([UPOS, XPOS, FEATS], [y for x in dev_preds for y in x])
