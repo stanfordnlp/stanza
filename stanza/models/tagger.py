@@ -112,7 +112,7 @@ def build_argparse():
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
 
-    parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%%')
+    parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 50%%')
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
@@ -121,6 +121,9 @@ def build_argparse():
 def parse_args(args=None):
     parser = build_argparse()
     args = parser.parse_args(args=args)
+
+    if args.augment_nopunct is None:
+        args.augment_nopunct = 0.5
 
     if args.wandb_name:
         args.wandb = True

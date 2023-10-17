@@ -60,6 +60,7 @@ class Dataset:
             random.shuffle(data)
         self.num_examples = len(data)
         self.__punct_tags = self.vocab["upos"].map(["PUNCT"])
+        self.augment_nopunct = self.args.get("augment_nopunct", 0.0)
 
     @staticmethod
     def init_vocab(docs, args):
@@ -108,13 +109,7 @@ class Dataset:
 
         ### augmentation 1: punctuation augmentation ###
         # tags that needs to be checked, currently only PUNCT
-        augment_nopunct = self.args.get("augment_nopunct")
-
-        if augment_nopunct is None:
-            # default augment to 30%
-            augment_nopunct = 0.3
-
-        if random.uniform(0,1) < augment_nopunct:
+        if random.uniform(0,1) < self.augment_nopunct:
             for i in self.__punct_tags: 
                 # generate a mask for the last element
                 last_element = torch.zeros_like(upos, dtype=torch.bool)
