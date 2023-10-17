@@ -289,8 +289,6 @@ def train(args):
                     dev_preds += preds
                     indices.extend(batch[-1])
                 dev_preds = utils.unsort(dev_preds, indices)
-                # if len(dev_preds) == 0:
-                    # breakpoint()
                 dev_data.doc.set([UPOS, XPOS, FEATS], [y for x in dev_preds for y in x])
                 CoNLL.write_doc2conll(dev_data.doc, system_pred_file)
 
