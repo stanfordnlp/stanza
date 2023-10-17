@@ -108,6 +108,7 @@ def build_argparse():
     parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
     parser.add_argument('--save_dir', type=str, default='saved_models/pos', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_tagger.pt", help="File name to save the model")
+    parser.add_argument('--save_each', default=False, action='store_true', help="Save each checkpoint to its own model.  Will take up a bunch of space")
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
@@ -143,6 +144,11 @@ def main(args=None):
 def model_file_name(args):
     return utils.standard_model_file_name(args, "tagger")
 
+def save_each_file_name(args):
+    model_file = model_file_name(args)
+    pieces = os.path.splitext(model_file)
+    return pieces[0] + "_%05d" + pieces[1]
+
 def load_pretrain(args):
     pt = None
     if args['pretrain']:
@@ -168,6 +174,11 @@ def get_eval_type(dev_batch):
 def train(args):
     model_file = model_file_name(args)
     utils.ensure_dir(os.path.split(model_file)[0])
+
+    if args['save_each']:
+        # so models.pt -> models_0001.pt, etc
+        model_save_each_file = save_each_file_name(args)
+        logger.info("Saving each checkpoint to %s" % model_save_each_file)
 
     # load pretrained vectors if needed
     pretrain = load_pretrain(args)
@@ -246,6 +257,10 @@ def train(args):
         args['eval_interval'] = utils.get_adaptive_eval_interval(dev_batch.num_examples, 2000, args['eval_interval'])
         logger.info("Evaluating the model every {} steps...".format(args['eval_interval']))
 
+    if args['save_each']:
+        logger.info("Saving initial checkpoint to %s" % (model_save_each_file % global_step))
+        trainer.save(model_save_each_file % global_step)
+
     using_amsgrad = False
     last_best_step = 0
     # start training
@@ -285,6 +300,10 @@ def train(args):
                     wandb.log({'train_loss': train_loss, 'dev_score': dev_score})
 
                 train_loss = 0
+
+                if args['save_each']:
+                    logger.info("Saving checkpoint to %s" % (model_save_each_file % global_step))
+                    trainer.save(model_save_each_file % global_step)
 
                 # save best model
                 if len(dev_score_history) == 0 or dev_score > max(dev_score_history):

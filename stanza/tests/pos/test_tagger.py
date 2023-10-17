@@ -223,6 +223,16 @@ class TestTagger:
         """
         trainer = self.run_training(tmp_path, wordvec_pretrain_file, [TRAIN_DATA_NO_UPOS, TRAIN_DATA_NO_XPOS, TRAIN_DATA_NO_FEATS], DEV_DATA)
 
+    def test_save_each(self, tmp_path, wordvec_pretrain_file):
+        extra_args = ['--save_each']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=extra_args)
+        save_each_name = tagger.save_each_file_name(trainer.args)
+        expected_models = sorted(set([save_each_name % i for i in range(0, trainer.args['max_steps']+1, trainer.args['eval_interval'])]))
+        assert len(expected_models) == 6
+        for model_name in expected_models:
+            assert os.path.exists(model_name)
+
+
     def test_with_bert(self, tmp_path, wordvec_pretrain_file):
         self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert'])
 
