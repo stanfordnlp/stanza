@@ -103,6 +103,32 @@ def process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits, ssurgeon_id=
 
     return send_ssurgeon_request(request)
 
+def build_word_entry(word_index, graph_word):
+    word_entry = {
+        ID: word_index,
+        TEXT: graph_word.word if graph_word.word else None,
+        LEMMA: graph_word.lemma if graph_word.lemma else None,
+        UPOS: graph_word.coarseTag if graph_word.coarseTag else None,
+        XPOS: graph_word.pos if graph_word.pos else None,
+        FEATS: java_protobuf_requests.features_to_string(graph_word.conllUFeatures),
+        DEPS: None,
+        NER: graph_word.ner if graph_word.ner else None,
+        MISC: None,
+        START_CHAR: None,   # TODO: fix this?  one problem is the text positions
+        END_CHAR: None,     #   might change across all of the sentences
+        # presumably python will complain if this conflicts
+        # with one of the constants above
+        "is_mwt": graph_word.isMWT,
+        "is_first_mwt": graph_word.isFirstMWT,
+        "mwt_text": graph_word.mwtText,
+        "mwt_misc": graph_word.mwtMisc,
+    }
+    # TODO: do "before" as well
+    word_entry[MISC] = java_protobuf_requests.space_after_to_misc(graph_word.after)
+    if graph_word.conllUMisc:
+        word_entry[MISC] = java_protobuf_requests.substitute_space_misc(graph_word.conllUMisc, word_entry[MISC])
+    return word_entry
+
 def convert_response_to_doc(doc, semgrex_response):
     doc = copy.deepcopy(doc)
     try:
@@ -115,31 +141,7 @@ def convert_response_to_doc(doc, semgrex_response):
             ssurgeon_graph = ssurgeon_result.graph
             tokens = []
             for graph_node, graph_word in zip(ssurgeon_graph.node, ssurgeon_graph.token):
-                if graph_node.copyAnnotation:
-                    continue
-                word_entry = {
-                    ID: graph_node.index,
-                    TEXT: graph_word.word if graph_word.word else None,
-                    LEMMA: graph_word.lemma if graph_word.lemma else None,
-                    UPOS: graph_word.coarseTag if graph_word.coarseTag else None,
-                    XPOS: graph_word.pos if graph_word.pos else None,
-                    FEATS: java_protobuf_requests.features_to_string(graph_word.conllUFeatures),
-                    DEPS: None,
-                    NER: graph_word.ner if graph_word.ner else None,
-                    MISC: None,
-                    START_CHAR: None,   # TODO: fix this?  one problem is the text positions
-                    END_CHAR: None,     #   might change across all of the sentences
-                    # presumably python will complain if this conflicts
-                    # with one of the constants above
-                    "is_mwt": graph_word.isMWT,
-                    "is_first_mwt": graph_word.isFirstMWT,
-                    "mwt_text": graph_word.mwtText,
-                    "mwt_misc": graph_word.mwtMisc,
-                }
-                # TODO: do "before" as well
-                word_entry[MISC] = java_protobuf_requests.space_after_to_misc(graph_word.after)
-                if graph_word.conllUMisc:
-                    word_entry[MISC] = java_protobuf_requests.substitute_space_misc(graph_word.conllUMisc, word_entry[MISC])
+                word_entry = build_word_entry(graph_node.index, graph_word)
                 tokens.append(word_entry)
             tokens.sort(key=lambda x: x[ID])
             for root in ssurgeon_graph.root:
