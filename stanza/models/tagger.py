@@ -228,7 +228,8 @@ def train(args):
     system_pred_file = args['output_file']
 
     # skip training if the language does not have training or dev data
-    if len(train_data) == 0 or len(dev_data) == 0:
+    # sum(...) to check if all of the training files are empty
+    if sum(len(td) for td in train_data) == 0 or len(dev_data) == 0:
         logger.info("Skip training because no data available...")
         return
 
