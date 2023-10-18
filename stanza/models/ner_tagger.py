@@ -410,11 +410,13 @@ def evaluate(args):
     # TODO: might still want to add multiple layers of tag evaluation to the scorer
     gold_tags = [[x[trainer.args['predict_tagset']] for x in tags] for tags in gold_tags]
 
-    _, _, score, _ = scorer.score_by_entity(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
+    _, _, score, entity_f1 = scorer.score_by_entity(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
     _, _, _, confusion = scorer.score_by_token(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
     logger.info("Weighted f1 for non-O tokens: %5f", confusion_to_weighted_f1(confusion, exclude=["O"]))
 
     logger.info("NER tagger score: %s %s %s %.2f", args['shorthand'], model_file, args['eval_file'], score*100)
+    entity_f1_lines = ["%s: %.2f" % (x, y*100) for x, y in entity_f1.items()]
+    logger.info("NER Entity F1 scores:\n  %s", "\n  ".join(entity_f1_lines))
     logger.info("NER token confusion matrix:\n{}".format(format_confusion(confusion)))
 
     if args['eval_output_file']:
