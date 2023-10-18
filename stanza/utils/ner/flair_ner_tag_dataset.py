@@ -41,7 +41,7 @@ def test_file(eval_file, tagger):
     pred_tags = [[x[1] for x in sentence] for sentence in pred_doc]
     gold_tags = [[x[1] for x in sentence] for sentence in gold_doc]
     print("RESULTS ON: %s" % eval_file)
-    _, _, f_micro = score_by_entity(pred_tags, gold_tags)
+    _, _, f_micro, _ = score_by_entity(pred_tags, gold_tags)
     score_by_token(pred_tags, gold_tags)
     return f_micro
 

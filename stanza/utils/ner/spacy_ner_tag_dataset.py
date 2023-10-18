@@ -82,7 +82,7 @@ def test_file(eval_file, tagger, simplify):
     pred_tags = [[x[1] for x in sentence] for sentence in pred_doc]
     gold_tags = [[x[1] for x in sentence] for sentence in gold_doc]
     print("RESULTS ON: %s" % eval_file)
-    _, _, f_micro = score_by_entity(pred_tags, gold_tags, ignore_tags=ignore_tags)
+    _, _, f_micro, _ = score_by_entity(pred_tags, gold_tags, ignore_tags=ignore_tags)
     _, _, _, confusion = score_by_token(pred_tags, gold_tags, ignore_tags=ignore_tags)
     print("NER token confusion matrix:\n{}".format(format_confusion(confusion, hide_blank=True, transpose=True)))
     return f_micro

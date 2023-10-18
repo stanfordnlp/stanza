@@ -321,7 +321,7 @@ def train(args):
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
-                _, _, dev_score = scorer.score_by_entity(dev_preds, dev_gold_tags, ignore_tags=args['ignore_tag_scores'])
+                _, _, dev_score, _ = scorer.score_by_entity(dev_preds, dev_gold_tags, ignore_tags=args['ignore_tag_scores'])
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
                 logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
@@ -410,7 +410,7 @@ def evaluate(args):
     # TODO: might still want to add multiple layers of tag evaluation to the scorer
     gold_tags = [[x[trainer.args['predict_tagset']] for x in tags] for tags in gold_tags]
 
-    _, _, score = scorer.score_by_entity(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
+    _, _, score, _ = scorer.score_by_entity(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
     _, _, _, confusion = scorer.score_by_token(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
     logger.info("Weighted f1 for non-O tokens: %5f", confusion_to_weighted_f1(confusion, exclude=["O"]))
 

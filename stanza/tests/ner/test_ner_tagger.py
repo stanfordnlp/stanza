@@ -8,7 +8,6 @@ import stanza
 
 from stanza.tests import *
 from stanza.models import ner_tagger
-from stanza.models.ner.scorer import score_by_token, score_by_entity
 from stanza.utils.confusion import confusion_to_macro_f1
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 from stanza.utils.training.run_ner import build_pretrain_args
