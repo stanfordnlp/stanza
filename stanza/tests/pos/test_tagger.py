@@ -245,9 +245,10 @@ class TestTagger:
             upos_unchanged += torch.allclose(t1.model.upos_clf.weight, t2.model.upos_clf.weight)
             xpos_unchanged += torch.allclose(t1.model.xpos_clf.W_bilin.weight, t2.model.xpos_clf.W_bilin.weight)
             ufeats_unchanged += all(torch.allclose(f1.W_bilin.weight, f2.W_bilin.weight) for f1, f2 in zip(t1.model.ufeats_clf, t2.model.ufeats_clf))
-        assert upos_unchanged == 1
-        assert xpos_unchanged == 1
-        assert ufeats_unchanged == 1
+        upos_norms = [torch.linalg.norm(t.model.upos_clf.weight) for t in saved_trainers]
+        assert upos_unchanged == 1, "Unchanged: {} {} {} {}".format(upos_unchanged, xpos_unchanged, ufeats_unchanged, upos_norms)
+        assert xpos_unchanged == 1, "Unchanged: %d %d %d" % (upos_unchanged, xpos_unchanged, ufeats_unchanged)
+        assert ufeats_unchanged == 1, "Unchanged: %d %d %d" % (upos_unchanged, xpos_unchanged, ufeats_unchanged)
 
     def test_save_each(self, tmp_path, wordvec_pretrain_file):
         extra_args = ['--save_each']
