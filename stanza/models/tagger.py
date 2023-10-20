@@ -265,6 +265,8 @@ def train(args):
     last_best_step = 0
     # start training
     train_loss = 0
+    if args['log_norms']:
+        trainer.model.log_norms()
     while True:
         do_break = False
         all_train_batches = [x for train_batch in train_batches for x in train_batch]
