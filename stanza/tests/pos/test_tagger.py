@@ -230,7 +230,10 @@ class TestTagger:
         each column stay unchanged in one iteration and change in the
         other two.
         """
-        extra_args = ['--save_each', '--eval_interval', '1', '--max_steps', '3', '--batch_size', '1']
+        # use SGD because some old versions of pytorch with Adam keep
+        # learning a value even if the loss is 0 in subsequent steps
+        # (perhaps it had a momentum by default?)
+        extra_args = ['--save_each', '--eval_interval', '1', '--max_steps', '3', '--batch_size', '1', '--optim', 'sgd']
         trainer = self.run_training(tmp_path, wordvec_pretrain_file, [TRAIN_DATA_NO_UPOS, TRAIN_DATA_NO_XPOS, TRAIN_DATA_NO_FEATS], DEV_DATA, extra_args=extra_args)
         save_each_name = tagger.save_each_file_name(trainer.args)
         model_files = [save_each_name % i for i in range(4)]
