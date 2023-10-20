@@ -7,6 +7,8 @@ Uses a couple sentences of UD_English-EWT as training/dev data
 import os
 import pytest
 
+import torch
+
 from stanza.models import tagger
 from stanza.models.common import pretrain
 from stanza.models.pos.trainer import Trainer
@@ -219,9 +221,33 @@ class TestTagger:
         """
         Test that using train files with missing columns works
 
-        TODO: we should find some evidence that it is successfully training the upos & xpos
+        In this test, we create three separate files, each with a single training entry.
+        We then train on an amalgam of those three files with a batch size of 1, saving after each batch.
+        This will ensure that only one item is used for each training loop and we can inspect the models which were saved.
+
+        Since each of the three files have exactly one column missing
+        from the training data, we expect to see the output maps for
+        each column stay unchanged in one iteration and change in the
+        other two.
         """
-        trainer = self.run_training(tmp_path, wordvec_pretrain_file, [TRAIN_DATA_NO_UPOS, TRAIN_DATA_NO_XPOS, TRAIN_DATA_NO_FEATS], DEV_DATA)
+        extra_args = ['--save_each', '--eval_interval', '1', '--max_steps', '3', '--batch_size', '1']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, [TRAIN_DATA_NO_UPOS, TRAIN_DATA_NO_XPOS, TRAIN_DATA_NO_FEATS], DEV_DATA, extra_args=extra_args)
+        save_each_name = tagger.save_each_file_name(trainer.args)
+        model_files = [save_each_name % i for i in range(4)]
+        assert all(os.path.exists(x) for x in model_files)
+        pt = pretrain.Pretrain(wordvec_pretrain_file)
+        saved_trainers = [Trainer(pretrain=pt, model_file=model_file) for model_file in model_files]
+
+        upos_unchanged = 0
+        xpos_unchanged = 0
+        ufeats_unchanged = 0
+        for t1, t2 in zip(saved_trainers[:-1], saved_trainers[1:]):
+            upos_unchanged += torch.allclose(t1.model.upos_clf.weight, t2.model.upos_clf.weight)
+            xpos_unchanged += torch.allclose(t1.model.xpos_clf.W_bilin.weight, t2.model.xpos_clf.W_bilin.weight)
+            ufeats_unchanged += all(torch.allclose(f1.W_bilin.weight, f2.W_bilin.weight) for f1, f2 in zip(t1.model.ufeats_clf, t2.model.ufeats_clf))
+        assert upos_unchanged == 1
+        assert xpos_unchanged == 1
+        assert ufeats_unchanged == 1
 
     def test_save_each(self, tmp_path, wordvec_pretrain_file):
         extra_args = ['--save_each']
