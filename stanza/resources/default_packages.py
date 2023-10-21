@@ -647,6 +647,7 @@ TRANSFORMER_NICKNAMES = {
     "bert-base-multilingual-cased": "mbert",
     "xlm-roberta-large": "xlm-roberta-large",
     "google/electra-large-discriminator": "electra-large",
+    "microsoft/deberta-v3-large": "deberta-v3-large",
 
     # es
     "bertin-project/bertin-roberta-base-spanish": "bertin-roberta",
