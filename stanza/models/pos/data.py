@@ -1,3 +1,4 @@
+from collections import namedtuple
 import random
 import logging
 import torch
@@ -10,6 +11,8 @@ from stanza.models.pos.xpos_vocab_factory import xpos_vocab_factory
 from stanza.models.common.doc import *
 
 logger = logging.getLogger('stanza')
+
+DataBatch = namedtuple("DataBatch", "words words_mask wordchars wordchars_mask upos xpos ufeats pretrained orig_idx word_orig_idx lens word_lens text")
 
 class DataLoader:
     def __init__(self, doc, batch_size, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False, bert_tokenizer=None):
@@ -125,7 +128,7 @@ class DataLoader:
         pretrained = get_long_tensor(batch[5], batch_size)
         text = batch[6]
         sentlens = [len(x) for x in batch[0]]
-        return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, orig_idx, word_orig_idx, sentlens, word_lens, text
+        return DataBatch(words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, orig_idx, word_orig_idx, sentlens, word_lens, text)
 
     def __iter__(self):
         for i in range(self.__len__()):
