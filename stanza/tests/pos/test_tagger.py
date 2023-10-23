@@ -210,6 +210,24 @@ class TestTagger:
         assert '	hers	' in TRAIN_DATA_2
         assert 'hers' in word_vocab
 
+    def test_train_zero_augment(self, tmp_path, wordvec_pretrain_file):
+        """
+        Train with the punct augmentation set to zero
+
+        Distinguishs cases where training works w/ or w/o augmentation
+        """
+        extra_args = ['--augment_nopunct', '0.0']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=extra_args)
+
+    def test_train_100_augment(self, tmp_path, wordvec_pretrain_file):
+        """
+        Train with the punct augmentation set to 1.0
+
+        Distinguishs cases where training works w/ or w/o augmentation
+        """
+        extra_args = ['--augment_nopunct', '1.0']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=extra_args)
+
     def test_train_charlm(self, tmp_path, wordvec_pretrain_file, charlm_args):
         trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=charlm_args)
 
