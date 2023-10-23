@@ -420,6 +420,7 @@ class Sentence(StanzaObject):
         # comments are a list of comment lines occurring before the
         # sentence in a CoNLL-U file.  Can be empty
         self._comments = []
+        self._doc_id = None
 
         # enhanced_dependencies represents the DEPS column
         # this is a networkx MultiDiGraph
@@ -521,6 +522,23 @@ class Sentence(StanzaObject):
                 break
         else: # this is intended to be a for/else loop
             self._comments.append(sent_id_comment)
+
+    @property
+    def doc_id(self):
+        """ conll-style doc_id  Can be left blank if unknown """
+        return self._doc_id
+
+    @doc_id.setter
+    def doc_id(self, value):
+        """ Set the sentence's doc_id value. """
+        self._doc_id = value
+        doc_id_comment = "# doc_id = " + str(value)
+        for comment_idx, comment in enumerate(self._comments):
+            if comment.startswith("# doc_id = "):
+                self._comments[comment_idx] = doc_id_comment
+                break
+        else: # this is intended to be a for/else loop
+            self._comments.append(doc_id_comment)
 
     @property
     def doc(self):
@@ -686,6 +704,11 @@ class Sentence(StanzaObject):
             sent_id = sent_id.strip()
             self._sent_id = sent_id
             self._comments = [x for x in self._comments if not x.startswith("# sent_id =")]
+        elif comment.startswith("# doc_id ="):
+            _, doc_id = comment.split("=", 1)
+            doc_id = doc_id.strip()
+            self._doc_id = doc_id
+            self._comments = [x for x in self._comments if not x.startswith("# doc_id =")]
         self._comments.append(comment)
 
     def rebuild_dependencies(self):
