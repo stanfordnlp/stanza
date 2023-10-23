@@ -395,3 +395,24 @@ def check_empty_deps_conversion(input_str, expected_words):
     assert len(doc.sentences[0].tokens) == expected_words
     assert len(doc.sentences[0].words) == expected_words
     assert len(doc.sentences[0].empty_words) == 1
+
+
+ESTONIAN_DOC_ID = """
+# doc_id = this_is_a_doc
+# sent_id = ewtb2_000035_15
+# text = Ja paari aasta pärast rôômalt maasikatele ...
+1	Ja	ja	CCONJ	J	_	3	cc	5.1:cc	_
+2	paari	paar	NUM	N	Case=Gen|Number=Sing|NumForm=Word|NumType=Card	3	nummod	3:nummod	_
+3	aasta	aasta	NOUN	S	Case=Gen|Number=Sing	0	root	5.1:obl	_
+4	pärast	pärast	ADP	K	AdpType=Post	3	case	3:case	_
+5	rôômalt	rõõmsalt	ADV	D	Typo=Yes	3	advmod	5.1:advmod	Orphan=Yes|CorrectForm=rõõmsalt
+5.1	panna	panema	VERB	V	VerbForm=Inf	_	_	0:root	Empty=5.1
+6	maasikatele	maasikas	NOUN	S	Case=All|Number=Plur	3	obl	5.1:obl	Orphan=Yes
+7	...	...	PUNCT	Z	_	3	punct	5.1:punct	_
+""".strip()
+
+def test_read_doc_id():
+    doc = CoNLL.conll2doc(input_str=ESTONIAN_DOC_ID, ignore_gapping=False)
+    assert "{:C}".format(doc) == ESTONIAN_DOC_ID
+    assert doc.sentences[0].doc_id == 'this_is_a_doc'
+
