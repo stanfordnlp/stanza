@@ -115,7 +115,7 @@ def test_sentiment_comment(doc):
 
 def test_sent_id_comment(doc):
     """
-    Test that setting the sentiment on a doc sets the sentiment comment
+    Test that setting the sent_id on a sentence sets the sentiment comment
     """
     for sent_idx, sentence in enumerate(doc.sentences):
         assert len([x for x in sentence.comments if x.startswith("# sent_id")]) == 1
@@ -130,6 +130,11 @@ def test_sent_id_comment(doc):
         assert sentence.sent_id == "%d" % (sent_idx + 10)
         assert len([x for x in doc.sentences[0].comments if x.startswith("# sent_id")]) == 1
         assert "# sent_id = %d" % (sent_idx + 10) in sentence.comments
+
+    doc.sentences[0].add_comment("# sent_id = bar")
+    assert doc.sentences[0].sent_id == "bar"
+    assert "# sent_id = bar" in doc.sentences[0].comments
+    assert len([x for x in doc.sentences[0].comments if x.startswith("# sent_id")]) == 1
 
 @pytest.fixture(scope="module")
 def pipeline():

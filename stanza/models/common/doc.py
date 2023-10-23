@@ -668,7 +668,7 @@ class Sentence(StanzaObject):
         If the comment does not already have # at the start, it will be added.
         """
         if not comment.startswith("#"):
-            comment = "#" + comment
+            comment = "# " + comment
         if comment.startswith("# constituency ="):
             _, tree_text = comment.split("=", 1)
             tree = tree_reader.read_trees(tree_text)
@@ -681,6 +681,11 @@ class Sentence(StanzaObject):
             sentiment = int(sentiment.strip())
             self._sentiment = sentiment
             self._comments = [x for x in self._comments if not x.startswith("# sentiment =")]
+        elif comment.startswith("# sent_id ="):
+            _, sent_id = comment.split("=", 1)
+            sent_id = sent_id.strip()
+            self._sent_id = sent_id
+            self._comments = [x for x in self._comments if not x.startswith("# sent_id =")]
         self._comments.append(comment)
 
     def rebuild_dependencies(self):
