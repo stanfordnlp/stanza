@@ -102,7 +102,7 @@ def build_argparse():
     parser.add_argument('--fix_eval_interval', dest='adapt_eval_interval', action='store_false', \
             help="Use fixed evaluation interval for all treebanks, otherwise by default the interval will be increased for larger treebanks.")
     parser.add_argument('--max_steps_before_stop', type=int, default=3000, help='Changes learning method or early terminates after this many steps if the dev scores are not improving')
-    parser.add_argument('--batch_size', type=int, default=50)
+    parser.add_argument('--batch_size', type=int, default=250)
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
@@ -124,7 +124,7 @@ def parse_args(args=None):
     args = parser.parse_args(args=args)
 
     if args.augment_nopunct is None:
-        args.augment_nopunct = 0.5
+        args.augment_nopunct = 0.25
 
     if args.wandb_name:
         args.wandb = True
