@@ -208,10 +208,18 @@ def train(args):
         logger.info("Augmented data size: {}".format(len(train_data)))
         train_doc = Document(train_data)
         train_docs.append(train_doc)
+    # we want to ensure that the model is able te output _ for empty columns,
+    # but create batches whereby if a doc has upos/xpos tags we include them all.
+    # therefore, we create seperate datasets and loaders for each input training file,
+    # which will ensure the system be able to see batches with both upos available
+    # and upos unavailable depending on what the availability in the file is.
     vocab = DataLoader.init_vocab(train_docs, args)
     train_batches = [DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
                      for train_doc in train_docs]
     # here we make sure the model will learn to output _ for empty columns
+    # if *any* dataset has data for the upos, xpos, or feature column,
+    # we consider that data enough to train the model on that column
+    # otherwise, we want to train the model to always output blanks
     if not any(train_batch.has_upos for train_batch in train_batches):
         for train_batch in train_batches:
             train_batch.has_upos = True
@@ -269,6 +277,10 @@ def train(args):
         trainer.model.log_norms()
     while True:
         do_break = False
+        # we now merge all train batches together into one giant list
+        # this allows us to mix batches which have or don't have individual training columns,
+        # such as if XPOS or UPOS are missing from a training file,
+        # as we shuffle all of those batches together
         all_train_batches = [x for train_batch in train_batches for x in train_batch]
         random.shuffle(all_train_batches)
         for i, batch in enumerate(all_train_batches):
