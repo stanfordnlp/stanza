@@ -5,6 +5,7 @@ import torch
 from collections import namedtuple
 
 from torch.utils.data import DataLoader as DL
+from torch.nn.utils.rnn import pad_sequence
 
 from stanza.models.common.bert_embedding import filter_data
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
@@ -98,11 +99,8 @@ class Dataset:
     def __mask(self, upos):
         """Returns a torch boolean about which elements should be masked out"""
 
-        # creates temporary tensor to operate on
-        upos = torch.tensor(upos)
-
         # creates all false mask
-        mask = ~upos.bool()
+        mask = torch.zeros_like(upos, dtype=torch.bool)
 
         ### augmentation 1: punctuation augmentation ###
         # tags that needs to be checked, currently only PUNCT
@@ -164,41 +162,48 @@ class Dataset:
         # For instance, sometimes we'd like to mask out ending sentence punctuation.
         # We copy the other items here so that any edits made because
         # of the mask don't clobber the version owned by the Dataset
-        # TODO: for the most part, these can be converted to tensors here
-        # and avoid any clobbering issues
-        upos = copy.deepcopy(sample.upos) if self.has_upos else None
-        char = copy.deepcopy(sample.char)
-        words = copy.deepcopy(sample.word)
-        xpos = copy.deepcopy(sample.xpos) if self.has_xpos else None
-        ufeats = copy.deepcopy(sample.feats) if self.has_feats else None
-        pretrained = copy.deepcopy(sample.pretrain)
+        # convert to tensors
+        # TODO: only store single lists per data entry?
+        words = torch.tensor(sample.word[0])
+        # convert the rest to tensors
+        upos = torch.tensor(sample.upos[0]) if self.has_upos else None
+        xpos = torch.tensor(sample.xpos[0]) if self.has_xpos else None
+        ufeats = torch.tensor(sample.feats[0]) if self.has_feats else None
+        pretrained = torch.tensor(sample.pretrain[0])
+
+        # and deal with char & raw_text
+        char = sample.char[0]
         raw_text = sample.text
 
+        # some data augmentation requires constructing a mask based on
+        # which upos. For instance, sometimes we'd like to mask out ending
+        # sentence punctuation. The mask is True if we want to remove the element
         if self.has_upos and upos is not None and not self.eval:
             # perform actual masking
-            # The mask is True if we want to remove the element
             mask = self.__mask(upos)
         else:
-            # not masking
-            # leave a skeleton to build on for other possible future masks
+            # dummy mask that's all false
             mask = None
-
         if mask is not None:
             mask_index = mask.nonzero()
 
             # mask out the elements that we need to mask out
             for mask in mask_index:
-                words[mask[0]][mask[1]] = PAD_ID
+                mask = mask.item()
+                words[mask] = PAD_ID
                 if upos is not None:
-                    upos[mask[0]][mask[1]] = PAD_ID
+                    upos[mask] = PAD_ID
                 if xpos is not None:
-                    xpos[mask[0]][mask[1]] = (PAD_ID if isinstance(xpos[mask[0]][mask[1]], int)
-                                              else [PAD_ID for _ in range(len(xpos[0][0]))])
+                    # TODO: test the multi-dimension xpos
+                    xpos[mask, ...] = PAD_ID
                 if ufeats is not None:
-                    ufeats[mask[0]][mask[1]] = [PAD_ID for _ in range(len(ufeats[0][0]))]
-                pretrained[mask[0]][mask[1]] = PAD_ID
-                del char[mask[0]][mask[1]]
-                raw_text = raw_text[:mask[1]] + raw_text[mask[1]+1:]
+                    ufeats[mask, ...] = PAD_ID
+                pretrained[mask] = PAD_ID
+                char = char[:mask] + char[mask+1:]
+                raw_text = raw_text[:mask] + raw_text[mask+1:]
+
+        # get each character from the input sentnece
+        # chars = [w for sent in char for w in sent]
 
         return DataSample(words, char, upos, xpos, ufeats, pretrained, raw_text), key
 
@@ -222,46 +227,34 @@ class Dataset:
         # collate_fn is given a list of length batch size
         batch_size = len(data)
 
-        # flatten everything else (because they seem to contain
-        # only one sentence each. TODO are we sure about this @John)
-        words = [i[0] for i in words]
-        if None not in upos:
-            upos = [i[0] for i in upos]
-        if None not in xpos:
-            xpos = [i[0] for i in xpos]
-        if None not in ufeats:
-            ufeats = [i[0] for i in ufeats]
-        pretrained = [i[0] for i in pretrained]
-
         # sort sentences by lens for easy RNN operations
-        lens = [len(list(filter(lambda x:x!=0, x))) for x in words]
+        lens = [torch.sum(x != PAD_ID) for x in words]
         (words, wordchars, upos, xpos,
          ufeats, pretrained, text), orig_idx = sort_all((words, wordchars, upos, xpos,
                                                          ufeats, pretrained, text), lens)
-        lens = [len(list(filter(lambda x:x!=0, x))) for x in words] # we need to reinterpret lengths for the RNN
+        lens = [torch.sum(x != PAD_ID) for x in words] # we need to reinterpret lengths for the RNN
 
         # combine all words into one large list, and sort for easy charRNN ops
         wordchars = [w for sent in wordchars for w in sent]
-        wordchars = sum(wordchars, [])
         word_lens = [len(x) for x in wordchars]
         (wordchars,), word_orig_idx = sort_all([wordchars], word_lens)
         word_lens = [len(x) for x in wordchars] # we need to reinterpret lengths for the RNN
 
         # We now pad everything
-        words = get_long_tensor(words, batch_size)
+        words = pad_sequence(words, True, PAD_ID)
         if None not in upos:
-            upos = get_long_tensor(upos, batch_size)
+            upos = pad_sequence(upos, True, PAD_ID)
         else:
             upos = None
         if None not in xpos:
-            xpos = get_long_tensor(xpos, batch_size)
+            xpos = pad_sequence(xpos, True, PAD_ID)
         else:
             xpos = None
         if None not in ufeats:
-            ufeats = get_long_tensor(ufeats, batch_size)
+            ufeats = pad_sequence(ufeats, True, PAD_ID)
         else:
             ufeats = None
-        pretrained = get_long_tensor(pretrained, batch_size)
+        pretrained = pad_sequence(pretrained, True, PAD_ID)
         wordchars = get_long_tensor(wordchars, len(word_lens))
 
         # and finally create masks for the padding indices
