@@ -45,7 +45,7 @@ default_ners = {
     "bg": "bsnlp19",
     "da": "ddt",
     "de": "germeval2014",
-    "en": "ontonotes",
+    "en": "ontonotes_charlm",
     "es": "conll02",
     "fa": "arman",
     "fi": "turku",
