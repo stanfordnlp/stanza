@@ -5,8 +5,8 @@ from typing import List, Tuple
 import numpy as np                                 # type: ignore
 from transformers import AutoModel, AutoTokenizer  # type: ignore
 
-from coref.config import Config
-from coref.const import Doc
+from stanza.models.coref.config import Config
+from stanza.models.coref.const import Doc
 
 
 def get_subwords_batches(doc: Doc,
