@@ -25,7 +25,7 @@ def evaluate_models(eval_path: str, binary_classifier: Any, baseline_classifier:
     gold_doc = load_doc_from_conll_file(eval_path)
     for sentence in doc.sentences:
         for word in sentence.words:
-            if word.text == "'s":
+            if word.text == "'s" and word.upos == "VERB":
                 gold_tag = word.lemma
                 # predict binary classifier
                 bin_predict = None  # TODO
@@ -49,7 +49,7 @@ def main():
     count = 0
     for sentence in doc.sentences:
         for word in sentence.words:
-            if word.text == "'s":
+            if word.text == "'s" and word.upos == "VERB":
                 print("Found")
                 print(word)
                 count += 1 
