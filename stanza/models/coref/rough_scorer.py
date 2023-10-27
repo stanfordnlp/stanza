@@ -6,7 +6,7 @@ from typing import Tuple
 
 import torch
 
-from coref.config import Config
+from stanza.models.coref.config import Config
 
 
 class RoughScorer(torch.nn.Module):

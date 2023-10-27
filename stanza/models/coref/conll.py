@@ -6,8 +6,8 @@ from contextlib import contextmanager
 import os
 from typing import List, TextIO
 
-from coref.config import Config
-from coref.const import Doc, Span
+from stanza.models.coref.config import Config
+from stanza.models.coref.const import Doc, Span
 
 
 # pylint: disable=too-many-locals
