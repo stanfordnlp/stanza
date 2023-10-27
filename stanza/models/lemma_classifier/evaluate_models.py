@@ -25,7 +25,7 @@ def evaluate_models(eval_path: str, binary_classifier: Any, baseline_classifier:
     gold_doc = load_doc_from_conll_file(eval_path)
     for sentence in doc.sentences:
         for word in sentence.words:
-            if word.text == "'s" and word.upos == "VERB":
+            if word.text == "'s" and word.upos in ["VERB", "AUX"]:
                 gold_tag = word.lemma
                 # predict binary classifier
                 bin_predict = None  # TODO
@@ -44,12 +44,12 @@ def main():
     """
     Runs a test on the EN_GUM test set
     """
-    coNLL_path = os.path.join(os.path.dirname(__file__), "en_gum-ud-test.conllu")
+    coNLL_path = os.path.join(os.path.dirname(__file__), "en_gum-ud-train.conllu")
     doc = load_doc_from_conll_file(coNLL_path)
     count = 0
     for sentence in doc.sentences:
         for word in sentence.words:
-            if word.text == "'s" and word.upos == "VERB":
+            if word.text == "'s" and word.upos in ["VERB", "AUX"]:
                 print("Found")
                 print(word)
                 count += 1 
