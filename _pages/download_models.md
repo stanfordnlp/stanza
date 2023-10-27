@@ -10,9 +10,13 @@ toc: false
 
 Stanza provides pretrained NLP models for a total 70 human languages. On this page we provide detailed information on how to download these models to process text in a language of your choosing.
 
-Pretrained models in Stanza can be divided into two categories, based on the datasets they were trained on:
-1. Universal Dependencies (UD) models, which are trained on the UD treebanks, and cover functionalities including tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing;
-2. NER models, which support named entity tagging for 8 languages, and are trained on various NER datasets.
+## Automatic download
+
+Pretrained models in Stanza can be divided into four categories, based on the datasets they were trained on:
+- Universal Dependencies (UD) models, which are trained on the UD treebanks, and cover functionalities including tokenization, multi-word token (MWT) expansion, lemmatization, part-of-speech (POS) and morphological features tagging and dependency parsing;
+- NER models, which support named entity tagging for 8 languages, and are trained on various NER datasets.
+- Constituency models, trained on a specific constituency parser dataset
+- Sentiment models, similarly trained on a dataset for that specific language and task
 
 {% include alerts.html %}
 {{ note }}
@@ -46,3 +50,79 @@ Downloading Stanza models is as simple as calling the `stanza.download()` method
 {{ "As of v1.4.0, creating a `Pipeline` will automatically try to download missing models.  You can turn off this behavior with `download_method=None` when creating a pipeline." | markdownify }}
 {{ end }}
 
+
+## Manual download
+
+In some cases, it is not convenient, practical, or possible to
+download models automatically.  In such cases, it will be necessary to
+manually download the models and populate the resources directory.
+
+By default, the resources are downloaded to `~/stanza_resources`.
+There are a couple ways to change this.  One is by defining the
+environment variable `$STANZA_RESOURCES_DIR`.  The other is, when
+creating a `Pipeline`, specify a different directory via the
+`model_dir` parameter.
+
+If you are in a situation where you cannot download resources while
+creating the `Pipeline`, it will also be necessary to provide the
+argument `download_method=None`, as by default the `Pipeline` checks
+for updated models at creation time.
+
+Once you have chosen the location for the models download,
+if you are able to download models programmatically, the easiest way
+to populate that directory will be using the `stanza.download()` method described above.
+
+Otherwise, models are available for download in separate HuggingFace
+repos for the language in question.  Each repo is specified by the
+short language code used by Stanza
+
+So, the models for English are [in the stanza-en repo](https://huggingface.co/stanfordnlp/stanza-en)
+
+You will also need to download the resources to download the
+resources.json file appropriate for the Stanza version you are using.
+This is available [in a Stanford git repo](https://github.com/stanfordnlp/stanza-resources)
+The resources file goes in `$STANZA_RESOURCES/resources.json` (without the version number)
+
+Each language has the default models packaged in a `default.zip` file.
+The English one, for example,
+[is in this subdirectory of the English models tree](https://huggingface.co/stanfordnlp/stanza-en/tree/main/models)
+This goes in a language specific directory of `$STANZA_RESOURCES_DIR`
+so for example the English package goes in `$STANZA_RESOURCES_DIR/en/default.zip`
+From there, unzip the models package.
+
+As of version 1.6.1, downloading `resources.json`, downloading the
+`default.zip` file for English, and unzipping `default.zip` results in
+the following:
+
+```
+$STANZA_RESOURCES_DIR/
+$STANZA_RESOURCES_DIR/resources.json
+$STANZA_RESOURCES_DIR/en
+$STANZA_RESOURCES_DIR/en/default.zip
+$STANZA_RESOURCES_DIR/en/backward_charlm/1billion.pt
+$STANZA_RESOURCES_DIR/en/constituency/ptb3-revised_charlm.pt
+$STANZA_RESOURCES_DIR/en/depparse/combined_charlm.pt
+$STANZA_RESOURCES_DIR/en/forward_charlm/1billion.pt
+$STANZA_RESOURCES_DIR/en/lemma/combined_nocharlm.pt
+$STANZA_RESOURCES_DIR/en/ner/ontonotes_charlm.pt
+$STANZA_RESOURCES_DIR/en/pos/combined_charlm.pt
+$STANZA_RESOURCES_DIR/en/pretrain/conll17.pt
+$STANZA_RESOURCES_DIR/en/pretrain/fasttextcrawl.pt
+$STANZA_RESOURCES_DIR/en/sentiment/sstplus.pt
+$STANZA_RESOURCES_DIR/en/tokenize/combined.pt
+```
+
+This is the expected layout if manually downloading model files.
+
+To manually download a different package for the same language,
+individual model files can be downloaded and added to the appropriate
+place.  For example, to use the `ncbi_disease.pt` NER model for
+English, that can be downloaded from
+`https://huggingface.co/stanfordnlp/stanza-en/tree/main/models/ner`
+into `STANZA_RESOURCES_DIR/en/ner/ncbi_disease.pt`.  You can explore
+the stanza-en tree to find the specific model you are looking for.
+
+If downloading several individual models, we are aware that can be
+tedious, especially when checking for updates.  Please let us know if
+you need a package similar to `default.zip` for a different
+combination of models.
