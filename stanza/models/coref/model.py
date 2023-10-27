@@ -14,18 +14,18 @@ import torch
 from tqdm import tqdm   # type: ignore
 import transformers     # type: ignore
 
-from coref import bert, conll, utils
-from coref.anaphoricity_scorer import AnaphoricityScorer
-from coref.cluster_checker import ClusterChecker
-from coref.config import Config
-from coref.const import CorefResult, Doc
-from coref.loss import CorefLoss
-from coref.pairwise_encoder import PairwiseEncoder
-from coref.rough_scorer import RoughScorer
-from coref.span_predictor import SpanPredictor
-from coref.tokenizer_customization import TOKENIZER_FILTERS, TOKENIZER_MAPS
-from coref.utils import GraphNode
-from coref.word_encoder import WordEncoder
+from stanza.models.coref import bert, conll, utils
+from stanza.models.coref.anaphoricity_scorer import AnaphoricityScorer
+from stanza.models.coref.cluster_checker import ClusterChecker
+from stanza.models.coref.config import Config
+from stanza.models.coref.const import CorefResult, Doc
+from stanza.models.coref.loss import CorefLoss
+from stanza.models.coref.pairwise_encoder import PairwiseEncoder
+from stanza.models.coref.rough_scorer import RoughScorer
+from stanza.models.coref.span_predictor import SpanPredictor
+from stanza.models.coref.tokenizer_customization import TOKENIZER_FILTERS, TOKENIZER_MAPS
+from stanza.models.coref.utils import GraphNode
+from stanza.models.coref.word_encoder import WordEncoder
 
 
 class CorefModel:  # pylint: disable=too-many-instance-attributes

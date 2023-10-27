@@ -13,7 +13,7 @@ import time
 import numpy as np  # type: ignore
 import torch        # type: ignore
 
-from coref import CorefModel
+from stanza.models.coref.model import CorefModel
 
 
 @contextmanager

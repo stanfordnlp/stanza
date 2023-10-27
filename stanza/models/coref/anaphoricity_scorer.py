@@ -3,8 +3,8 @@ mentions produces their anaphoricity scores.
 """
 import torch
 
-from coref import utils
-from coref.config import Config
+from stanza.models.coref import utils
+from stanza.models.coref.config import Config
 
 
 class AnaphoricityScorer(torch.nn.Module):

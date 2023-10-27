@@ -5,8 +5,8 @@ from typing import List
 
 import torch
 
-from coref.config import Config
-from coref.const import Doc
+from stanza.models.coref.config import Config
+from stanza.models.coref.const import Doc
 
 
 class PairwiseEncoder(torch.nn.Module):
