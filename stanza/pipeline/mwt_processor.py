@@ -4,6 +4,8 @@ Processor for performing multi-word-token expansion
 
 import io
 
+import torch
+
 from stanza.models.mwt.data import DataLoader
 from stanza.models.mwt.trainer import Trainer
 from stanza.pipeline._constants import *
@@ -28,9 +30,10 @@ class MWTProcessor(UDProcessor):
             if self.config['dict_only']:
                 preds = dict_preds
             else:
-                preds = []
-                for i, b in enumerate(batch):
-                    preds += self.trainer.predict(b)
+                with torch.no_grad():
+                    preds = []
+                    for i, b in enumerate(batch):
+                        preds += self.trainer.predict(b)
 
                 if self.config.get('ensemble_dict', False):
                     preds = self.trainer.ensemble(batch.doc.get_mwt_expansions(evaluation=True), preds)

@@ -19,7 +19,7 @@ import torch
 from torch import nn, optim
 
 import stanza.models.pos.data as data
-from stanza.models.pos.data import DataLoader
+from stanza.models.pos.data import Dataset
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos import scorer
 from stanza.models.common import utils
@@ -32,16 +32,16 @@ from stanza.models import _training_logging
 
 logger = logging.getLogger('stanza')
 
-def parse_args(args=None):
+def build_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/pos', help='Root dir for saving models.')
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/wordvec', help='Directory of word vectors.')
     parser.add_argument('--wordvec_file', type=str, default=None, help='Word vectors filename.')
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
-    parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
+    parser.add_argument('--train_file', type=str, default=None, help='Input file for training.')
+    parser.add_argument('--eval_file', type=str, default=None, help='Input file for scoring.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
-    parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
+    parser.add_argument('--no_gold_labels', dest='gold_labels', action='store_false', help="Don't score the eval file - perhaps it has no gold labels, for example.  Cannot be used at training time")
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
@@ -51,9 +51,11 @@ def parse_args(args=None):
     parser.add_argument('--char_hidden_dim', type=int, default=400)
     parser.add_argument('--deep_biaff_hidden_dim', type=int, default=400)
     parser.add_argument('--composite_deep_biaff_hidden_dim', type=int, default=100)
-    parser.add_argument('--word_emb_dim', type=int, default=75)
+    parser.add_argument('--word_emb_dim', type=int, default=75, help='Dimension of the finetuned word embedding.  Set to 0 to turn off')
+    parser.add_argument('--word_cutoff', type=int, default=7, help='How common a word must be to include it in the finetuned word embedding')
     parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--tag_emb_dim', type=int, default=50)
+    parser.add_argument('--charlm_transform_dim', type=int, default=None, help='Transform the pretrained charlm to this dimension.  If not set, no transform is used')
     parser.add_argument('--transformed_dim', type=int, default=125)
     parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--char_num_layers', type=int, default=1)
@@ -76,6 +78,9 @@ def parse_args(args=None):
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
     parser.add_argument('--bert_hidden_layers', type=int, default=None, help="How many layers of hidden state to use from the transformer")
+    parser.add_argument('--bert_finetune', default=False, action='store_true', help='Finetune the bert (or other transformer)')
+    parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
+    parser.add_argument('--bert_learning_rate', default=1.0, type=float, help='Scale the learning rate for transformer finetuning by this much')
 
     parser.add_argument('--no_pretrain', dest='pretrain', action='store_false', help="Turn off pretrained embeddings.")
     parser.add_argument('--share_hid', action='store_true', help="Share hidden representations for UPOS, XPOS and UFeats.")
@@ -85,6 +90,7 @@ def parse_args(args=None):
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam, adamw, adamax, or adadelta.  madgrad as an optional dependency')
     parser.add_argument('--second_optim', type=str, default='amsgrad', help='Optimizer for the second half of training.  Default is Adam with AMSGrad')
     parser.add_argument('--second_optim_reload', default=False, action='store_true', help='Reload the best model instead of continuing from current model if the first optimizer stalls out.  This does not seem to help, but might be useful for further experiments')
+    parser.add_argument('--no_second_optim', action='store_const', const=None, dest='second_optim', help="Don't use a second optimizer - only use the first optimizer")
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
     parser.add_argument('--second_lr', type=float, default=None, help='Alternate learning rate for the second optimizer')
     parser.add_argument('--initial_weight_decay', type=float, default=None, help='Optimizer weight decay for the first optimizer')
@@ -96,22 +102,29 @@ def parse_args(args=None):
     parser.add_argument('--fix_eval_interval', dest='adapt_eval_interval', action='store_false', \
             help="Use fixed evaluation interval for all treebanks, otherwise by default the interval will be increased for larger treebanks.")
     parser.add_argument('--max_steps_before_stop', type=int, default=3000, help='Changes learning method or early terminates after this many steps if the dev scores are not improving')
-    parser.add_argument('--batch_size', type=int, default=5000)
+    parser.add_argument('--batch_size', type=int, default=250)
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
     parser.add_argument('--save_dir', type=str, default='saved_models/pos', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_tagger.pt", help="File name to save the model")
+    parser.add_argument('--save_each', default=False, action='store_true', help="Save each checkpoint to its own model.  Will take up a bunch of space")
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
 
-    parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%')
+    parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 50%%')
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+    return parser
 
+def parse_args(args=None):
+    parser = build_argparse()
     args = parser.parse_args(args=args)
+
+    if args.augment_nopunct is None:
+        args.augment_nopunct = 0.25
 
     if args.wandb_name:
         args.wandb = True
@@ -132,12 +145,12 @@ def main(args=None):
         evaluate(args)
 
 def model_file_name(args):
-    if args['save_name'] is not None:
-        save_name = args['save_name']
-    else:
-        save_name = args['shorthand'] + "_tagger.pt"
+    return utils.standard_model_file_name(args, "tagger")
 
-    return os.path.join(args['save_dir'], save_name)
+def save_each_file_name(args):
+    model_file = model_file_name(args)
+    pieces = os.path.splitext(model_file)
+    return pieces[0] + "_%05d" + pieces[1]
 
 def load_pretrain(args):
     pt = None
@@ -150,9 +163,25 @@ def load_pretrain(args):
         pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
 
+def get_eval_type(dev_batch):
+    """
+    If there is only one column to score in the dev set, use that instead of AllTags
+    """
+    if dev_batch.has_xpos and not dev_batch.has_upos and not dev_batch.has_feats:
+        return "XPOS"
+    elif dev_batch.has_upos and not dev_batch.has_xpos and not dev_batch.has_feats:
+        return "UPOS"
+    else:
+        return "AllTags"
+
 def train(args):
     model_file = model_file_name(args)
     utils.ensure_dir(os.path.split(model_file)[0])
+
+    if args['save_each']:
+        # so models.pt -> models_0001.pt, etc
+        model_save_each_file = save_each_file_name(args)
+        logger.info("Saving each checkpoint to %s" % model_save_each_file)
 
     # load pretrained vectors if needed
     pretrain = load_pretrain(args)
@@ -168,27 +197,50 @@ def train(args):
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    # train_data is now a list of sentences, where each sentence is a
-    # list of words, in which each word is a dict of conll attributes
-    train_data, _ = CoNLL.conll2dict(input_file=args['train_file'])
-    # possibly augment the training data with some amount of fake data
-    # based on the options chosen
-    logger.info("Original data size: {}".format(len(train_data)))
-    train_data.extend(augment_punct(train_data, args['augment_nopunct'],
-                                    keep_original_sentences=False))
-    logger.info("Augmented data size: {}".format(len(train_data)))
-    train_doc = Document(train_data)
-    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
-    vocab = train_batch.vocab
+    train_docs = []
+    for train_file in args['train_file'].split(";"):
+        logger.info("Reading %s" % train_file)
+        # train_data is now a list of sentences, where each sentence is a
+        # list of words, in which each word is a dict of conll attributes
+        train_file_data, _, _ = CoNLL.conll2dict(input_file=train_file)
+        logger.info("Train File {}, Data Size: {}".format(train_file, len(train_file_data)))
+        train_docs.append(Document(train_file_data))
+    # we want to ensure that the model is able te output _ for empty columns,
+    # but create batches whereby if a doc has upos/xpos tags we include them all.
+    # therefore, we create seperate datasets and loaders for each input training file,
+    # which will ensure the system be able to see batches with both upos available
+    # and upos unavailable depending on what the availability in the file is.
+    vocab = Dataset.init_vocab(train_docs, args)
+    train_data = [Dataset(i, args, pretrain, vocab=vocab, evaluation=False)
+                  for i in train_docs]
+    # here we make sure the model will learn to output _ for empty columns
+    # if *any* dataset has data for the upos, xpos, or feature column,
+    # we consider that data enough to train the model on that column
+    # otherwise, we want to train the model to always output blanks
+    if not any(td.has_upos for td in train_data):
+        for td in train_data:
+            td.has_upos = True
+    if not any(td.has_xpos for td in train_data):
+        for td in train_data:
+            td.has_xpos = True
+    if not any(td.has_feats for td in train_data):
+        for td in train_data:
+            td.has_feats = True
+    # calculate the batches
+    train_batches = [i.to_loader(batch_size=args["batch_size"], shuffle=True)
+                     for i in train_data]
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
-    dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    dev_data = Dataset(dev_doc, args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    dev_batch = dev_data.to_loader(batch_size=args["batch_size"])
+
+    eval_type = get_eval_type(dev_data)
 
     # pred and gold path
     system_pred_file = args['output_file']
-    gold_file = args['gold_file']
 
     # skip training if the language does not have training or dev data
-    if len(train_batch) == 0 or len(dev_batch) == 0:
+    # sum(...) to check if all of the training files are empty
+    if sum(len(td) for td in train_data) == 0 or len(dev_data) == 0:
         logger.info("Skip training because no data available...")
         return
 
@@ -212,16 +264,29 @@ def train(args):
     format_str = 'Finished STEP {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
 
     if args['adapt_eval_interval']:
-        args['eval_interval'] = utils.get_adaptive_eval_interval(dev_batch.num_examples, 2000, args['eval_interval'])
+        args['eval_interval'] = utils.get_adaptive_eval_interval(dev_data.num_examples, 2000, args['eval_interval'])
         logger.info("Evaluating the model every {} steps...".format(args['eval_interval']))
+
+    if args['save_each']:
+        logger.info("Saving initial checkpoint to %s" % (model_save_each_file % global_step))
+        trainer.save(model_save_each_file % global_step)
 
     using_amsgrad = False
     last_best_step = 0
     # start training
     train_loss = 0
+    if args['log_norms']:
+        trainer.model.log_norms()
     while True:
         do_break = False
-        for i, batch in enumerate(train_batch):
+        # we now merge all train batches together into one giant list
+        # this allows us to mix batches which have or don't have individual training columns,
+        # such as if XPOS or UPOS are missing from a training file,
+        # as we shuffle all of those batches together
+        # the downside being that it loses the efficiency benefit of the pytorch dataloader
+        all_train_batches = [x for train_batch in train_batches for x in iter(train_batch)]
+        random.shuffle(all_train_batches)
+        for i, batch in enumerate(all_train_batches):
             start_time = time.time()
             global_step += 1
             loss = trainer.update(batch, eval=False) # update step
@@ -236,13 +301,16 @@ def train(args):
                 # eval on dev
                 logger.info("Evaluating on dev set...")
                 dev_preds = []
+                indices = []
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
-                dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
-                dev_batch.doc.set([UPOS, XPOS, FEATS], [y for x in dev_preds for y in x])
-                CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
-                _, _, dev_score = scorer.score(system_pred_file, gold_file)
+                    indices.extend(batch[-1])
+                dev_preds = utils.unsort(dev_preds, indices)
+                dev_data.doc.set([UPOS, XPOS, FEATS], [y for x in dev_preds for y in x])
+                CoNLL.write_doc2conll(dev_data.doc, system_pred_file)
+
+                _, _, dev_score = scorer.score(system_pred_file, args['eval_file'], eval_type=eval_type)
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
                 logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(global_step, train_loss, dev_score))
@@ -251,6 +319,10 @@ def train(args):
                     wandb.log({'train_loss': train_loss, 'dev_score': dev_score})
 
                 train_loss = 0
+
+                if args['save_each']:
+                    logger.info("Saving checkpoint to %s" % (model_save_each_file % global_step))
+                    trainer.save(model_save_each_file % global_step)
 
                 # save best model
                 if len(dev_score_history) == 0 or dev_score > max(dev_score_history):
@@ -262,7 +334,7 @@ def train(args):
                 dev_score_history += [dev_score]
 
             if global_step - last_best_step >= args['max_steps_before_stop']:
-                if not using_amsgrad:
+                if not using_amsgrad and args['second_optim'] is not None:
                     logger.info("Switching to second optimizer: {}".format(args['second_optim']))
                     if args['second_optim_reload']:
                         logger.info('Reloading best model to continue from current local optimum')
@@ -272,7 +344,7 @@ def train(args):
                     lr = args['second_lr']
                     if lr is None:
                         lr = args['lr']
-                    trainer.optimizer = utils.get_optimizer(args['second_optim'], trainer.model.parameters(), lr=lr, betas=(.9, args['beta2']), eps=1e-6, weight_decay=args['second_weight_decay'])
+                    trainer.optimizer = utils.get_optimizer(args['second_optim'], trainer.model, lr=lr, betas=(.9, args['beta2']), eps=1e-6, weight_decay=args['second_weight_decay'])
                 else:
                     logger.info("Early termination: have not improved in {} steps".format(args['max_steps_before_stop']))
                     do_break = True
@@ -283,8 +355,6 @@ def train(args):
                 break
 
         if do_break: break
-
-        train_batch.reshuffle()
 
     logger.info("Training ended with {} steps.".format(global_step))
 
@@ -302,7 +372,6 @@ def train(args):
 def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
-    gold_file = args['gold_file']
     model_file = model_file_name(args)
 
     pretrain = load_pretrain(args)
@@ -323,26 +392,30 @@ def evaluate(args):
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
     doc = CoNLL.conll2doc(input_file=args['eval_file'])
-    batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
-    if len(batch) > 0:
+    dev_data = Dataset(doc, loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    dev_batch = dev_data.to_loader(batch_size=args['batch_size'])
+    eval_type = get_eval_type(dev_data)
+    if len(dev_batch) > 0:
         logger.info("Start evaluation...")
         preds = []
-        for i, b in enumerate(batch):
-            preds += trainer.predict(b)
+        indices = []
+        with torch.no_grad():
+            for b in dev_batch:
+                preds += trainer.predict(b)
+                indices.extend(b[-1])
     else:
         # skip eval if dev data does not exist
         preds = []
-    preds = utils.unsort(preds, batch.data_orig_idx)
+    preds = utils.unsort(preds, indices)
 
     # write to file and score
-    batch.doc.set([UPOS, XPOS, FEATS], [y for x in preds for y in x])
-    CoNLL.write_doc2conll(batch.doc, system_pred_file)
+    dev_data.doc.set([UPOS, XPOS, FEATS], [y for x in preds for y in x])
+    CoNLL.write_doc2conll(dev_data.doc, system_pred_file)
 
-    if gold_file is not None:
-        _, _, score = scorer.score(system_pred_file, gold_file)
+    if args['gold_labels']:
+        _, _, score = scorer.score(system_pred_file, args['eval_file'], eval_type=eval_type)
 
-        logger.info("Tagger score:")
-        logger.info("{} {:.2f}".format(args['shorthand'], score*100))
+        logger.info("POS Tagger score: %s %.2f", args['shorthand'], score*100)
 
 if __name__ == '__main__':
     main()

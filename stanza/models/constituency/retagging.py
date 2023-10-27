@@ -15,15 +15,27 @@ from stanza import Pipeline
 
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.common.vocab import VOCAB_PREFIX
+from stanza.resources.common import download_resources_json, load_resources_json, get_language_resources
 
 logger = logging.getLogger('stanza')
+
+# xpos tagger doesn't produce PP tag on the turin treebank,
+# so instead we use upos to avoid unknown tag errors
+RETAG_METHOD = {
+    "da": "upos",   # the DDT has no xpos tags anyway
+    "es": "upos",   # AnCora has half-finished xpos tags
+    "id": "upos",   # GSD is missing a few punctuation tags - fixed in 2.12, though
+    "it": "upos",
+    "pt": "upos",   # default PT model has no xpos either
+    "vi": "xpos",   # the new version of UD can be merged with xpos from VLSP22
+}
 
 def add_retag_args(parser):
     """
     Arguments specifically for retagging treebanks
     """
     parser.add_argument('--retag_package', default="default", help='Which tagger shortname to use when retagging trees.  None for no retagging.  Retagging is recommended, as gold tags will not be available at pipeline time')
-    parser.add_argument('--retag_method', default='xpos', choices=['xpos', 'upos'], help='Which tags to use when retagging')
+    parser.add_argument('--retag_method', default=None, choices=['xpos', 'upos'], help='Which tags to use when retagging.  Default depends on the language')
     parser.add_argument('--retag_model_path', default=None, help='Path to a retag POS model to use.  Will use a downloaded Stanza model by default.  Can specify multiple taggers with ; in which case the majority vote wins')
     parser.add_argument('--retag_pretrain_path', default=None, help='Use this for a pretrain path for the retagging pipeline.  Generally not needed unless using a custom POS model with a custom pretrain')
     parser.add_argument('--retag_charlm_forward_file', default=None, help='Use this for a forward charlm path for the retagging pipeline.  Generally not needed unless using a custom POS model with a custom charlm')
@@ -34,6 +46,13 @@ def postprocess_args(args):
     """
     After parsing args, unify some settings
     """
+    # use a language specific default for retag_method if we know the language
+    # otherwise, use xpos
+    if args['retag_method'] is None and 'lang' in args and args['lang'] in RETAG_METHOD:
+        args['retag_method'] = RETAG_METHOD[args['lang']]
+    if args['retag_method'] is None:
+        args['retag_method'] = 'xpos'
+
     if args['retag_method'] == 'xpos':
         args['retag_xpos'] = True
     elif args['retag_method'] == 'upos':
@@ -54,8 +73,17 @@ def build_retag_pipeline(args):
     """
     # some argument sets might not use 'mode'
     if args['retag_package'] is not None and args.get('mode', None) != 'remove_optimizer':
+        download_resources_json()
+        resources = load_resources_json()
+
         if '_' in args['retag_package']:
             lang, package = args['retag_package'].split('_', 1)
+            lang_resources = get_language_resources(resources, lang)
+            if lang_resources is None and 'lang' in args:
+                lang_resources = get_language_resources(resources, args['lang'])
+                if lang_resources is not None and 'pos' in lang_resources and args['retag_package'] in lang_resources['pos']:
+                    lang = args['lang']
+                    package = args['retag_package']
         else:
             if 'lang' not in args:
                 raise ValueError("Retag package %s does not specify the language, and it is not clear from the arguments" % args['retag_package'])
@@ -75,6 +103,9 @@ def build_retag_pipeline(args):
 
         def build(retag_args, path):
             retag_args = copy.deepcopy(retag_args)
+            # we just downloaded the resources a moment ago
+            # no need to repeatedly download
+            retag_args['download_method'] = 'reuse_resources'
             if path is not None:
                 retag_args['allow_unknown_language'] = True
                 retag_args['pos_model_path'] = path

@@ -9,6 +9,7 @@ from torch import nn
 
 from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common import utils, loss
+from stanza.models.common.foundation_cache import NoTransformerFoundationCache
 from stanza.models.common.chuliu_edmonds import chuliu_edmonds_one_root
 from stanza.models.depparse.model import Parser
 from stanza.models.pos.vocab import MultiVocab
@@ -36,9 +37,8 @@ class Trainer(BaseTrainer):
             self.args = args
             self.vocab = vocab
             self.model = Parser(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None)
-        self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         self.model = self.model.to(device)
-        self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6)
+        self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
@@ -106,11 +106,17 @@ class Trainer(BaseTrainer):
             raise
         self.args = checkpoint['config']
         if args is not None: self.args.update(args)
+        # preserve old models which were created before transformers were added
+        if 'bert_model' not in self.args:
+            self.args['bert_model'] = None
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         # load model
         emb_matrix = None
         if self.args['pretrain'] and pretrain is not None: # we use pretrain only if args['pretrain'] == True and pretrain is not None
             emb_matrix = pretrain.emb
+        if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
+            logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
+            foundation_cache = NoTransformerFoundationCache(foundation_cache)
         self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache)
         self.model.load_state_dict(checkpoint['model'], strict=False)
 

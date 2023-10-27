@@ -2,11 +2,17 @@
 Processor for performing lemmatization
 """
 
+from itertools import compress
+
+import torch
+
 from stanza.models.common import doc
 from stanza.models.lemma.data import DataLoader
 from stanza.models.lemma.trainer import Trainer
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
+
+WORD_TAGS = [doc.TEXT, doc.UPOS]
 
 @register_processor(name=LEMMA)
 class LemmaProcessor(UDProcessor):
@@ -35,8 +41,18 @@ class LemmaProcessor(UDProcessor):
             self._config = config
             self.config['batch_size'] = LemmaProcessor.DEFAULT_BATCH_SIZE
         else:
+            # the lemmatizer only looks at one word when making
+            # decisions, not the surrounding context
+            # therefore, we can save some time by remembering what
+            # we did the last time we saw any given word,pos
+            # since a long running program will remember everything
+            # (unless we go back and make it smarter)
+            # we make this an option, not the default
+            self.store_results = config.get('store_results', False)
             self._use_identity = False
-            self._trainer = Trainer(model_file=config['model_path'], device=device)
+            args = {'charlm_forward_file': config.get('forward_charlm_path', None),
+                    'charlm_backward_file': config.get('backward_charlm_path', None)}
+            self._trainer = Trainer(args=args, model_file=config['model_path'], device=device, foundation_cache=pipeline.foundation_cache)
 
     def _set_up_requires(self):
         self._pretagged = self._config.get('pretagged', None)
@@ -65,16 +81,23 @@ class LemmaProcessor(UDProcessor):
             else:
                 seq2seq_batch = batch
 
-            preds = []
-            edits = []
-            for i, b in enumerate(seq2seq_batch):
-                ps, es = self.trainer.predict(b, self.config['beam_size'])
-                preds += ps
-                if es is not None:
-                    edits += es
+            with torch.no_grad():
+                preds = []
+                edits = []
+                for i, b in enumerate(seq2seq_batch):
+                    ps, es = self.trainer.predict(b, self.config['beam_size'])
+                    preds += ps
+                    if es is not None:
+                        edits += es
 
             if self.config.get('ensemble_dict', False):
-                preds = self.trainer.postprocess([x for x, y in zip(batch.doc.get([doc.TEXT]), skip) if not y], preds, edits=edits)
+                word_tags = batch.doc.get(WORD_TAGS)
+                words = [x[0] for x in word_tags]
+                preds = self.trainer.postprocess([x for x, y in zip(words, skip) if not y], preds, edits=edits)
+                if self.store_results:
+                    new_word_tags = compress(word_tags, map(lambda x: not x, skip))
+                    new_predictions = [(x[0], x[1], y) for x, y in zip(new_word_tags, preds)]
+                    self.trainer.train_dict(new_predictions, update_word_dict=False)
                 # expand seq2seq predictions to the same size as all words
                 i = 0
                 preds1 = []
@@ -84,7 +107,7 @@ class LemmaProcessor(UDProcessor):
                     else:
                         preds1.append(preds[i])
                         i += 1
-                preds = self.trainer.ensemble(batch.doc.get([doc.TEXT, doc.UPOS]), preds1)
+                preds = self.trainer.ensemble(word_tags, preds1)
             else:
                 preds = self.trainer.postprocess(batch.doc.get([doc.TEXT]), preds, edits=edits)
 

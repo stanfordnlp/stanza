@@ -5,10 +5,10 @@ import torch
 from stanza.models.common.bert_embedding import filter_data
 from stanza.models.common.data import map_to_ids, get_long_tensor, sort_all
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX
-from stanza.models.pos.vocab import CharVocab, WordVocab
-from stanza.models.ner.vocab import TagVocab, MultiVocab
+from stanza.models.pos.vocab import CharVocab, CompositeVocab, WordVocab
+from stanza.models.ner.vocab import MultiVocab
 from stanza.models.common.doc import *
-from stanza.models.ner.utils import process_tags
+from stanza.models.ner.utils import process_tags, normalize_empty_tags
 
 logger = logging.getLogger('stanza')
 
@@ -22,11 +22,11 @@ class DataLoader:
         self.preprocess_tags = preprocess_tags
 
         data = self.load_doc(self.doc)
-        
+
         # filter out the long sentences if bert is used
         if self.args.get('bert_model', False):
             data = filter_data(self.args['bert_model'], data, bert_tokenizer)
-        
+
         self.tags = [[w[1] for w in sent] for sent in data]
         # handle vocab
         self.pretrain = pretrain
@@ -68,7 +68,8 @@ class DataLoader:
         else:
             charvocab = CharVocab(data, self.args['shorthand'])
         wordvocab = self.pretrain.vocab
-        tagvocab = TagVocab(data, self.args['shorthand'], idx=1)
+        tag_data = [[(x[1],) for x in sentence] for sentence in data]
+        tagvocab = CompositeVocab(tag_data, self.args['shorthand'], idx=0, sep=None)
         ignore = None
         if self.args['emb_finetune_known_only']:
             if self.args['lowercase']:
@@ -90,7 +91,7 @@ class DataLoader:
             char_case = lambda x: x.lower()
         else:
             char_case = lambda x: x
-        for sent in data:
+        for sent_idx, sent in enumerate(data):
             processed_sent = [[w[0] for w in sent]]
             processed_sent += [[vocab['char'].map([char_case(x) for x in w[0]]) for w in sent]]
             processed_sent += [vocab['tag'].map([w[1] for w in sent])]
@@ -109,7 +110,7 @@ class DataLoader:
         batch = self.data[key]
         batch_size = len(batch)
         batch = list(zip(*batch))
-        assert len(batch) == 3 # words: List[List[int]], chars: List[List[List[int]]], tags: List[List[int]]
+        assert len(batch) == 3 # words: List[List[int]], chars: List[List[List[int]]], tags: List[List[List[int]]]
 
         # sort sentences by lens for easy RNN operations
         sentlens = [len(x) for x in batch[0]]
@@ -146,9 +147,13 @@ class DataLoader:
             yield self.__getitem__(i)
 
     def load_doc(self, doc):
-        data = doc.get([TEXT, NER], as_sentences=True, from_token=True)
+        # preferentially load the MULTI_NER in case we are training /
+        # testing a model with multiple layers of tags
+        data = doc.get([TEXT, NER, MULTI_NER], as_sentences=True, from_token=True)
+        data = [[[token[0], token[2]] if token[2] else [token[0], (token[1],)] for token in sentence] for sentence in data]
         if self.preprocess_tags: # preprocess tags
             data = process_tags(data, self.args.get('scheme', 'bio'))
+            data = normalize_empty_tags(data)
         return data
 
     def process_chars(self, sents):

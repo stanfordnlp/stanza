@@ -7,9 +7,9 @@ import logging
 import torch
 from torch import nn
 
-from stanza.models.common.foundation_cache import load_bert
+from stanza.models.common.foundation_cache import NoTransformerFoundationCache
 from stanza.models.common.trainer import Trainer as BaseTrainer
-from stanza.models.common.vocab import VOCAB_PREFIX
+from stanza.models.common.vocab import VOCAB_PREFIX, VOCAB_PREFIX_SIZE
 from stanza.models.common import utils, loss
 from stanza.models.ner.model import NERTagger
 from stanza.models.ner.vocab import MultiVocab
@@ -70,8 +70,13 @@ class Trainer(BaseTrainer):
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.bert_model, self.bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
-            self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, bert_model = self.bert_model, bert_tokenizer = self.bert_tokenizer)
+            self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, foundation_cache=foundation_cache)
+
+        # if this wasn't set anywhere, we use a default of the 0th tagset
+        # we don't set this as a default in the options so that
+        # we can distinguish "intentionally set to 0" and "not set at all"
+        if self.args.get('predict_tagset', None) is None:
+            self.args['predict_tagset'] = 0
 
         if train_classifier_only:
             logger.info('Disabling gradient for non-classifier layers')
@@ -79,9 +84,8 @@ class Trainer(BaseTrainer):
             for pname, p in self.model.named_parameters():
                 if pname.split('.')[0] not in exclude:
                     p.requires_grad = False
-        self.parameters = [p for p in self.model.parameters() if p.requires_grad]
         self.model = self.model.to(device)
-        self.optimizer = utils.get_optimizer(self.args['optim'], self.parameters, self.args['lr'], momentum=self.args['momentum'])
+        self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'], momentum=self.args['momentum'], bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
@@ -113,13 +117,28 @@ class Trainer(BaseTrainer):
         _, logits, trans = self.model(word, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx)
 
         # decode
-        trans = trans.data.cpu().numpy()
-        scores = logits.data.cpu().numpy()
-        bs = logits.size(0)
+        # TODO: might need to decode multiple columns of output for
+        # models with multiple layers
+        trans = [x.data.cpu().numpy() for x in trans]
+        logits = [x.data.cpu().numpy() for x in logits]
+        batch_size = logits[0].shape[0]
+        if any(x.shape[0] != batch_size for x in logits):
+            raise AssertionError("Expected all of the logits to have the same size")
         tag_seqs = []
-        for i in range(bs):
-            tags, _ = viterbi_decode(scores[i, :sentlens[i]], trans)
+        predict_tagset = self.args['predict_tagset']
+        for i in range(batch_size):
+            # for each tag column in the output, decode the tag assignments
+            tags = [viterbi_decode(x[i, :sentlens[i]], y)[0] for x, y in zip(logits, trans)]
+            # TODO: this is to patch that the model can sometimes predict < "O"
+            tags = [[x if x >= VOCAB_PREFIX_SIZE else VOCAB_PREFIX_SIZE for x in y] for y in tags]
+            # that gives us N lists of |sent| tags, whereas we want |sent| lists of N tags
+            tags = list(zip(*tags))
+            # now unmap that to the tags in the vocab
             tags = self.vocab['tag'].unmap(tags)
+            # for now, allow either TagVocab or CompositeVocab
+            # TODO: we might want to return all of the predictions
+            # rather than a single column
+            tags = [x[predict_tagset] if isinstance(x, list) else x for x in tags]
             tags = fix_singleton_tags(tags)
             tag_seqs += [tags]
 
@@ -155,14 +174,28 @@ class Trainer(BaseTrainer):
             raise
         self.args = checkpoint['config']
         if args: self.args.update(args)
-        self.bert_model, self.bert_tokenizer = load_bert(self.args.get('bert_model', None), foundation_cache)
+        # if predict_tagset was not explicitly set in the args,
+        # we use the value the model was trained with
+        if self.args.get('predict_tagset', None) is None:
+            self.args['predict_tagset'] = checkpoint['config'].get('predict_tagset', None)
+
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
 
         emb_matrix=None
         if pretrain is not None:
             emb_matrix = pretrain.emb
 
-        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, bert_model=self.bert_model, bert_tokenizer=self.bert_tokenizer)
+        force_bert_saved = False
+        if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
+            logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
+            foundation_cache = NoTransformerFoundationCache(foundation_cache)
+            force_bert_saved = True
+        if any(x.startswith("crit.") for x in checkpoint['model'].keys()):
+            logger.debug("Old model format detected.  Updating to the new format with one column of tags")
+            checkpoint['model']['crits.0._transitions'] = checkpoint['model'].pop('crit._transitions')
+            checkpoint['model']['tag_clfs.0.weight'] = checkpoint['model'].pop('tag_clf.weight')
+            checkpoint['model']['tag_clfs.0.bias'] = checkpoint['model'].pop('tag_clf.bias')
+        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, force_bert_saved=force_bert_saved)
         self.model.load_state_dict(checkpoint['model'], strict=False)
 
         # there is a possible issue with the delta embeddings.
@@ -183,7 +216,7 @@ class Trainer(BaseTrainer):
         Removes the S-, B-, etc, and does not include O
         """
         tags = set()
-        for tag in self.vocab['tag']:
+        for tag in self.vocab['tag'].items(0):
             if tag in VOCAB_PREFIX:
                 continue
             if tag == 'O':

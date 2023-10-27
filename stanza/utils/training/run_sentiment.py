@@ -14,7 +14,7 @@ from stanza.models import classifier
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, build_charlm_args, choose_charlm, find_wordvec_pretrain
 
-from stanza.resources.prepare_resources import default_charlms, default_pretrains
+from stanza.resources.default_packages import default_charlms, default_pretrains
 
 logger = logging.getLogger('stanza')
 
@@ -57,11 +57,8 @@ def run_dataset(mode, paths, treebank, short_name,
 
     default_args = wordvec_args + charlm_args
 
-    if command_args.use_bert and '--bert_model' not in extra_args:
-        if language in common.BERT:
-            default_args.extend(['--bert_model', common.BERT.get(language)])
-        else:
-            logger.error("Transformer requested, but no default transformer for %s  Specify one using --bert_model" % language)
+    bert_args = common.choose_transformer(language, command_args, extra_args)
+    default_args += bert_args
 
     if mode == Mode.TRAIN:
         train_args = ['--save_name', "%s_classifier.pt" % short_name,
@@ -98,7 +95,7 @@ def run_dataset(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_dataset, "classifier", "classifier", add_sentiment_args)
+    common.main(run_dataset, "classifier", "classifier", add_sentiment_args, classifier.build_argparse())
 
 if __name__ == "__main__":
     main()

@@ -18,6 +18,39 @@ da_arboretum
     $CONSTITUENCY_BASE/danish/W0084/... becomes
     $CONSTITUENCY_BASE/danish/arboretum/...
 
+en_ptb3-revised is an updated version of PTB with NML and stuff
+  put LDC2015T13 in $CONSTITUENCY_BASE/english
+  the directory name may look like LDC2015T13_eng_news_txt_tbnk-ptb_revised
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset en_ptb3-revised
+
+  All this needs to do is concatenate the various pieces
+
+  @article{ptb_revised,
+    title= {Penn Treebank Revised: English News Text Treebank LDC2015T13},
+    journal= {},
+    author= {Ann Bies and Justin Mott and Colin Warner},
+    year= {2015},
+    url= {https://doi.org/10.35111/xpjy-at91},
+    doi= {10.35111/xpjy-at91},
+    isbn= {1-58563-724-6},
+    dcmi= {text},
+    languages= {english},
+    language= {english},
+    ldc= {LDC2015T13},
+  }
+
+id_icon
+  ICON: Building a Large-Scale Benchmark Constituency Treebank
+    for the Indonesian Language
+    Ee Suan Lim, Wei Qi Leong, Ngan Thanh Nguyen, Dea Adhista,
+    Wei Ming Kng, William Chandra Tjhi, Ayu Purwarianti
+    https://aclanthology.org/2023.tlt-1.5.pdf
+  Available at https://github.com/aisingapore/seacorenlp-data
+  git clone the repo in $CONSTITUENCY_BASE/seacorenlp
+  so there is now a directory
+    $CONSTITUENCY_BASE/seacorenlp/seacorenlp-data
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset id_icon
+
 it_turin
   A combination of Evalita competition from 2011 and the ParTUT trees
   More information is available in convert_it_turin
@@ -104,6 +137,28 @@ vlsp22 is the 2022 constituency treebank from the VLSP bakeoff
   LE Van Cuong, NGUYEN Thi Luong, NGO The Quyen
     VLSP 2022 Challenge: Vietnamese Constituency Parsing
     to appear in Journal of Computer Science and Cybernetics.
+
+zh_ctb-51 is the 5.1 version of CTB
+  put LDC2005T01U01_ChineseTreebank5.1 in $CONSTITUENCY_BASE/chinese
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset zh_ctb-51
+
+  @article{xue_xia_chiou_palmer_2005,
+           title={The Penn Chinese TreeBank: Phrase structure annotation of a large corpus},
+           volume={11},
+           DOI={10.1017/S135132490400364X},
+           number={2},
+           journal={Natural Language Engineering},
+           publisher={Cambridge University Press},
+           author={XUE, NAIWEN and XIA, FEI and CHIOU, FU-DONG and PALMER, MARTA},
+           year={2005},
+           pages={207–238}}
+
+zh_ctb-90 is the 9.0 version of CTB
+  put LDC2016T13 in $CONSTITUENCY_BASE/chinese
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset zh_ctb-90
+
+  the splits used are the ones from the file docs/ctb9.0-file-list.txt
+    included in the CTB 9.0 release
 """
 
 import argparse
@@ -112,12 +167,18 @@ import random
 import sys
 import tempfile
 
+from tqdm import tqdm
+
 from stanza.models.constituency import parse_tree
 import stanza.utils.default_paths as default_paths
+from stanza.models.constituency import tree_reader
+from stanza.models.constituency.parse_tree import Tree
+from stanza.server import tsurgeon
 from stanza.utils.datasets.constituency import utils
 from stanza.utils.datasets.constituency.convert_alt import convert_alt
 from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
 from stanza.utils.datasets.constituency.convert_cintil import convert_cintil_treebank
+import stanza.utils.datasets.constituency.convert_ctb as convert_ctb
 from stanza.utils.datasets.constituency.convert_it_turin import convert_it_turin
 from stanza.utils.datasets.constituency.convert_it_vit import convert_it_vit
 from stanza.utils.datasets.constituency.convert_starlang import read_starlang
@@ -305,8 +366,84 @@ def process_pt_cintil(paths, dataset_name, *args):
 
     write_dataset(datasets, output_dir, dataset_name)
 
+def process_id_icon(paths, dataset_name, *args):
+    lang, source = dataset_name.split("_", 1)
+    assert lang == 'id'
+    assert source == 'icon'
+
+    input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "seacorenlp", "seacorenlp-data", "id", "constituency")
+    input_files = [os.path.join(input_dir, x) for x in ("train.txt", "dev.txt", "test.txt")]
+    datasets = []
+    for input_file in input_files:
+        trees = tree_reader.read_tree_file(input_file)
+        trees = [Tree("ROOT", tree) for tree in trees]
+        datasets.append(trees)
+
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    write_dataset(datasets, output_dir, dataset_name)
+
+def process_ctb_51(paths, dataset_name, *args):
+    lang, source = dataset_name.split("_", 1)
+    assert lang == 'zh-hans'
+    assert source == 'ctb-51'
+
+    input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "chinese", "LDC2005T01U01_ChineseTreebank5.1", "bracketed")
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    convert_ctb.convert_ctb(input_dir, output_dir, dataset_name, convert_ctb.Version.V51)
+
+def process_ctb_90(paths, dataset_name, *args):
+    lang, source = dataset_name.split("_", 1)
+    assert lang == 'zh-hans'
+    assert source == 'ctb-90'
+
+    input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "chinese", "LDC2016T13", "ctb9.0", "data", "bracketed")
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    convert_ctb.convert_ctb(input_dir, output_dir, dataset_name, convert_ctb.Version.V90)
+
+
+def process_ptb3_revised(paths, dataset_name, *args):
+    input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "english", "LDC2015T13_eng_news_txt_tbnk-ptb_revised")
+    if not os.path.exists(input_dir):
+        backup_input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "english", "LDC2015T13")
+        if not os.path.exists(backup_input_dir):
+            raise FileNotFoundError("Could not find ptb3-revised in either %s or %s" % (input_dir, backup_input_dir))
+        input_dir = backup_input_dir
+
+    bracket_dir = os.path.join(input_dir, "data", "penntree")
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+
+    # compensate for a weird mislabeling in the original dataset
+    label_map = {"ADJ-PRD": "ADJP-PRD"}
+
+    train_trees = []
+    for i in tqdm(range(2, 22)):
+        new_trees = tree_reader.read_directory(os.path.join(bracket_dir, "%02d" % i))
+        new_trees = [t.remap_constituent_labels(label_map) for t in new_trees]
+        train_trees.extend(new_trees)
+
+    move_tregex = "_ROOT_ <1 __=home <2 /^[.]$/=move"
+    move_tsurgeon = "move move >-1 home"
+
+    print("Moving sentence final punctuation if necessary")
+    with tsurgeon.Tsurgeon() as tsurgeon_processor:
+        train_trees = [tsurgeon_processor.process(tree, move_tregex, move_tsurgeon)[0] for tree in tqdm(train_trees)]
+
+    dev_trees = tree_reader.read_directory(os.path.join(bracket_dir, "22"))
+    dev_trees = [t.remap_constituent_labels(label_map) for t in dev_trees]
+
+    test_trees = tree_reader.read_directory(os.path.join(bracket_dir, "23"))
+    test_trees = [t.remap_constituent_labels(label_map) for t in test_trees]
+    print("Read %d train trees, %d dev trees, and %d test trees" % (len(train_trees), len(dev_trees), len(test_trees)))
+    datasets = [train_trees, dev_trees, test_trees]
+    write_dataset(datasets, output_dir, dataset_name)
+
+
 DATASET_MAPPING = {
     'da_arboretum': process_arboretum,
+
+    'en_ptb3-revised': process_ptb3_revised,
+
+    'id_icon':      process_id_icon,
 
     'it_turin':     process_it_turin,
     'it_vit':       process_it_vit,
@@ -320,6 +457,9 @@ DATASET_MAPPING = {
     'vi_vlsp09':    process_vlsp09,
     'vi_vlsp21':    process_vlsp21,
     'vi_vlsp22':    process_vlsp22,
+
+    'zh-hans_ctb-51':   process_ctb_51,
+    'zh-hans_ctb-90':   process_ctb_90,
 }
 
 def main(dataset_name, *args):

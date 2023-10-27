@@ -8,7 +8,7 @@ import tempfile
 
 import stanza
 from stanza.resources import common
-from stanza.tests import TEST_WORKING_DIR
+from stanza.tests import TEST_MODELS_DIR, TEST_WORKING_DIR
 
 pytestmark = [pytest.mark.travis, pytest.mark.client]
 
@@ -50,12 +50,12 @@ def test_download_non_default():
     If that layout changes on purpose, this test will fail and will need to be updated
     """
     with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-        stanza.download("en", model_dir=test_dir, processors="ner", package="ontonotes", verbose=False)
+        stanza.download("en", model_dir=test_dir, processors="ner", package="ontonotes_charlm", verbose=False)
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
         assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain']
-        assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes.pt']
+        assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes_charlm.pt']
         for i in en_dir_listing:
             assert len(os.listdir(os.path.join(en_dir, i))) == 1
 
@@ -74,12 +74,12 @@ def test_download_two_models():
     which download two different charlms
     """
     with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-        stanza.download("en", model_dir=test_dir, processors="ner", package={"ner": ["ontonotes", "anatem"]}, verbose=False)
+        stanza.download("en", model_dir=test_dir, processors="ner", package={"ner": ["ontonotes_charlm", "anatem"]}, verbose=False)
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
         assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain']
-        assert sorted(os.listdir(os.path.join(en_dir, 'ner'))) == ['anatem.pt', 'ontonotes.pt']
+        assert sorted(os.listdir(os.path.join(en_dir, 'ner'))) == ['anatem.pt', 'ontonotes_charlm.pt']
         for i in en_dir_listing:
             assert len(os.listdir(os.path.join(en_dir, i))) == 2
 
@@ -105,3 +105,28 @@ def test_process_pipeline_parameters():
         assert processors == {"tokenize": "ewt", "pos": "ewt"}
         assert package == None
 
+def test_language_resources():
+    resources = common.load_resources_json(TEST_MODELS_DIR)
+
+    # check that an unknown language comes back as None
+    bad_lang = 'z'
+    while bad_lang in resources and len(bad_lang) < 100:
+        bad_lang = bad_lang + 'z'
+    assert bad_lang not in resources
+    assert common.get_language_resources(resources, bad_lang) == None
+
+    # check the parameters of the test make sense
+    # there should be 'zh' which is an alias of 'zh-hans'
+    assert "zh" in resources
+    assert "alias" in resources["zh"]
+    assert resources["zh"]["alias"] == "zh-hans"
+
+    # check that getting the resources for either 'zh' or 'zh-hans'
+    # return the simplified Chinese resources
+    zh_resources = common.get_language_resources(resources, "zh")
+    assert "tokenize" in zh_resources
+    assert "alias" not in zh_resources
+    assert "Chinese" in zh_resources["lang_name"]
+
+    zh_hans_resources = common.get_language_resources(resources, "zh-hans")
+    assert zh_resources == zh_hans_resources

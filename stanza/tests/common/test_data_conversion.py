@@ -1,6 +1,8 @@
 """
 Basic tests of the data conversion
 """
+
+import io
 import pytest
 import tempfile
 from zipfile import ZipFile
@@ -37,8 +39,10 @@ DICT = [[{'id': (1,), 'text': 'Nous', 'lemma': 'il', 'upos': 'PRON', 'feats': 'N
          {'id': (9,), 'text': '.', 'lemma': '.', 'upos': 'PUNCT', 'head': 3, 'deprel': 'punct', 'misc': 'start_char=36|end_char=37'}]]
 
 def test_conll_to_dict():
-    dicts = CoNLL.convert_conll(CONLL)
+    dicts, empty = CoNLL.convert_conll(CONLL)
     assert dicts == DICT
+    assert len(dicts) == len(empty)
+    assert all(len(x) == 0 for x in empty)
 
 def test_dict_to_conll():
     document = Document(DICT)
@@ -108,6 +112,7 @@ def check_russian_doc(doc):
         assert expected_id == sentence.sent_id
         assert sent_idx == sentence.index
         assert len(sentence.comments) == 3
+        assert not sentence.has_enhanced_dependencies()
 
     sentences = "{:C}".format(doc)
     sentences = sentences.split("\n\n")
@@ -132,7 +137,7 @@ def test_write_russian_doc(tmp_path):
     check_russian_doc(doc)
     CoNLL.write_doc2conll(doc, filename)
 
-    with open(filename) as fin:
+    with open(filename, encoding="utf-8") as fin:
         text = fin.read()
 
     # the conll docs have to end with \n\n
@@ -149,6 +154,38 @@ def test_write_russian_doc(tmp_path):
 
     doc2 = CoNLL.conll2doc(filename)
     check_russian_doc(doc2)
+
+# random sentence from EN_Pronouns
+ENGLISH_SAMPLE = """
+# newdoc
+# sent_id = 1
+# text = It is hers.
+# previous = Which person owns this?
+# comment = copular subject
+1	It	it	PRON	PRP	Number=Sing|Person=3|PronType=Prs	3	nsubj	_	_
+2	is	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	3	cop	_	_
+3	hers	hers	PRON	PRP	Gender=Fem|Number=Sing|Person=3|Poss=Yes|PronType=Prs	0	root	_	SpaceAfter=No
+4	.	.	PUNCT	.	_	3	punct	_	_
+""".strip()
+
+def test_write_to_io():
+    doc = CoNLL.conll2doc(input_str=ENGLISH_SAMPLE)
+    output = io.StringIO()
+    CoNLL.write_doc2conll(doc, output)
+    output_value = output.getvalue()
+    assert output_value.endswith("\n\n")
+    assert output_value.strip() == ENGLISH_SAMPLE
+
+def test_write_doc2conll_append(tmp_path):
+    doc = CoNLL.conll2doc(input_str=ENGLISH_SAMPLE)
+    filename = tmp_path / "english.conll"
+    CoNLL.write_doc2conll(doc, filename)
+    CoNLL.write_doc2conll(doc, filename, mode="a")
+
+    with open(filename) as fin:
+        text = fin.read()
+    expected = ENGLISH_SAMPLE + "\n\n" + ENGLISH_SAMPLE + "\n\n"
+    assert text == expected
 
 def test_doc_with_comments():
     """
@@ -253,6 +290,7 @@ def test_mwt_ner_conversion():
     assert len(doc.sentences) == 1
     sentence = doc.sentences[0]
     assert len(sentence.tokens) == 5
+    assert not sentence.has_enhanced_dependencies()
     EXPECTED_NER = ["O", "O", "S-PERSON", "O", "O"]
     EXPECTED_WORDS = [1, 1, 2, 1, 1]
     for token, ner, expected_words in zip(sentence.tokens, EXPECTED_NER, EXPECTED_WORDS):
@@ -266,3 +304,115 @@ def test_mwt_ner_conversion():
 
     conll = "{:C}".format(doc)
     assert conll == MWT_NER
+
+
+# A random sentence from et_ewt-ud-train.conllu
+# which we use to test the deps conversion for multiple deps
+ESTONIAN_DEPS = """
+# newpar
+# sent_id = aia_foorum_37
+# text = Sestpeale ei mõistagi neid, kes koduaias sortidega tegelevad.
+1	Sestpeale	sest_peale	ADV	D	_	3	advmod	3:advmod	_
+2	ei	ei	AUX	V	Polarity=Neg	3	aux	3:aux	_
+3	mõistagi	mõistma	VERB	V	Connegative=Yes|Mood=Ind|Tense=Pres|VerbForm=Fin|Voice=Act	0	root	0:root	_
+4	neid	tema	PRON	P	Case=Par|Number=Plur|Person=3|PronType=Prs	3	obj	3:obj|9:nsubj	SpaceAfter=No
+5	,	,	PUNCT	Z	_	9	punct	9:punct	_
+6	kes	kes	PRON	P	Case=Nom|Number=Plur|PronType=Int,Rel	9	nsubj	4:ref	_
+7	koduaias	kodu_aed	NOUN	S	Case=Ine|Number=Sing	9	obl	9:obl	_
+8	sortidega	sort	NOUN	S	Case=Com|Number=Plur	9	obl	9:obl	_
+9	tegelevad	tegelema	VERB	V	Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin|Voice=Act	4	acl:relcl	4:acl	SpaceAfter=No
+10	.	.	PUNCT	Z	_	3	punct	3:punct	_
+""".strip()
+
+def test_deps_conversion():
+    doc = CoNLL.conll2doc(input_str=ESTONIAN_DEPS)
+    assert len(doc.sentences) == 1
+    sentence = doc.sentences[0]
+    assert len(sentence.tokens) == 10
+    assert sentence.has_enhanced_dependencies()
+
+    word = doc.sentences[0].words[3]
+    assert word.deps == "3:obj|9:nsubj"
+
+    conll = "{:C}".format(doc)
+    assert conll == ESTONIAN_DEPS
+
+ESTONIAN_EMPTY_DEPS = """
+# sent_id = ewtb2_000035_15
+# text = Ja paari aasta pärast rôômalt maasikatele ...
+1	Ja	ja	CCONJ	J	_	3	cc	5.1:cc	_
+2	paari	paar	NUM	N	Case=Gen|Number=Sing|NumForm=Word|NumType=Card	3	nummod	3:nummod	_
+3	aasta	aasta	NOUN	S	Case=Gen|Number=Sing	0	root	5.1:obl	_
+4	pärast	pärast	ADP	K	AdpType=Post	3	case	3:case	_
+5	rôômalt	rõõmsalt	ADV	D	Typo=Yes	3	advmod	5.1:advmod	Orphan=Yes|CorrectForm=rõõmsalt
+5.1	panna	panema	VERB	V	VerbForm=Inf	_	_	0:root	Empty=5.1
+6	maasikatele	maasikas	NOUN	S	Case=All|Number=Plur	3	obl	5.1:obl	Orphan=Yes
+7	...	...	PUNCT	Z	_	3	punct	5.1:punct	_
+""".strip()
+
+ESTONIAN_EMPTY_END_DEPS = """
+# sent_id = ewtb2_000035_15
+# text = Ja paari aasta pärast rôômalt maasikatele ...
+1	Ja	ja	CCONJ	J	_	3	cc	5.1:cc	_
+2	paari	paar	NUM	N	Case=Gen|Number=Sing|NumForm=Word|NumType=Card	3	nummod	3:nummod	_
+3	aasta	aasta	NOUN	S	Case=Gen|Number=Sing	0	root	5.1:obl	_
+4	pärast	pärast	ADP	K	AdpType=Post	3	case	3:case	_
+5	rôômalt	rõõmsalt	ADV	D	Typo=Yes	3	advmod	5.1:advmod	Orphan=Yes|CorrectForm=rõõmsalt
+5.1	panna	panema	VERB	V	VerbForm=Inf	_	_	0:root	Empty=5.1
+""".strip()
+
+def test_empty_deps_conversion():
+    """
+    Check that we can read and then output a sentence with empty dependencies
+    """
+    check_empty_deps_conversion(ESTONIAN_EMPTY_DEPS, 7)
+
+def test_empty_deps_at_end_conversion():
+    """
+    The empty deps conversion should also work if the empty dep is at the end
+    """
+    check_empty_deps_conversion(ESTONIAN_EMPTY_END_DEPS, 5)
+
+def check_empty_deps_conversion(input_str, expected_words):
+    doc = CoNLL.conll2doc(input_str=input_str, ignore_gapping=False)
+    assert len(doc.sentences) == 1
+    assert len(doc.sentences[0].tokens) == expected_words
+    assert len(doc.sentences[0].words) == expected_words
+    assert len(doc.sentences[0].empty_words) == 1
+
+    sentence = doc.sentences[0]
+    conll = "{:C}".format(doc)
+    assert conll == input_str
+
+    sentence_dict = doc.sentences[0].to_dict()
+    assert len(sentence_dict) == expected_words + 1
+    # currently this is true for both of the examples we run
+    assert sentence_dict[5]['id'] == (5, 1)
+
+    # redo the above checks to make sure
+    # there are no weird bugs in the accessors
+    assert len(doc.sentences) == 1
+    assert len(doc.sentences[0].tokens) == expected_words
+    assert len(doc.sentences[0].words) == expected_words
+    assert len(doc.sentences[0].empty_words) == 1
+
+
+ESTONIAN_DOC_ID = """
+# doc_id = this_is_a_doc
+# sent_id = ewtb2_000035_15
+# text = Ja paari aasta pärast rôômalt maasikatele ...
+1	Ja	ja	CCONJ	J	_	3	cc	5.1:cc	_
+2	paari	paar	NUM	N	Case=Gen|Number=Sing|NumForm=Word|NumType=Card	3	nummod	3:nummod	_
+3	aasta	aasta	NOUN	S	Case=Gen|Number=Sing	0	root	5.1:obl	_
+4	pärast	pärast	ADP	K	AdpType=Post	3	case	3:case	_
+5	rôômalt	rõõmsalt	ADV	D	Typo=Yes	3	advmod	5.1:advmod	Orphan=Yes|CorrectForm=rõõmsalt
+5.1	panna	panema	VERB	V	VerbForm=Inf	_	_	0:root	Empty=5.1
+6	maasikatele	maasikas	NOUN	S	Case=All|Number=Plur	3	obl	5.1:obl	Orphan=Yes
+7	...	...	PUNCT	Z	_	3	punct	5.1:punct	_
+""".strip()
+
+def test_read_doc_id():
+    doc = CoNLL.conll2doc(input_str=ESTONIAN_DOC_ID, ignore_gapping=False)
+    assert "{:C}".format(doc) == ESTONIAN_DOC_ID
+    assert doc.sentences[0].doc_id == 'this_is_a_doc'
+

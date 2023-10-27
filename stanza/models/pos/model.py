@@ -50,7 +50,15 @@ class Tagger(nn.Module):
                 logger.debug("POS model loading charmodels: %s and %s", args['charlm_forward_file'], args['charlm_backward_file'])
                 add_unsaved_module('charmodel_forward', load_charlm(args['charlm_forward_file'], foundation_cache=foundation_cache))
                 add_unsaved_module('charmodel_backward', load_charlm(args['charlm_backward_file'], foundation_cache=foundation_cache))
-                input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
+                # optionally add a input transformation layer
+                if self.args.get('charlm_transform_dim', 0):
+                    self.charmodel_forward_transform = nn.Linear(self.charmodel_forward.hidden_dim(), self.args['charlm_transform_dim'], bias=False)
+                    self.charmodel_backward_transform = nn.Linear(self.charmodel_backward.hidden_dim(), self.args['charlm_transform_dim'], bias=False)
+                    input_size += self.args['charlm_transform_dim'] * 2
+                else:
+                    self.charmodel_forward_transform = None
+                    self.charmodel_backward_transform = None
+                    input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
             else:
                 bidirectional = args.get('char_bidirectional', False)
                 self.charmodel = CharacterModel(args, vocab, bidirectional=bidirectional)
@@ -61,8 +69,6 @@ class Tagger(nn.Module):
                 input_size += self.args['transformed_dim']
 
         if self.args['bert_model']:
-            bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
-            input_size += bert_model.config.hidden_size
             if args.get('bert_hidden_layers', False):
                 # The average will be offset by 1/N so that the default zeros
                 # repressents an average of the N layers
@@ -72,11 +78,20 @@ class Tagger(nn.Module):
                 # an average of layers 2, 3, 4 will be used
                 # (for historic reasons)
                 self.bert_layer_mix = None
+            if self.args.get('bert_finetune', False):
+                bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
+                self.bert_model = bert_model
+                add_unsaved_module('bert_tokenizer', bert_tokenizer)
+            else:
+                bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
+                for n, p in bert_model.named_parameters():
+                    p.requires_grad = False
+                add_unsaved_module('bert_model', bert_model)
+                add_unsaved_module('bert_tokenizer', bert_tokenizer)
+            input_size += bert_model.config.hidden_size
         else:
-            bert_model = None
-            bert_tokenizer = None
-        add_unsaved_module('bert_model', bert_model)
-        add_unsaved_module('bert_tokenizer', bert_tokenizer)
+            self.bert_model = None
+            self.bert_tokenizer = None
 
         if self.args['pretrain']:
             # pretrained embeddings, by default this won't be saved into model file
@@ -131,7 +146,7 @@ class Tagger(nn.Module):
     def log_norms(self):
         lines = ["NORMS FOR MODEL PARAMTERS"]
         for name, param in self.named_parameters():
-            if param.requires_grad and name.split(".")[0] not in ('bert_model', 'charmodel_forward', 'charmodel_backward'):
+            if param.requires_grad and name.split(".")[0] not in ('charmodel_forward', 'charmodel_backward'):
                 lines.append("  %s %.6g" % (name, torch.norm(param).item()))
         logger.info("\n".join(lines))
 
@@ -153,14 +168,21 @@ class Tagger(nn.Module):
             inputs += [pretrained_emb]
 
         def pad(x):
-            return pad_packed_sequence(PackedSequence(x, word_emb.batch_sizes), batch_first=True)[0]
+            return pad_packed_sequence(PackedSequence(x, inputs[0].batch_sizes), batch_first=True)[0]
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('charlm', None):
                 all_forward_chars = self.charmodel_forward.build_char_representation(text)
+                assert isinstance(all_forward_chars, list)
+                if self.charmodel_forward_transform is not None:
+                    all_forward_chars = [self.charmodel_forward_transform(x) for x in all_forward_chars]
                 all_forward_chars = pack(pad_sequence(all_forward_chars, batch_first=True))
+
                 all_backward_chars = self.charmodel_backward.build_char_representation(text)
+                if self.charmodel_backward_transform is not None:
+                    all_backward_chars = [self.charmodel_backward_transform(x) for x in all_backward_chars]
                 all_backward_chars = pack(pad_sequence(all_backward_chars, batch_first=True))
+
                 inputs += [all_forward_chars, all_backward_chars]
             else:
                 char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
@@ -170,7 +192,8 @@ class Tagger(nn.Module):
         if self.bert_model is not None:
             device = next(self.parameters()).device
             processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=False,
-                                                     num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None)
+                                                     num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
+                                                     detach=not self.args.get('bert_finetune', False))
 
             if self.bert_layer_mix is not None:
                 # add the average so that the default behavior is to
@@ -195,8 +218,11 @@ class Tagger(nn.Module):
 
         preds = [pad(upos_pred).max(2)[1]]
 
-        upos = pack(upos).data
-        loss = self.crit(upos_pred.view(-1, upos_pred.size(-1)), upos.view(-1))
+        if upos is not None:
+            upos = pack(upos).data
+            loss = self.crit(upos_pred.view(-1, upos_pred.size(-1)), upos.view(-1))
+        else:
+            loss = 0.0
 
         if self.share_hid:
             xpos_hid = upos_hid
@@ -207,31 +233,34 @@ class Tagger(nn.Module):
             xpos_hid = F.relu(self.xpos_hid(self.drop(lstm_outputs)))
             ufeats_hid = F.relu(self.ufeats_hid(self.drop(lstm_outputs)))
 
-            if self.training:
+            if self.training and upos is not None:
                 upos_emb = self.upos_emb(upos)
             else:
                 upos_emb = self.upos_emb(upos_pred.max(1)[1])
 
             clffunc = lambda clf, hid: clf(self.drop(hid), self.drop(upos_emb))
 
-        xpos = pack(xpos).data
+        if xpos is not None: xpos = pack(xpos).data
         if isinstance(self.vocab['xpos'], CompositeVocab):
             xpos_preds = []
             for i in range(len(self.vocab['xpos'])):
                 xpos_pred = clffunc(self.xpos_clf[i], xpos_hid)
-                loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos[:, i].view(-1))
+                if xpos is not None:
+                    loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos[:, i].view(-1))
                 xpos_preds.append(pad(xpos_pred).max(2, keepdim=True)[1])
             preds.append(torch.cat(xpos_preds, 2))
         else:
             xpos_pred = clffunc(self.xpos_clf, xpos_hid)
-            loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos.view(-1))
+            if xpos is not None:
+                loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos.view(-1))
             preds.append(pad(xpos_pred).max(2)[1])
 
         ufeats_preds = []
-        ufeats = pack(ufeats).data
+        if ufeats is not None: ufeats = pack(ufeats).data
         for i in range(len(self.vocab['feats'])):
             ufeats_pred = clffunc(self.ufeats_clf[i], ufeats_hid)
-            loss += self.crit(ufeats_pred.view(-1, ufeats_pred.size(-1)), ufeats[:, i].view(-1))
+            if ufeats is not None:
+                loss += self.crit(ufeats_pred.view(-1, ufeats_pred.size(-1)), ufeats[:, i].view(-1))
             ufeats_preds.append(pad(ufeats_pred).max(2, keepdim=True)[1])
         preds.append(torch.cat(ufeats_preds, 2))
 

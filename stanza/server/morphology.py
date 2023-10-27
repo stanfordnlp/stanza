@@ -12,7 +12,7 @@ from stanza.server.java_protobuf_requests import send_request, JavaProtobufConte
 MORPHOLOGY_JAVA = "edu.stanford.nlp.process.ProcessMorphologyRequest"
 
 def send_morphology_request(request):
-    return send_request(request, MorphologyResponse, MORPHOLOGY_JAVA, classpath="$CLASSPATH")
+    return send_request(request, MorphologyResponse, MORPHOLOGY_JAVA)
 
 def build_request(words, xpos_tags):
     """
@@ -72,7 +72,7 @@ def main():
     print(lemma)
     assert lemma == expected
 
-    with Morphology(classpath="$CLASSPATH") as morph:
+    with Morphology() as morph:
         result = morph.process(words, tags)
         lemma = [x.lemma for x in result.words]
         assert lemma == expected

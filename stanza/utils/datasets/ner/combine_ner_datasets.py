@@ -1,9 +1,7 @@
 import argparse
-import json
-import os
 
 from stanza.utils.default_paths import get_default_paths
-from stanza.utils.datasets.ner.utils import write_dataset
+from stanza.utils.datasets.ner.utils import combine_dataset
 
 SHARDS = ("train", "dev", "test")
 
@@ -21,18 +19,7 @@ def main(args=None):
     input_dir = args.input_dir
     output_dir = args.output_dir
 
-    datasets = []
-    for shard in SHARDS:
-        full_dataset = []
-        for input_dataset in args.input_datasets:
-            input_filename = "%s.%s.json" % (input_dataset, shard)
-            input_path = os.path.join(input_dir, input_filename)
-            with open(input_path, encoding="utf-8") as fin:
-                dataset = json.load(fin)
-                converted = [[(word['text'], word['ner']) for word in sentence] for sentence in dataset]
-                full_dataset.extend(converted)
-        datasets.append(full_dataset)
-    write_dataset(datasets, output_dir, args.output_dataset)
+    combine_dataset(input_dir, output_dir, args.input_datasets, args.output_dataset)
 
 if __name__ == '__main__':
     main()

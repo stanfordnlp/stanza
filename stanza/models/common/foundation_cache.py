@@ -12,13 +12,19 @@ from stanza.models.common.pretrain import Pretrain
 logger = logging.getLogger('stanza')
 
 class FoundationCache:
-    def __init__(self):
-        self.bert = {}
-        self.charlms = {}
-        self.pretrains = {}
-        # future proof the module by using a lock for the glorious day
-        # when the GIL is finally gone
-        self.lock = threading.Lock()
+    def __init__(self, other=None):
+        if other is None:
+            self.bert = {}
+            self.charlms = {}
+            self.pretrains = {}
+            # future proof the module by using a lock for the glorious day
+            # when the GIL is finally gone
+            self.lock = threading.Lock()
+        else:
+            self.bert = other.bert
+            self.charlms = other.charlms
+            self.pretrains = other.pretrains
+            self.lock = other.lock
 
     def load_bert(self, transformer_name):
         """
@@ -67,6 +73,18 @@ class FoundationCache:
 
             return self.pretrains[filename]
 
+class NoTransformerFoundationCache(FoundationCache):
+    """
+    Uses the underlying FoundationCache, but hiding the transformer.
+
+    Useful for when loading a downstream model such as POS which has a
+    finetuned transformer, and we don't want the transformer reused
+    since it will then have the finetuned weights for other models
+    which don't want them
+    """
+    def load_bert(self, transformer_name):
+        return load_bert(transformer_name)
+
 def load_bert(model_name, foundation_cache=None):
     """
     Load a bert, possibly using a foundation cache, ignoring it if not present
@@ -76,9 +94,14 @@ def load_bert(model_name, foundation_cache=None):
     else:
         return foundation_cache.load_bert(model_name)
 
-def load_charlm(charlm_file, foundation_cache=None):
+def load_charlm(charlm_file, foundation_cache=None, finetune=False):
     if not charlm_file:
         return None
+
+    if finetune:
+        # can't use the cache in the case of a model which will be finetuned
+        # and the numbers will be different for other users of the model
+        return CharacterLanguageModel.load(charlm_file, finetune=True)
 
     if foundation_cache is not None:
         return foundation_cache.load_charlm(charlm_file)

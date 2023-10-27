@@ -5,6 +5,8 @@ Processor for performing tokenization
 import io
 import logging
 
+import torch
+
 from stanza.models.tokenization.data import TokenizationDataset
 from stanza.models.tokenization.trainer import Trainer
 from stanza.models.tokenization.utils import output_predictions
@@ -38,6 +40,15 @@ class TokenizeProcessor(UDProcessor):
             self._trainer = None
         else:
             self._trainer = Trainer(model_file=config['model_path'], device=device)
+
+        # get and typecheck the postprocessor
+        postprocessor = config.get('postprocessor')
+        if postprocessor and callable(postprocessor):
+            self._postprocessor = postprocessor
+        elif not postprocessor:
+            self._postprocessor = None
+        else:
+            raise ValueError("Tokenizer recieved 'postprocessor' option of unrecognized type; postprocessor must be callable. Got %s" % postprocessor)
 
     def process_pre_tokenized_text(self, input_src):
         """
@@ -87,11 +98,13 @@ class TokenizeProcessor(UDProcessor):
         # set up batches
         batches = TokenizationDataset(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True, dictionary=self.trainer.dictionary)
         # get dict data
-        _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
-                                               max_seq_len,
-                                               orig_text=raw_text,
-                                               no_ssplit=self.config.get('no_ssplit', False),
-                                               num_workers = self.config.get('num_workers', 0))
+        with torch.no_grad():
+            _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
+                                                   max_seq_len,
+                                                   orig_text=raw_text,
+                                                   no_ssplit=self.config.get('no_ssplit', False),
+                                                   num_workers = self.config.get('num_workers', 0),
+                                                   postprocessor = self._postprocessor)
 
         # replace excessively long tokens with <UNK> to avoid downstream GPU memory issues in POS
         for sentence in document:

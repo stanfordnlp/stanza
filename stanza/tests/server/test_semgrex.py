@@ -167,7 +167,7 @@ def check_response(response, response_len=1, semgrex_len=1, source_index=1, targ
             assert match.reln[0].reln == reln
 
 def test_multi():
-    with semgrex.Semgrex(classpath="$CLASSPATH") as sem:
+    with semgrex.Semgrex() as sem:
         response = sem.process(ONE_SENTENCE_DOC, "{}=source >obj=zzz {}=target")
         check_response(response)
         response = sem.process(ONE_SENTENCE_DOC, "{}=source >obj=zzz {}=target")

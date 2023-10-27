@@ -34,7 +34,7 @@ from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import retagging
 from stanza.models.constituency import tree_reader
-from stanza.models.constituency.trainer import Trainer, run_dev_set, parse_text
+from stanza.models.constituency.trainer import Trainer, run_dev_set, parse_text, parse_dir
 from stanza.models.constituency.utils import add_predict_output_args, postprocess_predict_output_args, retag_trees
 from stanza.resources.common import DEFAULT_MODEL_DIR
 from stanza.server.parser_eval import EvaluateParser, ParseResult, ScoredTree
@@ -227,25 +227,8 @@ class Ensemble:
 
 DEFAULT_EVAL = {
     "en": "en_wsj_dev.mrg",
+    "id": "id_icon_dev.mrg",
     "vi": "vi_vlsp22_dev.mrg",
-}
-
-DEFAULT_FORWARD = {
-    "en": os.path.join(DEFAULT_MODEL_DIR, "en/forward_charlm/1billion.pt"),
-    "it": os.path.join(DEFAULT_MODEL_DIR, "it/forward_charlm/conll17.pt"),
-    "vi": os.path.join(DEFAULT_MODEL_DIR, "vi/forward_charlm/conll17.pt"),
-}
-
-DEFAULT_BACKWARD = {
-    "en": os.path.join(DEFAULT_MODEL_DIR, "en/backward_charlm/1billion.pt"),
-    "it": os.path.join(DEFAULT_MODEL_DIR, "it/backward_charlm/conll17.pt"),
-    "vi": os.path.join(DEFAULT_MODEL_DIR, "vi/backward_charlm/conll17.pt"),
-}
-
-DEFAULT_PRETRAIN = {
-    "en": os.path.join(DEFAULT_MODEL_DIR, "en/pretrain/combined.pt"),
-    "it": os.path.join(DEFAULT_MODEL_DIR, "it/pretrain/combined.pt"),
-    "vi": os.path.join(DEFAULT_MODEL_DIR, "vi/pretrain/vtb.pt"),
 }
 
 def parse_args(args=None):
@@ -253,6 +236,7 @@ def parse_args(args=None):
 
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--tokenized_file', type=str, default=None, help='Input file of tokenized text for parsing with parse_text.')
+    parser.add_argument('--tokenized_dir', type=str, default=None, help='Input directory of tokenized text for parsing with parse_text.')
 
     parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
@@ -269,8 +253,6 @@ def parse_args(args=None):
     add_predict_output_args(parser)
 
     retagging.add_retag_args(parser)
-    # TODO: get default method & package from run_constituency.py
-    parser.set_defaults(retag_method='xpos')
 
     args = vars(parser.parse_args())
 
@@ -281,13 +263,6 @@ def parse_args(args=None):
     if not args['eval_file'] and args['lang'] in DEFAULT_EVAL:
         paths = get_default_paths()
         args['eval_file'] = os.path.join(paths["CONSTITUENCY_DATA_DIR"], DEFAULT_EVAL[args['lang']])
-    # TODO: try to download defaults if needed
-    if not args['charlm_forward_file'] and args['lang'] in DEFAULT_FORWARD:
-        args['charlm_forward_file'] = DEFAULT_FORWARD[args['lang']]
-    if not args['charlm_backward_file'] and args['lang'] in DEFAULT_BACKWARD:
-        args['charlm_backward_file'] = DEFAULT_BACKWARD[args['lang']]
-    if not args['wordvec_pretrain_file'] and args['lang'] in DEFAULT_PRETRAIN:
-        args['wordvec_pretrain_file'] = DEFAULT_PRETRAIN[args['lang']]
 
     return args
 
@@ -315,7 +290,12 @@ def main():
             if kbestF1 is not None:
                 logger.info("KBest F1 score on %s: %f", args['eval_file'], kbestF1)
     elif args['mode'] == 'parse_text':
-        parse_text(args, ensemble, retag_pipeline)
+        if args['tokenized_dir']:
+            if not args['predict_dir']:
+                raise ValueError("Must specific --predict_dir to go with --tokenized_dir")
+            parse_dir(args, ensemble, retag_pipeline, args['tokenized_dir'], args['predict_dir'])
+        else:
+            parse_text(args, ensemble, retag_pipeline)
     else:
         raise ValueError("Unhandled mode %s" % args['mode'])
 

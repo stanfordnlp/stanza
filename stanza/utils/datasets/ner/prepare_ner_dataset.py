@@ -261,6 +261,23 @@ LST20 is a Thai NER dataset from 2020
   - Then run
     pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset th_lst20
 
+Thai-NNER is another Thai NER dataset, from 2022
+  - https://github.com/vistec-AI/Thai-NNER
+  - https://aclanthology.org/2022.findings-acl.116/
+    Thai Nested Named Entity Recognition Corpus
+    Weerayut Buaphet, Can Udomcharoenchaikit, Peerat Limkonchotiwat,
+    Attapol Rutherford, and Sarana Nutanong
+  - git clone the data to $NERBASE/thai
+  - On the git repo, there should be a link to a more complete version
+    of the dataset.  For example, in Sep. 2023 it is here:
+    https://github.com/vistec-AI/Thai-NNER#dataset
+    The Google drive it goes to has "postproc".
+    Put the train.json, dev.json, and test.json in
+    $NERBASE/thai/Thai-NNER/data/scb-nner-th-2022/postproc/
+  - Then run
+    pytohn3 -m stanza.utils.datasets.ner.prepare_ner_dataset th_nner22
+
+
 NKJP is a Polish NER dataset
   - http://nkjp.pl/index.php?page=0&lang=1
     About the Project
@@ -328,12 +345,12 @@ SiNER is a Sindhi NER dataset
   - Then, prepare the dataset with this script:
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset sd_siner
 
-en_foreign-4class is an English non-US newswire dataset
+en_worldwide-4class is an English non-US newswire dataset
   - currently WIP.  annotated by MLTwist, collected at Stanford
   - the 4 class version is converted to the 4 classes in conll,
     then split into train/dev/test
-  - clone https://github.com/stanfordnlp/en-foreign-newswire
-    into $NERBASE/en_foreign
+  - clone https://github.com/stanfordnlp/en-worldwide-newswire
+    into $NERBASE/en_worldwide
 
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
@@ -351,6 +368,33 @@ ArmTDP-NER is an Armenian NER dataset
   - Then run
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hy_armtdp
 
+OntoNotes 5 contains a Chinese NER dataset
+  - https://catalog.ldc.upenn.edu/LDC2013T19
+
+en_conllpp is a test set from 2020 newswire
+  - https://arxiv.org/abs/2212.09747
+  - https://github.com/ShuhengL/acl2023_conllpp
+  - Do CoNLL-2003 Named Entity Taggers Still Work Well in 2023?
+    Shuheng Liu, Alan Ritter
+  - git clone the repo in $NERBASE
+  - then run
+    python3 stanza/utils/datasets/ner/prepare_ner_dataset.py en_conllpp
+
+AQMAR is a small dataset of Arabic Wikipedia articles
+  - http://www.cs.cmu.edu/~ark/ArabicNER/
+  - Recall-Oriented Learning of Named Entities in Arabic Wikipedia
+    Behrang Mohit, Nathan Schneider, Rishav Bhowmick, Kemal Oflazer, and Noah A. Smith.
+    In Proceedings of the 13th Conference of the European Chapter of
+    the Association for Computational Linguistics, Avignon, France,
+    April 2012.
+  - download the .zip file there and put it in
+    $NERBASE/arabic/AQMAR
+  - there is a challenge for it here:
+    https://www.topcoder.com/challenges/f3cf483e-a95c-4a7e-83e8-6bdd83174d38
+  - alternatively, we just randomly split it ourselves
+  - currently, running the following reproduces the random split:
+    python3 stanza/utils/datasets/ner/prepare_ner_dataset.py ar_aqmar
+
 """
 
 import glob
@@ -367,6 +411,7 @@ import stanza.utils.default_paths as default_paths
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
 import stanza.utils.datasets.ner.conll_to_iob as conll_to_iob
+import stanza.utils.datasets.ner.convert_ar_aqmar as convert_ar_aqmar
 import stanza.utils.datasets.ner.convert_bn_daffodil as convert_bn_daffodil
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
@@ -374,6 +419,7 @@ import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.convert_kk_kazNERD as convert_kk_kazNERD
 import stanza.utils.datasets.ner.convert_lst20 as convert_lst20
+import stanza.utils.datasets.ner.convert_nner22 as convert_nner22
 import stanza.utils.datasets.ner.convert_mr_l3cube as convert_mr_l3cube
 import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
@@ -382,11 +428,11 @@ import stanza.utils.datasets.ner.convert_starlang_ner as convert_starlang_ner
 import stanza.utils.datasets.ner.convert_nkjp as convert_nkjp
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 import stanza.utils.datasets.ner.convert_sindhi_siner as convert_sindhi_siner
-import stanza.utils.datasets.ner.simplify_en_foreign as simplify_en_foreign
+import stanza.utils.datasets.ner.simplify_en_worldwide as simplify_en_worldwide
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
 import stanza.utils.datasets.ner.convert_hy_armtdp as convert_hy_armtdp
-from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset, random_shuffle_files
+from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset, random_shuffle_by_prefixes, read_prefix_file
 
 SHARDS = ('train', 'dev', 'test')
 
@@ -898,6 +944,9 @@ def process_hinercollapsed(paths, short_name):
 def process_lst20(paths, short_name, include_space_char=True):
     convert_lst20.convert_lst20(paths, short_name, include_space_char)
 
+def process_nner22(paths, short_name, include_space_char=True):
+    convert_nner22.convert_nner22(paths, short_name, include_space_char)
+
 def process_mr_l3cube(paths, short_name):
     base_output_path = paths["NER_DATA_DIR"]
     in_directory = os.path.join(paths["NERBASE"], "marathi", "MarathiNLP", "L3Cube-MahaNER", "IOB")
@@ -984,12 +1033,27 @@ def process_sd_siner(paths, short_name):
             raise FileNotFoundError("Found an SiNER directory at %s but the directory did not contain the dataset" % in_directory)
     convert_sindhi_siner.convert_sindhi_siner(in_filename, paths["NER_DATA_DIR"], short_name)
 
-def process_en_foreign_4class(paths, short_name):
-    # TODO: simplify to a temp directory?
-    simplify_en_foreign.main(args=[])
-    in_directory = os.path.join(paths["NERBASE"], "en_foreign", "4class")
+def process_en_worldwide_4class(paths, short_name):
+    simplify_en_worldwide.main(args=['--simplify'])
+
+    in_directory = os.path.join(paths["NERBASE"], "en_worldwide", "4class")
     out_directory = paths["NER_DATA_DIR"]
-    random_shuffle_files(in_directory, out_directory, short_name)
+
+    destination_file = os.path.join(paths["NERBASE"], "en_worldwide", "en-worldwide-newswire", "regions.txt")
+    prefix_map = read_prefix_file(destination_file)
+
+    random_shuffle_by_prefixes(in_directory, out_directory, short_name, prefix_map)
+
+def process_en_worldwide_8class(paths, short_name):
+    simplify_en_worldwide.main(args=['--no_simplify'])
+
+    in_directory = os.path.join(paths["NERBASE"], "en_worldwide", "8class")
+    out_directory = paths["NER_DATA_DIR"]
+
+    destination_file = os.path.join(paths["NERBASE"], "en_worldwide", "en-worldwide-newswire", "regions.txt")
+    prefix_map = read_prefix_file(destination_file)
+
+    random_shuffle_by_prefixes(in_directory, out_directory, short_name, prefix_map)
 
 def process_armtdp(paths, short_name):
     assert short_name == 'hy_armtdp'
@@ -1006,11 +1070,34 @@ def process_armtdp(paths, short_name):
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
+def process_en_conllpp(paths, short_name):
+    """
+    This is ONLY a test set
+
+    the test set has entities start with I- instead of B- unless they
+    are in the middle of a sentence, but that should be find, as
+    process_tags in the NER model converts those to B- in a BIOES
+    conversion
+    """
+    base_input_path = os.path.join(paths["NERBASE"], "acl2023_conllpp", "dataset", "conllpp.txt")
+    base_output_path = paths["NER_DATA_DIR"]
+    sentences = read_tsv(base_input_path, 0, 3, separator=None)
+    sentences = [sent for sent in sentences if len(sent) > 1 or sent[0][0] != '-DOCSTART-']
+    write_dataset([sentences], base_output_path, short_name, shard_names=["test"], shards=["test"])
+
+def process_ar_aqmar(paths, short_name):
+    base_input_path = os.path.join(paths["NERBASE"], "arabic", "AQMAR", "AQMAR_Arabic_NER_corpus-1.0.zip")
+    base_output_path = paths["NER_DATA_DIR"]
+    convert_ar_aqmar.convert_shuffle(base_input_path, base_output_path, short_name)
+
 DATASET_MAPPING = {
+    "ar_aqmar":          process_ar_aqmar,
     "bn_daffodil":       process_bn_daffodil,
     "da_ddt":            process_da_ddt,
     "de_germeval2014":   process_de_germeval2014,
-    "en_foreign-4class": process_en_foreign_4class,
+    "en_conllpp":        process_en_conllpp,
+    "en_worldwide-4class": process_en_worldwide_4class,
+    "en_worldwide-8class": process_en_worldwide_8class,
     "fa_arman":          process_fa_arman,
     "fi_turku":          process_turku,
     "hi_hiner":          process_hiner,
@@ -1030,6 +1117,7 @@ DATASET_MAPPING = {
     "sv_suc3shuffle":    process_sv_suc3shuffle,
     "tr_starlang":       process_starlang,
     "th_lst20":          process_lst20,
+    "th_nner22":         process_nner22
 }
 
 def main(dataset_name):

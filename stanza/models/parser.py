@@ -33,7 +33,7 @@ from stanza.models import _training_logging
 
 logger = logging.getLogger('stanza')
 
-def parse_args(args=None):
+def build_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/depparse', help='Root dir for saving models.')
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors.')
@@ -71,6 +71,13 @@ def parse_args(args=None):
     parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
 
+    parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
+    parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
+    parser.add_argument('--bert_hidden_layers', type=int, default=None, help="How many layers of hidden state to use from the transformer")
+    parser.add_argument('--bert_finetune', default=False, action='store_true', help='Finetune the bert (or other transformer)')
+    parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
+    parser.add_argument('--bert_learning_rate', default=1.0, type=float, help='Scale the learning rate for transformer finetuning by this much')
+
     parser.add_argument('--no_pretrain', dest='pretrain', action='store_false', help="Turn off pretrained embeddings.")
     parser.add_argument('--no_linearization', dest='linearization', action='store_false', help="Turn off linearization term.")
     parser.add_argument('--no_distance', dest='distance', action='store_false', help="Turn off distance term.")
@@ -87,29 +94,32 @@ def parse_args(args=None):
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/depparse', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_parser.pt", help="File name to save the model")
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
 
-    parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%')
+    parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%%')
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+    return parser
 
+def parse_args(args=None):
+    parser = build_argparse()
     args = parser.parse_args(args=args)
 
     if args.wandb_name:
         args.wandb = True
 
+    args = vars(args)
     return args
 
 def main(args=None):
     args = parse_args(args=args)
 
-    utils.set_random_seed(args.seed)
+    utils.set_random_seed(args['seed'])
 
-    args = vars(args)
     logger.info("Running parser in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
@@ -117,14 +127,8 @@ def main(args=None):
     else:
         evaluate(args)
 
-# TODO: refactor with tagger
 def model_file_name(args):
-    if args['save_name'] is not None:
-        save_name = args['save_name']
-    else:
-        save_name = args['shorthand'] + "_parser.pt"
-
-    return os.path.join(args['save_dir'], save_name)
+    return utils.standard_model_file_name(args, "parser")
 
 # TODO: refactor with everywhere
 def load_pretrain(args):
@@ -157,7 +161,7 @@ def train(args):
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    train_data, _ = CoNLL.conll2dict(input_file=args['train_file'])
+    train_data, _, _ = CoNLL.conll2dict(input_file=args['train_file'])
     # possibly augment the training data with some amount of fake data
     # based on the options chosen
     logger.info("Original data size: {}".format(len(train_data)))
@@ -282,9 +286,12 @@ def evaluate(args):
     # load pretrained vectors if needed
     pretrain = load_pretrain(args)
 
+    load_args = {'charlm_forward_file': args.get('charlm_forward_file', None),
+                 'charlm_backward_file': args.get('charlm_backward_file', None)}
+
     # load model
     logger.info("Loading model from: {}".format(model_file))
-    trainer = Trainer(pretrain=pretrain, model_file=model_file, device=args['device'])
+    trainer = Trainer(pretrain=pretrain, model_file=model_file, device=args['device'], args=load_args)
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config

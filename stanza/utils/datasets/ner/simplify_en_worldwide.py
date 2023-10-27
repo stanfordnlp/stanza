@@ -9,13 +9,14 @@ from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
 
-PUNCTUATION = """!"#%&'()*+, -./:;<=>?@[\]^_`{|}~"""
+PUNCTUATION = """!"#%&'()*+, -./:;<=>?@[\\]^_`{|}~"""
 MONEY_WORDS = {"million", "billion", "trillion", "millions", "billions", "trillions", "hundred", "hundreds",
                "lakh", "crore", # south asian english
                "tens", "of", "ten", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "couple"}
 
 # Doesn't include Money but this case is handled explicitly for processing
 LABEL_TRANSLATION = {
+    "Date":         None,
     "Misc":         "MISC",
     "Product":      "MISC",
     "NORP":         "MISC",
@@ -81,15 +82,19 @@ def process_label(line, is_start=False):
         pass
     elif label_name in LABEL_TRANSLATION:
         label_name = LABEL_TRANSLATION[label_name]
+        if label_name is None:
+            position = ""
+            label_name = "O"
+            is_start = False
     else:
         raise ValueError("Oops, missed a label: %s" % label_name)
     return [token, position + label_name, is_start]
 
 
-def write_new_file(save_dir, input_path, old_file):
+def write_new_file(save_dir, input_path, old_file, simplify):
     starts_b = False
     with open(input_path, "r+", encoding="utf-8") as iob:
-        new_filename = os.path.splitext(old_file)[0] + ".4class.tsv"
+        new_filename = (os.path.splitext(old_file)[0] + ".4class.tsv") if simplify else old_file
         with open(os.path.join(save_dir, new_filename), 'w', encoding='utf-8') as fout:
             for i, line in enumerate(iob):
                 if i == 0 or i == 1:  # skip over the URL and subsequent space line.
@@ -99,68 +104,24 @@ def write_new_file(save_dir, input_path, old_file):
                     fout.write("\n")
                     continue
                 label = line.split("\t")
-                try:
-                    edited = process_label(label, is_start=starts_b)  # processed label line labels
-                except ValueError as e:
-                    raise ValueError("Error in %s at line %d" % (input_path, i)) from e
-                assert edited
-                starts_b = edited[-1]
-                fout.write("\t".join(edited[:-1]))
-                fout.write("\n")
+                if simplify:
+                    try:
+                        edited = process_label(label, is_start=starts_b)  # processed label line labels
+                    except ValueError as e:
+                        raise ValueError("Error in %s at line %d" % (input_path, i)) from e
+                    assert edited
+                    starts_b = edited[-1]
+                    fout.write("\t".join(edited[:-1]))
+                    fout.write("\n")
+                else:
+                    fout.write("%s\t%s\n" % (label[0], label[1]))
 
 
-def ner_tags(pipe, sentence):
-    doc = pipe([sentence])
-    tags = [token.ner for sentence in doc.sentences for token in sentence.tokens]
-    return tags
-
-
-def write_file_stanza(pipe, input_dir, output_dir, file_name):
-    """
-    REMOVES DATES ONLY! To collapse rest of labels use write_new_file
-    """
-    complete_path = os.path.join(input_dir, file_name)
-    output_path = os.path.join(output_dir, file_name)
-    data = read_tsv(complete_path, text_column=0, annotation_column=1, keep_broken_tags=True)
-    with open(output_path, 'w', encoding='utf-8') as fout:
-        for segment in data:  # segments delimited by spaces
-            tokens = [token for token, _ in segment]
-            labels = [label for _, label in segment]
-
-            if any(x.endswith("MISC") for x in labels):
-                stanza_tags = ner_tags(pipe, tokens)
-                just_removed = False
-                for i, stanza_tag in enumerate(stanza_tags):
-                    if stanza_tag[2:] == "DATE":
-                        labels[i] = "O"  # remove date labels replace with empty
-                        just_removed = True
-                    elif just_removed:
-                        # make sure new tags start with B- instead of I-
-                        just_removed = False
-                        if labels[i].startswith("I-"):
-                            labels[i] = "B-" + labels[i][2:]
-            for token, tag in zip(tokens, labels):
-                fout.write("%s\t%s\n" % (token, tag))
-            fout.write("\n")
-
-
-def main(args=None):
-    BASE_PATH = "C:\\Users\\SystemAdmin\\PycharmProjects\\General Code\\stanza source code"
-    if not os.path.exists(BASE_PATH):
-        paths = get_default_paths()
-        BASE_PATH = os.path.join(paths["NERBASE"], "en_foreign")
-
-    # TODO: use a temp dir for the intermediate files
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--base_path', type=str, default=BASE_PATH, help="Where to find the raw data")
-    args = parser.parse_args(args=args)
-
-    BASE_PATH = args.base_path
-
-    with tempfile.TemporaryDirectory(dir=BASE_PATH) as tempdir:
+def copy_and_simplify(base_path, simplify):
+    with tempfile.TemporaryDirectory(dir=base_path) as tempdir:
         # Condense Labels
-        input_dir = os.path.join(BASE_PATH, "en-foreign-newswire")
-        final_dir = os.path.join(BASE_PATH, "4class")
+        input_dir = os.path.join(base_path, "en-worldwide-newswire")
+        final_dir = os.path.join(base_path, "4class" if simplify else "8class")
         os.makedirs(tempdir, exist_ok=True)
         os.makedirs(final_dir, exist_ok=True)
         for root, dirs, files in os.walk(input_dir):
@@ -168,13 +129,21 @@ def main(args=None):
                 batch_files = os.listdir(root)
                 for filename in batch_files:
                     file_path = os.path.join(root, filename)
-                    write_new_file(tempdir, file_path, filename)
+                    write_new_file(final_dir, file_path, filename, simplify)
 
-        # REMOVE DATES
-        batch_files = os.listdir(tempdir)
-        pipe = stanza.Pipeline("en", processors="tokenize,ner", tokenize_pretokenized=True)
-        for filename in tqdm(batch_files):
-            write_file_stanza(pipe, tempdir, final_dir, filename)
+def main(args=None):
+    BASE_PATH = "C:\\Users\\SystemAdmin\\PycharmProjects\\General Code\\stanza source code"
+    if not os.path.exists(BASE_PATH):
+        paths = get_default_paths()
+        BASE_PATH = os.path.join(paths["NERBASE"], "en_worldwide")
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--base_path', type=str, default=BASE_PATH, help="Where to find the raw data")
+    parser.add_argument('--simplify', default=False, action='store_true', help='Simplify to 4 classes... otherwise, keep all classes')
+    parser.add_argument('--no_simplify', dest='simplify', action='store_false', help="Don't simplify to 4 classes")
+    args = parser.parse_args(args=args)
+
+    copy_and_simplify(args.base_path, args.simplify)
 
 if __name__ == '__main__':
     main()

@@ -17,6 +17,7 @@ from operator import itemgetter
 import os
 import random
 import re
+import sys
 
 import torch
 from torch import nn
@@ -38,6 +39,9 @@ from stanza.models.constituency.utils import retag_tags, retag_trees, build_opti
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
 from stanza.server.parser_eval import EvaluateParser, ParseResult
 from stanza.utils.get_tqdm import get_tqdm
+# TODO: could put find_wordvec_pretrain, choose_charlm, etc in a more central place if it becomes widely used
+from stanza.utils.training.common import find_wordvec_pretrain, choose_charlm, find_charlm_file
+from stanza.resources.default_packages import default_charlms, default_pretrains
 
 tqdm = get_tqdm()
 
@@ -79,6 +83,29 @@ class Trainer:
         logger.info("Model saved to %s", filename)
 
     @staticmethod
+    def find_and_load_pretrain(saved_args, foundation_cache):
+        if 'wordvec_pretrain_file' not in saved_args:
+            return None
+        if os.path.exists(saved_args['wordvec_pretrain_file']):
+            return load_pretrain(saved_args['wordvec_pretrain_file'], foundation_cache)
+        logger.info("Unable to find pretrain in %s  Will try to load from the default resources instead", saved_args['wordvec_pretrain_file'])
+        language = saved_args['lang']
+        wordvec_pretrain = find_wordvec_pretrain(language, default_pretrains)
+        return load_pretrain(wordvec_pretrain, foundation_cache)
+
+    @staticmethod
+    def find_and_load_charlm(charlm_file, direction, saved_args, foundation_cache):
+        try:
+            return load_charlm(charlm_file, foundation_cache)
+        except FileNotFoundError as e:
+            logger.info("Unable to load charlm from %s  Will try to load from the default resources instead", charlm_file)
+            language = saved_args['lang']
+            dataset = saved_args['shorthand'].split("_")[1]
+            charlm = choose_charlm(language, dataset, "default", default_charlms, {})
+            charlm_file = find_charlm_file(direction, language, charlm)
+            return load_charlm(charlm_file, foundation_cache)
+
+    @staticmethod
     def model_from_params(params, args, foundation_cache=None):
         """
         Build a new model just from the saved params and some extra args
@@ -98,19 +125,44 @@ class Trainer:
         update_args.pop("transition_scheme", None)
         update_args.pop("transition_stack", None)
         update_args.pop("maxout_k", None)
+        # if the pretrain or charlms are not specified, don't override the values in the model
+        # (if any), since the model won't even work without loading the same charlm
+        if 'wordvec_pretrain_file' in update_args and update_args['wordvec_pretrain_file'] is None:
+            update_args.pop('wordvec_pretrain_file')
+        if 'charlm_forward_file' in update_args and update_args['charlm_forward_file'] is None:
+            update_args.pop('charlm_forward_file')
+        if 'charlm_backward_file' in update_args and update_args['charlm_backward_file'] is None:
+            update_args.pop('charlm_backward_file')
+        # we don't pop bert_finetune, with the theory being that if
+        # the saved model has bert_finetune==True we can load the bert
+        # weights but then not further finetune if bert_finetune==False
         saved_args.update(update_args)
+
+        # TODO: not needed if we rebuild the models
+        if saved_args.get("bert_finetune", None) is None:
+            saved_args["bert_finetune"] = False
+        if saved_args.get("stage1_bert_finetune", None) is None:
+            saved_args["stage1_bert_finetune"] = False
 
         model_type = params['model_type']
         if model_type == 'LSTM':
-            pt = load_pretrain(saved_args.get('wordvec_pretrain_file', None), foundation_cache)
-            bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
-            forward_charlm = load_charlm(saved_args["charlm_forward_file"], foundation_cache)
-            backward_charlm = load_charlm(saved_args["charlm_backward_file"], foundation_cache)
+            pt = Trainer.find_and_load_pretrain(saved_args, foundation_cache)
+            if saved_args['bert_finetune'] or saved_args['stage1_bert_finetune'] or any(x.startswith("bert_model.") for x in params['model'].keys()):
+                # if bert_finetune is True, don't use the cached model!
+                # otherwise, other uses of the cached model will be ruined
+                bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None))
+                bert_saved = True
+            else:
+                bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
+                bert_saved = False
+            forward_charlm =  Trainer.find_and_load_charlm(saved_args["charlm_forward_file"],  "forward",  saved_args, foundation_cache)
+            backward_charlm = Trainer.find_and_load_charlm(saved_args["charlm_backward_file"], "backward", saved_args, foundation_cache)
             model = LSTMModel(pretrain=pt,
                               forward_charlm=forward_charlm,
                               backward_charlm=backward_charlm,
                               bert_model=bert_model,
                               bert_tokenizer=bert_tokenizer,
+                              force_bert_saved=bert_saved,
                               transitions=params['transitions'],
                               constituents=params['constituents'],
                               tags=params['tags'],
@@ -133,6 +185,13 @@ class Trainer:
         """
         Load back a model and possibly its optimizer.
         """
+        if not os.path.exists(filename):
+            if args.get('save_dir', None) is None:
+                raise FileNotFoundError("Cannot find model in {} and args['save_dir'] is None".format(filename))
+            elif os.path.exists(os.path.join(args['save_dir'], filename)):
+                filename = os.path.join(args['save_dir'], filename)
+            else:
+                raise FileNotFoundError("Cannot find model in {} or in {}".format(filename, os.path.join(args['save_dir'], filename)))
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
@@ -163,7 +222,7 @@ class Trainer:
             else:
                 logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
 
-            scheduler = build_scheduler(model.args, optimizer)
+            scheduler = build_scheduler(model.args, optimizer, first_optimizer=build_simple_adadelta)
             if 'scheduler_state_dict' in checkpoint:
                 scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         else:
@@ -193,7 +252,7 @@ def load_pretrain_or_wordvec(args):
     pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
 
-def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse):
+def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse, name):
     """
     Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
     """
@@ -204,18 +263,18 @@ def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse
     if logger.getEffectiveLevel() <= logging.INFO:
         data = tqdm(zip(trees, sequences), total=len(trees))
 
-    for tree, sequence in data:
+    for tree_idx, (tree, sequence) in enumerate(data):
         # TODO: make the SimpleModel have a parse operation?
         state = model.initial_state_from_gold_trees([tree])[0]
         for idx, trans in enumerate(sequence):
             if not trans.is_legal(state, model):
-                raise RuntimeError("Transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(idx, trans, tree, sequence))
+                raise RuntimeError("Tree {} of {} failed: transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(tree_idx, name, idx, trans, tree, sequence))
             state = trans.apply(state, model)
         result = model.get_top_constituent(state.constituents)
         if reverse:
             result = result.reverse()
         if tree != result:
-            raise RuntimeError("Transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree, sequence, result))
+            raise RuntimeError("Tree {} of {} failed: transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree_idx, name, tree, sequence, result))
 
 def load_model_parse_text(args, model_file, retag_pipeline):
     """
@@ -233,51 +292,66 @@ def load_model_parse_text(args, model_file, retag_pipeline):
     model.eval()
     logger.info("Loaded model from %s", model_file)
 
-    parse_text(args, model, retag_pipeline)
+    if args['tokenized_dir']:
+        if not args['predict_dir']:
+            raise ValueError("Must specific --predict_dir to go with --tokenized_dir")
+        parse_dir(args, model, retag_pipeline, args['tokenized_dir'], args['predict_dir'])
+    else:
+        parse_text(args, model, retag_pipeline)
 
-def parse_text(args, model, retag_pipeline):
+def parse_dir(args, model, retag_pipeline, tokenized_dir, predict_dir):
+    os.makedirs(predict_dir, exist_ok=True)
+    for filename in os.listdir(tokenized_dir):
+        input_path = os.path.join(tokenized_dir, filename)
+        output_path = os.path.join(predict_dir, os.path.splitext(filename)[0] + ".mrg")
+        logger.info("Processing %s to %s", input_path, output_path)
+        parse_text(args, model, retag_pipeline, tokenized_file=input_path, predict_file=output_path)
+
+def parse_text(args, model, retag_pipeline, tokenized_file=None, predict_file=None):
     """
     Use the given model to parse text and write it
 
     refactored so it can be used elsewhere, such as Ensemble
+
+    TODO: some of these things really ought to be separated out from trainer.py
     """
     model.eval()
-    if args['tokenized_file']:
-        with open(args['tokenized_file'], encoding='utf-8') as fin:
-            lines = fin.readlines()
-        lines = [x.strip() for x in lines]
-        lines = [x for x in lines if x]
-        docs = [[word.replace("_", " ") for word in sentence.split()] for sentence in lines]
-        logger.info("Processing %d lines", len(docs))
-        treebank = []
-        chunk_size = 10000
-        for chunk_start in range(0, len(docs), chunk_size):
-            chunk = docs[chunk_start:chunk_start+chunk_size]
-            logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
 
-            tags = retag_tags(chunk, retag_pipeline, model.uses_xpos())
-            words = [[(word, tag) for word, tag in zip(s_words, s_tags)] for s_words, s_tags in zip(chunk, tags)]
-            logger.info("Retagging finished.  Parsing tagged text")
-
-            assert len(words) == len(chunk)
-            chunk_trees = model.parse_sentences_no_grad(iter(tqdm(words)), model.build_batch_from_tagged_words, args['eval_batch_size'], model.predict, keep_scores=False)
-            treebank.extend(chunk_trees)
+    if predict_file is None:
         if args['predict_file']:
             predict_file = args['predict_file']
             if args['predict_dir']:
                 predict_file = os.path.join(args['predict_dir'], predict_file)
-            with open(predict_file, "w", encoding="utf-8") as fout:
+
+    if tokenized_file is None:
+        tokenized_file = args['tokenized_file']
+
+    if tokenized_file is not None:
+        with open(tokenized_file, encoding='utf-8') as fin:
+            lines = fin.readlines()
+        lines = [x.strip() for x in lines]
+        lines = [x for x in lines if x]
+        docs = [[word if all(x == '_' for x in word) else word.replace("_", " ") for word in sentence.split()] for sentence in lines]
+        logger.info("Processing %d lines", len(docs))
+
+        with utils.output_stream(predict_file) as fout:
+            chunk_size = 10000
+            for chunk_start in range(0, len(docs), chunk_size):
+                chunk = docs[chunk_start:chunk_start+chunk_size]
+                logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
+
+                tags = retag_tags(chunk, retag_pipeline, model.uses_xpos())
+                words = [[(word, tag) for word, tag in zip(s_words, s_tags)] for s_words, s_tags in zip(chunk, tags)]
+                logger.info("Retagging finished.  Parsing tagged text")
+
+                assert len(words) == len(chunk)
+                treebank = model.parse_sentences_no_grad(iter(tqdm(words)), model.build_batch_from_tagged_words, args['eval_batch_size'], model.predict, keep_scores=False)
+
                 for tree_idx, result in enumerate(treebank):
                     tree = result.predictions[0].tree
-                    tree.tree_id = tree_idx + 1
+                    tree.tree_id = chunk_start + tree_idx + 1
                     fout.write(args['predict_format'].format(tree))
                     fout.write("\n")
-        else:
-            for tree_idx, result in enumerate(treebank):
-                tree = result.predictions[0].tree
-                tree.tree_id = tree_idx + 1
-                print(args['predict_format'].format(tree))
-
 
 def evaluate(args, model_file, retag_pipeline):
     """
@@ -306,12 +380,17 @@ def evaluate(args, model_file, retag_pipeline):
         }
         trainer = Trainer.load(model_file, args=load_args, foundation_cache=foundation_cache)
 
+        if args['log_shapes']:
+            trainer.model.log_shapes()
+
         treebank = tree_reader.read_treebank(args['eval_file'])
         logger.info("Read %d trees for evaluation", len(treebank))
 
         if retag_pipeline is not None:
-            logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
-            retagged_treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
+            retag_method = trainer.model.args['retag_method']
+            retag_xpos = trainer.model.args['retag_xpos']
+            logger.info("Retagging trees using the %s tags from the %s package...", retag_method, args['retag_package'])
+            retagged_treebank = retag_trees(treebank, retag_pipeline, retag_xpos)
             logger.info("Retagging finished")
 
         if args['log_norms']:
@@ -402,6 +481,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
                       max(t.count_unary_depth() for t in dev_trees)) + 1
     if silver_trees:
         unary_limit = max(unary_limit, max(t.count_unary_depth() for t in silver_trees))
+    logger.info("Unary limit: %d", unary_limit)
     train_sequences, train_transitions = transition_sequence.convert_trees_to_sequences(train_trees, "training", args['transition_scheme'], args['reversed'])
     dev_sequences, dev_transitions = transition_sequence.convert_trees_to_sequences(dev_trees, "dev", args['transition_scheme'], args['reversed'])
     silver_sequences, silver_transitions = transition_sequence.convert_trees_to_sequences(silver_trees, "silver", args['transition_scheme'], args['reversed'])
@@ -413,8 +493,8 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     # theoretically could just train based on the items in the silver dataset
     parse_transitions.check_transitions(expanded_train_transitions, silver_transitions, "silver")
 
-    verify_transitions(train_trees, train_sequences, args['transition_scheme'], unary_limit, args['reversed'])
-    verify_transitions(dev_trees, dev_sequences, args['transition_scheme'], unary_limit, args['reversed'])
+    verify_transitions(train_trees, train_sequences, args['transition_scheme'], unary_limit, args['reversed'], "train")
+    verify_transitions(dev_trees, dev_sequences, args['transition_scheme'], unary_limit, args['reversed'], "dev")
 
     root_labels = parse_tree.Tree.get_root_labels(train_trees)
     check_root_labels(root_labels, dev_trees, "dev")
@@ -445,7 +525,6 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     pt = foundation_cache.load_pretrain(args['wordvec_pretrain_file'])
     forward_charlm = foundation_cache.load_charlm(args['charlm_forward_file'])
     backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
-    bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
 
     trainer = None
     if args['checkpoint'] and args['checkpoint_save_name'] and os.path.exists(args['checkpoint_save_name']):
@@ -477,7 +556,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         # using the model's current values works for if the new
         # dataset is the same or smaller
         # TODO: handle a larger dataset as well
-        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, trainer.model.transitions, trainer.model.constituents, trainer.model.tags, trainer.model.delta_words, trainer.model.rare_words, trainer.model.root_labels, trainer.model.constituent_opens, trainer.model.unary_limit(), args)
+        model = LSTMModel(pt, forward_charlm, backward_charlm, trainer.model.bert_model, trainer.model.bert_tokenizer, trainer.model.force_bert_saved, trainer.model.transitions, trainer.model.constituents, trainer.model.tags, trainer.model.delta_words, trainer.model.rare_words, trainer.model.root_labels, trainer.model.constituent_opens, trainer.model.unary_limit(), args)
         model = model.to(args['device'])
         model.copy_with_new_structure(trainer.model)
         optimizer = build_optimizer(args, model, False)
@@ -493,13 +572,21 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         temp_args['pattn_num_layers'] = 0
         temp_args['lattn_d_proj'] = 0
 
-        temp_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, temp_args)
+        if args['bert_finetune'] or args['stage1_bert_finetune']:
+            bert_model, bert_tokenizer = load_bert(args['bert_model'])
+        else:
+            bert_model, bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
+        temp_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, False, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, temp_args)
         temp_model = temp_model.to(args['device'])
         temp_optim = build_optimizer(temp_args, temp_model, True)
-        scheduler = build_scheduler(temp_args, temp_optim)
+        scheduler = build_scheduler(temp_args, temp_optim, True)
         trainer = Trainer(temp_model, temp_optim, scheduler)
-    else:
-        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
+    else:     # TODO: combine with the multistage version?  could make this a single stage
+        if args['bert_finetune']:
+            bert_model, bert_tokenizer = load_bert(args['bert_model'])
+        else:
+            bert_model, bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
+        model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, False, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, args)
         model = model.to(args['device'])
 
         optimizer = build_optimizer(args, model, False)
@@ -592,6 +679,8 @@ def train(args, model_load_file, model_save_each_file, retag_pipeline):
         foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
         trainer, train_sequences, silver_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, model_load_file)
 
+        if args['log_shapes']:
+            model.log_shapes()
         trainer = iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, silver_trees, silver_sequences, foundation_cache, model_save_each_file, evaluator)
 
     if args['wandb']:
@@ -631,6 +720,40 @@ def next_epoch_data(leftover_training_data, train_data, epoch_size):
     epoch_data = epoch_data[:epoch_size]
 
     return leftover_training_data, epoch_data
+
+def update_bert_learning_rate(args, optimizer, epochs_trained):
+    """
+    Update the learning rate for the bert finetuning, if applicable
+    """
+    # would be nice to have a parameter group specific scheduler
+    # however, there is an issue with the optimizer we had the most success with, madgrad
+    # when the learning rate is 0 for a group, it still learns by some
+    # small amount because of the eps parameter
+    # in fact, that is enough to make the learning for the bert in the
+    # second half broken
+    for base_param_group in optimizer.param_groups:
+        if base_param_group['param_group_name'] == 'base':
+            break
+    else:
+        raise AssertionError("There should always be a base parameter group")
+    for param_group in optimizer.param_groups:
+        if param_group['param_group_name'] == 'bert':
+            # Occasionally a model goes haywire and forgets how to use the transformer
+            # So far we have only seen this happen with Electra on the non-NML version of PTB
+            # We tried fixing that with an increasing transformer learning rate, but that
+            # didn't fully resolve the problem
+            # Switching to starting the finetuning after a few epochs seems to help a lot, though
+            old_lr = param_group['lr']
+            if args['bert_finetune_begin_epoch'] is not None and epochs_trained < args['bert_finetune_begin_epoch']:
+                param_group['lr'] = 0.0
+            elif args['bert_finetune_end_epoch'] is not None and epochs_trained >= args['bert_finetune_end_epoch']:
+                param_group['lr'] = 0.0
+            elif args['multistage'] and epochs_trained < args['epochs'] // 2:
+                param_group['lr'] = base_param_group['lr'] * args['stage1_bert_learning_rate']
+            else:
+                param_group['lr'] = base_param_group['lr'] * args['bert_learning_rate']
+            if param_group['lr'] != old_lr:
+                logger.info("Setting %s finetuning rate from %f to %f", param_group['param_group_name'], old_lr, param_group['lr'])
 
 def iterate_training(args, trainer, train_trees, train_sequences, transitions, dev_trees, silver_trees, silver_sequences, foundation_cache, model_save_each_filename, evaluator):
     """
@@ -698,10 +821,17 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     leftover_silver_data = []
     if trainer.best_epoch > 0:
         logger.info("Restarting trainer with a model trained for %d epochs.  Best epoch %d, f1 %f", trainer.epochs_trained, trainer.best_epoch, trainer.best_f1)
+
+    # if we're training a new model, save the initial state so it can be inspected
+    if model_save_each_filename and trainer.epochs_trained == 0:
+        trainer.save(model_save_each_filename % trainer.epochs_trained, save_optimizer=True)
+
     # trainer.epochs_trained+1 so that if the trainer gets saved after 1 epoch, the epochs_trained is 1
     for trainer.epochs_trained in range(trainer.epochs_trained+1, args['epochs']+1):
         model.train()
         logger.info("Starting epoch %d", trainer.epochs_trained)
+        update_bert_learning_rate(args, trainer.optimizer, trainer.epochs_trained)
+
         if args['log_norms']:
             model.log_norms()
         leftover_training_data, epoch_data = next_epoch_data(leftover_training_data, train_data, args['epoch_size'])
@@ -723,11 +853,15 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             trainer.best_f1 = f1
             trainer.best_epoch = trainer.epochs_trained
             trainer.save(args['save_name'], save_optimizer=False)
-        if model_save_each_filename:
-            trainer.save(model_save_each_filename % trainer.epochs_trained, save_optimizer=True)
         if epoch_stats.nans > 0:
             logger.warning("Had to ignore %d batches with NaN", epoch_stats.nans)
         logger.info("Epoch %d finished\n  Transitions correct: %s\n  Transitions incorrect: %s\n  Total loss for epoch: %.5f\n  Dev score      (%5d): %8f\n  Best dev score (%5d): %8f", trainer.epochs_trained, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, trainer.epochs_trained, f1, trainer.best_epoch, trainer.best_f1)
+
+        old_lr = trainer.optimizer.param_groups[0]['lr']
+        trainer.scheduler.step(f1)
+        new_lr = trainer.optimizer.param_groups[0]['lr']
+        if old_lr != new_lr:
+            logger.info("Updating learning rate from %f to %f", old_lr, new_lr)
 
         if args['wandb']:
             wandb.log({'epoch_loss': epoch_stats.epoch_loss, 'dev_score': f1}, step=trainer.epochs_trained)
@@ -764,7 +898,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             forward_charlm = foundation_cache.load_charlm(args['charlm_forward_file'])
             backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
             bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
-            new_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model.transitions, model.constituents, model.tags, model.delta_words, model.rare_words, model.root_labels, model.constituent_opens, model.unary_limit(), temp_args)
+            new_model = LSTMModel(pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, model.force_bert_saved, model.transitions, model.constituents, model.tags, model.delta_words, model.rare_words, model.root_labels, model.constituent_opens, model.unary_limit(), temp_args)
             new_model.to(device)
             new_model.copy_with_new_structure(model)
 
@@ -779,6 +913,10 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         # can be made based on the end of the epoch
         if args['checkpoint'] and args['checkpoint_save_name']:
             trainer.save(args['checkpoint_save_name'], save_optimizer=True)
+        # same with the "each filename", actually, in case those are
+        # brought back for more training or even just for testing
+        if model_save_each_filename:
+            trainer.save(model_save_each_filename % trainer.epochs_trained, save_optimizer=True)
 
     return trainer
 
@@ -788,7 +926,6 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
 
     model = trainer.model
     optimizer = trainer.optimizer
-    scheduler = trainer.scheduler
 
     epoch_stats = EpochStats(0.0, Counter(), Counter(), Counter(), 0, 0)
 
@@ -807,12 +944,6 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
         optimizer.zero_grad()
         epoch_stats = epoch_stats + batch_stats
 
-
-    old_lr = scheduler.get_last_lr()[0]
-    scheduler.step()
-    new_lr = scheduler.get_last_lr()[0]
-    if old_lr != new_lr:
-        logger.info("Updating learning rate from %f to %f", old_lr, new_lr)
 
     # TODO: refactor the logging?
     total_correct = sum(v for _, v in epoch_stats.transitions_correct.items())

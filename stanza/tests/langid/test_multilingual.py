@@ -82,6 +82,16 @@ def test_multilingual_config():
 
     run_multilingual_pipeline(en_has_dependencies=False, lang_configs=lang_configs)
 
+def test_multilingual_processors_limited():
+    """
+    Test loading an available subset of processors
+    """
+    run_multilingual_pipeline(en_has_dependencies=False, fr_has_dependencies=False, lang_configs={}, processors="tokenize")
+    run_multilingual_pipeline(en_has_dependencies=True, fr_has_dependencies=False, lang_configs={"en": {"processors": "tokenize,pos,lemma,depparse"}}, processors="tokenize")
+    # this should not fail, as it will drop the zzzzzzzzzz processor for the languages which don't have it
+    run_multilingual_pipeline(en_has_dependencies=False, fr_has_dependencies=False, lang_configs={}, processors="tokenize,zzzzzzzzzz")
+
+
 def test_defaultdict_config():
     """
     Test that you can pass in a defaultdict for the lang_configs argument

@@ -35,8 +35,8 @@ There are a few minor differences in the model:
   - Initializing the embeddings with smaller values than pytorch default
     For example, on a ja_alt dataset, scores went from 0.8980 to 0.8985
     at 200 iterations averaged over 5 trials
-  - Partitioned transformer layers help quite a bit, but require some
-    finicky training mechanism.  See --multistage
+  - Training with AdaDelta first, then AdamW or madgrad later improves
+    results quite a bit.  See --multistage
 
 A couple experiments which have been tried with little noticeable impact:
   - Combining constituents using the method in the paper (only a trained
@@ -82,6 +82,24 @@ A couple experiments which have been tried with little noticeable impact:
       two layer MLP:                    0.9409
       two layer MLP, init weights:      0.9413
       single layer:                     0.9467
+  - There is code to rebuild models with a new structure in lstm_model.py
+    As part of this, we tried to randomly reinitialize the transitions
+    if the transition embedding had gone to 0, which often happens
+    This didn't help at all
+  - We tried something akin to attention with just the query vector
+    over the bert embeddings as a way to mix them, but that did not
+    improve scores.
+    Example, with a self.bert_layer_mix of size bert_dim x 1:
+        mixed_bert_embeddings = []
+        for feature in bert_embeddings:
+            weighted_feature = self.bert_layer_mix(feature.transpose(1, 2))
+            weighted_feature = torch.softmax(weighted_feature, dim=1)
+            weighted_feature = torch.matmul(feature, weighted_feature).squeeze(2)
+            mixed_bert_embeddings.append(weighted_feature)
+        bert_embeddings = mixed_bert_embeddings
+    It seems just finetuning the transformer is already enough
+    (in general, no need to mix layers at all when finetuning bert embeddings)
+
 
 The code breakdown is as follows:
 
@@ -143,20 +161,23 @@ Some alternate optimizer methods:
 import argparse
 import logging
 import os
+import re
 
 import torch
 
-from stanza import Pipeline
+import stanza
+from stanza.models.common import constant
 from stanza.models.common import utils
 from stanza.models.constituency import retagging
 from stanza.models.constituency import trainer
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY, add_predict_output_args, postprocess_predict_output_args
+from stanza.resources.common import DEFAULT_MODEL_DIR
 
 logger = logging.getLogger('stanza')
 
-def parse_args(args=None):
+def build_argparse():
     """
     Adds the arguments for building the con parser
 
@@ -173,12 +194,131 @@ def parse_args(args=None):
 
     parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
+
     # BERT helps a lot and actually doesn't slow things down too much
     # for VI, for example, use vinai/phobert-base
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
     parser.add_argument('--bert_hidden_layers', type=int, default=4, help="How many layers of hidden state to use from the transformer")
     parser.add_argument('--bert_hidden_layers_original', action='store_const', const=None, dest='bert_hidden_layers', help='Use layers 2,3,4 of the Bert embedding')
+
+    # BERT finetuning (or any transformer finetuning)
+    # also helps quite a lot.
+    # Experimentally, finetuning all of the layers is the most effective
+    # On the id_icon dataset with the indolem transformer
+    # In this experiment, we trained for 150 iterations with AdaDelta,
+    # with the learning rate 0.01,
+    # then trained for another 150 with madgrad and no finetuning
+    #   1 layer        0.880753  (152)
+    #   2 layers       0.880453  (174)
+    #   3 layers       0.881774  (163)
+    #   4 layers       0.886915  (194)
+    #   5 layers       0.892064  (299)
+    #   6 layers       0.891825  (224)
+    #   7 layers       0.894373  (173)
+    #   8 layers       0.894505  (233)
+    #   9 layers       0.896676  (269)
+    #  10 layers       0.897525  (269)
+    #  11 layers       0.897348  (211)
+    #  12 layers       0.898729  (270)
+    #  everything      0.898855  (252)
+    # so the trend is clear that more finetuning is better
+    #
+    # We found that finetuning works very well on the AdaDelta portion
+    # of a multistage training, but less well on a madgrad second
+    # stage.  The issue was that we literally could not set the
+    # learning rate low enough because madgrad used epsilon in the LR:
+    #  https://github.com/facebookresearch/madgrad/issues/16
+    #
+    # Possible values of the AdaDelta learning rate on the id_icon dataset
+    # In this experiment, we finetuned the entire transformer 150
+    # iterations on AdaDelta, then trained with madgrad for another
+    # 150 with no finetuning
+    #   0.0005:    0.89122   (155)
+    #   0.001:     0.889807  (241)
+    #   0.002:     0.894874  (202)
+    #   0.005:     0.896327  (270)
+    #   0.006:     0.898989  (246)
+    #   0.007:     0.896712  (167)
+    #   0.008:     0.900136  (237)
+    #   0.009:     0.898597  (169)
+    #   0.01:      0.898665  (251)
+    #   0.012:     0.89661   (274)
+    #   0.014:     0.899149  (283)
+    #   0.016:     0.896314  (230)
+    #   0.018:     0.897753  (257)
+    #   0.02:      0.893665  (256)
+    #   0.05:      0.849274  (159)
+    #   0.1:       0.850633  (183)
+    #   0.2:       0.847332  (176)
+    #
+    # The peak is somewhere around 0.008 to 0.014, with the further
+    # observation that at the 150 iteration mark, 0.09 was winning:
+    #   0.007:     0.894589  (33)
+    #   0.008:     0.894777  (53)
+    #   0.009:     0.896466  (56)
+    #   0.01:      0.895557  (71)
+    #   0.012:     0.893479  (45)
+    #   0.014:     0.89468  (116)
+    #   0.016:     0.893053 (128)
+    #   0.018:     0.893086  (48)
+    #
+    # Another option is to train for a few iterations with no
+    # finetuning, then begin finetuning.  However, that was not
+    # beneficial at all.
+    # Start iteration on id_icon, same setup as above:
+    #   1:         0.898855  (252)
+    #   5:         0.897885  (217)
+    #   10:        0.895367  (215)
+    #   25:        0.896781  (193)
+    #   50:        0.895216  (193)
+    # Using adamw instead of madgrad:
+    #   1:         0.900594  (226)
+    #   5:         0.898153  (267)
+    #   10:        0.898756  (271)
+    #   25:        0.896867  (256)
+    #   50:        0.895025  (220)
+    #
+    #
+    # With the observation that very low learning rate is currently
+    # not working for madgrad, we tried to parameter sweep LR for
+    # AdamW, and got the following, using a first stage LR of 0.009:
+    #  0.0:     0.899706  (290)
+    #  0.00005: 0.899631  (176)
+    #  0.0001:  0.899851  (233)
+    #  0.0002:  0.898601  (207)
+    #  0.0003:  0.899258  (252)
+    #  0.0004:  0.90033  (187)
+    #  0.0005:  0.899091  (183)
+    #  0.001:   0.899791  (268)
+    #  0.002:   0.899453  (196)
+    #  0.003:   0.897029  (173)
+    #  0.004:   0.899566  (290)
+    #  0.005:   0.899285  (289)
+    #  0.01:    0.898938  (233)
+    #  0.02:    0.898983  (248)
+    #  0.03:    0.898571  (247)
+    #  0.04:    0.898466  (180)
+    #  0.05:    0.897448  (214)
+    # It should be noted that in the 0.0001 range, the epoch to epoch
+    # change of the Bert weights was almost negligible.  Weights would
+    # change in the 5th or 6th decimal place, if at all.
+    #
+    # The conclusion of all these experiments is that, if we are using
+    # bert_finetuning, the best approach is probably a stage1 learning
+    # rate of 0.009 or so and a second stage optimizer of adamw with
+    # no LR or a very low LR.  This behavior is what happens with the
+    # --stage1_bert_finetune flag
+    parser.add_argument('--bert_finetune', default=False, action='store_true', help='Finetune the bert (or other transformer)')
+    parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
+    parser.add_argument('--bert_finetune_layers', default=None, type=int, help='Only finetune this many layers from the transformer')
+    parser.add_argument('--bert_finetune_begin_epoch', default=None, type=int, help='Which epoch to start finetuning the transformer')
+    parser.add_argument('--bert_finetune_end_epoch', default=None, type=int, help='Which epoch to stop finetuning the transformer')
+    parser.add_argument('--bert_learning_rate', default=0.009, type=float, help='Scale the learning rate for transformer finetuning by this much')
+    parser.add_argument('--stage1_bert_learning_rate', default=None, type=float, help="Scale the learning rate for transformer finetuning by this much only during an AdaDelta warmup")
+    parser.add_argument('--bert_weight_decay', default=0.0001, type=float, help='Scale the weight decay for transformer finetuning by this much')
+    parser.add_argument('--stage1_bert_finetune', default=None, action='store_true', help="Finetune the bert (or other transformer) during an AdaDelta warmup, even if the second half doesn't use bert_finetune")
+    parser.add_argument('--no_stage1_bert_finetune', dest='stage1_bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer) during an AdaDelta warmup, even if the second half doesn't use bert_finetune")
 
     parser.add_argument('--tag_embedding_dim', type=int, default=20, help="Embedding size for a tag.  0 turns off the feature")
     # Smaller values also seem to work
@@ -195,7 +335,10 @@ def parse_args(args=None):
     parser.add_argument('--silver_file', type=str, default=None, help='Secondary training file.')
     parser.add_argument('--silver_remove_duplicates', default=False, action='store_true', help="Do/don't remove duplicates from the silver training file.  Could be useful for intentionally reweighting some trees")
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
+    # TODO: write a unit test of these things
+    # and possibly refactor --tokenized_file / --tokenized_dir from here & ensemble
     parser.add_argument('--tokenized_file', type=str, default=None, help='Input file of tokenized text for parsing with parse_text.')
+    parser.add_argument('--tokenized_dir', type=str, default=None, help='Input directory of tokenized text for parsing with parse_text.')
     parser.add_argument('--mode', default='train', choices=['train', 'parse_text', 'predict', 'remove_optimizer'])
     parser.add_argument('--num_generate', type=int, default=0, help='When running a dev set, how many sentences to generate beyond the greedy one')
     add_predict_output_args(parser)
@@ -271,7 +414,7 @@ def parse_args(args=None):
     parser.add_argument('--eval_batch_size', type=int, default=50, help='How many trees to batch when running eval')
 
     parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_{finetune}_constituency.pt", help="File name to save the model")
     parser.add_argument('--save_each_name', type=str, default=None, help="Save each model in sequence to this pattern.  Mostly for testing")
 
     parser.add_argument('--seed', type=int, default=1234)
@@ -388,7 +531,13 @@ def parse_args(args=None):
 
     parser.add_argument('--stage1_learning_rate', default=None, type=float, help='Learning rate to use in the first stage of --multistage.  None means use default: {}'.format(DEFAULT_LEARNING_RATES['adadelta']))
 
-    parser.add_argument('--learning_rate_warmup', default=0, type=int, help='Number of epochs to ramp up learning rate from 0 to full.  Set to 0 to always use the chosen learning rate')
+    parser.add_argument('--learning_rate_warmup', default=0, type=int, help="Number of epochs to ramp up learning rate from 0 to full.  Set to 0 to always use the chosen learning rate.  Currently not functional, as it didn't do anything")
+
+    parser.add_argument('--learning_rate_factor', default=0.6, type=float, help='Plateau learning rate decreate when plateaued')
+    parser.add_argument('--learning_rate_patience', default=5, type=int, help='Plateau learning rate patience')
+    parser.add_argument('--learning_rate_cooldown', default=10, type=int, help='Plateau learning rate cooldown')
+    parser.add_argument('--learning_rate_min_lr', default=None, type=float, help='Plateau learning rate minimum')
+    parser.add_argument('--stage1_learning_rate_min_lr', default=None, type=float, help='Plateau learning rate minimum (stage 1)')
 
     parser.add_argument('--grad_clipping', default=None, type=float, help='Clip abs(grad) to this amount.  Use --no_grad_clipping to turn off grad clipping')
     parser.add_argument('--no_grad_clipping', action='store_const', const=None, dest='grad_clipping', help='Use --no_grad_clipping to turn off grad clipping')
@@ -481,6 +630,7 @@ def parse_args(args=None):
     parser.add_argument('--checkpoint_save_name', type=str, default=None, help="File name to save the most recent checkpoint")
     parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
     parser.add_argument('--load_name', type=str, default=None, help='Model to load when finetuning, evaluating, or manipulating an existing file')
+    parser.add_argument('--load_package', type=str, default=None, help='Download an existing stanza package & use this for tests, finetuning, etc')
 
     retagging.add_retag_args(parser)
 
@@ -521,20 +671,51 @@ def parse_args(args=None):
     parser.add_argument('--no_lattn_combined_input', dest='lattn_combined_input', action='store_false', help="Don't combine all inputs for the lattn, not just the pattn")
 
     parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
+    parser.add_argument('--log_shapes', default=False, action='store_true', help='Log the parameters shapes at the beginning')
     parser.add_argument('--watch_regex', default=None, help='regex to describe which weights and biases to output, if any')
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
     parser.add_argument('--wandb_norm_regex', default=None, help='Log on wandb any tensor whose norm matches this matrix.  Might get cluttered?')
 
+    return parser
+
+def build_model_filename(args):
+    embedding = utils.embedding_name(args)
+    maybe_finetune = "finetuned" if args['bert_finetune'] or args['stage1_bert_finetune'] else ""
+    transformer_finetune_begin = "%d" % args['bert_finetune_begin_epoch'] if args['bert_finetune_begin_epoch'] is not None else ""
+    model_save_file = args['save_name'].format(shorthand=args['shorthand'],
+                                               embedding=embedding,
+                                               finetune=maybe_finetune,
+                                               transformer_finetune_begin=transformer_finetune_begin,
+                                               transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
+                                               trans_layers=args['bert_hidden_layers'],
+                                               seed=args['seed'])
+    model_save_file = re.sub("_+", "_", model_save_file)
+    logger.info("Expanded save_name: %s", model_save_file)
+
+    model_dir = os.path.split(model_save_file)[0]
+    if model_dir != args['save_dir']:
+        model_save_file = os.path.join(args['save_dir'], model_save_file)
+    return model_save_file
+
+def parse_args(args=None):
+    parser = build_argparse()
+
     args = parser.parse_args(args=args)
     if not args.lang and args.shorthand and len(args.shorthand.split("_", maxsplit=1)) == 2:
         args.lang = args.shorthand.split("_")[0]
+
+    if args.stage1_bert_learning_rate is None:
+        args.stage1_bert_learning_rate = args.bert_learning_rate
 
     if args.optim is None and args.mode == 'train':
         if not args.multistage:
             # this seemed to work the best when not doing multistage
             args.optim = "adadelta"
+        elif args.bert_finetune or args.stage1_bert_finetune:
+            logger.info("Multistage training is set, optimizer is not chosen, and bert finetuning is active.  Will use AdamW as the second stage optimizer.")
+            args.optim = "adamw"
         else:
             # if MADGRAD exists, use it
             # otherwise, adamw
@@ -558,6 +739,13 @@ def parse_args(args=None):
 
         if args.stage1_learning_rate is None:
             args.stage1_learning_rate = DEFAULT_LEARNING_RATES["adadelta"]
+        if args.stage1_bert_finetune is None:
+            args.stage1_bert_finetune = args.bert_finetune
+
+        if args.learning_rate_min_lr is None:
+            args.learning_rate_min_lr = args.learning_rate * 0.02
+        if args.stage1_learning_rate_min_lr is None:
+            args.stage1_learning_rate_min_lr = args.stage1_learning_rate * 0.02
 
     if args.reduce_position is None:
         args.reduce_position = args.hidden_size // 4
@@ -576,15 +764,11 @@ def parse_args(args=None):
     retagging.postprocess_args(args)
     postprocess_predict_output_args(args)
 
-    model_save_file = args['save_name'] if args['save_name'] else '{}_constituency.pt'.format(args['shorthand'])
+    model_save_file = build_model_filename(args)
+    args['save_name'] = model_save_file
 
     if args['checkpoint']:
         args['checkpoint_save_name'] = utils.checkpoint_name(args['save_dir'], model_save_file, args['checkpoint_save_name'])
-
-    model_dir = os.path.split(model_save_file)[0]
-    if model_dir != args['save_dir']:
-        model_save_file = os.path.join(args['save_dir'], model_save_file)
-    args['save_name'] = model_save_file
 
     return args
 
@@ -609,7 +793,7 @@ def main(args=None):
         except TypeError:
             # so models.pt -> models_0001.pt, etc
             pieces = os.path.splitext(model_save_each_file)
-            model_save_each_file = pieces[0] + "_%4d" + pieces[1]
+            model_save_each_file = pieces[0] + "_%04d" + pieces[1]
 
     model_load_file = args['save_name']
     if args['load_name']:
@@ -617,7 +801,24 @@ def main(args=None):
             model_load_file = args['load_name']
         else:
             model_load_file = os.path.join(args['save_dir'], args['load_name'])
+    elif args['load_package']:
+        if args['lang'] is None:
+            lang_pieces = args['load_package'].split("_", maxsplit=1)
+            try:
+                lang = constant.lang_to_langcode(lang_pieces[0])
+            except ValueError as e:
+                raise ValueError("--lang not specified, and the start of the --load_package name, %s, is not a known language.  Please check the values of those parameters" % args['load_package']) from e
+            args['lang'] = lang
+            args['load_package'] = lang_pieces[1]
+        stanza.download(args['lang'], processors="constituency", package={"constituency": args['load_package']})
+        model_load_file = os.path.join(DEFAULT_MODEL_DIR, args['lang'], 'constituency', args['load_package'] + ".pt")
+        if not os.path.exists(model_load_file):
+            raise FileNotFoundError("Expected the downloaded model file for language %s package %s to be in %s, but there is nothing there.  Perhaps the package name doesn't exist?" % (args['lang'], args['load_package'], model_load_file))
+        else:
+            logger.info("Model for language %s package %s is in %s", args['lang'], args['load_package'], model_load_file)
 
+    # TODO: when loading a saved model, we should default to whatever
+    # is in the model file for --retag_method, not the default for the language
     retag_pipeline = retagging.build_retag_pipeline(args)
 
     if args['mode'] == 'train':

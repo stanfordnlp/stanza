@@ -401,8 +401,9 @@ class OpenConstituent(Transition):
         """
         disallow based on the length of the sentence
         """
-        if state.num_opens > state.sentence_length + 5:
+        if state.num_opens > state.sentence_length + 10:
             # fudge a bit so we don't miss root nodes etc in very small trees
+            # also there's one really deep tree in CTB 9.0
             return False
         if model.is_top_down():
             # If the model is top down, you can't Open if there are

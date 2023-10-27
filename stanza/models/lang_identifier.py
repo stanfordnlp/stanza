@@ -13,28 +13,30 @@ from datetime import datetime
 from stanza.models.common import utils
 from stanza.models.langid.data import DataLoader
 from stanza.models.langid.trainer import Trainer
-from tqdm import tqdm
+from stanza.utils.get_tqdm import get_tqdm
+
+tqdm = get_tqdm()
 
 logger = logging.getLogger('stanza')
 
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--batch-mode", help="custom settings when running in batch mode", action="store_true")
-    parser.add_argument("--batch-size", help="batch size for training", type=int, default=64)
-    parser.add_argument("--eval-length", help="length of strings to eval on", type=int, default=None)
-    parser.add_argument("--eval-set", help="eval on dev or test", default="test")
-    parser.add_argument("--data-dir", help="directory with train/dev/test data", default=None)
-    parser.add_argument("--load-model", help="path to load model from", default=None)
+    parser.add_argument("--batch_mode", help="custom settings when running in batch mode", action="store_true")
+    parser.add_argument("--batch_size", help="batch size for training", type=int, default=64)
+    parser.add_argument("--eval_length", help="length of strings to eval on", type=int, default=None)
+    parser.add_argument("--eval_set", help="eval on dev or test", default="test")
+    parser.add_argument("--data_dir", help="directory with train/dev/test data", default=None)
+    parser.add_argument("--load_name", help="path to load model from", default=None)
     parser.add_argument("--mode", help="train or eval", default="train")
-    parser.add_argument("--num-epochs", help="number of epochs for training", type=int, default=50)
+    parser.add_argument("--num_epochs", help="number of epochs for training", type=int, default=50)
     parser.add_argument("--randomize", help="take random substrings of samples", action="store_true")
-    parser.add_argument("--randomize-lengths-range", help="range of lengths to use when random sampling text", 
+    parser.add_argument("--randomize_lengths_range", help="range of lengths to use when random sampling text",
                         type=randomize_lengths_range, default="5,20")
-    parser.add_argument("--merge-labels-for-eval", 
+    parser.add_argument("--merge_labels_for_eval",
                         help="merge some language labels for eval (e.g. \"zh-hans\" and \"zh-hant\" to \"zh\")", 
                         action="store_true")
-    parser.add_argument("--save-best-epochs", help="save model for every epoch with new best score", action="store_true")
-    parser.add_argument("--save-name", help="where to save model", default=None)
+    parser.add_argument("--save_best_epochs", help="save model for every epoch with new best score", action="store_true")
+    parser.add_argument("--save_name", help="where to save model", default=None)
     utils.add_device_args(parser)
     args = parser.parse_args(args=args)
     return args
@@ -84,11 +86,11 @@ def train_model(args):
     # set up indexes
     tag_to_idx, char_to_idx = build_indexes(args)
     # load training data
-    train_data = DataLoader(args['device'])
+    train_data = DataLoader(args.device)
     train_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "train" in x]
     train_data.load_data(args.batch_size, train_files, char_to_idx, tag_to_idx, args.randomize)
     # load dev data
-    dev_data = DataLoader(args['device'])
+    dev_data = DataLoader(args.device)
     dev_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if "dev" in x]
     dev_data.load_data(args.batch_size, dev_files, char_to_idx, tag_to_idx, randomize=False, 
                        max_length=args.eval_length)
@@ -100,18 +102,23 @@ def train_model(args):
         "batch_size": args.batch_size,
         "lang_weights": train_data.lang_weights
     }
-    if args.load_model:
-        trainer_config["load_model"] = args.load_model
-        logger.info(f"{datetime.now()}\tLoading model from: {args.load_model}")
-    trainer = Trainer(trainer_config, load_model=args.load_model, device=args['device'])
+    if args.load_name:
+        trainer_config["load_name"] = args.load_name
+        logger.info(f"{datetime.now()}\tLoading model from: {args.load_name}")
+    trainer = Trainer(trainer_config, load_model=args.load_name is not None, device=args.device)
     # run training
     best_accuracy = 0.0
     for epoch in range(1, args.num_epochs+1):
         logger.info(f"{datetime.now()}\tEpoch {epoch}")
         logger.info(f"{datetime.now()}\tNum training batches: {len(train_data.batches)}")
-        for train_batch in tqdm(train_data.batches, disable=args.batch_mode):
+
+        batches = train_data.batches
+        if not args.batch_mode:
+            batches = tqdm(batches)
+        for train_batch in batches:
             inputs = (train_batch["sentences"], train_batch["targets"])
             trainer.update(inputs)
+
         logger.info(f"{datetime.now()}\tEpoch complete. Evaluating on dev data.")
         curr_dev_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
             eval_trainer(trainer, dev_data, batch_mode=args.batch_mode)
@@ -136,8 +143,8 @@ def score_log_path(file_path):
     Helper that will determine corresponding log file (e.g. /path/to/demo.pt to /path/to/demo.json
     """
     model_suffix = os.path.splitext(file_path)
-    if model_suffix:
-        score_log_path = f"{file_path[:-len(model_suffix)]}.json"
+    if model_suffix[1]:
+        score_log_path = f"{file_path[:-len(model_suffix[1])]}.json"
     else:
         score_log_path = f"{file_path}.json"
     return score_log_path
@@ -147,19 +154,19 @@ def eval_model(args):
     # set up trainer
     trainer_config = {
         "model_path": None,
-        "load_model": args.load_model,
+        "load_name": args.load_name,
         "batch_size": args.batch_size
     }
-    trainer = Trainer(trainer_config, load_model=True, device=args['device'])
+    trainer = Trainer(trainer_config, load_model=True, device=args.device)
     # load test data
-    test_data = DataLoader(args['device'])
+    test_data = DataLoader(args.device)
     test_files = [f"{args.data_dir}/{x}" for x in os.listdir(args.data_dir) if args.eval_set in x]
     test_data.load_data(args.batch_size, test_files, trainer.model.char_to_idx, trainer.model.tag_to_idx, 
                         randomize=False, max_length=args.eval_length)
     curr_accuracy, curr_confusion_matrix, curr_precisions, curr_recalls, curr_f1s = \
         eval_trainer(trainer, test_data, batch_mode=args.batch_mode, fine_grained=not args.merge_labels_for_eval)
     logger.info(f"{datetime.now()}\t{args.eval_set} accuracy: {curr_accuracy}")
-    eval_save_path = args.save_name if args.save_name else score_log_path(args.load_model)
+    eval_save_path = args.save_name if args.save_name else score_log_path(args.load_name)
     if not os.path.exists(eval_save_path) or args.save_name:
         with open(eval_save_path, "w") as score_log_file:
             for score_log in [{"dev_accuracy": curr_accuracy}, curr_confusion_matrix, curr_precisions,
@@ -183,7 +190,10 @@ def eval_trainer(trainer, dev_data, batch_mode=False, fine_grained=True):
             confusion_matrix[row_label][col_label] = 0
 
     # process dev batches
-    for dev_batch in tqdm(dev_data.batches, disable=batch_mode):
+    batches = dev_data.batches
+    if not batch_mode:
+        batches = tqdm(batches)
+    for dev_batch in batches:
         inputs = (dev_batch["sentences"], dev_batch["targets"])
         predictions = trainer.predict(inputs)
         for target_idx, prediction in zip(dev_batch["targets"], predictions):

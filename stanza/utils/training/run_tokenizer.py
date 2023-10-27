@@ -29,6 +29,17 @@ from stanza.utils.training.common import Mode
 
 logger = logging.getLogger('stanza')
 
+def uses_dictionary(short_language):
+    """
+    Some of the languages (as shown here) have external dictionaries
+
+    We found this helped the overall tokenizer performance
+    If these can't be found, they can be extracted from the previous iteration of models
+    """
+    if short_language in ('ja', 'th', 'zh', 'zh-hans', 'zh-hant'):
+        return True
+    return False
+
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
@@ -61,8 +72,10 @@ def run_treebank(mode, paths, treebank, short_name,
         train_args = ([label_type, label_file, train_type, train_file, "--lang", short_language,
                        "--max_seqlen", seqlen, "--mwt_json_file", dev_mwt] +
                       train_dev_args +
-                      ["--dev_conll_gold", dev_gold, "--conll_file", dev_pred, "--shorthand", short_name] +
-                      extra_args)
+                      ["--dev_conll_gold", dev_gold, "--conll_file", dev_pred, "--shorthand", short_name])
+        if uses_dictionary(short_language):
+            train_args = train_args + ["--use_dictionary"]
+        train_args = train_args + extra_args
         logger.info("Running train step with args: {}".format(train_args))
         tokenizer.main(train_args)
     
@@ -79,7 +92,7 @@ def run_treebank(mode, paths, treebank, short_name,
         results = common.run_eval_script_tokens(dev_gold, dev_pred)
         logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
 
-    if mode == Mode.SCORE_TEST:
+    if mode == Mode.SCORE_TEST or mode == Mode.TRAIN:
         test_args = ["--mode", "predict", test_type, test_file, "--lang", short_language,
                      "--conll_file", test_pred, "--shorthand", short_name, "--mwt_json_file", test_mwt]
         test_args = test_args + extra_args
@@ -90,7 +103,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
 
 def main():
-    common.main(run_treebank, "tokenize", "tokenizer")
+    common.main(run_treebank, "tokenize", "tokenizer", sub_argparse=tokenizer.build_argparse())
         
 if __name__ == "__main__":
     main()

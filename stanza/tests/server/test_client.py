@@ -41,6 +41,17 @@ Tokens:
 [Text=. CharacterOffsetBegin=66 CharacterOffsetEnd=67 PartOfSpeech=.]
 """.strip()
 
+def run_webserver(port, timeout_secs):
+    class HTTPTimeoutHandler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            time.sleep(timeout_secs)
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain; charset=utf-8')
+            self.end_headers()
+            self.wfile.write("HTTPMockServerTimeout")
+
+    HTTPServer(('127.0.0.1', port), HTTPTimeoutHandler).serve_forever()
+
 class HTTPMockServerTimeoutContext:
     """ For launching an HTTP server on certain port with an specified delay at responses """
     def __init__(self, port, timeout_secs):
@@ -48,17 +59,7 @@ class HTTPMockServerTimeoutContext:
         self.timeout_secs = timeout_secs
 
     def __enter__(self):
-        class HTTPTimeoutHandler(BaseHTTPRequestHandler):
-            def do_POST(self_inner):
-                time.sleep(self.timeout_secs)
-                self_inner.send_response(200)
-                self_inner.send_header('Content-type', 'text/plain; charset=utf-8')
-                self_inner.end_headers()
-                self_inner.wfile.write("HTTPMockServerTimeout")
-        def run_webserver():
-            HTTPServer(('127.0.0.1',self.port), HTTPTimeoutHandler).serve_forever()
-
-        self.p = multiprocessing.Process(target=run_webserver, args=())
+        self.p = multiprocessing.Process(target=run_webserver, args=(self.port, self.timeout_secs))
         self.p.daemon = True
         self.p.start()
 
@@ -157,7 +158,7 @@ class TestCoreNLPClient:
             ]
         }
 
-    def ztest_tregex_trees(self, corenlp_client):
+    def test_tregex_trees(self, corenlp_client):
         """
         Test the results of tregex run on trees w/o parsing
 
@@ -173,34 +174,31 @@ class TestCoreNLPClient:
             ]
         }
 
-
-    def test_external_server_legacy_start_server(self):
-        """ Test starting up an external server and accessing with a client with start_server=False """
+    @pytest.fixture
+    def external_server_9001(self):
         corenlp_home = client.resolve_classpath(None)
         start_cmd = f'java -Xmx5g -cp "{corenlp_home}" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
                     f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
         start_cmd = start_cmd and shlex.split(start_cmd)
         external_server_process = subprocess.Popen(start_cmd)
-        with corenlp.CoreNLPClient(start_server=False, endpoint="http://localhost:9001") as external_server_client:
-            ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
+
+        yield external_server_process
+
         assert external_server_process
         external_server_process.terminate()
         external_server_process.wait(5)
+
+    def test_external_server_legacy_start_server(self, external_server_9001):
+        """ Test starting up an external server and accessing with a client with start_server=False """
+        with corenlp.CoreNLPClient(start_server=False, endpoint="http://localhost:9001") as external_server_client:
+            ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
         assert ann.strip() == EN_GOLD
 
-    def test_external_server_available(self):
+    def test_external_server_available(self, external_server_9001):
         """ Test starting up an external available server and accessing with a client with start_server=StartServer.DONT_START """
-        corenlp_home = os.getenv('CORENLP_HOME')
-        start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
-                    f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
-        start_cmd = start_cmd and shlex.split(start_cmd)
-        external_server_process = subprocess.Popen(start_cmd)
         time.sleep(5) # wait and make sure the external CoreNLP server is up and running
         with corenlp.CoreNLPClient(start_server=corenlp.StartServer.DONT_START, endpoint="http://localhost:9001") as external_server_client:
             ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
-        assert external_server_process
-        external_server_process.terminate()
-        external_server_process.wait(5)
         assert ann.strip() == EN_GOLD
 
     def test_external_server_unavailable(self):
@@ -217,42 +215,27 @@ class TestCoreNLPClient:
                 with corenlp.CoreNLPClient(start_server=corenlp.StartServer.DONT_START, endpoint="http://localhost:9001", timeout=5000) as external_server_client:
                     ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
 
-    def test_external_server_try_start_with_external(self):
+    def test_external_server_try_start_with_external(self, external_server_9001):
         """ Test starting up an external server and accessing with a client with start_server=StartServer.TRY_START """
-        corenlp_home = os.getenv('CORENLP_HOME')
-        start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
-                    f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
-        start_cmd = start_cmd and shlex.split(start_cmd)
-        external_server_process = subprocess.Popen(start_cmd)
+        time.sleep(5) # wait and make sure the external CoreNLP server is up and running
         with corenlp.CoreNLPClient(start_server=corenlp.StartServer.TRY_START,
                                    annotators='tokenize,ssplit,pos',
                                    endpoint="http://localhost:9001") as external_server_client:
             ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
-        assert external_server_process
-        external_server_process.terminate()
-        external_server_process.wait(5)
+            assert external_server_client.server is None, "If this is not None, that indicates the client started a server instead of reusing an existing one"
         assert ann.strip() == EN_GOLD
 
     def test_external_server_try_start(self):
         """ Test starting up a server with a client with start_server=StartServer.TRY_START """
-        corenlp_home = os.getenv('CORENLP_HOME')
         with corenlp.CoreNLPClient(start_server=corenlp.StartServer.TRY_START,
                                    annotators='tokenize,ssplit,pos',
                                    endpoint="http://localhost:9001") as external_server_client:
             ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
         assert ann.strip() == EN_GOLD
 
-    def test_external_server_force_start(self):
+    def test_external_server_force_start(self, external_server_9001):
         """ Test starting up an external server and accessing with a client with start_server=StartServer.FORCE_START """
-        corenlp_home = os.getenv('CORENLP_HOME')
-        start_cmd = f'java -Xmx5g -cp "{corenlp_home}/*" edu.stanford.nlp.pipeline.StanfordCoreNLPServer -port 9001 ' \
-                    f'-timeout 60000 -server_id stanza_external_server -serverProperties {SERVER_TEST_PROPS}'
-        start_cmd = start_cmd and shlex.split(start_cmd)
-        external_server_process = subprocess.Popen(start_cmd)
         time.sleep(5) # wait and make sure the external CoreNLP server is up and running
         with pytest.raises(corenlp.PermanentlyFailedException):
             with corenlp.CoreNLPClient(start_server=corenlp.StartServer.FORCE_START, endpoint="http://localhost:9001") as external_server_client:
                 ann = external_server_client.annotate(TEXT, annotators='tokenize,ssplit,pos', output_format='text')
-        assert external_server_process
-        external_server_process.terminate()
-        external_server_process.wait(5)

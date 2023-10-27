@@ -7,8 +7,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, pad_sequence, PackedSequence
 
+from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.biaffine import DeepBiaffineScorer
-from stanza.models.common.foundation_cache import load_charlm
+from stanza.models.common.foundation_cache import load_bert, load_charlm
 from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
 from stanza.models.common.vocab import CompositeVocab
@@ -69,6 +70,32 @@ class Parser(nn.Module):
                 self.charmodel = CharacterModel(args, vocab)
                 self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
                 input_size += self.args['transformed_dim']
+
+        # TODO: refactor with POS
+        if self.args['bert_model']:
+            if args.get('bert_hidden_layers', False):
+                # The average will be offset by 1/N so that the default zeros
+                # repressents an average of the N layers
+                self.bert_layer_mix = nn.Linear(args['bert_hidden_layers'], 1, bias=False)
+                nn.init.zeros_(self.bert_layer_mix.weight)
+            else:
+                # an average of layers 2, 3, 4 will be used
+                # (for historic reasons)
+                self.bert_layer_mix = None
+            if self.args.get('bert_finetune', False):
+                bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
+                self.bert_model = bert_model
+                add_unsaved_module('bert_tokenizer', bert_tokenizer)
+            else:
+                bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
+                for n, p in bert_model.named_parameters():
+                    p.requires_grad = False
+                add_unsaved_module('bert_model', bert_model)
+                add_unsaved_module('bert_tokenizer', bert_tokenizer)
+            input_size += bert_model.config.hidden_size
+        else:
+            self.bert_model = None
+            self.bert_tokenizer = None
 
         if self.args['pretrain']:
             # pretrained embeddings, by default this won't be saved into model file
@@ -137,16 +164,32 @@ class Parser(nn.Module):
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('charlm', None):
                 # \n is to add a somewhat neutral "word" for the ROOT
-                text = [["\n"] + x for x in text]
-                all_forward_chars = self.charmodel_forward.build_char_representation(text)
+                charlm_text = [["\n"] + x for x in text]
+                all_forward_chars = self.charmodel_forward.build_char_representation(charlm_text)
                 all_forward_chars = pack(pad_sequence(all_forward_chars, batch_first=True))
-                all_backward_chars = self.charmodel_backward.build_char_representation(text)
+                all_backward_chars = self.charmodel_backward.build_char_representation(charlm_text)
                 all_backward_chars = pack(pad_sequence(all_backward_chars, batch_first=True))
                 inputs += [all_forward_chars, all_backward_chars]
             else:
                 char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
                 char_reps = PackedSequence(self.trans_char(self.drop(char_reps.data)), char_reps.batch_sizes)
                 inputs += [char_reps]
+
+        if self.bert_model is not None:
+            device = next(self.parameters()).device
+            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=True,
+                                                     num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
+                                                     detach=not self.args.get('bert_finetune', False))
+            if self.bert_layer_mix is not None:
+                # add the average so that the default behavior is to
+                # take an average of the N layers, and anything else
+                # other than that needs to be learned
+                # TODO: refactor this
+                processed_bert = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in processed_bert]
+            # we are using the first endpoint from the transformer as the "word" for ROOT
+            processed_bert = [x[:-1, :] for x in processed_bert]
+            processed_bert = pad_sequence(processed_bert, batch_first=True)
+            inputs += [pack(processed_bert)]
 
         lstm_inputs = torch.cat([x.data for x in inputs], 1)
 

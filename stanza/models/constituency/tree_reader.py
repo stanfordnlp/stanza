@@ -7,6 +7,7 @@ then recursively processing those tokens into trees.
 
 from collections import deque
 import logging
+import os
 import re
 
 from stanza.models.constituency.parse_tree import Tree
@@ -164,12 +165,12 @@ class TokenIterator:
 
 
 class TextTokenIterator(TokenIterator):
-    def __init__(self, text):
+    def __init__(self, text, use_tqdm=True):
         super().__init__()
 
         self.lines = text.split("\n")
         self.num_lines = len(self.lines)
-        if self.num_lines > 1000:
+        if self.num_lines > 1000 and use_tqdm:
             self.line_iterator = iter(tqdm(self.lines))
         else:
             self.line_iterator = iter(self.lines)
@@ -219,13 +220,13 @@ def read_token_iterator(token_iterator, broken_ok, tree_callback):
         return trees
 
 
-def read_trees(text, broken_ok=False, tree_callback=None):
+def read_trees(text, broken_ok=False, tree_callback=None, use_tqdm=True):
     """
     Reads multiple trees from the text
 
     TODO: some of the error cases we hit can be recovered from
     """
-    token_iterator = TextTokenIterator(text)
+    token_iterator = TextTokenIterator(text, use_tqdm)
     return read_token_iterator(token_iterator, broken_ok=broken_ok, tree_callback=tree_callback)
 
 def read_tree_file(filename, broken_ok=False, tree_callback=None):
@@ -234,6 +235,16 @@ def read_tree_file(filename, broken_ok=False, tree_callback=None):
     """
     with FileTokenIterator(filename) as token_iterator:
         trees = read_token_iterator(token_iterator, broken_ok=broken_ok, tree_callback=tree_callback)
+    return trees
+
+def read_directory(dirname, broken_ok=False, tree_callback=None):
+    """
+    Read all of the trees in all of the files in a directory
+    """
+    trees = []
+    for filename in sorted(os.listdir(dirname)):
+        full_name = os.path.join(dirname, filename)
+        trees.extend(read_tree_file(full_name, broken_ok, tree_callback))
     return trees
 
 def read_treebank(filename, tree_callback=None):

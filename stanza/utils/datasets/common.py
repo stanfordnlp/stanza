@@ -1,5 +1,6 @@
 
 import argparse
+from enum import Enum
 import glob
 import logging
 import os
@@ -23,6 +24,13 @@ MWT_OR_COPY_RE = re.compile("^[0-9]+[-.][0-9]+")
 INT_RE = re.compile("^[0-9]+$")
 
 CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
+
+class ModelType(Enum):
+    TOKENIZER        = 1
+    MWT              = 2
+    POS              = 3
+    LEMMA            = 4
+    DEPPARSE         = 5
 
 def convert_conllu_to_txt(tokenizer_dir, short_name, shards=("train", "dev", "test")):
     """
@@ -143,7 +151,7 @@ def write_sentences_to_conllu(filename, sents):
                 print(line, file=outfile)
             print("", file=outfile)
 
-def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=False):
+def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=False, env_var="UDBASE"):
     """
     For a given treebank, dataset, extension, look for the exact filename to use.
 
@@ -159,7 +167,7 @@ def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=Fa
     files = glob.glob(filename)
     if len(files) == 0:
         if fail:
-            raise FileNotFoundError("Could not find any treebank files which matched {}".format(filename))
+            raise FileNotFoundError("Could not find any treebank files which matched {}\nIf you have the data elsewhere, you can change the base directory for the search by changing the {} environment variable".format(filename, env_var))
         else:
             return None
     elif len(files) == 1:
@@ -239,7 +247,7 @@ def build_argparse():
     return parser
 
 
-def main(process_treebank, add_specific_args=None):
+def main(process_treebank, model_type, add_specific_args=None):
     logger.info("Datasets program called with:\n" + " ".join(sys.argv))
 
     parser = build_argparse()
@@ -260,4 +268,4 @@ def main(process_treebank, add_specific_args=None):
             treebanks.append(treebank)
 
     for treebank in treebanks:
-        process_treebank(treebank, paths, args)
+        process_treebank(treebank, model_type, paths, args)

@@ -8,7 +8,6 @@ import stanza
 
 from stanza.tests import *
 from stanza.models import ner_tagger
-from stanza.models.ner.scorer import score_by_token, score_by_entity
 from stanza.utils.confusion import confusion_to_macro_f1
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 from stanza.utils.training.run_ner import build_pretrain_args
@@ -66,7 +65,7 @@ def test_evaluate(tmp_path):
     """
     This simple example should have a 1.0 f1 for the ontonote model
     """
-    model_path = os.path.join(TEST_MODELS_DIR, "en", "ner", "ontonotes.pt")
+    model_path = os.path.join(TEST_MODELS_DIR, "en", "ner", "ontonotes_charlm.pt")
     assert os.path.exists(model_path), "This model should be downloaded as part of setup.py"
 
     os.makedirs(tmp_path, exist_ok=True)
@@ -92,4 +91,3 @@ def test_evaluate(tmp_path):
         results = fin.read().strip()
 
     assert results == EN_EXPECTED_OUTPUT
-    print(results)

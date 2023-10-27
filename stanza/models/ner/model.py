@@ -6,18 +6,20 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, pad_sequence, PackedSequence
-from stanza.models.common.data import map_to_ids, get_long_tensor
 
+from stanza.models.common.data import map_to_ids, get_long_tensor
 from stanza.models.common.packed_lstm import PackedLSTM
 from stanza.models.common.dropout import WordDropout, LockedDropout
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanza.models.common.crf import CRFLoss
-from stanza.models.common.vocab import PAD_ID, UNK_ID
+from stanza.models.common.foundation_cache import load_bert
+from stanza.models.common.vocab import PAD_ID, UNK_ID, EMPTY_ID
 from stanza.models.common.bert_embedding import extract_bert_embeddings
+
 logger = logging.getLogger('stanza')
 
 class NERTagger(nn.Module):
-    def __init__(self, args, vocab, emb_matrix=None, bert_model=None, bert_tokenizer=None):
+    def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, force_bert_saved=False):
         super().__init__()
 
         self.vocab = vocab
@@ -27,10 +29,6 @@ class NERTagger(nn.Module):
         def add_unsaved_module(name, module):
             self.unsaved_modules += [name]
             setattr(self, name, module)
-
-        # this will remember None if there is no bert
-        add_unsaved_module('bert_model', bert_model)
-        add_unsaved_module('bert_tokenizer', bert_tokenizer)
 
         # input layers
         input_size = 0
@@ -69,8 +67,30 @@ class NERTagger(nn.Module):
 
             input_size += self.args['word_emb_dim']
 
-        if self.bert_model is not None:
+        # TODO: this, pos, depparse should all be refactored
+        # FIXME: possibly pos and depparse are all losing a finetuned transformer if loaded & saved
+        # (the force_bert_saved option here handles that)
+        if self.args.get('bert_model', None):
+            # first we load the transformer model and possibly turn off its requires_grad parameters ...
+            if self.args.get('bert_finetune', False):
+                bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
+            else:
+                bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
+                for n, p in bert_model.named_parameters():
+                    p.requires_grad = False
+            # then we attach it to the NER model
+            # if force_bert_saved is True, that probably indicates the save file had a transformer in it
+            # thus we need to save it again in the future to avoid losing it when resaving
+            if self.args.get('bert_finetune', False) or force_bert_saved:
+                self.bert_model = bert_model
+                add_unsaved_module('bert_tokenizer', bert_tokenizer)
+            else:
+                add_unsaved_module('bert_model', bert_model)
+                add_unsaved_module('bert_tokenizer', bert_tokenizer)
             input_size += self.bert_model.config.hidden_size
+        else:
+            self.bert_model = None
+            self.bert_tokenizer = None
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args['charlm']:
@@ -100,12 +120,18 @@ class NERTagger(nn.Module):
         self.taggerlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']), requires_grad=False)
 
         # tag classifier
-        num_tag = len(self.vocab['tag'])
-        self.tag_clf = nn.Linear(self.args['hidden_dim']*2, num_tag)
-        self.tag_clf.bias.data.zero_()
-
-        # criterion
-        self.crit = CRFLoss(num_tag)
+        tag_lengths = self.vocab['tag'].lens()
+        self.num_output_layers = len(tag_lengths)
+        if self.args.get('connect_output_layers'):
+            tag_clfs = [nn.Linear(self.args['hidden_dim']*2, tag_lengths[0])]
+            for prev_length, next_length in zip(tag_lengths[:-1], tag_lengths[1:]):
+                tag_clfs.append(nn.Linear(self.args['hidden_dim']*2 + prev_length, next_length))
+            self.tag_clfs = nn.ModuleList(tag_clfs)
+        else:
+            self.tag_clfs = nn.ModuleList([nn.Linear(self.args['hidden_dim']*2, num_tag) for num_tag in tag_lengths])
+        for tag_clf in self.tag_clfs:
+            tag_clf.bias.data.zero_()
+        self.crits = nn.ModuleList([CRFLoss(num_tag) for num_tag in tag_lengths])
 
         self.drop = nn.Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
@@ -119,6 +145,13 @@ class NERTagger(nn.Module):
         assert emb_matrix.size() == (vocab_size, dim), \
             "Input embedding matrix must match size: {} x {}, found {}".format(vocab_size, dim, emb_matrix.size())
         self.word_emb.weight.data.copy_(emb_matrix)
+
+    def log_norms(self):
+        lines = ["NORMS FOR MODEL PARAMTERS"]
+        for name, param in self.named_parameters():
+            if param.requires_grad and name.split(".")[0] not in ('charmodel_forward', 'charmodel_backward'):
+                lines.append("  %s %.6g" % (name, torch.norm(param).item()))
+        logger.info("\n".join(lines))
 
     def forward(self, sentences, wordchars, wordchars_mask, tags, word_orig_idx, sentlens, wordlens, chars, charoffsets, charlens, char_orig_idx):
         device = next(self.parameters()).device
@@ -163,7 +196,8 @@ class NERTagger(nn.Module):
 
         if self.bert_model is not None:
             device = next(self.parameters()).device
-            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, device, keep_endpoints=False)
+            processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, device, keep_endpoints=False,
+                                                     detach=not self.args.get('bert_finetune', False))
             processed_bert = pad_sequence(processed_bert, batch_first=True)
             inputs += [pack(processed_bert)]
 
@@ -205,9 +239,25 @@ class NERTagger(nn.Module):
         lstm_outputs = pad(lstm_outputs)
         lstm_outputs = self.lockeddrop(lstm_outputs)
         lstm_outputs = pack(lstm_outputs).data
-        logits = pad(self.tag_clf(lstm_outputs)).contiguous()
-        loss, trans = self.crit(logits, word_mask, tags)
-        
+
+        loss = 0
+        logits = []
+        trans = []
+        for idx, (tag_clf, crit) in enumerate(zip(self.tag_clfs, self.crits)):
+            if not self.args.get('connect_output_layers') or idx == 0:
+                next_logits = pad(tag_clf(lstm_outputs)).contiguous()
+            else:
+                # here we pack the output of the previous round, then append it
+                packed_logits = pack(next_logits).data
+                input_logits = torch.cat([lstm_outputs, packed_logits], axis=1)
+                next_logits = pad(tag_clf(input_logits)).contiguous()
+            # the tag_mask lets us avoid backprop on a blank tag
+            tag_mask = torch.eq(tags[:, :, idx], EMPTY_ID)
+            next_loss, next_trans = crit(next_logits, torch.bitwise_or(tag_mask, word_mask), tags[:, :, idx])
+            loss = loss + next_loss
+            logits.append(next_logits)
+            trans.append(next_trans)
+
         return loss, logits, trans
 
     @staticmethod

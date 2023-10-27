@@ -47,6 +47,7 @@ lcode2lang_raw = [
     ("bho", "Bhojpuri"),
     ("bpy", "Bishnupriya_Manipuri"),
     ("bi",  "Bislama"),
+    ("bor", "Bororo"),
     ("bs",  "Bosnian"),
     ("br",  "Breton"),
     ("bg",  "Bulgarian"),
@@ -161,6 +162,7 @@ lcode2lang_raw = [
     ("mk",  "Macedonian"),
     ("jaa", "Madi"),
     ("mag", "Magahi"),
+    ("qaf", "Maghrebi_Arabic_French"),
     ("mai", "Maithili"),
     ("mpu", "Makurap"),
     ("mg",  "Malagasy"),
@@ -198,7 +200,6 @@ lcode2lang_raw = [
     ("frr", "North_Frisian"),
     ("nd",  "North_Ndebele"),
     ("sme", "North_Sami"),
-    ("se",  "Northern_Sami"),
     ("nso", "Northern_Sotho"),
     ("nb",  "Norwegian_Bokmaal"),
     ("nn",  "Norwegian_Nynorsk"),
@@ -344,20 +345,38 @@ two_to_three_letters_raw = (
     ("xh",  "xho"),
     ("yo",  "yor"),
     ("zu",  "zul"),
+
+    # this is a weird case where a 2 letter code was available,
+    # but UD used the 3 letter code instead
+    ("se",  "sme"),
 )
 
 for two, three in two_to_three_letters_raw:
-    assert two in lcode2lang
-    assert three not in lcode2lang
-    assert three not in lang2lcode
-    lang2lcode[three] = two
-    lcode2lang[three] = lcode2lang[two]
+    if two in lcode2lang:
+        assert two in lcode2lang
+        assert three not in lcode2lang
+        assert three not in lang2lcode
+        lang2lcode[three] = two
+        lcode2lang[three] = lcode2lang[two]
+    elif three in lcode2lang:
+        assert three in lcode2lang
+        assert two not in lcode2lang
+        assert two not in lang2lcode
+        lang2lcode[two] = three
+        lcode2lang[two] = lcode2lang[three]
+    else:
+        raise AssertionError("Found a proposed alias %s -> %s when neither code was already known" % (two, three))
 
 two_to_three_letters = {
     two: three for two, three in two_to_three_letters_raw
 }
 
+three_to_two_letters = {
+    three: two for two, three in two_to_three_letters_raw
+}
+
 assert len(two_to_three_letters) == len(two_to_three_letters_raw)
+assert len(three_to_two_letters) == len(two_to_three_letters_raw)
 
 # additional useful code to language mapping
 # added after dict invert to avoid conflict
@@ -429,6 +448,7 @@ treebank_special_cases = {
     "UD_Chinese-GSD": "zh-hant_gsd",
     "UD_Chinese-HK": "zh-hant_hk",
     "UD_Chinese-CFL": "zh-hans_cfl",
+    "UD_Chinese-PatentChar": "zh-hans_patentchar",
     "UD_Chinese-PUD": "zh-hant_pud",
     "UD_Norwegian-Bokmaal": "nb_bokmaal",
     "UD_Norwegian-Nynorsk": "nn_nynorsk",
@@ -444,6 +464,15 @@ def langcode_to_lang(lcode):
         return lcode2lang[lcode.lower()]
     else:
         return lcode
+
+def pretty_langcode_to_lang(lcode):
+    lang = langcode_to_lang(lcode)
+    lang = lang.replace("_", " ")
+    if lang == 'Simplified Chinese':
+        lang = 'Chinese (Simplified)'
+    elif lang == 'Traditional Chinese':
+        lang = 'Chinese (Traditional)'
+    return lang
 
 def lang_to_langcode(lang):
     if lang in lang2lcode:

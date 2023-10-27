@@ -8,6 +8,7 @@ import tempfile
 
 from enum import Enum
 
+from stanza.resources.default_packages import default_charlms, lemma_charlms, pos_charlms, depparse_charlms, TRANSFORMERS, TRANSFORMER_LAYERS
 from stanza.models.common.constant import treebank_to_short_name
 from stanza.models.common.utils import ud_scores
 from stanza.resources.common import download, DEFAULT_MODEL_DIR, UnknownLanguageError
@@ -22,185 +23,32 @@ class Mode(Enum):
     SCORE_DEV = 2
     SCORE_TEST = 3
 
-BERT = {
-    # https://huggingface.co/Maltehb/danish-bert-botxo
-    # contrary to normal expectations, this hurts F1
-    # on a dev split by about 1 F1
-    # "da": "Maltehb/danish-bert-botxo",
-    #
-    # the multilingual bert is a marginal improvement for conparse
-    #
-    # December 2022 update:
-    # there are quite a few Danish transformers available on HuggingFace
-    # here are the results of training a constituency parser with adadelta/adamw
-    # on each of them:
-    #
-    # no bert                              0.8245    0.8230
-    # alexanderfalk/danbert-small-cased    0.8236    0.8286
-    # Geotrend/distilbert-base-da-cased    0.8268    0.8306
-    # sarnikowski/convbert-small-da-cased  0.8322    0.8341
-    # bert-base-multilingual-cased         0.8341    0.8342
-    # vesteinn/ScandiBERT-no-faroese       0.8373    0.8408
-    # Maltehb/danish-bert-botxo            0.8383    0.8408
-    # vesteinn/ScandiBERT                  0.8421    0.8475
-    #
-    # Also, two models have token windows too short for use with the
-    # Danish dataset:
-    #  jonfd/electra-small-nordic
-    #  Maltehb/aelaectra-danish-electra-small-cased
-    #
-    "da": "vesteinn/ScandiBERT",
+class ArgumentParserWithExtraHelp(argparse.ArgumentParser):
+    def __init__(self, sub_argparse, *args, **kwargs):
+        super().__init__(*args, **kwargs)  # forwards all unused arguments
 
-    # As of April 2022, the bert models available have a weird
-    # tokenizer issue where soft hyphen causes it to crash.
-    # We attempt to compensate for that in the dev branch
-    # bert-base-german-cased
-    # dev:  2022-04-27 21:21:31 INFO: de_germeval2014 87.59
-    # test: 2022-04-27 21:21:59 INFO: de_germeval2014 86.95
-    #
-    # dbmdz/bert-base-german-cased
-    # dev:  2022-04-27 22:24:59 INFO: de_germeval2014 88.22
-    # test: 2022-04-27 22:25:27 INFO: de_germeval2014 87.80
-    "de": "dbmdz/bert-base-german-cased",
+        self.sub_argparse = sub_argparse
 
-    # https://huggingface.co/roberta-base
-    # an experiment with the constituency parser
-    # to compare roberta-base vs roberta-large had
-    # better results with roberta-large
-    # this was true even with more than 4 layers of roberta-large
-    # roberta-base:  0.9591
-    # roberta-large: 0.9577
-    "en": "roberta-base",
+    def print_help(self, file=None):
+        super().print_help(file=file)
 
-    # NER scores for a couple Persian options:
-    # none:
-    # dev:  2022-04-23 01:44:53 INFO: fa_arman 79.46
-    # test: 2022-04-23 01:45:03 INFO: fa_arman 80.06
-    #
-    # HooshvareLab/bert-fa-zwnj-base
-    # dev:  2022-04-23 02:43:44 INFO: fa_arman 80.87
-    # test: 2022-04-23 02:44:07 INFO: fa_arman 80.81
-    #
-    # HooshvareLab/roberta-fa-zwnj-base
-    # dev:  2022-04-23 16:23:25 INFO: fa_arman 81.23
-    # test: 2022-04-23 16:23:48 INFO: fa_arman 81.11
-    #
-    # HooshvareLab/bert-base-parsbert-uncased
-    # dev:  2022-04-26 10:42:09 INFO: fa_arman 82.49
-    # test: 2022-04-26 10:42:31 INFO: fa_arman 83.16
-    "fa": 'HooshvareLab/bert-base-parsbert-uncased',
+    def format_help(self):
+        help_text = super().format_help()
+        if self.sub_argparse is not None:
+            sub_text = self.sub_argparse.format_help().split("\n")
+            first_line = -1
+            for line_idx, line in enumerate(sub_text):
+                if line.strip().startswith("usage:"):
+                    first_line = line_idx
+                elif first_line >= 0 and not line.strip():
+                    first_line = line_idx
+                    break
+            help_text = help_text + "\n\nmodel arguments:" + "\n".join(sub_text[first_line:])
+        return help_text
 
-    # NER scores for a couple options:
-    # none:
-    # dev:  2022-03-04 INFO: fi_turku 83.45
-    # test: 2022-03-04 INFO: fi_turku 86.25
-    #
-    # bert-base-multilingual-cased
-    # dev:  2022-03-04 INFO: fi_turku 85.23
-    # test: 2022-03-04 INFO: fi_turku 89.00
-    #
-    # TurkuNLP/bert-base-finnish-cased-v1:
-    # dev:  2022-03-04 INFO: fi_turku 88.41
-    # test: 2022-03-04 INFO: fi_turku 91.36
-    "fi": "TurkuNLP/bert-base-finnish-cased-v1",
 
-    # https://huggingface.co/xlm-roberta-base
-    # Scores by entity for armtdp NER on 18 labels:
-    # no bert : 86.68
-    # xlm-roberta-base : 89.31
-    "hy": "xlm-roberta-base",
-
-    # Indonesian POS experiments: dev set of GSD
-    # python3 stanza/utils/training/run_pos.py id_gsd
-    # 89.95
-    # flax-community/indonesian-roberta-large
-    # 89.78   (!)
-    # flax-community/indonesian-roberta-base
-    # 90.14
-    # indolem/indobert-base-uncased
-    # 90.21
-    # cahya/bert-base-indonesian-1.5G
-    # 90.32
-    # cahya/roberta-base-indonesian-1.5G
-    # 90.40
-    "id": "cahya/roberta-base-indonesian-1.5G",
-
-    # from https://github.com/idb-ita/GilBERTo
-    # annoyingly, it doesn't handle cased text
-    # supposedly there is an argument "do_lower_case"
-    # but that still leaves a lot of unk tokens
-    # "it": "idb-ita/gilberto-uncased-from-camembert",
-    #
-    # from https://github.com/musixmatchresearch/umberto
-    # on NER, this gets 88.37 dev and 91.02 test
-    # another option is dbmdz/bert-base-italian-cased,
-    # which gets 87.27 dev and 90.32 test
-    #
-    #  in-order constituency parser on the VIT dev set:
-    # dbmdz/bert-base-italian-cased                       0.8079
-    # dbmdz/bert-base-italian-xxl-cased:                  0.8195
-    # Musixmatch/umberto-commoncrawl-cased-v1:            0.8256
-    # dbmdz/electra-base-italian-xxl-cased-discriminator: 0.8314
-    #
-    #  FBK NER dev set:
-    # dbmdz/bert-base-italian-cased:                      87.76
-    # Musixmatch/umberto-commoncrawl-cased-v1:            88.62
-    # dbmdz/bert-base-italian-xxl-cased:                  88.84
-    # dbmdz/electra-base-italian-xxl-cased-discriminator: 89.91
-    #
-    #  combined UD POS dev set:                             UPOS    XPOS  UFeats AllTags
-    # dbmdz/bert-base-italian-cased:                       98.62   98.53   98.06   97.49
-    # dbmdz/bert-base-italian-xxl-cased:                   98.61   98.54   98.07   97.58
-    # dbmdz/electra-base-italian-xxl-cased-discriminator:  98.64   98.54   98.14   97.61
-    # Musixmatch/umberto-commoncrawl-cased-v1:             98.56   98.45   98.13   97.62
-    "it": "dbmdz/electra-base-italian-xxl-cased-discriminator",
-
-    # experiments on the cintil conparse dataset
-    # ran a variety of transformer settings
-    # found the following dev set scores after 400 iterations:
-    # Geotrend/distilbert-base-pt-cased : not plug & play
-    # no bert: 0.9082
-    # xlm-roberta-base: 0.9109
-    # xlm-roberta-large: 0.9254
-    # adalbertojunior/distilbert-portuguese-cased: 0.9300
-    # neuralmind/bert-base-portuguese-cased: 0.9307
-    # neuralmind/bert-large-portuguese-cased: 0.9343
-    "pt": "neuralmind/bert-large-portuguese-cased",
-
-    # https://huggingface.co/dbmdz/bert-base-turkish-128k-cased
-    # helps the Turkish model quite a bit
-    "tr": "dbmdz/bert-base-turkish-128k-cased",
-
-    # from https://github.com/VinAIResearch/PhoBERT
-    # "vi": "vinai/phobert-base",
-    # using 6 or 7 layers of phobert-large is slightly
-    # more effective for constituency parsing than
-    # using 4 layers of phobert-base
-    # ... going beyond 4 layers of phobert-base
-    # does not help the scores
-    "vi": "vinai/phobert-large",
-
-    # https://github.com/ymcui/Chinese-BERT-wwm
-    # there's also hfl/chinese-roberta-wwm-ext-large
-    "zh-hans": "hfl/chinese-roberta-wwm-ext",
-
-    # https://huggingface.co/allegro/herbert-base-cased
-    # Scores by entity on the NKJP NER task:
-    # no bert (dev/test): 88.64/88.75
-    # herbert-base-cased (dev/test): 91.48/91.02,
-    # herbert-large-cased (dev/test): 92.25/91.62
-    # sdadas/polish-roberta-large-v2 (dev/test): 92.66/91.22
-    "pl": "allegro/herbert-base-cased",
-}
-
-BERT_LAYERS = {
-    # not clear what the best number is without more experiments,
-    # but more than 4 is working better than just 4
-    "vi": 7,
-}
-
-def build_argparse():
-    parser = argparse.ArgumentParser()
+def build_argparse(sub_argparse=None):
+    parser = ArgumentParserWithExtraHelp(sub_argparse=sub_argparse, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--save_output', dest='temp_output', default=True, action='store_false', help="Save output - default is to use a temp directory.")
 
     parser.add_argument('treebanks', type=str, nargs='+', help='Which treebanks to run on.  Use all_ud or ud_all for all UD treebanks')
@@ -210,8 +58,12 @@ def build_argparse():
     parser.add_argument('--score_test', dest='mode', action='store_const', const=Mode.SCORE_TEST, help='Score the test set')
 
     # These arguments need to be here so we can identify if the model already exists in the user-specified home
+    # TODO: when all of the model scripts handle their own names, can eliminate this argument
     parser.add_argument('--save_dir', type=str, default=None, help="Root dir for saving models.  If set, will override the model's default.")
     parser.add_argument('--save_name', type=str, default=None, help="Base name for saving models.  If set, will override the model's default.")
+
+    parser.add_argument('--charlm_only', action='store_true', default=False, help='When asking for ud_all, filter the ones which have charlms')
+    parser.add_argument('--transformer_only', action='store_true', default=False, help='When asking for ud_all, filter the ones for languages where we have transformers')
 
     parser.add_argument('--force', dest='force', action='store_true', default=False, help='Retrain existing models')
     return parser
@@ -220,7 +72,7 @@ def add_charlm_args(parser):
     parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
     parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
 
-def main(run_treebank, model_dir, model_name, add_specific_args=None):
+def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argparse=None, build_model_filename=None, choose_charlm_method=None):
     """
     A main program for each of the run_xyz scripts
 
@@ -235,7 +87,7 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
 
     paths = default_paths.get_default_paths()
 
-    parser = build_argparse()
+    parser = build_argparse(sub_argparse)
     if add_specific_args is not None:
         add_specific_args(parser)
     if '--extra_args' in sys.argv:
@@ -265,6 +117,14 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
             treebank = treebank[:-1]
         if treebank.lower() in ('ud_all', 'all_ud'):
             ud_treebanks = common.get_ud_treebanks(paths["UDBASE"])
+            if choose_charlm_method is not None and command_args.charlm_only:
+                logger.info("Filtering ud_all treebanks to only those which can use charlm for this model")
+                ud_treebanks = [x for x in ud_treebanks
+                                if choose_charlm_method(*treebank_to_short_name(x).split("_", 1), 'default') is not None]
+            if command_args.transformer_only:
+                logger.info("Filtering ud_all treebanks to only those which can use a transformer for this model")
+                ud_treebanks = [x for x in ud_treebanks if treebank_to_short_name(x).split("_")[0] in TRANSFORMERS]
+            logger.info("Expanding %s to %s", treebank, " ".join(ud_treebanks))
             treebanks.extend(ud_treebanks)
         else:
             treebanks.append(treebank)
@@ -289,24 +149,34 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None):
                     save_name_filename = "%s_%s" % (short_name, save_name_filename)
                     save_name = os.path.join(save_name_dir, save_name_filename)
                     logger.info("Save file for %s model for %s: %s", short_name, treebank, save_name)
-            else:
+                save_name_args = ['--save_name', save_name]
+            # some run scripts can build the model filename
+            # in order to check for models that are already created
+            elif build_model_filename is None:
                 save_name = "%s_%s.pt" % (short_name, model_name)
                 logger.info("Save file for %s model: %s", short_name, save_name)
-            save_name_args = ['--save_name', save_name]
-
-        if mode == Mode.TRAIN and not command_args.force and model_name != 'ete':
-            if command_args.save_dir:
-                model_path = os.path.join(command_args.save_dir, save_name)
+                save_name_args = ['--save_name', save_name]
             else:
-                save_dir = os.path.join("saved_models", model_dir)
-                save_name_args.extend(["--save_dir", save_dir])
-                model_path = os.path.join(save_dir, save_name)
+                save_name_args = []
 
-            if os.path.exists(model_path):
-                logger.info("%s: %s exists, skipping!" % (treebank, model_path))
-                continue
-            else:
-                logger.info("%s: %s does not exist, training new model" % (treebank, model_path))
+            if mode == Mode.TRAIN and not command_args.force:
+                if build_model_filename is not None:
+                    model_path = build_model_filename(paths, short_name, command_args, extra_args)
+                elif command_args.save_dir:
+                    model_path = os.path.join(command_args.save_dir, save_name)
+                else:
+                    save_dir = os.path.join("saved_models", model_dir)
+                    save_name_args.extend(["--save_dir", save_dir])
+                    model_path = os.path.join(save_dir, save_name)
+
+                if model_path is None:
+                    # this can happen with the identity lemmatizer, for example
+                    pass
+                elif os.path.exists(model_path):
+                    logger.info("%s: %s exists, skipping!" % (treebank, model_path))
+                    continue
+                else:
+                    logger.info("%s: %s does not exist, training new model" % (treebank, model_path))
 
         if command_args.temp_output and model_name != 'ete':
             with tempfile.NamedTemporaryFile() as temp_output_file:
@@ -354,7 +224,7 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
         if not os.path.exists(default_pt_path):
             logger.info("Default pretrain should be {}  Attempting to download".format(default_pt_path))
             try:
-                download(lang=language, package=None, processors={"pretrain": default_pt})
+                download(lang=language, package=None, processors={"pretrain": default_pt}, model_dir=model_dir)
             except UnknownLanguageError:
                 # if there's a pretrain in the directory, hiding this
                 # error will let us find that pretrain later
@@ -374,7 +244,7 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
         # will have something?
         logger.warning(f"Cannot figure out which pretrain to use for '{language}'.  Will download the default package and hope for the best")
         try:
-            download(lang=language)
+            download(lang=language, model_dir=model_dir)
         except UnknownLanguageError as e:
             # this is a very unusual situation
             # basically, there was a language which we started to add
@@ -407,7 +277,7 @@ def find_charlm_file(direction, language, charlm, model_dir=DEFAULT_MODEL_DIR):
         return resource_path
 
     try:
-        download(lang=language, package=None, processors={f"{direction}_charlm": charlm})
+        download(lang=language, package=None, processors={f"{direction}_charlm": charlm}, model_dir=model_dir)
         if os.path.exists(resource_path):
             logger.info(f'Downloaded model, using model {resource_path} for {direction} charlm')
             return resource_path
@@ -449,6 +319,10 @@ def build_charlm_args(language, charlm, base_args=True, model_dir=DEFAULT_MODEL_
     return []
 
 def choose_charlm(language, dataset, charlm, language_charlms, dataset_charlms):
+    """
+    charlm == "default" means the default charlm for this dataset or language
+    charlm == None is no charlm
+    """
     default_charlm = language_charlms.get(language, None)
     specific_charlm = dataset_charlms.get(language, {}).get(dataset, None)
 
@@ -465,3 +339,53 @@ def choose_charlm(language, dataset, charlm, language_charlms, dataset_charlms):
     else:
         return None
 
+def choose_pos_charlm(short_language, dataset, charlm):
+    """
+    charlm == "default" means the default charlm for this dataset or language
+    charlm == None is no charlm
+    """
+    return choose_charlm(short_language, dataset, charlm, default_charlms, pos_charlms)
+
+def choose_depparse_charlm(short_language, dataset, charlm):
+    """
+    charlm == "default" means the default charlm for this dataset or language
+    charlm == None is no charlm
+    """
+    return choose_charlm(short_language, dataset, charlm, default_charlms, depparse_charlms)
+
+def choose_lemma_charlm(short_language, dataset, charlm):
+    """
+    charlm == "default" means the default charlm for this dataset or language
+    charlm == None is no charlm
+    """
+    return choose_charlm(short_language, dataset, charlm, default_charlms, lemma_charlms)
+
+def choose_transformer(short_language, command_args, extra_args, warn=True, layers=False):
+    """
+    Choose a transformer using the default options for this language
+    """
+    bert_args = []
+    if command_args.use_bert and '--bert_model' not in extra_args:
+        if short_language in TRANSFORMERS:
+            bert_args = ['--bert_model', TRANSFORMERS.get(short_language)]
+            if layers and short_language in TRANSFORMER_LAYERS and '--bert_hidden_layers' not in extra_args:
+                bert_args.extend(['--bert_hidden_layers', str(TRANSFORMER_LAYERS.get(short_language))])
+        elif warn:
+            logger.error("Transformer requested, but no default transformer for %s  Specify one using --bert_model" % short_language)
+
+    return bert_args
+
+def build_pos_charlm_args(short_language, dataset, charlm, base_args=True, model_dir=DEFAULT_MODEL_DIR):
+    charlm = choose_pos_charlm(short_language, dataset, charlm)
+    charlm_args = build_charlm_args(short_language, charlm, base_args, model_dir)
+    return charlm_args
+
+def build_lemma_charlm_args(short_language, dataset, charlm, base_args=True, model_dir=DEFAULT_MODEL_DIR):
+    charlm = choose_lemma_charlm(short_language, dataset, charlm)
+    charlm_args = build_charlm_args(short_language, charlm, base_args, model_dir)
+    return charlm_args
+
+def build_depparse_charlm_args(short_language, dataset, charlm, base_args=True, model_dir=DEFAULT_MODEL_DIR):
+    charlm = choose_depparse_charlm(short_language, dataset, charlm)
+    charlm_args = build_charlm_args(short_language, charlm, base_args, model_dir)
+    return charlm_args

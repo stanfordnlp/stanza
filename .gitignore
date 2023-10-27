@@ -6,6 +6,8 @@
 *.lem
 *.toklabels
 
+# also data w/o any slash to account for symlinks
+data
 data/
 stanza_resources/
 stanza_test/

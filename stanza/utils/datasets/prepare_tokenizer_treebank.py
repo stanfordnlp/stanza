@@ -33,6 +33,7 @@ from collections import Counter
 from stanza.models.common.constant import treebank_to_short_name
 import stanza.utils.datasets.common as common
 from stanza.utils.datasets.common import read_sentences_from_conllu, write_sentences_to_conllu, INT_RE, MWT_RE, MWT_OR_COPY_RE
+import stanza.utils.datasets.tokenization.convert_ml_cochin as convert_ml_cochin
 import stanza.utils.datasets.tokenization.convert_my_alt as convert_my_alt
 import stanza.utils.datasets.tokenization.convert_vi_vlsp as convert_vi_vlsp
 import stanza.utils.datasets.tokenization.convert_th_best as convert_th_best
@@ -48,7 +49,7 @@ def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_n
     sents = read_sentences_from_conllu(original)
     write_sentences_to_conllu(copied, sents)
 
-def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None, augment=True):
+def copy_conllu_treebank(treebank, model_type, paths, dest_dir, postprocess=None, augment=True):
     """
     This utility method copies only the conllu files to the given destination directory.
 
@@ -67,7 +68,7 @@ def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None, augment=Tr
         args = argparse.Namespace()
         args.augment = augment
         args.prepare_labels = False
-        process_treebank(treebank, paths, args)
+        process_treebank(treebank, model_type, paths, args)
 
         os.makedirs(dest_dir, exist_ok=True)
 
@@ -76,10 +77,11 @@ def copy_conllu_treebank(treebank, paths, dest_dir, postprocess=None, augment=Tr
 
         # now we copy the processed conllu data files
         postprocess(tokenizer_dir, "train.gold", dest_dir, "train.in", short_name)
-        postprocess(tokenizer_dir, "dev.gold", dest_dir, "dev.gold", short_name)
-        copy_conllu_file(dest_dir, "dev.gold", dest_dir, "dev.in", short_name)
-        postprocess(tokenizer_dir, "test.gold", dest_dir, "test.gold", short_name)
-        copy_conllu_file(dest_dir, "test.gold", dest_dir, "test.in", short_name)
+        postprocess(tokenizer_dir, "dev.gold", dest_dir, "dev.in", short_name)
+        postprocess(tokenizer_dir, "test.gold", dest_dir, "test.in", short_name)
+        if model_type is not common.ModelType.POS:
+            copy_conllu_file(dest_dir, "dev.in", dest_dir, "dev.gold", short_name)
+            copy_conllu_file(dest_dir, "test.in", dest_dir, "test.gold", short_name)
 
 def split_train_file(treebank, train_input_conllu, train_output_conllu, dev_output_conllu):
     # set the seed for each data file so that the results are the same
@@ -407,10 +409,14 @@ def augment_apos(sents):
     """
     If there are no instances of ’ in the dataset, but there are instances of ',
     we replace some fraction of ' with ’ so that the tokenizer will recognize it.
+
+    # TODO: we could do it the other way around as well
     """
     has_unicode_apos = False
     has_ascii_apos = False
-    for sent in sents:
+    for sent_idx, sent in enumerate(sents):
+        if len(sent) == 0:
+            raise AssertionError("Got a blank sentence in position %d!" % sent_idx)
         for line in sent:
             if line.startswith("# text"):
                 if line.find("'") >= 0:
@@ -419,7 +425,7 @@ def augment_apos(sents):
                     has_unicode_apos = True
                 break
         else:
-            raise ValueError("Cannot find '# text'")
+            raise ValueError("Cannot find '# text' in sentences %d.  First line: %s" % (sent_idx, sent[0]))
 
     if has_unicode_apos or not has_ascii_apos:
         return sents
@@ -464,10 +470,12 @@ def augment_ellipses(sents):
 
     new_sents = []
 
+    num_updated = 0
     for sent in sents:
-        if random.random() > 0.05:
+        if random.random() > 0.1:
             new_sents.append(sent)
             continue
+        found = False
         new_sent = []
         for line in sent:
             if line.startswith("#"):
@@ -476,9 +484,13 @@ def augment_ellipses(sents):
                 pieces = line.split("\t")
                 if pieces[1] == '...':
                     pieces[1] = '…'
+                    found = True
                 new_sent.append("\t".join(pieces))
         new_sents.append(new_sent)
+        if found:
+            num_updated = num_updated + 1
 
+    print("Changed %d sentences to use fancy unicode ellipses" % num_updated)
     return new_sents
 
 # https://en.wikipedia.org/wiki/Quotation_mark
@@ -644,6 +656,47 @@ def augment_initial_punct(sents, ratio=0.20):
     return sents + new_sents
 
 
+def augment_brackets(sents, ratio=0.1):
+    """
+    If there are no sentences with [], transform some () into []
+    """
+    new_sents = []
+    for sent in sents:
+        text_idx = find_text_idx(sent)
+        text_line = sent[text_idx]
+        if text_line.count("[") > 0 or text_line.count("]") > 0:
+            # found a square bracket, so, never mind
+            return sents
+
+    for sent in sents:
+        if random.random() > ratio:
+            continue
+
+        text_idx = find_text_idx(sent)
+        text_line = sent[text_idx]
+        if text_line.count("(") == 0 and text_line.count(")") == 0:
+            continue
+
+        text_line = text_line.replace("(", "[").replace(")", "]")
+        new_sent = list(sent)
+        new_sent[text_idx] = text_line
+        for idx, line in enumerate(new_sent):
+            if line.startswith("#"):
+                continue
+            pieces = line.split("\t")
+            if pieces[1] == '(':
+                pieces[1] = '['
+            elif pieces[1] == ')':
+                pieces[1] = ']'
+            new_sent[idx] = "\t".join(pieces)
+        new_sents.append(new_sent)
+
+    if len(new_sents) > 0:
+        print("Added %d sentences with parens replaced with square brackets" % len(new_sents))
+
+    return sents + new_sents
+
+
 def augment_punct(sents):
     """
     If there are no instances of ’ in the dataset, but there are instances of ',
@@ -657,6 +710,7 @@ def augment_punct(sents):
     new_sents = augment_comma_separations(new_sents)
     new_sents = augment_initial_punct(new_sents)
     new_sents = augment_ellipses(new_sents)
+    new_sents = augment_brackets(new_sents)
 
     return new_sents
 
@@ -737,16 +791,25 @@ def build_combined_korean(udbase_dir, tokenizer_dir, short_name):
         output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
         build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_conllu)
 
-def build_combined_italian_dataset(paths, dataset):
+def build_combined_italian_dataset(paths, model_type, dataset):
     udbase_dir = paths["UDBASE"]
     if dataset == 'train':
         # could maybe add ParTUT, but that dataset has a slightly different xpos set
         # (no DE or I)
         # and I didn't feel like sorting through the differences
         # Note: currently these each have small changes compared with
-        # the UD2.7 release.  See the issues (possibly closed by now)
+        # the UD2.11 release.  See the issues (possibly closed by now)
         # filed by AngledLuffa on each of the treebanks for more info.
-        treebanks = ["UD_Italian-ISDT", "UD_Italian-VIT", "UD_Italian-TWITTIRO", "UD_Italian-PoSTWITA"]
+        treebanks = [
+            "UD_Italian-ISDT",
+            "UD_Italian-VIT",
+        ]
+        if model_type is not common.ModelType.TOKENIZER:
+            treebanks.extend([
+                "UD_Italian-TWITTIRO",
+                "UD_Italian-PoSTWITA"
+            ])
+        print("Building {} dataset out of {}".format(model_type, " ".join(treebanks)))
         sents = []
         for treebank in treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
@@ -762,7 +825,7 @@ def check_gum_ready(udbase_dir):
     if common.mostly_underscores(gum_conllu):
         raise ValueError("Cannot process UD_English-GUMReddit in its current form.  There should be a download script available in the directory which will help integrate the missing proprietary values.  Please run that script to update the data, then try again.")
 
-def build_combined_english_dataset(paths, dataset):
+def build_combined_english_dataset(paths, model_type, dataset):
     """
     en_combined is currently EWT, GUM, PUD, Pronouns, and handparsed
     """
@@ -850,7 +913,7 @@ def replace_semicolons(sentences):
     print("Updated %d sentences to replace sentence-final ; with ." % count)
     return new_sents
 
-def build_combined_spanish_dataset(paths, dataset):
+def build_combined_spanish_dataset(paths, model_type, dataset):
     """
     es_combined is AnCora and GSD put together
 
@@ -881,8 +944,23 @@ def build_combined_spanish_dataset(paths, dataset):
 
     return sents
 
+def build_combined_french_dataset(paths, model_type, dataset):
+    udbase_dir = paths["UDBASE_GIT"]
+    if dataset == 'train':
+        train_treebanks = ["UD_French-GSD", "UD_French-ParisStories", "UD_French-Rhapsodie", "UD_French-Sequoia"]
+        sents = []
+        for treebank in train_treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
+            new_sents = read_sentences_from_conllu(conllu_file)
+            print("Read %d sentences from %s" % (len(new_sents), conllu_file))
+            sents.extend(new_sents)
+    else:
+        gsd_conllu = common.find_treebank_dataset_file("UD_French-GSD", udbase_dir, dataset, "conllu")
+        sents = read_sentences_from_conllu(gsd_conllu)
 
-def build_combined_hebrew_dataset(paths, dataset):
+    return sents
+
+def build_combined_hebrew_dataset(paths, model_type, dataset):
     """
     Combines the IAHLT treebank with an updated form of HTB where the annotation style more closes matches IAHLT
 
@@ -922,6 +1000,7 @@ def build_combined_hebrew_dataset(paths, dataset):
 COMBINED_FNS = {
     "en_combined": build_combined_english_dataset,
     "es_combined": build_combined_spanish_dataset,
+    "fr_combined": build_combined_french_dataset,
     "he_combined": build_combined_hebrew_dataset,
     "it_combined": build_combined_italian_dataset,
 }
@@ -932,14 +1011,14 @@ COMBINED_EXTRA_FNS = {
     "it_combined": build_extra_combined_italian_dataset,
 }
 
-def build_combined_dataset(paths, short_name, augment):
+def build_combined_dataset(paths, short_name, model_type, augment):
     random.seed(1234)
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
     build_fn = COMBINED_FNS[short_name]
     extra_fn = COMBINED_EXTRA_FNS.get(short_name, None)
     for dataset in ("train", "dev", "test"):
         output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
-        sents = build_fn(paths, dataset)
+        sents = build_fn(paths, model_type, dataset)
         if dataset == 'train' and augment:
             sents = augment_punct(sents)
         if extra_fn is not None:
@@ -948,7 +1027,7 @@ def build_combined_dataset(paths, short_name, augment):
 
 BIO_DATASETS = ("en_craft", "en_genia", "en_mimic")
 
-def build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, augment):
+def build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, model_type, augment):
     """
     Process the en bio datasets
 
@@ -960,7 +1039,7 @@ def build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_na
     for dataset in ("train", "dev", "test"):
         output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
         if dataset == 'train':
-            sents = build_combined_english_dataset(paths, dataset)
+            sents = build_combined_english_dataset(paths, model_type, dataset)
             if dataset == 'train' and augment:
                 sents = augment_punct(sents)
         else:
@@ -1076,7 +1155,7 @@ def add_specific_args(parser):
 
     convert_vi_vlsp.add_vlsp_args(parser)
 
-def process_treebank(treebank, paths, args):
+def process_treebank(treebank, model_type, paths, args):
     """
     Processes a single treebank into train, dev, test parts
 
@@ -1098,19 +1177,21 @@ def process_treebank(treebank, paths, args):
     if short_name == "my_alt":
         convert_my_alt.convert_my_alt(paths["CONSTITUENCY_BASE"], tokenizer_dir)
     elif short_name == "vi_vlsp":
-        convert_vi_vlsp.convert_vi_vlsp(paths["EXTERN_DIR"], tokenizer_dir, args)
+        convert_vi_vlsp.convert_vi_vlsp(paths["STANZA_EXTERN_DIR"], tokenizer_dir, args)
     elif short_name == "th_orchid":
-        convert_th_orchid.main(paths["EXTERN_DIR"], tokenizer_dir)
+        convert_th_orchid.main(paths["STANZA_EXTERN_DIR"], tokenizer_dir)
     elif short_name == "th_lst20":
-        convert_th_lst20.convert(paths["EXTERN_DIR"], tokenizer_dir, args)
+        convert_th_lst20.convert(paths["STANZA_EXTERN_DIR"], tokenizer_dir, args)
     elif short_name == "th_best":
-        convert_th_best.main(paths["EXTERN_DIR"], tokenizer_dir)
+        convert_th_best.main(paths["STANZA_EXTERN_DIR"], tokenizer_dir)
+    elif short_name == "ml_cochin":
+        convert_ml_cochin.main(paths["STANZA_EXTERN_DIR"], tokenizer_dir)
     elif short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
     elif short_name in COMBINED_FNS: # eg "it_combined", "en_combined", etc
-        build_combined_dataset(paths, short_name, args.augment)
+        build_combined_dataset(paths, short_name, model_type, args.augment)
     elif short_name in BIO_DATASETS:
-        build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, args.augment)
+        build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, model_type, args.augment)
     elif short_name.startswith("en_gum"):
         # we special case GUM because it should include a filled-out GUMReddit
         print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
@@ -1134,7 +1215,7 @@ def process_treebank(treebank, paths, args):
 
 
 def main():
-    common.main(process_treebank, add_specific_args)
+    common.main(process_treebank, common.ModelType.TOKENIZER, add_specific_args)
 
 if __name__ == '__main__':
     main()

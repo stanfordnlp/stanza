@@ -11,6 +11,7 @@ import logging
 import lzma
 import os
 import random
+import re
 import sys
 import unicodedata
 import zipfile
@@ -20,7 +21,9 @@ import numpy as np
 
 from stanza.models.common.constant import lcode2lang
 import stanza.models.common.seq2seq_constant as constant
+from stanza.resources.default_packages import TRANSFORMER_NICKNAMES
 import stanza.utils.conll18_ud_eval as ud_eval
+from stanza.utils.conll18_ud_eval import UDError
 
 logger = logging.getLogger('stanza')
 
@@ -51,6 +54,20 @@ def get_wordvec_file(wordvec_dir, shorthand, wordvec_type=None):
     elif os.path.exists(filename + ".txt"):
         filename = filename + ".txt"
     return filename
+
+@contextmanager
+def output_stream(filename=None):
+    """
+    Yields the given file if a file is given, or returns sys.stdout if filename is None
+
+    Opens the file in a context manager so it closes nicely
+    """
+    if filename is None:
+        yield sys.stdout
+    else:
+        with open(filename, "w", encoding="utf-8") as fout:
+            yield fout
+
 
 @contextmanager
 def open_read_text(filename, encoding="utf-8"):
@@ -123,8 +140,15 @@ def get_adaptive_eval_interval(cur_dev_size, thres_dev_size, base_interval):
 
 # ud utils
 def ud_scores(gold_conllu_file, system_conllu_file):
-    gold_ud = ud_eval.load_conllu_file(gold_conllu_file)
-    system_ud = ud_eval.load_conllu_file(system_conllu_file)
+    try:
+        gold_ud = ud_eval.load_conllu_file(gold_conllu_file)
+    except UDError as e:
+        raise UDError("Could not read %s" % gold_conllu_file) from e
+
+    try:
+        system_ud = ud_eval.load_conllu_file(system_conllu_file)
+    except UDError as e:
+        raise UDError("Could not read %s" % system_conllu_file) from e
     evaluation = ud_eval.evaluate(gold_ud, system_ud)
 
     return evaluation
@@ -140,7 +164,21 @@ def harmonic_mean(a, weights=None):
             return sum(weights) / sum(w/x for x, w in zip(a, weights))
 
 # torch utils
-def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None):
+def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, charlm_learning_rate=0.0):
+    base_parameters = [p for n, p in model.named_parameters()
+                       if p.requires_grad and not n.startswith("bert_model.")
+                       and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
+    parameters = [{'param_group_name': 'base', 'params': base_parameters}]
+
+    charlm_parameters = [p for n, p in model.named_parameters()
+                         if p.requires_grad and (n.startswith("charmodel_forward.") or n.startswith("charmodel_backward."))]
+    if len(charlm_parameters) > 0 and charlm_learning_rate > 0:
+        parameters.append({'param_group_name': 'charlm', 'params': charlm_parameters, 'lr': lr * charlm_learning_rate})
+
+    bert_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
+    if len(bert_parameters) > 0 and bert_learning_rate > 0:
+        parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': lr * bert_learning_rate})
+
     extra_args = {}
     if weight_decay is not None:
         extra_args["weight_decay"] = weight_decay
@@ -159,7 +197,7 @@ def get_optimizer(name, parameters, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0
     elif name == 'adamax':
         return torch.optim.Adamax(parameters, **extra_args) # use default lr
     elif name == 'adadelta':
-        return torch.optim.Adadelta(parameters, **extra_args) # use default lr
+        return torch.optim.Adadelta(parameters, lr=lr, **extra_args)
     elif name == 'madgrad':
         try:
             import madgrad
@@ -358,18 +396,6 @@ def set_random_seed(seed):
         torch.cuda.manual_seed(seed)
     return seed
 
-def get_known_tags(known_tags):
-    """
-    Turns either a list or a list of lists into a single sorted list
-
-    Actually this is not at all necessarily about tags
-    """
-    if isinstance(known_tags, list) and isinstance(known_tags[0], list):
-        known_tags = sorted(set(x for y in known_tags for x in y))
-    else:
-        known_tags = sorted(known_tags)
-    return known_tags
-
 def find_missing_tags(known_tags, test_tags):
     if isinstance(known_tags, list) and isinstance(known_tags[0], list):
         known_tags = set(x for y in known_tags for x in y)
@@ -444,3 +470,57 @@ def log_training_args(args, args_logger, name="training"):
     keys = sorted(args.keys())
     log_lines = ['%s: %s' % (k, args[k]) for k in keys]
     args_logger.info('ARGS USED AT %s TIME:\n%s\n', name.upper(), '\n'.join(log_lines))
+
+def embedding_name(args):
+    """
+    Return the generic name of the biggest embedding used by a model.
+
+    Used by POS and depparse, for example.
+
+    TODO: Probably will make the transformer names a bit more informative,
+    such as electra, roberta, etc.  Maybe even phobert for VI, for example
+    """
+    embedding = "nocharlm"
+    if args['wordvec_pretrain_file'] is None and args['wordvec_file'] is None:
+        embedding = "nopretrain"
+    if args.get('charlm', True) and (args['charlm_forward_file'] or args['charlm_backward_file']):
+        embedding = "charlm"
+    if args['bert_model']:
+        if args['bert_model'] in TRANSFORMER_NICKNAMES:
+            embedding = TRANSFORMER_NICKNAMES[args['bert_model']]
+        else:
+            embedding = "transformer"
+
+    return embedding
+
+def standard_model_file_name(args, model_type):
+    """
+    Returns a model file name based on some common args found in the various models.
+
+    The expectation is that the args will have something like
+
+      parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_parser.pt", help="File name to save the model")
+
+    Then the model shorthand, embedding type, and other args will be
+    turned into arguments in a format string
+    """
+    embedding = embedding_name(args)
+
+    finetune = ""
+    transformer_lr = ""
+    if args.get("bert_finetune", False):
+        finetune = "finetuned"
+        if "bert_learning_rate" in args:
+            transformer_lr = "{}".format(args["bert_learning_rate"])
+
+    model_file = args['save_name'].format(shorthand=args['shorthand'],
+                                          embedding=embedding,
+                                          finetune=finetune,
+                                          transformer_lr=transformer_lr)
+    model_file = re.sub("_+", "_", model_file)
+
+    model_dir = os.path.split(model_file)[0]
+
+    if not os.path.exists(os.path.join(args['save_dir'], model_file)) and os.path.exists(model_file):
+        return model_file
+    return os.path.join(args['save_dir'], model_file)

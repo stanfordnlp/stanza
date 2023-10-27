@@ -178,6 +178,26 @@ def test_forward_charlm(pretrain_file):
     model = build_model(pretrain_file, '--charlm_forward_file', forward_charlm_path, '--charlm_backward_file', backward_charlm_path, '--sentence_boundary_vectors', 'words')
     run_forward_checks(model)
 
+def test_forward_bert(pretrain_file):
+    """
+    Test on a tiny Bert, which hopefully does not take up too much disk space or memory
+    """
+    bert_model = "hf-internal-testing/tiny-bert"
+
+    model = build_model(pretrain_file, '--bert_model', bert_model)
+    run_forward_checks(model)
+
+
+def test_forward_xlnet(pretrain_file):
+    """
+    Test on a tiny xlnet, which hopefully does not take up too much disk space or memory
+    """
+    bert_model = "hf-internal-testing/tiny-random-xlnet"
+
+    model = build_model(pretrain_file, '--bert_model', bert_model)
+    run_forward_checks(model)
+
+
 def test_forward_sentence_boundaries(pretrain_file):
     """
     Test start & stop boundary vectors

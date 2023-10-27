@@ -12,6 +12,7 @@ languages such as VI which have spaces in them
 import argparse
 import io
 import os
+import time
 import re
 import zipfile
 
@@ -28,18 +29,20 @@ tqdm = get_tqdm()
 
 NEWLINE_SPLIT_RE = re.compile(r"\n\s*\n")
 
-def tokenize_to_file(tokenizer, fin, fout):
-    # TODO: split text?  this could be kinda long
+def tokenize_to_file(tokenizer, fin, fout, chunk_size=500):
     raw_text = fin.read()
     documents = NEWLINE_SPLIT_RE.split(raw_text)
-    in_docs = [stanza.Document([], text=d) for d in documents]
-    out_docs = tokenizer.bulk_process(in_docs)
-    for document in out_docs:
-        for sent_idx, sentence in enumerate(document.sentences):
-            if sent_idx > 0:
-                fout.write(" ")
-            fout.write(" ".join(x.text for x in sentence.tokens))
-        fout.write("\n")
+    for chunk_start in tqdm(range(0, len(documents), chunk_size), leave=False):
+        chunk_end = min(chunk_start + chunk_size, len(documents))
+        chunk = documents[chunk_start:chunk_end]
+        in_docs = [stanza.Document([], text=d) for d in chunk]
+        out_docs = tokenizer.bulk_process(in_docs)
+        for document in out_docs:
+            for sent_idx, sentence in enumerate(document.sentences):
+                if sent_idx > 0:
+                    fout.write(" ")
+                fout.write(" ".join(x.text for x in sentence.tokens))
+            fout.write("\n")
 
 def main(args=None):
     parser = argparse.ArgumentParser()
@@ -48,6 +51,7 @@ def main(args=None):
     parser.add_argument("input_files", type=str, nargs="+", help="Which input files to tokenize")
     parser.add_argument("--output_file", type=str, default="glove.txt", help="Where to write the tokenized output")
     parser.add_argument("--model_dir", type=str, default=None, help="Where to get models for a Pipeline (None => default models dir)")
+    parser.add_argument("--chunk_size", type=int, default=500, help="How many 'documents' to use in a chunk when tokenizing.  This is separate from the tokenizer batching - this limits how much memory gets used at once, since we don't need to store an entire file in memory at once")
     args = parser.parse_args(args=args)
 
     if os.path.exists(args.output_file):

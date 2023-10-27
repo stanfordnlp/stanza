@@ -222,6 +222,11 @@ message Token {
   optional bool isMWT = 67;
   optional bool isFirstMWT = 68;
   optional string mwtText = 69;
+  // setting this to a map might be nice, but there are a couple issues
+  // for one, there can be values with no key
+  // for another, it's a pain to correctly parse, since different treebanks
+  // can have different standards for how to write out the misc field
+  optional string mwtMisc = 78;
 
   // number info
   optional uint64 numericValue = 70;
@@ -236,8 +241,19 @@ message Token {
   //       string text           @see Document#text + character offsets
   //       uint32 sentenceIndex  @see Sentence#sentenceIndex
   //       string docID          @see Document#docID
-  //       uint32 index          @see implicit in Sentence
   //       uint32 paragraph      @see Sentence#paragraph
+
+  // Most serialized annotations will not have this
+  // Some code paths may not correctly process this if serialized,
+  // since many places will read the index off the position in a sentence
+  // In particular, deserializing a Document using ProtobufAnnotationSerializer
+  // will clobber any index value
+  // But Semgrex and Ssurgeon in particular need a way
+  // to pass around nodes where the node's index is not strictly 1, 2, 3, ...
+  // thanks to the empty nodes in UD treebanks such as
+  // English EWT or Estonian EWT (not related to each other)
+  optional uint32 index          = 79;
+  optional uint32 emptyIndex     = 80;
 
   extensions 100 to 255;
 }
@@ -300,24 +316,31 @@ message DependencyGraph {
     required uint32 sentenceIndex  = 1;
     required uint32 index          = 2;
     optional uint32 copyAnnotation = 3;
+    optional uint32 emptyIndex     = 4;
   }
 
   message Edge {
-    required uint32 source     = 1;
-    required uint32 target     = 2;
-    optional string dep        = 3;
-    optional bool   isExtra    = 4;
-    optional uint32 sourceCopy = 5;
-    optional uint32 targetCopy = 6;
-    optional Language language = 7 [default=Unknown];
+    required uint32 source      = 1;
+    required uint32 target      = 2;
+    optional string dep         = 3;
+    optional bool   isExtra     = 4;
+    optional uint32 sourceCopy  = 5;
+    optional uint32 targetCopy  = 6;
+    optional uint32 sourceEmpty = 8;
+    optional uint32 targetEmpty = 9;
+    optional Language language  = 7 [default=Unknown];
   }
-  
+
   repeated Node     node     = 1;
   repeated Edge     edge     = 2;
   repeated uint32   root     = 3 [packed=true];
   // optional: if this graph message is not part of a larger context,
   // the tokens will help reconstruct the actual sentence
   repeated Token    token    = 4;
+  // The values in this field will index directly into the node list
+  // This is useful so that additional information such as emptyIndex
+  // can be considered without having to pass it around a second time
+  repeated uint32   rootNode = 5 [packed=true];
 }
 
 //
@@ -381,15 +404,15 @@ message Mention {
   optional IndexedWord       headWord  = 32;
   optional SpeakerInfo    speakerInfo  = 33;
 
-  repeated IndexedWord         sentenceWords = 50;
-  repeated IndexedWord         originalSpan = 51;
+  repeated IndexedWord sentenceWords   = 50;
+  repeated IndexedWord originalSpan    = 51;
   repeated string dependents           = 52;
   repeated string preprocessedTerms    = 53;
-  repeated int32 appositions = 54;
-  repeated int32 predicateNominatives = 55;
-  repeated int32 relativePronouns = 56;
-  repeated int32 listMembers = 57;
-  repeated int32 belongToLists = 58;
+  repeated int32 appositions           = 54;
+  repeated int32 predicateNominatives  = 55;
+  repeated int32 relativePronouns      = 56;
+  repeated int32 listMembers           = 57;
+  repeated int32 belongToLists         = 58;
 
 }
 
@@ -410,7 +433,7 @@ message IndexedWord {
 
 message SpeakerInfo {
   optional string speakerName          = 1;
-  repeated int32 mentions    = 2;
+  repeated int32 mentions              = 2;
 }
 
 //
@@ -448,7 +471,7 @@ message Entity {
   optional uint32 headTokenIndex = 10;
   optional string corefID        = 11;
   // inherited from ExtractionObject
-  optional string objectID = 1;
+  optional string objectID       = 1;
   optional uint32 extentStart    = 2;
   optional uint32 extentEnd      = 3;
   optional string type           = 4;
@@ -687,7 +710,11 @@ message SemgrexResponse {
 // corresponding graph
 // An alternative would have been to use the existing Document or
 // Sentence classes, but the problem with that is it would be
-// ambiguous which dependency object to use.
+// ambiguous which dependency object to use.  Another problem
+// is that if the intent is to use multiple graphs from a
+// Sentence, then edits to the nodes of one graph would show up
+// in the nodes of the other graph (same backing CoreLabels)
+// and the operations themselves may not have the intended effect.
 // The Ssurgeon is composed of two pieces, the semgrex and the
 // ssurgeon operations, along with some optional documentation.
 message SsurgeonRequest {

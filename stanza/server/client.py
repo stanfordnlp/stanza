@@ -20,8 +20,7 @@ import uuid
 
 from datetime import datetime
 from pathlib import Path
-
-from six.moves.urllib.parse import urlparse
+from urllib.parse import urlparse
 
 from stanza.protobuf import Document, parseFromDelimitedString, writeToDelimitedString, to_text
 __author__ = 'arunchaganty, kelvinguu, vzhong, wmonroe4'
@@ -133,14 +132,14 @@ class RobustService(object):
                 with contextlib.closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as sock:
                     try:
                         sock.bind((self.host, self.port))
-                    except socket.error:
+                    except socket.error as e:
                         if self.ignore_binding_error:
                             logger.info(f"Connecting to existing CoreNLP server at {self.host}:{self.port}")
                             self.server = None
                             return
                         else:
                             raise PermanentlyFailedException("Error: unable to start the CoreNLP server on port %d "
-                                                         "(possibly something is already running there)" % self.port)
+                                                             "(possibly something is already running there)" % self.port) from e
             if self.be_quiet:
                 # Issue #26: subprocess.DEVNULL isn't supported in python 2.7.
                 if hasattr(subprocess, 'DEVNULL'):
@@ -468,7 +467,11 @@ class CoreNLPClient(RobustService):
         except requests.exceptions.Timeout as e:
             raise TimeoutException("Timeout requesting to CoreNLPServer. Maybe server is unavailable or your document is too long")
         except requests.exceptions.RequestException as e:
-            raise AnnotationException(e)
+            if e.response is not None and e.response.text is not None:
+                raise AnnotationException(e.response.text) from e
+            elif e.args:
+                raise AnnotationException(e.args[0]) from e
+            raise AnnotationException() from e
 
     def annotate(self, text, annotators=None, output_format=None, properties=None, reset_default=None, **kwargs):
         """
@@ -671,6 +674,47 @@ class CoreNLPClient(RobustService):
                 self.endpoint + path, params={
                     'pattern': pattern,
                     'filter': filter,
+                    'properties': str(properties)
+                },
+                data=text.encode('utf-8') if isinstance(text, str) else text,
+                headers={'content-type': ctype},
+                timeout=(self.timeout*2)/1000,
+            )
+            r.raise_for_status()
+            if r.encoding is None:
+                r.encoding = "utf-8"
+            return json.loads(r.text)
+        except requests.HTTPError as e:
+            if r.text.startswith("Timeout"):
+                raise TimeoutException(r.text)
+            else:
+                raise AnnotationException(r.text)
+        except json.JSONDecodeError:
+            raise AnnotationException(r.text)
+
+
+    def scenegraph(self, text, properties=None):
+        """
+        Send a request to the server which processes the text using SceneGraph
+
+        This will require a new CoreNLP release, 4.5.5 or later
+        """
+        # since we're using requests ourself,
+        # check if the server has started or not
+        if self.start_server is not StartServer.DONT_START:
+            self.ensure_alive()
+
+        if properties is None:
+            properties = {}
+        # the only thing the scenegraph knows how to use is text
+        properties['inputFormat'] = 'text'
+        ctype = "text/plain; charset=utf-8"
+        # the json output format is much more useful
+        properties['outputFormat'] = 'json'
+        try:
+            r = requests.post(
+                self.endpoint + "/scenegraph",
+                params={
                     'properties': str(properties)
                 },
                 data=text.encode('utf-8') if isinstance(text, str) else text,

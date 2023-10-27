@@ -108,14 +108,14 @@ def get_ptb_tokenized_phrases(dataset):
     phrases = [SentimentDatum(x.sentiment, y.split()) for x, y in zip(dataset, tokenized)]
     return phrases
 
-def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_language, mapping, delimiter='\t', quotechar=None, skip_first_line=False, nlp=None):
+def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_language, mapping, delimiter='\t', quotechar=None, skip_first_line=False, nlp=None, encoding="utf-8"):
     """
     Read in a single CSV file and return a list of SentimentDatums
     """
     if nlp is None:
         nlp = stanza.Pipeline(tokenizer_language, processors='tokenize')
 
-    with open(csv_filename, newline='') as fin:
+    with open(csv_filename, newline='', encoding=encoding) as fin:
         if skip_first_line:
             next(fin)
         cin = csv.reader(fin, delimiter=delimiter, quotechar=quotechar)

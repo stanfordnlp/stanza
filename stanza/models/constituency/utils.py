@@ -214,12 +214,18 @@ def build_optimizer(args, model, build_simple_adadelta=False):
     """
     if build_simple_adadelta:
         optim_type = 'adadelta'
+        bert_finetune = args.get('stage1_bert_finetune', False)
+        if bert_finetune:
+            bert_learning_rate = args['stage1_bert_learning_rate']
         learning_eps = DEFAULT_LEARNING_EPS['adadelta']
         learning_rate = args['stage1_learning_rate']
         learning_rho = DEFAULT_LEARNING_RHO
         weight_decay = DEFAULT_WEIGHT_DECAY['adadelta']
     else:
         optim_type = args['optim'].lower()
+        bert_finetune = args.get('bert_finetune', False)
+        if bert_finetune:
+            bert_learning_rate = args['bert_learning_rate']
         learning_beta2 = args['learning_beta2']
         learning_eps = args['learning_eps']
         learning_rate = args['learning_rate']
@@ -227,7 +233,26 @@ def build_optimizer(args, model, build_simple_adadelta=False):
         momentum = args['learning_momentum']
         weight_decay = args['learning_weight_decay']
 
-    parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name)]
+    base_parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name) and not name.startswith("bert_model.")]
+    parameters = [
+        {'param_group_name': 'base', 'params': base_parameters},
+    ]
+    if bert_finetune:
+        bert_parameters = [param for name, param in model.named_parameters()
+                           if not model.is_unsaved_module(name) and name.startswith("bert_model.")]
+        logger.debug("Finetuning %d transformer parameters" % len(bert_parameters))
+        if len(bert_parameters) > 0 and args['bert_finetune_layers'] is not None:
+            num_layers = model.bert_model.config.num_hidden_layers
+            start_layer = num_layers - args['bert_finetune_layers']
+            bert_parameters = []
+            for layer_num in range(start_layer, num_layers):
+                #print([name for name, param in model.named_parameters()
+                #       if not model.is_unsaved_module(name) and name.startswith("bert_model.") and "layer.%d." % layer_num in name])
+                bert_parameters.extend([param for name, param in model.named_parameters()
+                                        if not model.is_unsaved_module(name) and name.startswith("bert_model.") and "layer.%d." % layer_num in name])
+        if len(bert_parameters) > 0:
+            parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': learning_rate * bert_learning_rate, 'weight_decay': weight_decay * args['bert_weight_decay']})
+
     if optim_type == 'sgd':
         logger.info("Building SGD with lr=%f, momentum=%f, weight_decay=%f", learning_rate, momentum, weight_decay)
         optimizer = optim.SGD(parameters, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
@@ -260,18 +285,29 @@ def build_optimizer(args, model, build_simple_adadelta=False):
         raise ValueError("Unknown optimizer: %s" % optim)
     return optimizer
 
-def build_scheduler(args, optimizer):
-    if args.get('learning_rate_warmup', 0) <= 0:
-        # TODO: is there an easier way to make an empty scheduler?
-        lr_lambda = lambda x: 1.0
-    else:
-        warmup_end = args['learning_rate_warmup']
-        def lr_lambda(x):
-            if x >= warmup_end:
-                return 1.0
-            return x / warmup_end
+def build_scheduler(args, optimizer, first_optimizer=False):
+    """
+    Build the scheduler for the conparser based on its args
 
-    scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+    Used to use a warmup for learning rate, but that wasn't working very well
+    Now, we just use a ReduceLROnPlateau, which does quite well
+    """
+    #if args.get('learning_rate_warmup', 0) <= 0:
+    #    # TODO: is there an easier way to make an empty scheduler?
+    #    lr_lambda = lambda x: 1.0
+    #else:
+    #    warmup_end = args['learning_rate_warmup']
+    #    def lr_lambda(x):
+    #        if x >= warmup_end:
+    #            return 1.0
+    #        return x / warmup_end
+
+    #scheduler = optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+    if first_optimizer:
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=args['learning_rate_factor'], patience=args['learning_rate_patience'], cooldown=args['learning_rate_cooldown'], min_lr=args['stage1_learning_rate_min_lr'])
+    else:
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='max', factor=args['learning_rate_factor'], patience=args['learning_rate_patience'], cooldown=args['learning_rate_cooldown'], min_lr=args['learning_rate_min_lr'])
     return scheduler
 
 def initialize_linear(linear, nonlinearity, bias):

@@ -17,6 +17,7 @@ if not TEST_WORKING_DIR:
     TEST_WORKING_DIR = os.path.join(os.getcwd(), TEST_DIR_BASE_NAME)
 
 TEST_MODELS_DIR = f'{TEST_WORKING_DIR}/models'
+TEST_CORENLP_DIR = f'{TEST_WORKING_DIR}/corenlp_dir'
 
 # server resources
 SERVER_TEST_PROPS = f'{TEST_WORKING_DIR}/scripts/external_server.properties'

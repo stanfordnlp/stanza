@@ -21,7 +21,8 @@ def test_ner_scorer():
     assert pytest.approx(token_r, abs=0.00001) == 0.5
     assert pytest.approx(token_f, abs=0.00001) == 0.55555
 
-    entity_p, entity_r, entity_f = score_by_entity(pred_sequences, gold_sequences)
+    entity_p, entity_r, entity_f, entity_f1 = score_by_entity(pred_sequences, gold_sequences)
     assert pytest.approx(entity_p, abs=0.00001) == 0.4
     assert pytest.approx(entity_r, abs=0.00001) == 0.33333
     assert pytest.approx(entity_f, abs=0.00001) == 0.36363
+    assert entity_f1 == {'LOC': 0.0, 'MISC': 1.0, 'ORG': 0.0, 'PER': 0.5}

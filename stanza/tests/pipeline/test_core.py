@@ -29,13 +29,13 @@ def test_download_missing_ner_model():
     """
     with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         stanza.download("en", model_dir=test_dir, processors="tokenize", package="combined", verbose=False)
-        pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize,ner", package={"ner": ("ontonotes")})
+        pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize,ner", package={"ner": ("ontonotes_charlm")})
 
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
         assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain', 'tokenize']
-        assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes.pt']
+        assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes_charlm.pt']
 
 
 def test_download_missing_resources():
@@ -43,13 +43,13 @@ def test_download_missing_resources():
     Test that the pipeline will automatically download missing models
     """
     with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-        pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize,ner", package={"tokenize": "combined", "ner": "ontonotes"})
+        pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize,ner", package={"tokenize": "combined", "ner": "ontonotes_charlm"})
 
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
         assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain', 'tokenize']
-        assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes.pt']
+        assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes_charlm.pt']
 
 
 def test_download_resources_overwrites():

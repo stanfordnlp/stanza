@@ -9,7 +9,7 @@ import tempfile
 
 from stanza.models import tagger
 from stanza.models.common import pretrain
-from stanza.models.pos.data import DataLoader
+from stanza.models.pos.data import Dataset
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos.vocab import WordVocab, XPOSVocab
 from stanza.models.pos.xpos_vocab_factory import xpos_vocab_factory
@@ -52,7 +52,7 @@ def build_data(iterations, suffix):
     Same thing, but passes the Doc through a POS Tagger DataLoader
     """
     doc = build_doc(iterations, suffix)
-    data = DataLoader.load_doc(doc)
+    data = Dataset.load_doc(doc)
     return data
 
 class ErrorFatalHandler(logging.Handler):
@@ -146,7 +146,7 @@ class TestXPOSVocabFactory:
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             args = tagger.parse_args(["--batch_size", "1", "--shorthand", shorthand])
             train_doc = build_doc(iterations, suffix)
-            train_batch = DataLoader(train_doc, args["batch_size"], args, pt, evaluation=False)
+            train_batch = Dataset(train_doc, args, pt, evaluation=False)
             vocab = train_batch.vocab
             assert isinstance(vocab['xpos'], expected_vocab)
 

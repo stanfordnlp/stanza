@@ -31,7 +31,7 @@ from stanza.models import _training_logging
 
 logger = logging.getLogger('stanza')
 
-def parse_args(args=None):
+def build_argparse():
     """
     If args == None, the system args are used.
     """
@@ -90,27 +90,39 @@ def parse_args(args=None):
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+    return parser
 
+def parse_args(args=None):
+    parser = build_argparse()
     args = parser.parse_args(args=args)
 
     if args.wandb_name:
         args.wandb = True
 
+    args = vars(args)
     return args
+
+def model_file_name(args):
+    if args['save_name'] is not None:
+        save_name = args['save_name']
+    else:
+        save_name = args['shorthand'] + "_tokenizer.pt"
+
+    if not os.path.exists(os.path.join(args['save_dir'], save_name)) and os.path.exists(save_name):
+        return save_name
+    return os.path.join(args['save_dir'], save_name)
 
 def main(args=None):
     args = parse_args(args=args)
 
-    utils.set_random_seed(args.seed)
+    utils.set_random_seed(args['seed'])
 
-    args = vars(args)
     logger.info("Running tokenizer in {} mode".format(args['mode']))
 
     args['feat_funcs'] = ['space_before', 'capitalized', 'numeric', 'end_of_para', 'start_of_para']
     args['feat_dim'] = len(args['feat_funcs'])
-    save_name = args['save_name'] if args['save_name'] else '{}_tokenizer.pt'.format(args['shorthand'])
-    args['save_name'] = os.path.join(args['save_dir'], save_name)
-    utils.ensure_dir(args['save_dir'])
+    args['save_name'] = model_file_name(args)
+    utils.ensure_dir(os.path.split(args['save_name'])[0])
 
     if args['mode'] == 'train':
         train(args)

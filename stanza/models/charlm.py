@@ -64,16 +64,17 @@ def load_data(path, vocab, direction):
         data = load_file(path, vocab, direction)
         yield data
 
-def parse_args(args=None):
-    parser = argparse.ArgumentParser()
+def build_argparse():
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--train_file', type=str, help="Input plaintext file")
     parser.add_argument('--train_dir', type=str, help="If non-empty, load from directory with multiple training files")
     parser.add_argument('--eval_file', type=str, help="Input plaintext file for the dev/test set")
-    parser.add_argument('--lang', type=str, help="Language")
     parser.add_argument('--shorthand', type=str, help="UD treebank shorthand")
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--direction', default='forward', choices=['forward', 'backward'], help="Forward or backward language model")
+    parser.add_argument('--forward', action='store_const', dest='direction', const='forward', help="Train a forward language model")
+    parser.add_argument('--backward', action='store_const', dest='direction', const='backward', help="Train a backward language model")
 
     parser.add_argument('--char_emb_dim', type=int, default=100, help="Dimension of unit embeddings")
     parser.add_argument('--char_hidden_dim', type=int, default=1024, help="Dimension of hidden units")
@@ -106,6 +107,18 @@ def parse_args(args=None):
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+    return parser
+
+def build_model_filename(args):
+    if args['save_name']:
+        save_name = args['save_name']
+    else:
+        save_name = '{}_{}_charlm.pt'.format(args['shorthand'], args['direction'])
+    model_file = os.path.join(args['save_dir'], save_name)
+    return model_file
+
+def parse_args(args=None):
+    parser = build_argparse()
 
     args = parser.parse_args(args=args)
 
@@ -163,7 +176,11 @@ def evaluate_and_save(args, vocab, data, trainer, best_loss, model_file, checkpo
     ppl = math.exp(loss)
     elapsed = int(time.time() - start_time)
     # TODO: step the scheduler less often when the eval frequency is higher
+    previous_lr = get_current_lr(trainer, args)
     trainer.scheduler.step(loss)
+    current_lr = get_current_lr(trainer, args)
+    if previous_lr != current_lr:
+        logger.info("Updating learning rate to %f", current_lr)
     logger.info(
         "| eval checkpoint @ global step {:10d} | time elapsed {:6d}s | loss {:5.2f} | ppl {:8.2f}".format(
             trainer.global_step,
@@ -193,17 +210,13 @@ def load_char_vocab(vocab_file):
 
 def train(args):
     utils.log_training_args(args, logger)
-    if args['save_name']:
-        save_name = args['save_name']
-    else:
-        save_name = '{}_{}_charlm.pt'.format(args['shorthand'], args['direction'])
-    model_file = os.path.join(args['save_dir'], save_name)
+    model_file = build_model_filename(args)
 
     vocab_file = args['save_dir'] + '/' + args['vocab_save_name'] if args['vocab_save_name'] is not None \
         else '{}/{}_vocab.pt'.format(args['save_dir'], args['shorthand'])
 
     if args['checkpoint']:
-        checkpoint_file = utils.checkpoint_name(args['save_dir'], save_name, args['checkpoint_save_name'])
+        checkpoint_file = utils.checkpoint_name(args['save_dir'], model_file, args['checkpoint_save_name'])
     else:
         checkpoint_file = None
 
@@ -324,8 +337,7 @@ def train(args):
     return
 
 def evaluate(args):
-    model_file = args['save_dir'] + '/' + args['save_name'] if args['save_name'] is not None \
-        else '{}/{}_{}_charlm.pt'.format(args['save_dir'], args['shorthand'], args['direction'])
+    model_file = build_model_filename(args)
 
     model = CharacterLanguageModel.load(model_file).to(args['device'])
     vocab = model.vocab

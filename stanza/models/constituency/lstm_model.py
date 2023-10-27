@@ -210,7 +210,7 @@ class ConstituencyComposition(Enum):
     UNTIED_KEY            = 10
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
+    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, force_bert_saved, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
         """
         pretrain: a Pretrain object
         transitions: a list of all possible transitions which will be
@@ -351,7 +351,11 @@ class LSTMModel(BaseModel, nn.Module):
         # we set up the bert AFTER building word_start and word_end
         # so that we can use the charlm endpoint values rather than
         # try to train our own
-        self.add_unsaved_module('bert_model', bert_model)
+        self.force_bert_saved = force_bert_saved
+        if self.args['bert_finetune'] or self.args['stage1_bert_finetune'] or force_bert_saved:
+            self.bert_model = bert_model
+        else:
+            self.add_unsaved_module('bert_model', bert_model)
         self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
         if bert_model is not None:
             if bert_tokenizer is None:
@@ -360,6 +364,10 @@ class LSTMModel(BaseModel, nn.Module):
             if args['bert_hidden_layers']:
                 # The average will be offset by 1/N so that the default zeros
                 # repressents an average of the N layers
+                if args['bert_hidden_layers'] > bert_model.config.num_hidden_layers:
+                    # limit ourselves to the number of layers actually available
+                    # note that we can +1 because of the initial embedding layer
+                    args['bert_hidden_layers'] = bert_model.config.num_hidden_layers + 1
                 self.bert_layer_mix = nn.Linear(args['bert_hidden_layers'], 1, bias=False)
                 nn.init.zeros_(self.bert_layer_mix.weight)
             else:
@@ -641,6 +649,9 @@ class LSTMModel(BaseModel, nn.Module):
         """
         self.unsaved_modules += [name]
         setattr(self, name, module)
+        if module is not None and name in ('bert_model', 'forward_charlm', 'backward_charlm'):
+            for _, parameter in module.named_parameters():
+                parameter.requires_grad = False
 
     def is_unsaved_module(self, name):
         return name.split('.')[0] in self.unsaved_modules
@@ -656,14 +667,26 @@ class LSTMModel(BaseModel, nn.Module):
             lines.append("reduce_linear:")
             for c_idx, c_open in enumerate(self.constituent_opens):
                 lines.append("  %s weight %.6g bias %.6g" % (c_open, torch.norm(self.reduce_linear_weight[c_idx]).item(), torch.norm(self.reduce_linear_bias[c_idx]).item()))
+        max_name_len = max(len(name) for name, param in self.named_parameters() if param.requires_grad and name not in skip)
+        max_norm_len = max(len("%.6g" % torch.norm(param).item()) for name, param in self.named_parameters() if param.requires_grad and name not in skip)
+        format_string = "%-" + str(max_name_len) + "s   norm %" + str(max_norm_len) + "s  zeros %d / %d"
         for name, param in self.named_parameters():
-            if param.requires_grad and name not in skip and name.split(".")[0] not in ('bert_model', 'forward_charlm', 'backward_charlm'):
-                lines.append("%s %.6g" % (name, torch.norm(param).item()))
+            if param.requires_grad and name not in skip:
+                zeros = torch.sum(param.abs() < 0.000001).item()
+                norm = "%.6g" % torch.norm(param).item()
+                lines.append(format_string % (name, norm, zeros, param.nelement()))
         return lines
 
     def log_norms(self):
         lines = ["NORMS FOR MODEL PARAMTERS"]
         lines.extend(self.get_norms())
+        logger.info("\n".join(lines))
+
+    def log_shapes(self):
+        lines = ["NORMS FOR MODEL PARAMTERS"]
+        for name, param in self.named_parameters():
+            if param.requires_grad:
+                lines.append("{} {}".format(name, param.shape))
         logger.info("\n".join(lines))
 
     def initial_word_queues(self, tagged_word_lists):
@@ -733,7 +756,8 @@ class LSTMModel(BaseModel, nn.Module):
             # we will take 1:-1 if we don't care about the endpoints
             bert_embeddings = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, all_word_labels, device,
                                                       keep_endpoints=self.sentence_boundary_vectors is not SentenceBoundary.NONE,
-                                                      num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None)
+                                                      num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
+                                                      detach=not self.args['bert_finetune'] and not self.args['stage1_bert_finetune'])
             if self.bert_layer_mix is not None:
                 # add the average so that the default behavior is to
                 # take an average of the N layers, and anything else
