@@ -380,6 +380,9 @@ def misc_to_space_after(misc):
                 elif misc_space[pos:pos+2] == '\\\\':
                     spaces.append('\\')
                     pos += 2
+                elif misc_space[pos:pos+3] == '" "':
+                    spaces.append(' ')
+                    pos += 3
                 else:
                     spaces.append(misc_space[pos])
                     pos += 1
