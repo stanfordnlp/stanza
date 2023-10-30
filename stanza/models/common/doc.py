@@ -35,6 +35,7 @@ END_CHAR = 'end_char'
 TYPE = 'type'
 SENTIMENT = 'sentiment'
 CONSTITUENCY = 'constituency'
+COREF = 'coref'
 
 # field indices when converting the document to conll
 FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
@@ -60,6 +61,7 @@ class Document(StanzaObject):
 
         self._process_sentences(sentences, comments, empty_sentences)
         self._ents = []
+        self._coref = []
         if self._text is not None:
             self.build_ents()
 
@@ -362,6 +364,18 @@ class Document(StanzaObject):
     def sentence_comments(self):
         """ Returns a list of list of comments for the sentences """
         return [[comment for comment in sentence.comments] for sentence in self.sentences]
+
+    @property
+    def coref(self):
+        """
+        Access the coref lists of the document
+        """
+        return self._coref
+
+    @coref.setter
+    def coref(self, value):
+        """ Set the document's coref lists """
+        self._coref = value
 
     def reindex_sentences(self, start_index):
         for sent_id, sentence in zip(range(start_index, start_index + len(self.sentences)), self.sentences):
