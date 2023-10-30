@@ -415,7 +415,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     def _clusterize(self, doc: Doc, scores: torch.Tensor, top_indices: torch.Tensor):
         antecedents = scores.argmax(dim=1) - 1
         not_dummy = antecedents >= 0
-        coref_span_heads = torch.arange(0, len(scores))[not_dummy]
+        coref_span_heads = torch.arange(0, len(scores), device=not_dummy.device)[not_dummy]
         antecedents = top_indices[coref_span_heads, antecedents[not_dummy]]
 
         nodes = [GraphNode(i) for i in range(len(doc["cased_words"]))]
