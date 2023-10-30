@@ -198,7 +198,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 elif key.endswith("_scheduler"):
                     self.schedulers[key].load_state_dict(state_dict)
                 else:
-                    self.trainable[key].load_state_dict(state_dict)
+                    self.trainable[key].load_state_dict(state_dict, strict=False)
                 print(f"Loaded {key}")
 
     def run(self,  # pylint: disable=too-many-locals
