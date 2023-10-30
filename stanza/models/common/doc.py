@@ -43,6 +43,7 @@ END_CHAR = 'end_char'
 TYPE = 'type'
 SENTIMENT = 'sentiment'
 CONSTITUENCY = 'constituency'
+COREF = 'coref'
 
 # field indices when converting the document to conll
 FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
@@ -68,6 +69,7 @@ class Document(StanzaObject):
 
         self._process_sentences(sentences, comments, empty_sentences)
         self._ents = []
+        self._coref = []
         if self._text is not None:
             self.build_ents()
 
@@ -404,6 +406,30 @@ class Document(StanzaObject):
     def sentence_comments(self):
         """ Returns a list of list of comments for the sentences """
         return [[comment for comment in sentence.comments] for sentence in self.sentences]
+
+    @property
+    def coref(self):
+        """
+        Access the coref lists of the document
+        """
+        return self._coref
+
+    @coref.setter
+    def coref(self, chains):
+        """ Set the document's coref lists """
+        self._coref = chains
+        self._attach_coref_mentions(chains)
+
+    def _attach_coref_mentions(self, chains):
+        for sentence in self.sentences:
+            for word in sentence.words:
+                word.coref_chain = None
+
+        for chain in chains:
+            for mention in chain.mentions:
+                sentence = self.sentences[mention.sentence]
+                for word_idx in range(mention.start_word, mention.end_word):
+                    sentence.words[word_idx].coref_chain = chain
 
     def reindex_sentences(self, start_index):
         for sent_id, sentence in zip(range(start_index, start_index + len(self.sentences)), self.sentences):
@@ -1108,6 +1134,7 @@ class Word(StanzaObject):
         self._parent = None
         self._sent = sentence
         self._mexp = word_entry.get(MEXP, None)
+        self._coref_chain = None
 
         if self._misc is not None:
             init_from_misc(self)
@@ -1303,6 +1330,20 @@ class Word(StanzaObject):
     def pos(self, value):
         """ Set the word's universal part-of-speech value. Example: 'NOUN'"""
         self._upos = value if self._is_null(value) == False else None
+
+    @property
+    def coref_chain(self):
+        """
+        coref_chain points to a CorefChain namedtuple, which has a list of mentions and a representative mention.
+
+        Useful for disambiguating words such as "him" (in languages where coref is available)
+        """
+        return self._coref_chain
+
+    @coref_chain.setter
+    def coref_chain(self, chain):
+        """ Set the backref for the coref chain """
+        self._coref_chain = chain
 
     @property
     def sent(self):
