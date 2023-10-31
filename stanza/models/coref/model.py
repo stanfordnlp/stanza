@@ -49,10 +49,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         sp (SpanPredictor)
     """
     def __init__(self,
-                 config_path: str,
-                 section: str,
+                 config_path: Optional[str] = None,
+                 section: Optional[str] = None,
                  epochs_trained: int = 0,
-                 build_optimizers: bool = True):
+                 build_optimizers: bool = True,
+                 config: Optional[dict] = None):
         """
         A newly created model is set to evaluation mode.
 
@@ -62,7 +63,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             epochs_trained (int): the number of epochs finished
                 (useful for warm start)
         """
-        self.config = CorefModel._load_config(config_path, section)
+        if config is not None:
+            self.config = config
+        else:
+            self.config = CorefModel._load_config(config_path, section)
         self.epochs_trained = epochs_trained
         self._docs: Dict[str, List[Doc]] = {}
         self._build_model()
@@ -195,6 +199,23 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         print(f"Loading from {path}...")
         state_dicts = torch.load(path, map_location=map_location)
         self.epochs_trained = state_dicts.pop("epochs_trained", 0)
+        # just ignore a config in the model, since we should already have one
+        # TODO: some config elements may be fixed parameters of the model,
+        # such as the dimensions of the head,
+        # so we would want to use the ones from the config even if the
+        # user created a weird shaped model
+        config = state_dicts.pop("config", {})
+        self.load_state_dicts(state_dicts, ignore)
+
+    def load_state_dicts(self,
+                         state_dicts: dict,
+                         ignore: Optional[Set[str]] = None):
+        """
+        Process the dictionaries from the save file
+
+        Loads the weights into the tensors of this model
+        May also have optimizer and/or schedule state
+        """
         for key, state_dict in state_dicts.items():
             if not ignore or key not in ignore:
                 if key.endswith("_optimizer"):
@@ -204,6 +225,20 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 else:
                     self.trainable[key].load_state_dict(state_dict, strict=False)
                 print(f"Loaded {key}")
+
+    @staticmethod
+    def load_model(path: str,
+                   map_location: str = "cpu",
+                   ignore: Optional[Set[str]] = None):
+        state_dicts = torch.load(path, map_location=map_location)
+        epochs_trained = state_dicts.pop("epochs_trained", 0)
+        config = state_dicts.pop('config', None)
+        if config is None:
+            raise ValueError("Cannot load this format model without config in the dicts")
+        model = CorefModel(config=config, build_optimizers=False, epochs_trained=epochs_trained)
+        model.load_state_dicts(state_dicts, ignore)
+        return model
+
 
     def run(self,  # pylint: disable=too-many-locals
             doc: Doc,
@@ -264,7 +299,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
         return res
 
-    def save_weights(self):
+    def save_weights(self, save_path=None):
         """ Saves trainable models as state dicts. """
         to_save: List[Tuple[str, Any]] = \
             [(key, value) for key, value in self.trainable.items()
@@ -273,12 +308,14 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         to_save.extend(self.schedulers.items())
 
         time = datetime.strftime(datetime.now(), "%Y.%m.%d_%H.%M")
-        path = os.path.join(self.config.data_dir,
-                            f"{self.config.section}"
-                            f"_(e{self.epochs_trained}_{time}).pt")
+        if save_path is None:
+            save_path = os.path.join(self.config.data_dir,
+                                     f"{self.config.section}"
+                                     f"_(e{self.epochs_trained}_{time}).pt")
         savedict = {name: module.state_dict() for name, module in to_save}
         savedict["epochs_trained"] = self.epochs_trained  # type: ignore
-        torch.save(savedict, path)
+        savedict["config"] = self.config
+        torch.save(savedict, save_path)
 
     def train(self):
         """
