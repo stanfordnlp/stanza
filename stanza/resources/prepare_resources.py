@@ -63,7 +63,8 @@ processor_to_ending = {
     "backward_charlm": "backward_charlm",
     "sentiment": "sentiment",
     "constituency": "constituency",
-    "langid": "langid"
+    "coref": "coref",
+    "langid": "langid",
 }
 ending_to_processor = {j: i for i, j in processor_to_ending.items()}
 PROCESSORS = list(processor_to_ending.keys())
@@ -438,6 +439,9 @@ def get_default_optional_processors(resources, lang):
     if lang in optional_constituency:
         optional_processors['constituency'] = optional_constituency[lang]
 
+    if lang in optional_coref:
+        optional_processors['coref'] = optional_coref[lang]
+
     return optional_processors
 
 def update_processor_add_transformer(resources, lang, current_processors, processor, transformer):
@@ -484,6 +488,9 @@ def get_optional_accurate(resources, lang):
     if transformer is not None:
         for processor in 'pos', 'depparse', 'constituency':
             update_processor_add_transformer(resources, lang, optional_processors, processor, transformer)
+
+    if lang in optional_coref:
+        optional_processors['coref'] = optional_coref[lang]
 
     return optional_processors
 
