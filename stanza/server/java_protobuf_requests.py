@@ -329,6 +329,8 @@ def space_after_to_misc(space):
             spaces.append('\\p')
         elif char == '\\':
             spaces.append('\\\\')
+        elif char == ' ':
+            spaces.append('\\u00A0')
         else:
             spaces.append(char)
     space_after = "".join(spaces)
@@ -380,9 +382,9 @@ def misc_to_space_after(misc):
                 elif misc_space[pos:pos+2] == '\\\\':
                     spaces.append('\\')
                     pos += 2
-                elif misc_space[pos:pos+3] == '" "':
+                elif misc_space[pos:pos+6] == '\\u00A0':
                     spaces.append(' ')
-                    pos += 3
+                    pos += 6
                 else:
                     spaces.append(misc_space[pos])
                     pos += 1
