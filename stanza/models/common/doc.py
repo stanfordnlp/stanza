@@ -140,8 +140,10 @@ class Document(StanzaObject):
         for sent_idx, (tokens, empty_words) in enumerate(zip(sentences, empty_sentences)):
             try:
                 sentence = Sentence(tokens, doc=self, empty_words=empty_words)
+            except IndexError as e:
+                raise IndexError("Could not process document at sentence %d" % sent_idx) from e
             except ValueError as e:
-                raise ValueError("Could not process document at sentence %d: %s" % (sent_idx, str(e))) from e
+                raise ValueError("Could not process document at sentence %d" % sent_idx) from e
             self.sentences.append(sentence)
             begin_idx, end_idx = sentence.tokens[0].start_char, sentence.tokens[-1].end_char
             if all((self.text is not None, begin_idx is not None, end_idx is not None)): sentence.text = self.text[begin_idx: end_idx]
@@ -729,7 +731,10 @@ class Sentence(StanzaObject):
                 head = Word(self, word_entry)
             else:
                 # id is index in words list + 1
-                head = self.words[word.head - 1]
+                try:
+                    head = self.words[word.head - 1]
+                except IndexError as e:
+                    raise IndexError("Word head {} is not a valid word index for word {}".format(word.head, word.id)) from e
                 if word.head != head.id:
                     raise ValueError("Dependency tree is incorrectly constructed")
             self.dependencies.append((head, word.deprel, word))

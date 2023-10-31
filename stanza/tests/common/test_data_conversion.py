@@ -416,3 +416,18 @@ def test_read_doc_id():
     assert "{:C}".format(doc) == ESTONIAN_DOC_ID
     assert doc.sentences[0].doc_id == 'this_is_a_doc'
 
+SIMPLE_DEPENDENCY_INDEX_ERROR = """
+# text = Teferi's best friend is Karn
+# sent_id = 0
+# notes = this sentence has a dependency index outside the sentence.  it should throw an IndexError
+1	Teferi	_	_	_	_	0	root	_	start_char=0|end_char=6|ner=S-PERSON
+2	's	_	_	_	_	1	dep	_	start_char=6|end_char=8|ner=O
+3	best	_	_	_	_	2	dep	_	start_char=9|end_char=13|ner=O
+4	friend	_	_	_	_	3	dep	_	start_char=14|end_char=20|ner=O
+5	is	_	_	_	_	4	dep	_	start_char=21|end_char=23|ner=O
+6	Karn	_	_	_	_	8	dep	_	start_char=24|end_char=28|ner=S-PERSON
+""".strip()
+
+def test_read_dependency_errors():
+    with pytest.raises(IndexError):
+        doc = CoNLL.conll2doc(input_str=SIMPLE_DEPENDENCY_INDEX_ERROR)
