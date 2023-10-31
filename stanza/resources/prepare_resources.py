@@ -63,7 +63,8 @@ processor_to_ending = {
     "backward_charlm": "backward_charlm",
     "sentiment": "sentiment",
     "constituency": "constituency",
-    "langid": "langid"
+    "coref": "coref",
+    "langid": "langid",
 }
 ending_to_processor = {j: i for i, j in processor_to_ending.items()}
 PROCESSORS = list(processor_to_ending.keys())

@@ -400,6 +400,10 @@ default_tokenizer = {
     "my": "alt",
 }
 
+# ideally we would have a less expensive model as the base model
+#default_coref = {
+#    "en": "ontonotes_roberta-large_finetuned",
+#}
 
 """
 default transformers to use for various languages
