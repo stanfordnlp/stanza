@@ -66,6 +66,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         self.epochs_trained = epochs_trained
         self._docs: Dict[str, List[Doc]] = {}
         self._build_model()
+
+        self.optimizers = {}
+        self.schedulers = {}
+
         if build_optimizers:
             self._build_optimizers()
         self._set_training(False)
