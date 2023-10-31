@@ -338,6 +338,68 @@ ner_charlms = {
     },
 }
 
+# default ner for languages
+default_ners = {
+    "af": "nchlt",
+    "ar": "aqmar_charlm",
+    "bg": "bsnlp19",
+    "da": "ddt",
+    "de": "germeval2014",
+    "en": "ontonotes_charlm",
+    "es": "conll02",
+    "fa": "arman",
+    "fi": "turku",
+    "fr": "wikiner",
+    "hu": "combined",
+    "hy": "armtdp",
+    "it": "fbk",
+    "ja": "gsd",
+    "kk": "kazNERD",
+    "mr": "l3cube",
+    "my": "ucsy",
+    "nb": "norne",
+    "nl": "conll02",
+    "nn": "norne",
+    "pl": "nkjp",
+    "ru": "wikiner",
+    "sd": "siner",
+    "sv": "suc3shuffle",
+    "th": "lst20",
+    "tr": "starlang",
+    "uk": "languk",
+    "vi": "vlsp",
+    "zh-hans": "ontonotes",
+}
+
+# a few languages have sentiment classifier models
+default_sentiment = {
+    "en": "sstplus",
+    "de": "sb10k",
+    "es": "tass2020",
+    "mr": "l3cube",
+    "vi": "vsfc",
+    "zh-hans": "ren",
+}
+
+# also, a few languages (very few, currently) have constituency parser models
+default_constituency = {
+    "da": "arboretum_charlm",
+    "en": "ptb3-revised_charlm",
+    "es": "combined_charlm",
+    "id": "icon_charlm",
+    "it": "vit_charlm",
+    "ja": "alt_charlm",
+    "pt": "cintil_charlm",
+    #"tr": "starlang_charlm",
+    "vi": "vlsp22_charlm",
+    "zh-hans": "ctb-51_charlm",
+}
+
+# an alternate tokenizer for languages which aren't trained from a base UD source
+default_tokenizer = {
+    "my": "alt",
+}
+
 
 """
 default transformers to use for various languages

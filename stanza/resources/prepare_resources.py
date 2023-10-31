@@ -21,7 +21,7 @@ import zipfile
 from stanza import __resources_version__
 from stanza.models.common.constant import lcode2lang, two_to_three_letters, three_to_two_letters
 from stanza.resources.default_packages import PACKAGES, TRANSFORMERS, TRANSFORMER_NICKNAMES
-from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms, lemma_charlms, known_nicknames
+from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms, lemma_charlms, known_nicknames, default_ners, default_sentiment, default_constituency, default_tokenizer
 from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
@@ -37,68 +37,6 @@ def parse_args():
     args.output_dir = os.path.abspath(args.output_dir)
     return args
 
-
-# default ner for languages
-default_ners = {
-    "af": "nchlt",
-    "ar": "aqmar_charlm",
-    "bg": "bsnlp19",
-    "da": "ddt",
-    "de": "germeval2014",
-    "en": "ontonotes_charlm",
-    "es": "conll02",
-    "fa": "arman",
-    "fi": "turku",
-    "fr": "wikiner",
-    "hu": "combined",
-    "hy": "armtdp",
-    "it": "fbk",
-    "ja": "gsd",
-    "kk": "kazNERD",
-    "mr": "l3cube",
-    "my": "ucsy",
-    "nb": "norne",
-    "nl": "conll02",
-    "nn": "norne",
-    "pl": "nkjp",
-    "ru": "wikiner",
-    "sd": "siner",
-    "sv": "suc3shuffle",
-    "th": "lst20",
-    "tr": "starlang",
-    "uk": "languk",
-    "vi": "vlsp",
-    "zh-hans": "ontonotes",
-}
-
-# a few languages have sentiment classifier models
-default_sentiment = {
-    "en": "sstplus",
-    "de": "sb10k",
-    "es": "tass2020",
-    "mr": "l3cube",
-    "vi": "vsfc",
-    "zh-hans": "ren",
-}
-
-# also, a few languages (very few, currently) have constituency parser models
-default_constituency = {
-    "da": "arboretum_charlm",
-    "en": "ptb3-revised_charlm",
-    "es": "combined_charlm",
-    "id": "icon_charlm",
-    "it": "vit_charlm",
-    "ja": "alt_charlm",
-    "pt": "cintil_charlm",
-    #"tr": "starlang_charlm",
-    "vi": "vlsp22_charlm",
-    "zh-hans": "ctb-51_charlm",
-}
-
-# an alternate tokenizer for languages which aren't trained from a base UD source
-default_tokenizer = {
-    "my": "alt",
-}
 
 allowed_empty_languages = [
     # we don't have a lot of Thai support yet
