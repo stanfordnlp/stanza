@@ -1,6 +1,7 @@
 """ see __init__.py """
 
 from datetime import datetime
+import logging
 import os
 import pickle
 import random
@@ -27,6 +28,8 @@ from stanza.models.coref.tokenizer_customization import TOKENIZER_FILTERS, TOKEN
 from stanza.models.coref.utils import GraphNode
 from stanza.models.coref.word_encoder import WordEncoder
 
+
+logger = logging.getLogger('stanza')
 
 class CorefModel:  # pylint: disable=too-many-instance-attributes
     """Combines all coref modules together to find coreferent spans.
@@ -164,7 +167,6 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     f" p: {s_lea[1]:.5f},"
                     f" r: {s_lea[2]:<.5f}"
                 )
-            print()
 
         return (running_loss / len(docs), *s_checker.total_lea)
 
@@ -188,7 +190,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     files.append((int(match_obj.group(1)), f))
             if not files:
                 if noexception:
-                    print("No weights have been loaded", flush=True)
+                    logger.debug("No weights have been loaded", flush=True)
                     return
                 raise OSError(f"No weights found in {self.config.data_dir}!")
             _, path = sorted(files)[-1]
@@ -196,7 +198,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
         if map_location is None:
             map_location = self.config.device
-        print(f"Loading from {path}...")
+        logger.debug(f"Loading from {path}...")
         state_dicts = torch.load(path, map_location=map_location)
         self.epochs_trained = state_dicts.pop("epochs_trained", 0)
         # just ignore a config in the model, since we should already have one
@@ -224,7 +226,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     self.schedulers[key].load_state_dict(state_dict)
                 else:
                     self.trainable[key].load_state_dict(state_dict, strict=False)
-                print(f"Loaded {key}")
+                logger.debug(f"Loaded {key}")
 
     @staticmethod
     def load_model(path: str,
@@ -536,7 +538,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             module.train(self._training)
 
     def _tokenize_docs(self, path: str) -> List[Doc]:
-        print(f"Tokenizing documents at {path}...", flush=True)
+        logger.debug(f"Tokenizing documents at {path}...", flush=True)
         out: List[Doc] = []
         filter_func = TOKENIZER_FILTERS.get(self.config.bert_model,
                                             lambda _: True)
@@ -560,5 +562,5 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 doc["subwords"] = subwords
                 doc["word_id"] = word_id
                 out.append(doc)
-        print("Tokenization OK", flush=True)
+        logger.debug("Tokenization OK", flush=True)
         return out

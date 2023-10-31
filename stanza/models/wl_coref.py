@@ -6,6 +6,7 @@ Try 'python wl_coref.py -h' for more details.
 import argparse
 from contextlib import contextmanager
 import datetime
+import logging
 import random
 import sys
 import time
@@ -16,6 +17,8 @@ import torch        # type: ignore
 from stanza.models.coref.model import CorefModel
 
 
+logger = logging.getLogger('stanza')
+
 @contextmanager
 def output_running_time():
     """ Prints the time elapsed in the context """
@@ -25,7 +28,7 @@ def output_running_time():
     finally:
         end = int(time.time())
         delta = datetime.timedelta(seconds=end - start)
-        print(f"Total running time: {delta}")
+        logger.info(f"Total running time: {delta}")
 
 
 def seed(value: int) -> None:
@@ -68,9 +71,7 @@ if __name__ == "__main__":
     args = argparser.parse_args()
 
     if args.warm_start and args.weights is not None:
-        print("The following options are incompatible:"
-              " '--warm_start' and '--weights'", file=sys.stderr)
-        sys.exit(1)
+        raise ValueError("The following options are incompatible: '--warm_start' and '--weights'")
 
     seed(2020)
     model = CorefModel(args.config_file, args.experiment)

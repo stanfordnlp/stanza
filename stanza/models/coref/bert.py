@@ -1,5 +1,6 @@
 """Functions related to BERT or similar models"""
 
+import logging
 from typing import List, Tuple
 
 import numpy as np                                 # type: ignore
@@ -8,6 +9,8 @@ from transformers import AutoModel, AutoTokenizer  # type: ignore
 from stanza.models.coref.config import Config
 from stanza.models.coref.const import Doc
 
+
+logger = logging.getLogger('stanza')
 
 def get_subwords_batches(doc: Doc,
                          config: Config,
@@ -59,17 +62,17 @@ def load_bert(config: Config) -> Tuple[AutoModel, AutoTokenizer]:
 
     Bert model is loaded to the device specified in config.device
     """
-    print(f"Loading {config.bert_model}...")
+    logger.debug(f"Loading {config.bert_model}...")
 
     base_bert_name = config.bert_model.split("/")[-1]
     tokenizer_kwargs = config.tokenizer_kwargs.get(base_bert_name, {})
     if tokenizer_kwargs:
-        print(f"Using tokenizer kwargs: {tokenizer_kwargs}")
+        logger.debug(f"Using tokenizer kwargs: {tokenizer_kwargs}")
     tokenizer = AutoTokenizer.from_pretrained(config.bert_model,
                                               **tokenizer_kwargs)
 
     model = AutoModel.from_pretrained(config.bert_model).to(config.device)
 
-    print("Bert successfully loaded.")
+    logger.debug("Bert successfully loaded.")
 
     return model, tokenizer
