@@ -301,13 +301,14 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
         return res
 
-    def save_weights(self, save_path=None):
+    def save_weights(self, save_path=None, save_optimizers=True):
         """ Saves trainable models as state dicts. """
         to_save: List[Tuple[str, Any]] = \
             [(key, value) for key, value in self.trainable.items()
              if self.config.bert_finetune or key != "bert"]
-        to_save.extend(self.optimizers.items())
-        to_save.extend(self.schedulers.items())
+        if save_optimizers:
+            to_save.extend(self.optimizers.items())
+            to_save.extend(self.schedulers.items())
 
         time = datetime.strftime(datetime.now(), "%Y.%m.%d_%H.%M")
         if save_path is None:
@@ -380,7 +381,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 # TODO: choose a different default save dir
                 save_path = os.path.join(self.config.data_dir,
                                          f"{self.config.section}.pt")
-                self.save_weights(save_path)
+                self.save_weights(save_path, save_optimizers=False)
             # TODO: make save_each an option here
             self.save_weights()
 
