@@ -358,7 +358,7 @@ You can choose a Transformer module from HuggingFace and then use it as follows:
 python -m stanza.utils.training.run_ner bn_daffodil --bert_model sagorsarker/bangla-bert-base --save_name bn_daffodil_bert.pt
 ```
 
-If the Transformer helps (as expected), you can add it to the map in `stanza/utils/training/common.py`.
+If the Transformer helps (as expected), you can add it to the map in `stanza/resources/default_packages.py`.
 
 {% include alerts.html %}
 {{ note }}
