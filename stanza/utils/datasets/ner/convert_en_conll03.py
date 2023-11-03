@@ -10,8 +10,6 @@ import os
 from stanza.utils.default_paths import get_default_paths
 from stanza.utils.datasets.ner.utils import write_dataset
 
-from datasets import load_dataset
-
 TAG_TO_ID = {'O': 0, 'B-PER': 1, 'I-PER': 2, 'B-ORG': 3, 'I-ORG': 4, 'B-LOC': 5, 'I-LOC': 6, 'B-MISC': 7, 'I-MISC': 8}
 ID_TO_TAG = {y: x for x, y in TAG_TO_ID.items()}
 
@@ -24,6 +22,11 @@ def convert_dataset_section(section):
     return sentences
 
 def process_dataset(short_name, conll_path, ner_output_path):
+    try:
+        from datasets import load_dataset
+    except ImportError as e:
+        raise ImportError("Please install the datasets package to process CoNLL03 with Stanza")
+
     dataset = load_dataset('conll2003', cache_dir=conll_path)
     datasets = [convert_dataset_section(x) for x in [dataset['train'], dataset['validation'], dataset['test']]]
     write_dataset(datasets, ner_output_path, short_name)
