@@ -381,6 +381,9 @@ en_conll03 is the classic 2003 4 class CoNLL dataset
     Tjong Kim Sang, Erik F. and De Meulder, Fien
   - python3 stanza/utils/datasets/ner/prepare_ner_dataset.py en_conll03
 
+en_conll03ww is CoNLL 03 with Worldwide added to the training data.
+  - python3 stanza/utils/datasets/ner/prepare_ner_dataset.py en_conll03ww
+
 en_conllpp is a test set from 2020 newswire
   - https://arxiv.org/abs/2212.09747
   - https://github.com/ShuhengL/acl2023_conllpp
@@ -443,7 +446,7 @@ import stanza.utils.datasets.ner.simplify_en_worldwide as simplify_en_worldwide
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
 import stanza.utils.datasets.ner.convert_hy_armtdp as convert_hy_armtdp
-from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset, random_shuffle_by_prefixes, read_prefix_file
+from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset, random_shuffle_by_prefixes, read_prefix_file, combine_files
 
 SHARDS = ('train', 'dev', 'test')
 
@@ -1087,6 +1090,25 @@ def process_en_conll03(paths, short_name):
     ner_output_path = paths['NER_DATA_DIR']
     convert_en_conll03.process_dataset("en_conll03", conll_path, ner_output_path)
 
+def process_en_conll03_worldwide(paths, short_name):
+    """
+    Adds the training data for conll03 and worldwide together
+    """
+    print("============== Preparing CoNLL 2003 ===================")
+    process_en_conll03(paths, "en_conll03")
+    print("========== Preparing 4 Class Worldwide ================")
+    process_en_worldwide_4class(paths, "en_worldwide-4class")
+    print("============== Combined Train Data ====================")
+    input_files = [os.path.join(paths['NER_DATA_DIR'], "en_conll03.train.json"),
+                   os.path.join(paths['NER_DATA_DIR'], "en_worldwide-4class.train.json")]
+    output_file = os.path.join(paths['NER_DATA_DIR'], "%s.train.json" % short_name)
+    combine_files(output_file, *input_files)
+    shutil.copyfile(os.path.join(paths['NER_DATA_DIR'], "en_conll03.dev.json"),
+                    os.path.join(paths['NER_DATA_DIR'], "%s.dev.json" % short_name))
+    shutil.copyfile(os.path.join(paths['NER_DATA_DIR'], "en_conll03.test.json"),
+                    os.path.join(paths['NER_DATA_DIR'], "%s.test.json" % short_name))
+
+
 def process_en_conllpp(paths, short_name):
     """
     This is ONLY a test set
@@ -1113,6 +1135,7 @@ DATASET_MAPPING = {
     "da_ddt":            process_da_ddt,
     "de_germeval2014":   process_de_germeval2014,
     "en_conll03":        process_en_conll03,
+    "en_conll03ww":      process_en_conll03_worldwide,
     "en_conllpp":        process_en_conllpp,
     "en_worldwide-4class": process_en_worldwide_4class,
     "en_worldwide-8class": process_en_worldwide_8class,

@@ -339,3 +339,17 @@ def list_doc_entities(doc):
     entities = [(tuple(x[0]), x[1]) for x in entities]
     return entities
 
+def combine_files(output_filename, *input_filenames):
+    """
+    Combine multiple NER json files into one NER file
+    """
+    doc = []
+
+    for filename in input_filenames:
+        with open(filename) as fin:
+            new_doc = json.load(fin)
+            doc.extend(new_doc)
+
+    with open(output_filename, "w") as fout:
+        json.dump(doc, fout, indent=2)
+
