@@ -379,7 +379,7 @@ en_conll03 is the classic 2003 4 class CoNLL dataset
   - Introduction to the CoNLL-2003 Shared Task:
     Language-Independent Named Entity Recognition
     Tjong Kim Sang, Erik F. and De Meulder, Fien
-  - 
+  - python3 stanza/utils/datasets/ner/prepare_ner_dataset.py en_conll03
 
 en_conllpp is a test set from 2020 newswire
   - https://arxiv.org/abs/2212.09747
