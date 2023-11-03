@@ -371,6 +371,16 @@ ArmTDP-NER is an Armenian NER dataset
 OntoNotes 5 contains a Chinese NER dataset
   - https://catalog.ldc.upenn.edu/LDC2013T19
 
+en_conll03 is the classic 2003 4 class CoNLL dataset
+  - The version we use is posted on HuggingFace
+  - https://huggingface.co/datasets/conll2003
+  - The prepare script will download from HF
+    using the datasets package, then convert to json
+  - Introduction to the CoNLL-2003 Shared Task:
+    Language-Independent Named Entity Recognition
+    Tjong Kim Sang, Erik F. and De Meulder, Fien
+  - 
+
 en_conllpp is a test set from 2020 newswire
   - https://arxiv.org/abs/2212.09747
   - https://github.com/ShuhengL/acl2023_conllpp
@@ -415,6 +425,7 @@ import stanza.utils.datasets.ner.convert_ar_aqmar as convert_ar_aqmar
 import stanza.utils.datasets.ner.convert_bn_daffodil as convert_bn_daffodil
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
+import stanza.utils.datasets.ner.convert_en_conll03 as convert_en_conll03
 import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.convert_kk_kazNERD as convert_kk_kazNERD
@@ -1070,6 +1081,12 @@ def process_armtdp(paths, short_name):
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
+def process_en_conll03(paths, short_name):
+    ner_input_path = paths['NERBASE']
+    conll_path = os.path.join(ner_input_path, "en_conll03")
+    ner_output_path = paths['NER_DATA_DIR']
+    convert_en_conll03.process_dataset("en_conll03", conll_path, ner_output_path)
+
 def process_en_conllpp(paths, short_name):
     """
     This is ONLY a test set
@@ -1095,6 +1112,7 @@ DATASET_MAPPING = {
     "bn_daffodil":       process_bn_daffodil,
     "da_ddt":            process_da_ddt,
     "de_germeval2014":   process_de_germeval2014,
+    "en_conll03":        process_en_conll03,
     "en_conllpp":        process_en_conllpp,
     "en_worldwide-4class": process_en_worldwide_4class,
     "en_worldwide-8class": process_en_worldwide_8class,
