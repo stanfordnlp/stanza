@@ -429,6 +429,7 @@ import stanza.utils.datasets.ner.convert_bn_daffodil as convert_bn_daffodil
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
 import stanza.utils.datasets.ner.convert_en_conll03 as convert_en_conll03
+import stanza.utils.datasets.ner.convert_en_ontonotes as convert_en_ontonotes
 import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.convert_kk_kazNERD as convert_kk_kazNERD
@@ -1084,6 +1085,12 @@ def process_armtdp(paths, short_name):
 def process_toy_dataset(paths, short_name):
     convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
+def process_en_ontonotes(paths, short_name):
+    ner_input_path = paths['NERBASE']
+    ontonotes_path = os.path.join(ner_input_path, "english", "en_ontonotes")
+    ner_output_path = paths['NER_DATA_DIR']
+    convert_en_ontonotes.process_dataset("en_ontonotes", ontonotes_path, ner_output_path)
+
 def process_en_conll03(paths, short_name):
     ner_input_path = paths['NERBASE']
     conll_path = os.path.join(ner_input_path, "english", "en_conll03")
@@ -1137,6 +1144,7 @@ DATASET_MAPPING = {
     "en_conll03":        process_en_conll03,
     "en_conll03ww":      process_en_conll03_worldwide,
     "en_conllpp":        process_en_conllpp,
+    "en_ontonotes":      process_en_ontonotes,
     "en_worldwide-4class": process_en_worldwide_4class,
     "en_worldwide-8class": process_en_worldwide_8class,
     "fa_arman":          process_fa_arman,
