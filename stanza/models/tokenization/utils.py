@@ -356,33 +356,49 @@ def postprocess_doc(doc, postprocessor, orig_text=None):
     # collect the words and MWTs seperately
     corrected_words = []
     corrected_mwts = []
+    corrected_expansions = []
 
     # for each word, if its just a string (without the ("word", mwt_bool) format)
     # we default that the word is not a MWT.
     for sent in postprocessor_return:
         sent_words = []
         sent_mwts = []
+        sent_expansions = []
         for word in sent:
-            if type(word) == str:
+            if isinstance(word, str):
                 sent_words.append(word)
                 sent_mwts.append(False)
+                sent_expansions.append(None)
             else:
-                sent_words.append(word[0])
-                sent_mwts.append(word[1])
+                if isinstance(word[1], bool):
+                    sent_words.append(word[0])
+                    sent_mwts.append(word[1])
+                    sent_expansions.append(None)
+                else:
+                    sent_words.append(word[0])
+                    sent_mwts.append(True)
+                    # expansions are marked in a space-seperated list, which
+                    # `stanza.common.doc.set_mwt_expansions` reads and splits again
+                    # by splitting by spaces. Therefore, to serialize the users' supplied MWT
+                    # information, we join them by spaces to be split later by
+                    # `set_mwt_expansions`.
+                    sent_expansions.append(" ".join(word[1]))
         corrected_words.append(sent_words)
         corrected_mwts.append(sent_mwts)
-
+        corrected_expansions.append(sent_expansions)
+        
     # check postprocessor output
     token_lens = [len(i) for i in corrected_words]
     mwt_lens = [len(i) for i in corrected_mwts]
     assert token_lens == mwt_lens, "Postprocessor returned token and MWT lists of different length! Token list lengths %s, MWT list lengths %s" % (token_lens, mwt_lens)
-
-    # recassemble document. offsets and oov shouldn't change
-    doc = reassemble_doc_from_tokens(corrected_words, corrected_mwts, raw_text)
+    
+    # reassemble document. offsets and oov shouldn't change
+    doc = reassemble_doc_from_tokens(corrected_words, corrected_mwts,
+                                     corrected_expansions, raw_text)
 
     return doc
 
-def reassemble_doc_from_tokens(tokens, mwts, raw_text):
+def reassemble_doc_from_tokens(tokens, mwts, expansions, raw_text):
     """Assemble a Stanza document list format from a list of string tokens, calculating offsets as needed.
 
     Parameters
@@ -390,8 +406,10 @@ def reassemble_doc_from_tokens(tokens, mwts, raw_text):
     tokens : List[List[str]]
         A list of sentences, which includes string tokens.
     mwts : List[List[bool]]
-        Whether or not each of the tokens are MWTs to be analyzed by
-        the MWT raw.
+        Whether or not each of the tokens are MWTs to be analyzed by the MWT system.
+    expansions : List[List[Optional[List[str]]]]
+        A list of possible expansions for MWTs, or None if no user-defined expansion
+        is given.
     parser_text : str
         The raw text off of which we can compare offsets.
 
@@ -405,10 +423,10 @@ def reassemble_doc_from_tokens(tokens, mwts, raw_text):
     new_offset = 0
     corrected_doc = []
 
-    for sent_words, sent_mwts in zip(tokens, mwts):
+    for sent_words, sent_mwts, sent_expansions in zip(tokens, mwts, expansions):
         sentence_doc = []
 
-        for indx, (word, mwt) in enumerate(zip(sent_words, sent_mwts)):
+        for indx, (word, mwt, expansion) in enumerate(zip(sent_words, sent_mwts, sent_expansions)):
             try:
                 offset_index = raw_text.index(word)
             except ValueError as e:
@@ -422,7 +440,9 @@ def reassemble_doc_from_tokens(tokens, mwts, raw_text):
                 "start_char":  new_offset+offset_index,
                 "end_char":  new_offset+offset_index+len(word)
             }
-            if mwt:
+            if expansion:
+                wd["manual_expansion"] = True
+            elif mwt:
                 wd["misc"] = "MWT=Yes"
 
             sentence_doc.append(wd)
@@ -435,7 +455,13 @@ def reassemble_doc_from_tokens(tokens, mwts, raw_text):
 
         corrected_doc.append(sentence_doc)
 
-    return corrected_doc
+    # use the built in MWT system to expand MWTs
+    doc = Document(corrected_doc, raw_text)
+    doc.set_mwt_expansions([j
+                            for i in expansions
+                            for j in i if j],
+                           process_manual_expanded=True)
+    return doc.to_dict()
 
 def decode_predictions(vocab, mwt_dict, orig_text, all_raw, all_preds, no_ssplit, skip_newline, use_la_ittb_shorthand):
     """

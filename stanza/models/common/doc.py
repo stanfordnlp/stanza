@@ -9,15 +9,23 @@ import json
 import pickle
 import warnings
 
+from enum import Enum
+
 import networkx as nx
 
 from stanza.models.common.stanza_object import StanzaObject
 from stanza.models.ner.utils import decode_from_bioes
 from stanza.models.constituency import tree_reader
 
+class MWTProcessingType(Enum):
+    FLATTEN = 0 # flatten the current token into one ID instead of MWT
+    PROCESS = 1 # process the current token as an MWT and expand it as such
+    SKIP = 2 # do nothing on this token, simply increment IDs
+
 multi_word_token_id = re.compile(r"([0-9]+)-([0-9]+)")
 multi_word_token_misc = re.compile(r".*MWT=Yes.*")
 
+MEXP = 'manual_expansion'
 ID = 'id'
 TEXT = 'text'
 LEMMA = 'lemma'
@@ -276,25 +284,51 @@ class Document(StanzaObject):
                             setattr(unit, field, content)
                     cidx += 1
 
-    def set_mwt_expansions(self, expansions, fake_dependencies=False):
+    def set_mwt_expansions(self, expansions,
+                           fake_dependencies=False,
+                           process_manual_expanded=None):
         """ Extend the multi-word tokens annotated by tokenizer. A list of list of expansions
-        will be expected for each multi-word token.
+        will be expected for each multi-word token. Use `process_manual_expanded` to limit
+        processing for tokens marked manually expanded:
+
+        There are two types of MWT expansions: those with `misc`: `MWT=True`, and those with
+        `manual_expansion`: True. The latter of which means that it is an expansion which the
+        user manually specified through a postprocessor; the former means that it is a MWT
+        which the detector picked out, but needs to be automatically expanded.
+
+        process_manual_expanded = None - default; doesn't process manually expanded tokens
+                                = True - process only manually expanded tokens (with `manual_expansion`: True)
+                                = False - process only tokens explicitly tagged as MWT (`misc`: `MWT=True`)
         """
+
         idx_e = 0
         for sentence in self.sentences:
             idx_w = 0
             for token in sentence.tokens:
                 idx_w += 1
-                m = (len(token.id) > 1)
-                n = multi_word_token_misc.match(token.misc) if token.misc is not None else None
-                if not m and not n:
+                is_multi = (len(token.id) > 1)
+                is_mwt = (multi_word_token_misc.match(token.misc) if token.misc is not None else None)
+                is_manual_expansion = token.manual_expansion
+
+                perform_mwt_processing = MWTProcessingType.FLATTEN
+
+                if (process_manual_expanded and is_manual_expansion):
+                    perform_mwt_processing = MWTProcessingType.PROCESS
+                elif (process_manual_expanded==False and is_mwt):
+                    perform_mwt_processing = MWTProcessingType.PROCESS
+                elif (process_manual_expanded==False and is_manual_expansion):
+                    perform_mwt_processing = MWTProcessingType.SKIP
+                elif (process_manual_expanded==None and (is_mwt or is_multi)):
+                    perform_mwt_processing = MWTProcessingType.PROCESS
+
+                if perform_mwt_processing == MWTProcessingType.FLATTEN:
                     for word in token.words:
                         token.id = (idx_w, )
                         # delete dependency information
                         word.deps = None
                         word.head, word.deprel = None, None
                         word.id = idx_w
-                else:
+                elif perform_mwt_processing == MWTProcessingType.PROCESS:
                     expanded = [x for x in expansions[idx_e].split(' ') if len(x) > 0]
                     idx_e += 1
                     idx_w_end = idx_w + len(expanded) - 1
@@ -305,6 +339,12 @@ class Document(StanzaObject):
                     for i, e_word in enumerate(expanded):
                         token.words.append(Word(sentence, {ID: idx_w + i, TEXT: e_word}))
                     idx_w = idx_w_end
+                elif perform_mwt_processing == MWTProcessingType.SKIP:
+                    token.id = tuple(orig_id + idx_e for orig_id in token.id)
+                    for i in token.words:
+                        i.id += idx_e
+                    idx_w = token.id[-1]
+                    token.manual_expansion = None
 
             # reprocess the words using the new tokens
             sentence.words = []
@@ -327,14 +367,16 @@ class Document(StanzaObject):
     def get_mwt_expansions(self, evaluation=False):
         """ Get the multi-word tokens. For training, return a list of
         (multi-word token, extended multi-word token); otherwise, return a list of
-        multi-word token only.
+        multi-word token only. By default doesn't skip already expanded tokens, but
+        `skip_already_expanded` will return only tokens marked as MWT.
         """
         expansions = []
         for sentence in self.sentences:
             for token in sentence.tokens:
-                m = (len(token.id) > 1)
-                n = multi_word_token_misc.match(token.misc) if token.misc is not None else None
-                if m or n:
+                is_multi = (len(token.id) > 1)
+                is_mwt = multi_word_token_misc.match(token.misc) if token.misc is not None else None
+                is_manual_expansion = token.manual_expansion
+                if (is_multi and not is_manual_expansion) or is_mwt:
                     src = token.text
                     dst = ' '.join([word.text for word in token.words])
                     expansions.append([src, dst])
@@ -898,6 +940,7 @@ class Token(StanzaObject):
         self._start_char = token_entry.get(START_CHAR, None)
         self._end_char = token_entry.get(END_CHAR, None)
         self._sent = sentence
+        self._mexp = token_entry.get(MEXP, None)
 
         if self._misc is not None:
             init_from_misc(self)
@@ -911,6 +954,16 @@ class Token(StanzaObject):
     def id(self, value):
         """ Set the token's id value. """
         self._id = value
+
+    @property
+    def manual_expansion(self):
+        """ Access the whether this token was manually expanded. """
+        return self._mexp
+
+    @manual_expansion.setter
+    def manual_expansion(self, value):
+        """ Set the whether this token was manually expanded. """
+        self._mexp = value
 
     @property
     def text(self):
@@ -998,7 +1051,7 @@ class Token(StanzaObject):
     def to_conll_text(self):
         return "\n".join(dict_to_conll_text(x) for x in self.to_dict())
 
-    def to_dict(self, fields=[ID, TEXT, MISC, START_CHAR, END_CHAR, NER, MULTI_NER]):
+    def to_dict(self, fields=[ID, TEXT, MISC, START_CHAR, END_CHAR, NER, MULTI_NER, MEXP]):
         """ Dumps the token into a list of dictionary for this token with its extended words
         if the token is a multi-word token.
         """
@@ -1054,6 +1107,7 @@ class Word(StanzaObject):
         self._end_char = word_entry.get(END_CHAR, None)
         self._parent = None
         self._sent = sentence
+        self._mexp = word_entry.get(MEXP, None)
 
         if self._misc is not None:
             init_from_misc(self)
@@ -1061,6 +1115,16 @@ class Word(StanzaObject):
         # use the setter, which will go up to the sentence and set the
         # dependencies on that graph
         self.deps = word_entry.get(DEPS, None)
+
+    @property
+    def manual_expansion(self):
+        """ Access the whether this token was manually expanded. """
+        return self._mexp
+
+    @manual_expansion.setter
+    def manual_expansion(self, value):
+        """ Set the whether this token was manually expanded. """
+        self._mexp = value
 
     @property
     def id(self):
@@ -1268,7 +1332,7 @@ class Word(StanzaObject):
         token_dict = self.to_dict()
         return dict_to_conll_text(token_dict, '.')
 
-    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR]):
+    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, MEXP]):
         """ Dumps the word into a dictionary.
         """
         word_dict = {}
