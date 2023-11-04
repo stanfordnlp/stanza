@@ -368,9 +368,6 @@ ArmTDP-NER is an Armenian NER dataset
   - Then run
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hy_armtdp
 
-OntoNotes 5 contains a Chinese NER dataset
-  - https://catalog.ldc.upenn.edu/LDC2013T19
-
 en_conll03 is the classic 2003 4 class CoNLL dataset
   - The version we use is posted on HuggingFace
   - https://huggingface.co/datasets/conll2003
@@ -392,6 +389,13 @@ en_conllpp is a test set from 2020 newswire
   - git clone the repo in $NERBASE
   - then run
     python3 stanza/utils/datasets/ner/prepare_ner_dataset.py en_conllpp
+
+en_ontonotes is the OntoNotes 5 on HuggingFace
+  - this downloads the "v12" version of the data
+
+zh-hans_ontonotes is the ZH split of the OntoNotes dataset
+  - https://catalog.ldc.upenn.edu/LDC2013T19
+
 
 AQMAR is a small dataset of Arabic Wikipedia articles
   - http://www.cs.cmu.edu/~ark/ArabicNER/
@@ -429,7 +433,6 @@ import stanza.utils.datasets.ner.convert_bn_daffodil as convert_bn_daffodil
 import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
 import stanza.utils.datasets.ner.convert_en_conll03 as convert_en_conll03
-import stanza.utils.datasets.ner.convert_en_ontonotes as convert_en_ontonotes
 import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.convert_kk_kazNERD as convert_kk_kazNERD
@@ -437,6 +440,7 @@ import stanza.utils.datasets.ner.convert_lst20 as convert_lst20
 import stanza.utils.datasets.ner.convert_nner22 as convert_nner22
 import stanza.utils.datasets.ner.convert_mr_l3cube as convert_mr_l3cube
 import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
+import stanza.utils.datasets.ner.convert_ontonotes as convert_ontonotes
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.convert_nytk as convert_nytk
 import stanza.utils.datasets.ner.convert_starlang_ner as convert_starlang_ner
@@ -1089,7 +1093,13 @@ def process_en_ontonotes(paths, short_name):
     ner_input_path = paths['NERBASE']
     ontonotes_path = os.path.join(ner_input_path, "english", "en_ontonotes")
     ner_output_path = paths['NER_DATA_DIR']
-    convert_en_ontonotes.process_dataset("en_ontonotes", ontonotes_path, ner_output_path)
+    convert_ontonotes.process_dataset("en_ontonotes", ontonotes_path, ner_output_path)
+
+def process_zh_ontonotes(paths, short_name):
+    ner_input_path = paths['NERBASE']
+    ontonotes_path = os.path.join(ner_input_path, "chinese", "zh_ontonotes")
+    ner_output_path = paths['NER_DATA_DIR']
+    convert_ontonotes.process_dataset(short_name, ontonotes_path, ner_output_path)
 
 def process_en_conll03(paths, short_name):
     ner_input_path = paths['NERBASE']
@@ -1166,7 +1176,8 @@ DATASET_MAPPING = {
     "sv_suc3shuffle":    process_sv_suc3shuffle,
     "tr_starlang":       process_starlang,
     "th_lst20":          process_lst20,
-    "th_nner22":         process_nner22
+    "th_nner22":         process_nner22,
+    "zh-hans_ontonotes": process_zh_ontonotes,
 }
 
 def main(dataset_name):

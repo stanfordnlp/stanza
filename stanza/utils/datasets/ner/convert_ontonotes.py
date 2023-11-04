@@ -27,7 +27,15 @@ def process_dataset(short_name, conll_path, ner_output_path):
     except ImportError as e:
         raise ImportError("Please install the datasets package to process CoNLL03 with Stanza")
 
-    dataset = load_dataset("conll2012_ontonotesv5", "english_v12", cache_dir=conll_path)
+    if short_name == 'en_ontonotes':
+        config_name = 'english_v12'
+    elif short_name in ('zh_ontonotes', 'zh-hans_ontonotes'):
+        config_name = 'chinese_v4'
+    elif short_name == 'ar_ontonotes':
+        config_name = 'arabic_v4'
+    else:
+        raise ValueError("Unknown short name for downloading ontonotes: %s" % short_name)
+    dataset = load_dataset("conll2012_ontonotesv5", config_name, cache_dir=conll_path)
     datasets = [convert_dataset_section(x) for x in [dataset['train'], dataset['validation'], dataset['test']]]
     write_dataset(datasets, ner_output_path, short_name)
 
