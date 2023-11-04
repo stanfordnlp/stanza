@@ -34,7 +34,7 @@ def process_dataset(short_name, conll_path, ner_output_path):
 def main():
     paths = get_default_paths()
     ner_input_path = paths['NERBASE']
-    conll_path = os.path.join(ner_input_path, "en_conll03")
+    conll_path = os.path.join(ner_input_path, "english", "en_conll03")
     ner_output_path = paths['NER_DATA_DIR']
     process_dataset("en_conll03", conll_path, ner_output_path)
 

@@ -1086,7 +1086,7 @@ def process_toy_dataset(paths, short_name):
 
 def process_en_conll03(paths, short_name):
     ner_input_path = paths['NERBASE']
-    conll_path = os.path.join(ner_input_path, "en_conll03")
+    conll_path = os.path.join(ner_input_path, "english", "en_conll03")
     ner_output_path = paths['NER_DATA_DIR']
     convert_en_conll03.process_dataset("en_conll03", conll_path, ner_output_path)
 
