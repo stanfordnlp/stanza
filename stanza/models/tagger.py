@@ -19,7 +19,7 @@ import torch
 from torch import nn, optim
 
 import stanza.models.pos.data as data
-from stanza.models.pos.data import Dataset
+from stanza.models.pos.data import Dataset, merge_datasets
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos import scorer
 from stanza.models.common import utils
@@ -188,25 +188,13 @@ def load_training_data(args, pretrain):
     # therefore, we create seperate datasets and loaders for each input training file,
     # which will ensure the system be able to see batches with both upos available
     # and upos unavailable depending on what the availability in the file is.
+
     vocab = Dataset.init_vocab(train_docs, args)
     train_data = [Dataset(i, args, pretrain, vocab=vocab, evaluation=False)
                   for i in train_docs]
-    # here we make sure the model will learn to output _ for empty columns
-    # if *any* dataset has data for the upos, xpos, or feature column,
-    # we consider that data enough to train the model on that column
-    # otherwise, we want to train the model to always output blanks
-    if not any(td.has_upos for td in train_data):
-        for td in train_data:
-            td.has_upos = True
-    if not any(td.has_xpos for td in train_data):
-        for td in train_data:
-            td.has_xpos = True
-    if not any(td.has_feats for td in train_data):
-        for td in train_data:
-            td.has_feats = True
+
     # calculate the batches
-    train_batches = [i.to_loader(batch_size=args["batch_size"], shuffle=True)
-                     for i in train_data]
+    train_batches = merge_datasets(train_data).to_loader(batch_size=args["batch_size"], shuffle=True)
     return vocab, train_data, train_batches
 
 def train(args):
@@ -235,7 +223,8 @@ def train(args):
     vocab, train_data, train_batches = load_training_data(args, pretrain)
 
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
-    dev_data = Dataset(dev_doc, args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    dev_data = Dataset(dev_doc, args, pretrain, vocab=vocab,
+                       evaluation=True, sort_during_eval=True)
     dev_batch = dev_data.to_loader(batch_size=args["batch_size"])
 
     eval_type = get_eval_type(dev_data)
@@ -289,9 +278,7 @@ def train(args):
         # such as if XPOS or UPOS are missing from a training file,
         # as we shuffle all of those batches together
         # the downside being that it loses the efficiency benefit of the pytorch dataloader
-        all_train_batches = [x for train_batch in train_batches for x in iter(train_batch)]
-        random.shuffle(all_train_batches)
-        for i, batch in enumerate(all_train_batches):
+        for i, batch in enumerate(iter(train_batches)):
             start_time = time.time()
             global_step += 1
             loss = trainer.update(batch, eval=False) # update step
