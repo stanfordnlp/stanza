@@ -93,12 +93,12 @@ def test_merge_some_xpos():
             if batch.text[-1][0] == 'It':
                 if batch_idx == 0:
                     it_first += 1
-                # TODO: I would expect this to always be False, unless
-                # I have misinterpreted the process for the masking,
-                # but there are times it comes back True instead.  I
-                # think that is an effect of the has_xpos not being
-                # sorted with everything else by length
-                print(torch.any(batch.xpos[-1]))
+                    # in a batch of size 2, the other item has to be
+                    # one of the with-xpos items
+                    assert any(batch.xpos[0])
+                # this should always be false to represent that this
+                # item in the batch has been masked
+                assert not any(batch.xpos[-1])
 
     # check that the sentence w/o xpos is sometimes but not always in the first batch
     assert it_first > 5

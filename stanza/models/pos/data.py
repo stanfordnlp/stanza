@@ -71,9 +71,9 @@ class _ShadowDataset(DS):
 
         # sort sentences by lens for easy RNN operations
         lens = [torch.sum(x != PAD_ID) for x in words]
-        (words, wordchars, upos, xpos,
-        ufeats, pretrained, text), orig_idx = sort_all((words, wordchars, upos, xpos,
-                                                        ufeats, pretrained, text), lens)
+        (words, wordchars, upos, xpos, ufeats, pretrained,
+         has_upos, has_xpos, has_feats, text), orig_idx = sort_all((words, wordchars, upos, xpos, ufeats, pretrained,
+                                                                    has_upos, has_xpos, has_feats, text), lens)
         lens = [torch.sum(x != PAD_ID) for x in words] # we need to reinterpret lengths for the RNN
 
         # combine all words into one large list, and sort for easy charRNN ops
