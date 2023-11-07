@@ -174,29 +174,7 @@ def get_eval_type(dev_batch):
     else:
         return "AllTags"
 
-def train(args):
-    model_file = model_file_name(args)
-    utils.ensure_dir(os.path.split(model_file)[0])
-
-    if args['save_each']:
-        # so models.pt -> models_0001.pt, etc
-        model_save_each_file = save_each_file_name(args)
-        logger.info("Saving each checkpoint to %s" % model_save_each_file)
-
-    # load pretrained vectors if needed
-    pretrain = load_pretrain(args)
-
-    if args['charlm']:
-        if args['charlm_shorthand'] is None:
-            raise ValueError("CharLM Shorthand is required for loading pretrained CharLM model...")
-        logger.info('Using pretrained contextualized char embedding')
-        if not args['charlm_forward_file']:
-            args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
-        if not args['charlm_backward_file']:
-            args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
-
-    # load data
-    logger.info("Loading data with batch size {}...".format(args['batch_size']))
+def load_training_data(args, pretrain):
     train_docs = []
     for train_file in args['train_file'].split(";"):
         logger.info("Reading %s" % train_file)
@@ -229,6 +207,33 @@ def train(args):
     # calculate the batches
     train_batches = [i.to_loader(batch_size=args["batch_size"], shuffle=True)
                      for i in train_data]
+    return vocab, train_data, train_batches
+
+def train(args):
+    model_file = model_file_name(args)
+    utils.ensure_dir(os.path.split(model_file)[0])
+
+    if args['save_each']:
+        # so models.pt -> models_0001.pt, etc
+        model_save_each_file = save_each_file_name(args)
+        logger.info("Saving each checkpoint to %s" % model_save_each_file)
+
+    # load pretrained vectors if needed
+    pretrain = load_pretrain(args)
+
+    if args['charlm']:
+        if args['charlm_shorthand'] is None:
+            raise ValueError("CharLM Shorthand is required for loading pretrained CharLM model...")
+        logger.info('Using pretrained contextualized char embedding')
+        if not args['charlm_forward_file']:
+            args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+        if not args['charlm_backward_file']:
+            args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+
+    # load data
+    logger.info("Loading data with batch size {}...".format(args['batch_size']))
+    vocab, train_data, train_batches = load_training_data(args, pretrain)
+
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_data = Dataset(dev_doc, args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
     dev_batch = dev_data.to_loader(batch_size=args["batch_size"])
