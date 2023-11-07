@@ -12,7 +12,7 @@ from stanza.models.common.biaffine import BiaffineScorer
 from stanza.models.common.foundation_cache import load_bert, load_charlm
 from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
-from stanza.models.common.vocab import CompositeVocab
+from stanza.models.common.vocab import CompositeVocab, PAD_ID
 from stanza.models.common.char_model import CharacterModel
 
 logger = logging.getLogger('stanza')
@@ -218,15 +218,11 @@ class Tagger(nn.Module):
 
         preds = [pad(upos_pred).max(2)[1]]
 
+        loss = 0.0
         if upos is not None:
             upos = pack(upos).data
-
-            if torch.any(upos):
+            if not torch.all(upos.eq(PAD_ID)):
                 loss = self.crit(upos_pred.view(-1, upos_pred.size(-1)), upos.view(-1))
-            else:
-                loss = 0.0
-        else:
-            loss = 0.0
 
         if self.share_hid:
             xpos_hid = upos_hid
@@ -249,13 +245,13 @@ class Tagger(nn.Module):
             xpos_preds = []
             for i in range(len(self.vocab['xpos'])):
                 xpos_pred = clffunc(self.xpos_clf[i], xpos_hid)
-                if xpos is not None and torch.any(xpos):
+                if xpos is not None and not torch.all(xpos[:, i].eq(PAD_ID)):
                     loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos[:, i].view(-1))
                 xpos_preds.append(pad(xpos_pred).max(2, keepdim=True)[1])
             preds.append(torch.cat(xpos_preds, 2))
         else:
             xpos_pred = clffunc(self.xpos_clf, xpos_hid)
-            if xpos is not None and torch.any(xpos):
+            if xpos is not None and not torch.all(xpos.eq(PAD_ID)):
                 loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos.view(-1))
             preds.append(pad(xpos_pred).max(2)[1])
 
@@ -263,7 +259,7 @@ class Tagger(nn.Module):
         if ufeats is not None: ufeats = pack(ufeats).data
         for i in range(len(self.vocab['feats'])):
             ufeats_pred = clffunc(self.ufeats_clf[i], ufeats_hid)
-            if ufeats is not None and torch.any(ufeats):
+            if ufeats is not None and not torch.all(ufeats[:, i].eq(PAD_ID)):
                 loss += self.crit(ufeats_pred.view(-1, ufeats_pred.size(-1)), ufeats[:, i].view(-1))
             ufeats_preds.append(pad(ufeats_pred).max(2, keepdim=True)[1])
         preds.append(torch.cat(ufeats_preds, 2))
