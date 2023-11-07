@@ -193,6 +193,19 @@ def load_training_data(args, pretrain):
     train_data = [Dataset(i, args, pretrain, vocab=vocab, evaluation=False)
                   for i in train_docs]
 
+    # if *any* dataset has data for the upos, xpos, or feature column,
+    # we consider that data enough to train the model on that column
+    # otherwise, we want to train the model to always output blanks
+    if not any(td.has_upos for td in train_data):
+        for td in train_data:
+            td.has_upos = True
+    if not any(td.has_xpos for td in train_data):
+        for td in train_data:
+            td.has_xpos = True
+    if not any(td.has_feats for td in train_data):
+        for td in train_data:
+            td.has_feats = True
+
     # calculate the batches
     train_batches = merge_datasets(train_data).to_loader(batch_size=args["batch_size"], shuffle=True)
     return vocab, train_data, train_batches
