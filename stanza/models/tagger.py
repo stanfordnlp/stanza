@@ -19,7 +19,7 @@ import torch
 from torch import nn, optim
 
 import stanza.models.pos.data as data
-from stanza.models.pos.data import Dataset
+from stanza.models.pos.data import Dataset, ShuffledDataset
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos import scorer
 from stanza.models.common import utils
@@ -205,8 +205,7 @@ def load_training_data(args, pretrain):
         for td in train_data:
             td.has_feats = True
     # calculate the batches
-    train_batches = [i.to_loader(batch_size=args["batch_size"], shuffle=True)
-                     for i in train_data]
+    train_batches = ShuffledDataset(train_data, args["batch_size"])
     return vocab, train_data, train_batches
 
 def train(args):
@@ -284,14 +283,7 @@ def train(args):
         trainer.model.log_norms()
     while True:
         do_break = False
-        # we now merge all train batches together into one giant list
-        # this allows us to mix batches which have or don't have individual training columns,
-        # such as if XPOS or UPOS are missing from a training file,
-        # as we shuffle all of those batches together
-        # the downside being that it loses the efficiency benefit of the pytorch dataloader
-        all_train_batches = [x for train_batch in train_batches for x in iter(train_batch)]
-        random.shuffle(all_train_batches)
-        for i, batch in enumerate(all_train_batches):
+        for i, batch in enumerate(train_batches):
             start_time = time.time()
             global_step += 1
             loss = trainer.update(batch, eval=False) # update step
