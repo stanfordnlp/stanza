@@ -513,9 +513,16 @@ def standard_model_file_name(args, model_type):
         if "bert_learning_rate" in args:
             transformer_lr = "{}".format(args["bert_learning_rate"])
 
+    seed = args.get('seed', None)
+    if seed is None:
+        seed = ""
+    else:
+        seed = str(seed)
+
     model_file = args['save_name'].format(shorthand=args['shorthand'],
                                           embedding=embedding,
                                           finetune=finetune,
+                                          seed=seed,
                                           transformer_lr=transformer_lr)
     model_file = re.sub("_+", "_", model_file)
 
