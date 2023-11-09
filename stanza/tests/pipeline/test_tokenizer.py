@@ -19,8 +19,7 @@ EN_DOC_GOLD_TOKENS = """
 <Token id=5;words=[<Word id=5;text=California>]>
 <Token id=6;words=[<Word id=6;text=.>]>
 
-<Token id=1;words=[<Word id=1;text=Joe>]>
-<Token id=2;words=[<Word id=2;text='s>]>
+<Token id=1-2;words=[<Word id=1;text=Joe>, <Word id=2;text='s>]>
 <Token id=3;words=[<Word id=3;text=favorite>]>
 <Token id=4;words=[<Word id=4;text=food>]>
 <Token id=5;words=[<Word id=5;text=is>]>
