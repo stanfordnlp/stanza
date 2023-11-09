@@ -108,19 +108,6 @@ def split_train_file(treebank, train_input_conllu, train_output_conllu, dev_outp
     return True
 
 
-def strip_mwt_from_sentences(sents):
-    """
-    Removes all mwt lines from the given list of sentences
-
-    Useful for mixing MWT and non-MWT treebanks together (especially English)
-    """
-    new_sents = []
-    for sentence in sents:
-        new_sentence = [line for line in sentence if not MWT_RE.match(line)]
-        new_sents.append(new_sentence)
-    return new_sents
-
-
 def has_space_after_no(piece):
     if not piece or piece == "_":
         return False
@@ -854,7 +841,6 @@ def build_combined_english_dataset(paths, model_type, dataset):
         ewt_conllu = common.find_treebank_dataset_file("UD_English-EWT", udbase_dir, dataset, "conllu")
         sents = read_sentences_from_conllu(ewt_conllu)
 
-    sents = strip_mwt_from_sentences(sents)
     return sents
 
 def build_extra_combined_english_dataset(paths, dataset):
