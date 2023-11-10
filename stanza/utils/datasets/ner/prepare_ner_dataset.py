@@ -391,10 +391,15 @@ en_conllpp is a test set from 2020 newswire
     python3 stanza/utils/datasets/ner/prepare_ner_dataset.py en_conllpp
 
 en_ontonotes is the OntoNotes 5 on HuggingFace
+  - https://huggingface.co/datasets/conll2012_ontonotesv5
+  - python3 stanza/utils/datasets/ner/prepare_ner_dataset.py en_ontonotes
   - this downloads the "v12" version of the data
 
 zh-hans_ontonotes is the ZH split of the OntoNotes dataset
   - https://catalog.ldc.upenn.edu/LDC2013T19
+  - https://huggingface.co/datasets/conll2012_ontonotesv5
+  - python3 stanza/utils/datasets/ner/prepare_ner_dataset.py zh-hans_ontonotes
+  - this downloads the "v4" version of the data
 
 
 AQMAR is a small dataset of Arabic Wikipedia articles
