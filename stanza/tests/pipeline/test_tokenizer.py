@@ -34,6 +34,32 @@ EN_DOC_GOLD_TOKENS = """
 <Token id=6;words=[<Word id=6;text=beach>]>
 <Token id=7;words=[<Word id=7;text=.>]>
 """.strip()
+
+# spaCy doesn't have MWT
+EN_DOC_SPACY_TOKENS = """
+<Token id=1;words=[<Word id=1;text=Joe>]>
+<Token id=2;words=[<Word id=2;text=Smith>]>
+<Token id=3;words=[<Word id=3;text=lives>]>
+<Token id=4;words=[<Word id=4;text=in>]>
+<Token id=5;words=[<Word id=5;text=California>]>
+<Token id=6;words=[<Word id=6;text=.>]>
+
+<Token id=1;words=[<Word id=1;text=Joe>]>
+<Token id=2;words=[<Word id=2;text='s>]>
+<Token id=3;words=[<Word id=3;text=favorite>]>
+<Token id=4;words=[<Word id=4;text=food>]>
+<Token id=5;words=[<Word id=5;text=is>]>
+<Token id=6;words=[<Word id=6;text=pizza>]>
+<Token id=7;words=[<Word id=7;text=.>]>
+
+<Token id=1;words=[<Word id=1;text=He>]>
+<Token id=2;words=[<Word id=2;text=enjoys>]>
+<Token id=3;words=[<Word id=3;text=going>]>
+<Token id=4;words=[<Word id=4;text=to>]>
+<Token id=5;words=[<Word id=5;text=the>]>
+<Token id=6;words=[<Word id=6;text=beach>]>
+<Token id=7;words=[<Word id=7;text=.>]>
+""".strip()
 EN_DOC_POSTPROCESSOR_TOKENS_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], [("Joe's", True), 'favorite', 'food', 'is', 'pizza', '.'], ['He', 'enjoys', 'going', 'to', 'the', 'beach', '.']]
 EN_DOC_POSTPROCESSOR_COMBINED_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], ['Joe', "'s", 'favorite', 'food', 'is', 'pizza', '.'], ['He', 'enjoys', 'going', "to the beach", '.']]
 
@@ -357,7 +383,7 @@ def test_spacy():
 
     # make sure the loaded tokenizer is actually spacy
     assert "SpacyTokenizer" == nlp.processors['tokenize']._variant.__class__.__name__
-    assert EN_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
+    assert EN_DOC_SPACY_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
 
 def test_spacy_no_ssplit():
