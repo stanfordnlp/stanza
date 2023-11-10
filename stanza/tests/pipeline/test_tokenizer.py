@@ -34,8 +34,8 @@ EN_DOC_GOLD_TOKENS = """
 <Token id=6;words=[<Word id=6;text=beach>]>
 <Token id=7;words=[<Word id=7;text=.>]>
 """.strip()
-EN_DOC_POSTPROCESSOR_TOKENS_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], ['Joe', "'s", 'favorite', 'food', 'is', 'pizza', '.'], ['He', 'enjoys', 'going', 'to', 'the', 'beach', '.']]
-EN_DOC_POSTPROCESSOR_COMBINED_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], ['Joe\'s', 'favorite', 'food', 'is', 'pizza', '.'], ['He', 'enjoys', 'going', "to the beach", '.']]
+EN_DOC_POSTPROCESSOR_TOKENS_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], [("Joe's", True), 'favorite', 'food', 'is', 'pizza', '.'], ['He', 'enjoys', 'going', 'to', 'the', 'beach', '.']]
+EN_DOC_POSTPROCESSOR_COMBINED_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], ['Joe', "'s", 'favorite', 'food', 'is', 'pizza', '.'], ['He', 'enjoys', 'going', "to the beach", '.']]
 
 EN_DOC_POSTPROCESSOR_COMBINED_TOKENS = """
 <Token id=1;words=[<Word id=1;text=Joe>]>
@@ -45,12 +45,13 @@ EN_DOC_POSTPROCESSOR_COMBINED_TOKENS = """
 <Token id=5;words=[<Word id=5;text=California>]>
 <Token id=6;words=[<Word id=6;text=.>]>
 
-<Token id=1;words=[<Word id=1;text=Joe's>]>
-<Token id=2;words=[<Word id=2;text=favorite>]>
-<Token id=3;words=[<Word id=3;text=food>]>
-<Token id=4;words=[<Word id=4;text=is>]>
-<Token id=5;words=[<Word id=5;text=pizza>]>
-<Token id=6;words=[<Word id=6;text=.>]>
+<Token id=1;words=[<Word id=1;text=Joe>]>
+<Token id=2;words=[<Word id=2;text='s>]>
+<Token id=3;words=[<Word id=3;text=favorite>]>
+<Token id=4;words=[<Word id=4;text=food>]>
+<Token id=5;words=[<Word id=5;text=is>]>
+<Token id=6;words=[<Word id=6;text=pizza>]>
+<Token id=7;words=[<Word id=7;text=.>]>
 
 <Token id=1;words=[<Word id=1;text=He>]>
 <Token id=2;words=[<Word id=2;text=enjoys>]>
@@ -300,11 +301,11 @@ def test_pretokenized_multidoc():
 
 def test_postprocessor():
 
-    def dummy_postprocessor(input):
+    def dummy_postprocessor(in_doc):
         # Importantly, EN_DOC_POSTPROCESSOR_COMBINED_LIST returns a few tokens joinde
         # with space. As some languages (such as VN) contains tokens with space in between
         # its important to have joined space tested as one of the tokens
-        assert input == EN_DOC_POSTPROCESSOR_TOKENS_LIST
+        assert in_doc == EN_DOC_POSTPROCESSOR_TOKENS_LIST
         return EN_DOC_POSTPROCESSOR_COMBINED_LIST
 
     nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR,
