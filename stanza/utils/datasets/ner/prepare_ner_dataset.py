@@ -1089,21 +1089,6 @@ def process_en_worldwide_9class(paths, short_name):
 
     random_shuffle_by_prefixes(in_directory, out_directory, short_name, prefix_map)
 
-def process_armtdp(paths, short_name):
-    assert short_name == 'hy_armtdp'
-    base_input_path = os.path.join(paths["NERBASE"], "armenian", "ArmTDP-NER")
-    base_output_path = paths["NER_DATA_DIR"]
-    convert_hy_armtdp.convert_dataset(base_input_path, base_output_path, short_name)
-    for shard in SHARDS:
-        input_filename = os.path.join(base_output_path, f'{short_name}.{shard}.tsv')
-        if not os.path.exists(input_filename):
-            raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
-        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
-        prepare_ner_file.process_dataset(input_filename, output_filename)
-
-def process_toy_dataset(paths, short_name):
-    convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
-
 def process_en_ontonotes(paths, short_name):
     ner_input_path = paths['NERBASE']
     ontonotes_path = os.path.join(ner_input_path, "english", "en_ontonotes")
@@ -1155,6 +1140,21 @@ def process_en_conllpp(paths, short_name):
     sentences = read_tsv(base_input_path, 0, 3, separator=None)
     sentences = [sent for sent in sentences if len(sent) > 1 or sent[0][0] != '-DOCSTART-']
     write_dataset([sentences], base_output_path, short_name, shard_names=["test"], shards=["test"])
+
+def process_armtdp(paths, short_name):
+    assert short_name == 'hy_armtdp'
+    base_input_path = os.path.join(paths["NERBASE"], "armenian", "ArmTDP-NER")
+    base_output_path = paths["NER_DATA_DIR"]
+    convert_hy_armtdp.convert_dataset(base_input_path, base_output_path, short_name)
+    for shard in SHARDS:
+        input_filename = os.path.join(base_output_path, f'{short_name}.{shard}.tsv')
+        if not os.path.exists(input_filename):
+            raise FileNotFoundError('Cannot find %s component of %s in %s' % (shard, short_name, input_filename))
+        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
+        prepare_ner_file.process_dataset(input_filename, output_filename)
+
+def process_toy_dataset(paths, short_name):
+    convert_bio_to_json(os.path.join(paths["NERBASE"], "English-SAMPLE"), paths["NER_DATA_DIR"], short_name)
 
 def process_ar_aqmar(paths, short_name):
     base_input_path = os.path.join(paths["NERBASE"], "arabic", "AQMAR", "AQMAR_Arabic_NER_corpus-1.0.zip")
