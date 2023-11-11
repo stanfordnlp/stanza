@@ -345,13 +345,6 @@ SiNER is a Sindhi NER dataset
   - Then, prepare the dataset with this script:
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset sd_siner
 
-en_worldwide-4class is an English non-US newswire dataset
-  - currently WIP.  annotated by MLTwist, collected at Stanford
-  - the 4 class version is converted to the 4 classes in conll,
-    then split into train/dev/test
-  - clone https://github.com/stanfordnlp/en-worldwide-newswire
-    into $NERBASE/en_worldwide
-
 en_sample is the toy dataset included with stanza-train
   https://github.com/stanfordnlp/stanza-train
   this is not meant for any kind of actual NER use
@@ -394,6 +387,23 @@ en_ontonotes is the OntoNotes 5 on HuggingFace
   - https://huggingface.co/datasets/conll2012_ontonotesv5
   - python3 stanza/utils/datasets/ner/prepare_ner_dataset.py en_ontonotes
   - this downloads the "v12" version of the data
+
+en_worldwide-4class is an English non-US newswire dataset
+  - annotated by MLTwist and Aya Data, with help from Datasaur,
+    collected at Stanford
+  - work to be published at EMNLP Findings
+  - the 4 class version is converted to the 4 classes in conll,
+    then split into train/dev/test
+  - clone https://github.com/stanfordnlp/en-worldwide-newswire
+    into $NERBASE/en_worldwide
+
+en_worldwide-9class is an English non-US newswire dataset
+  - annotated by MLTwist and Aya Data, with help from Datasaur,
+    collected at Stanford
+  - work to be published at EMNLP Findings
+  - the 9 class version is not edited
+  - clone https://github.com/stanfordnlp/en-worldwide-newswire
+    into $NERBASE/en_worldwide
 
 zh-hans_ontonotes is the ZH split of the OntoNotes dataset
   - https://catalog.ldc.upenn.edu/LDC2013T19
@@ -1068,10 +1078,10 @@ def process_en_worldwide_4class(paths, short_name):
 
     random_shuffle_by_prefixes(in_directory, out_directory, short_name, prefix_map)
 
-def process_en_worldwide_8class(paths, short_name):
+def process_en_worldwide_9class(paths, short_name):
     simplify_en_worldwide.main(args=['--no_simplify'])
 
-    in_directory = os.path.join(paths["NERBASE"], "en_worldwide", "8class")
+    in_directory = os.path.join(paths["NERBASE"], "en_worldwide", "9class")
     out_directory = paths["NER_DATA_DIR"]
 
     destination_file = os.path.join(paths["NERBASE"], "en_worldwide", "en-worldwide-newswire", "regions.txt")
@@ -1161,7 +1171,7 @@ DATASET_MAPPING = {
     "en_conllpp":        process_en_conllpp,
     "en_ontonotes":      process_en_ontonotes,
     "en_worldwide-4class": process_en_worldwide_4class,
-    "en_worldwide-8class": process_en_worldwide_8class,
+    "en_worldwide-9class": process_en_worldwide_9class,
     "fa_arman":          process_fa_arman,
     "fi_turku":          process_turku,
     "hi_hiner":          process_hiner,
