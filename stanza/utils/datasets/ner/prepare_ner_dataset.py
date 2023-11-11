@@ -462,6 +462,7 @@ import stanza.utils.datasets.ner.convert_starlang_ner as convert_starlang_ner
 import stanza.utils.datasets.ner.convert_nkjp as convert_nkjp
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
 import stanza.utils.datasets.ner.convert_sindhi_siner as convert_sindhi_siner
+import stanza.utils.datasets.ner.ontonotes_multitag as ontonotes_multitag
 import stanza.utils.datasets.ner.simplify_en_worldwide as simplify_en_worldwide
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
@@ -1125,6 +1126,17 @@ def process_en_conll03_worldwide(paths, short_name):
     shutil.copyfile(os.path.join(paths['NER_DATA_DIR'], "en_conll03.test.json"),
                     os.path.join(paths['NER_DATA_DIR'], "%s.test.json" % short_name))
 
+def process_en_ontonotes_ww_multi(paths, short_name):
+    """
+    Combine the worldwide data with the OntoNotes data in a multi channel format
+    """
+    print("=============== Preparing OntoNotes ===============")
+    process_en_ontonotes(paths, "en_ontonotes")
+    print("========== Preparing 9 Class Worldwide ================")
+    process_en_worldwide_9class(paths, "en_worldwide-9class")
+    # TODO: pass in options?
+    ontonotes_multitag.build_multitag_dataset(paths['NER_DATA_DIR'], short_name, True, True)
+
 
 def process_en_conllpp(paths, short_name):
     """
@@ -1170,6 +1182,7 @@ DATASET_MAPPING = {
     "en_conll03ww":      process_en_conll03_worldwide,
     "en_conllpp":        process_en_conllpp,
     "en_ontonotes":      process_en_ontonotes,
+    "en_ontonotes-ww-multi": process_en_ontonotes_ww_multi,
     "en_worldwide-4class": process_en_worldwide_4class,
     "en_worldwide-9class": process_en_worldwide_9class,
     "fa_arman":          process_fa_arman,
