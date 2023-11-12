@@ -28,6 +28,7 @@ from stanza.models.coref.tokenizer_customization import TOKENIZER_FILTERS, TOKEN
 from stanza.models.coref.utils import GraphNode
 from stanza.models.coref.word_encoder import WordEncoder
 
+from peft import LoraConfig, get_peft_model, get_peft_model_state_dict, set_peft_model_state_dict
 
 logger = logging.getLogger('stanza')
 
@@ -77,11 +78,27 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         self.optimizers = {}
         self.schedulers = {}
 
+        # TODO make this actually configurable
+        if self.config.lora:
+            self.__peft_config = LoraConfig(inference_mode=False,
+                                            r=self.config.lora_rank,
+                                            target_modules=["query", "value",
+                                                            "output.dense", "intermediate.dense"],
+                                            lora_alpha=self.config.lora_alpha,
+                                            lora_dropout=self.config.lora_dropout,
+                                            modules_to_save=["pooler"],
+                                            bias="none")
+
+            self.bert = get_peft_model(self.bert, self.__peft_config)
+            self.bert.train()
+            self.trainable["bert"] = self.bert
+
         if build_optimizers:
             self._build_optimizers()
         self._set_training(False)
         self._coref_criterion = CorefLoss(self.config.bce_loss_weight)
         self._span_criterion = torch.nn.CrossEntropyLoss(reduction="sum")
+
 
     @property
     def training(self) -> bool:
@@ -224,6 +241,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     self.optimizers[key].load_state_dict(state_dict)
                 elif key.endswith("_scheduler"):
                     self.schedulers[key].load_state_dict(state_dict)
+                elif key.endswith("_lora"):
+                    assert self.config.lora, "Unable to load state dict of LoRA model into model initialized without LoRA!"
+                    set_peft_model_state_dict(self.trainable[key.split("_")[0]],
+                                              state_dict)
                 else:
                     self.trainable[key].load_state_dict(state_dict, strict=False)
                 logger.debug(f"Loaded {key}")
@@ -305,7 +326,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         """ Saves trainable models as state dicts. """
         to_save: List[Tuple[str, Any]] = \
             [(key, value) for key, value in self.trainable.items()
-             if self.config.bert_finetune or key != "bert"]
+             if (self.config.bert_finetune and not self.config.lora) or key != "bert"]
         if save_optimizers:
             to_save.extend(self.optimizers.items())
             to_save.extend(self.schedulers.items())
@@ -316,6 +337,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                                      f"{self.config.section}"
                                      f"_e{self.epochs_trained}_{time}.pt")
         savedict = {name: module.state_dict() for name, module in to_save}
+        if self.config.lora:
+            savedict["bert_lora"] = get_peft_model_state_dict(self.bert)
         savedict["epochs_trained"] = self.epochs_trained  # type: ignore
         savedict["config"] = self.config
         torch.save(savedict, save_path)
@@ -438,8 +461,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         self.optimizers: Dict[str, torch.optim.Optimizer] = {}
         self.schedulers: Dict[str, torch.optim.lr_scheduler.LambdaLR] = {}
 
-        for param in self.bert.parameters():
-            param.requires_grad = self.config.bert_finetune
+        if not getattr(self.config, 'lora', False):
+            for param in self.bert.parameters():
+                param.requires_grad = self.config.bert_finetune
 
         if self.config.bert_finetune:
             self.optimizers["bert_optimizer"] = torch.optim.Adam(
