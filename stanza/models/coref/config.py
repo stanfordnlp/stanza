@@ -33,6 +33,11 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
 
     rough_k: int
 
+    lora: bool
+    lora_alpha: int
+    lora_rank: int
+    lora_dropout: float
+
     bert_finetune: bool
     dropout_rate: float
     learning_rate: float
