@@ -138,6 +138,11 @@ vlsp22 is the 2022 constituency treebank from the VLSP bakeoff
     VLSP 2022 Challenge: Vietnamese Constituency Parsing
     to appear in Journal of Computer Science and Cybernetics.
 
+vlsp23 is the 2023 update to the constituency treebank from the VLSP bakeoff
+  the vlsp22 code also works for the new dataset,
+    although some effort may be needed to update the tags
+  currently there is no test data, so by default the split uses 1/10th for test
+
 zh_ctb-51 is the 5.1 version of CTB
   put LDC2005T01U01_ChineseTreebank5.1 in $CONSTITUENCY_BASE/chinese
   python3 -m stanza.utils.datasets.constituency.prepare_con_dataset zh_ctb-51
@@ -233,18 +238,25 @@ def process_vlsp21(paths, dataset_name, *args):
         # create an empty test file - currently we don't have actual test data for VLSP 21
         pass
 
-
 def process_vlsp22(paths, dataset_name, *args):
     """
     Processes the VLSP 2022 dataset, which is four separate files for some reason
     """
-    assert dataset_name == 'vi_vlsp22'
+    assert dataset_name == 'vi_vlsp22' or dataset_name == 'vi_vlsp23'
+
+    if dataset_name == 'vi_vlsp22':
+        default_subdir = 'VLSP_2022'
+        default_make_test_split = False
+    elif dataset_name == 'vi_vlsp23':
+        default_subdir = os.path.join('VLSP_2023', 'TrainingDataset')
+        default_make_test_split = True
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--subdir', default='VLSP_2022', type=str, help='Where to find the data - allows for using previous versions, if needed')
+    parser.add_argument('--subdir', default=default_subdir, type=str, help='Where to find the data - allows for using previous versions, if needed')
     parser.add_argument('--no_convert_brackets', default=True, action='store_false', dest='convert_brackets', help="Don't convert the VLSP parens RKBT & LKBT to PTB parens")
     parser.add_argument('--n_splits', default=None, type=int, help='Split the data into this many pieces.  Relevant as there is no set training/dev split, so this allows for N models on N different dev sets')
-    parser.add_argument('--test_split', default=False, action='store_true', help='Split 1/10th of the data as a test split as well.  Useful for experimental results.  Less relevant since there is now an official test set')
+    parser.add_argument('--test_split', default=default_make_test_split, action='store_true', help='Split 1/10th of the data as a test split as well.  Useful for experimental results.  Less relevant since there is now an official test set')
+    parser.add_argument('--no_test_split', dest='test_split', action='store_false', help='Split 1/10th of the data as a test split as well.  Useful for experimental results.  Less relevant since there is now an official test set')
     args = parser.parse_args(args=list(*args))
 
     if os.path.exists(args.subdir):
@@ -252,14 +264,14 @@ def process_vlsp22(paths, dataset_name, *args):
     else:
         vlsp_dir = os.path.join(paths["CONSTITUENCY_BASE"], "vietnamese", args.subdir)
     if not os.path.exists(vlsp_dir):
-        raise FileNotFoundError("Could not find the 2022 dataset in the expected location of {} - CONSTITUENCY_BASE == {}".format(vlsp_dir, paths["CONSTITUENCY_BASE"]))
+        raise FileNotFoundError("Could not find the {} dataset in the expected location of {} - CONSTITUENCY_BASE == {}".format(dataset_name, vlsp_dir, paths["CONSTITUENCY_BASE"]))
     vlsp_files = os.listdir(vlsp_dir)
     vlsp_test_files = [os.path.join(vlsp_dir, x) for x in vlsp_files if x.startswith("private") and not x.endswith(".zip")]
     vlsp_train_files = [os.path.join(vlsp_dir, x) for x in vlsp_files if x.startswith("file") and not x.endswith(".zip")]
     vlsp_train_files.sort()
     if len(vlsp_train_files) == 0:
         raise FileNotFoundError("No train files (files starting with 'file') found in {}".format(vlsp_dir))
-    if len(vlsp_test_files) == 0:
+    if not args.test_split and len(vlsp_test_files) == 0:
         raise FileNotFoundError("No test files found in {}".format(vlsp_dir))
     print("Loading training files from {}".format(vlsp_dir))
     print("Procesing training files:\n  {}".format("\n  ".join(vlsp_train_files)))
@@ -457,6 +469,7 @@ DATASET_MAPPING = {
     'vi_vlsp09':    process_vlsp09,
     'vi_vlsp21':    process_vlsp21,
     'vi_vlsp22':    process_vlsp22,
+    'vi_vlsp23':    process_vlsp22,  # options allow for this
 
     'zh-hans_ctb-51':   process_ctb_51,
     'zh-hans_ctb-90':   process_ctb_90,
