@@ -14,6 +14,7 @@ import json
 import os
 import shutil
 
+from stanza.utils import default_paths
 from stanza.utils.datasets.ner.utils import combine_files
 from stanza.utils.datasets.ner.simplify_ontonotes_to_worldwide import simplify_ontonotes_to_worldwide
 
