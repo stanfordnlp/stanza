@@ -76,9 +76,49 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
     return multi_class_result, confusion   
 
 
-def main():
+def model_predict(model: LemmaClassifier, text: List[int], position_idx: int) -> int:
     """
-    Runs a test on the EN_GUM test set
+    A LemmaClassifier is used to predict on a single text example, given the position index of the target token.
+
+    Args:
+        model (LemmaClassifier): A trained LemmaClassifier that is able to predict on a target token.
+        text (List[int]): A tokenized sentence with the proper embeddings corresponding to `model`.
+        position_idx (int): The (zero-indexed) position of the target token in `text`.
+    
+    Returns:
+        (int): The index of the predicted class in `model`'s output.
+    """
+    assert len(text) != 0, f"Text arg is empty. Please provide a proper input for model evaluation."
+    if not isinstance(text[0], int):
+        raise TypeError(f"Text variable must contain tokenized version of sentence, but instead found type {type(text[0])}.")
+
+
+    text_tensor = torch.tensor(text)
+    with torch.no_grad():
+        logits = model(text_tensor, position_idx)
+        predicted_class = torch.argmax(logits).item()
+    
+    return predicted_class
+
+
+def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, label_decoder: Mapping[str, int], 
+                   verbose: bool = True) -> Tuple[Mapping, Mapping, float]:
+    """
+    Helper function for model evaluation
+
+    Args:
+        model (LemmaClassifier): An instance of the LemmaClassifier class that has architecture initialized which matches the model saved in `model_path`.
+        model_path (str): Path to the saved model weights that will be loaded into `model`.
+        eval_path (str): Path to the saved evaluation dataset.
+        label_decoder (Mapping[str, int]): A map between target token lemmas and their corresponding integers for the labels
+        verbose (bool, optional): True if `evaluate_sequences()` should print the F1, Precision, and Recall for each class. Defaults to True.
+
+    Returns:
+        1. Multi-class results (Mapping[int, Mapping[str, float]]): first map has keys as the classes (lemma indices) and value is 
+                                                                    another map with key of "f1", "precision", or "recall" with corresponding values.
+        2. Confusion Matrix (Mapping[int, Mapping[int, int]]): A confusion matrix with keys equal to the index of the gold tag, and a value of the 
+                                                               map with the key as the predicted tag and corresponding count of that (gold, pred) pair.
+        3. Accuracy (float): the total accuracy (num correct / total examples) across the evaluation set.
     """
     coNLL_path = os.path.join(os.path.dirname(__file__), "en_gum-ud-train.conllu")
     print(f"Attempting to find token 's in file {coNLL_path}...")
