@@ -65,8 +65,9 @@ def test_evaluate(tmp_path):
     """
     This simple example should have a 1.0 f1 for the ontonote model
     """
-    model_path = os.path.join(TEST_MODELS_DIR, "en", "ner", "ontonotes_charlm.pt")
-    assert os.path.exists(model_path), "This model should be downloaded as part of setup.py"
+    package = "ontonotes-ww-multi_charlm"
+    model_path = os.path.join(TEST_MODELS_DIR, "en", "ner", package + ".pt")
+    assert os.path.exists(model_path), "The {} model should be downloaded as part of setup.py".format(package)
 
     os.makedirs(tmp_path, exist_ok=True)
 
@@ -82,7 +83,7 @@ def test_evaluate(tmp_path):
             "--eval_file", str(test_json_filename),
             "--eval_output_file", str(test_output_filename),
             "--mode", "predict"]
-    args = args + build_pretrain_args("en", "ontonotes", model_dir=TEST_MODELS_DIR)
+    args = args + build_pretrain_args("en", package, model_dir=TEST_MODELS_DIR)
     args = ner_tagger.parse_args(args=args)
     confusion = ner_tagger.evaluate(args)
     assert confusion_to_macro_f1(confusion) == pytest.approx(1.0)
