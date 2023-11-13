@@ -7,25 +7,38 @@ parentdir = os.path.dirname(parentdir)
 sys.path.append(parentdir)
 
 import stanza
-from typing import Any, List, Tuple
+import torch
 import utils
+
+from typing import Any, List, Tuple, Mapping
 from collections import defaultdict
+from constants import get_glove
+from model import LemmaClassifier
+from constants import *
+from tqdm import tqdm
+from numpy import random
 
 
-def evaluate_sequences(gold_tag_sequences, pred_tag_sequences, verbose=True):
+def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: List[List[Any]], verbose=True):
     """
     Evaluates a model's predicted tags against a set of gold tags. Computes precision, recall, and f1 for all classes.
 
     Precision = true positives / true positives + false positives
     Recall = true positives / true positives + false negatives
     F1 = 2 * (Precision * Recall) / (Precision + Recall)
+
+    Returns:
+        1. Multi class result dictionary, where each class is a key and maps to another map of its F1, precision, and recall scores.
+           e.g. multiclass_results[0]["precision"] would give class 0's precision.
+        2. Confusion matrix, where each key is a gold tag and its value is another map with a key of the predicted tag with value of that (gold, pred) count.
+           e.g. confusion[0][1] = 6 would mean that for gold tag 0, the model predicted tag 1 a total of 6 times.
     """
     assert len(gold_tag_sequences) == len(pred_tag_sequences), \
     f"Length of gold tag sequences is {len(gold_tag_sequences)}, while length of predicted tag sequence is {len(pred_tag_sequences)}"        
     
     confusion = defaultdict(lambda: defaultdict(int))
     
-    for gold_tags, pred_tags in zip(gold_tag_sequences, pred_tag_sequences):
+    for gold_tags, pred_tags in tqdm(zip(gold_tag_sequences, pred_tag_sequences), "Evaluating sequences"):
 
         assert len(gold_tags) == len(pred_tags), f"Number of gold tags doesn't match number of predicted tags ({len(gold_tags)}, {len(pred_tags)})"
         for gold, pred in zip(gold_tags, pred_tags):
