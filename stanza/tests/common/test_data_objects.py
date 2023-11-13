@@ -14,7 +14,7 @@ EN_DOC = "This is a test document. Pretty cool!"
 
 EN_DOC_UPOS_XPOS = (('PRON_DT', 'AUX_VBZ', 'DET_DT', 'NOUN_NN', 'NOUN_NN', 'PUNCT_.'), ('ADV_RB', 'ADJ_JJ', 'PUNCT_.'))
 
-EN_DOC2 = "Chris wrote a sentence. Then another."
+EN_DOC2 = "Chris Manning wrote a sentence. Then another."
 
 @pytest.fixture(scope="module")
 def nlp_pipeline():
