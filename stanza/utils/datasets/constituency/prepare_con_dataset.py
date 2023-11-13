@@ -247,9 +247,11 @@ def process_vlsp22(paths, dataset_name, *args):
     if dataset_name == 'vi_vlsp22':
         default_subdir = 'VLSP_2022'
         default_make_test_split = False
+        updated_tagset = False
     elif dataset_name == 'vi_vlsp23':
-        default_subdir = os.path.join('VLSP_2023', 'TrainingDataset')
+        default_subdir = os.path.join('VLSP_2023', 'Trainingdataset')
         default_make_test_split = True
+        updated_tagset = True
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--subdir', default=default_subdir, type=str, help='Where to find the data - allows for using previous versions, if needed')
@@ -276,7 +278,7 @@ def process_vlsp22(paths, dataset_name, *args):
     print("Loading training files from {}".format(vlsp_dir))
     print("Procesing training files:\n  {}".format("\n  ".join(vlsp_train_files)))
     with tempfile.TemporaryDirectory() as train_output_path:
-        vtb_convert.convert_files(vlsp_train_files, train_output_path, verbose=True, fix_errors=True, convert_brackets=args.convert_brackets)
+        vtb_convert.convert_files(vlsp_train_files, train_output_path, verbose=True, fix_errors=True, convert_brackets=args.convert_brackets, updated_tagset=updated_tagset)
         # This produces a 0 length test set, just as a placeholder until the actual test set is released
         if args.n_splits:
             test_size = 0.1 if args.test_split else 0.0
