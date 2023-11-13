@@ -120,26 +120,9 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, labe
                                                                map with the key as the predicted tag and corresponding count of that (gold, pred) pair.
         3. Accuracy (float): the total accuracy (num correct / total examples) across the evaluation set.
     """
-    coNLL_path = os.path.join(os.path.dirname(__file__), "en_gum-ud-train.conllu")
-    print(f"Attempting to find token 's in file {coNLL_path}...")
-    doc = utils.load_doc_from_conll_file(coNLL_path)
-    count = 0
-    be_count, have_count = 0, 0
-    for sentence in doc.sentences:
-        for word in sentence.words:
-            if word.text == "'s" and word.upos == "AUX":
-                print("---------------------------")
-                print(word)
-                print("---------------------------")
-                if word.lemma == "have":
-                    have_count += 1
-                if word.lemma == "be":
-                    be_count += 1
-                count += 1 
-
-    print(f"The number of 's found was {count}.")
-    print(f"There were {have_count} occurrences of the lemma being 'have'.")
-    print(f"There were {be_count} occurrences of the lemma being 'be'.")
+    # load model
+    model.load_state_dict(torch.load(model_path))
+    model.eval()  # set to eval mode
 
 
 if __name__ == "__main__":
