@@ -124,6 +124,60 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, labe
     model.load_state_dict(torch.load(model_path))
     model.eval()  # set to eval mode
 
+    # load in eval data 
+    text_batches, index_batches, label_batches = utils.load_dataset(eval_path, label_decoder=label_decoder)
+    
+    correct = 0
+    gold_tags, pred_tags = [label_batches], []
+    # run eval on each example from dataset
+    for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file"):
+        # tokenize raw text sentence using model
+        GLOVE = get_glove(model.embedding_dim)   # TODO make this dynamic
+
+        # TODO: See if John approves of this fix
+        tokenized_sentence = [GLOVE.stoi[word.lower()] if word.lower() in GLOVE.stoi else UNKNOWN_TOKEN_IDX for word in sentence]  # handle unknown tokens by randomizing their embedding
+
+        pred = model_predict(model, tokenized_sentence, pos_index)
+        correct += 1 if pred == label else 0 
+        pred_tags += [pred]
+
+    print("Finished evaluating on dataset. Computing scores...")
+    accuracy = correct / len(label_batches)
+    mc_results, confusion = evaluate_sequences(gold_tags, [pred_tags], verbose=verbose)  
+    # add brackets around batches of gold and pred tags because each batch is an element within the sequences in this helper
+    if verbose:
+        print(f"Accuracy: {accuracy} ({correct}/{len(label_batches)})")
+    
+    return mc_results, confusion, accuracy
+
+
+
+def main():
+
+    vocab_size = 10000  # Adjust based on your dataset
+    embedding_dim = 100
+    hidden_dim = 256
+    output_dim = 2  # Binary classification (be or have)
+
+    model = LemmaClassifier(vocab_size=vocab_size,
+                            embedding_dim=embedding_dim,
+                            hidden_dim=hidden_dim,
+                            output_dim=output_dim,
+                            embeddings=get_glove(embedding_dim).vectors)
+    
+    model_path = os.path.join(os.path.dirname(__file__), "big_demo_model.pt")
+    eval_path = os.path.join(os.path.dirname(__file__), "test_output.txt")
+    label_decoder = {"be": 0, "have": 1}
+
+    mcc_results, confusion, acc = evaluate_model(model, model_path, eval_path, label_decoder)
+
+    print(f"MCC Results: {dict(mcc_results)}")
+    print("______________________________________________")
+    print(f"Confusion: {dict(confusion)}")
+    print("______________________________________________")
+    print(f"Accuracy: {acc}")
+
+    
 
 if __name__ == "__main__":
     main()
