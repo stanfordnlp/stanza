@@ -213,10 +213,13 @@ def get_depparse_dependencies(lang, package):
 def get_ner_charlm_package(lang, package):
     return get_charlm_package(lang, package, ner_charlms, default_charlms)
 
+def get_ner_pretrain_package(lang, package):
+    return get_pretrain_package(lang, package, ner_pretrains, default_pretrains)
+
 def get_ner_dependencies(lang, package):
     dependencies = []
 
-    pretrain_package = get_pretrain_package(lang, package, ner_pretrains, default_pretrains)
+    pretrain_package = get_ner_pretrain_package(lang, package)
     if pretrain_package is not None:
         dependencies.append({'model': 'pretrain', 'package': pretrain_package})
 
