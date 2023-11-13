@@ -163,7 +163,7 @@ def test_serialized(pipeline):
     Checks that NER entities are correctly set.
     Also checks that constituency & sentiment are set on the sentences.
     """
-    text = "John works at Stanford"
+    text = "John Bauer works at Stanford"
     doc = pipeline(text)
     assert len(doc.ents) == 2
     serialized = doc.to_serialized()
