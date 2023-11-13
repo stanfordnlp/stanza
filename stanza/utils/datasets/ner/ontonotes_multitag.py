@@ -1,3 +1,14 @@
+"""
+Combines OntoNotes and WW into a single dataset with OntoNotes used for dev & test
+
+The resulting dataset has two layers saved in the multi_ner column.
+
+WW is kept as 9 classes, with the tag put in either the first or
+second layer depending on the flags.
+
+OntoNotes is converted to one column for 18 and one column for 9 classes.
+"""
+
 import argparse
 import json
 import os
