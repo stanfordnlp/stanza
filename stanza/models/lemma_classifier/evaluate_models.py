@@ -1,4 +1,3 @@
-# TODO: Figure out how to load in the UD files into Stanza objects to get the features from them.
 import os 
 import sys 
 
