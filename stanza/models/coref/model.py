@@ -77,6 +77,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
         # TODO make this actually configurable
         if hasattr(self.config, 'lora') and self.config.lora:
+            logger.debug("Creating lora adapter with rank %d", self.config.lora_rank)
             self.__peft_config = LoraConfig(inference_mode=False,
                                             r=self.config.lora_rank,
                                             target_modules=["query", "value",
@@ -470,6 +471,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 param.requires_grad = self.config.bert_finetune
 
         if self.config.bert_finetune:
+            logger.debug("Making bert optimizer with LR of %f", self.config.bert_learning_rate)
             self.optimizers["bert_optimizer"] = torch.optim.Adam(
                 self.bert.parameters(), lr=self.config.bert_learning_rate
             )
