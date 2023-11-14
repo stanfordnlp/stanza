@@ -68,16 +68,25 @@ if __name__ == "__main__":
                            help="If set, output word-level conll-formatted"
                                 " files in evaluation modes. Ignored in"
                                 " 'train' mode.")
+    argparser.add_argument("--bert_learning_rate", default=None, type=float,
+                           help="If set, update the learning rate for the transformer")
+    argparser.add_argument("--save_dir", default=None,
+                           help="If set, update the save directory for writing models")
     args = argparser.parse_args()
 
     if args.warm_start and args.weights is not None:
         raise ValueError("The following options are incompatible: '--warm_start' and '--weights'")
 
     seed(2020)
-    model = CorefModel(args.config_file, args.experiment)
-
+    config = CorefModel._load_config(args.config_file, args.experiment)
     if args.batch_size:
-        model.config.a_scoring_batch_size = args.batch_size
+        config.a_scoring_batch_size = args.batch_size
+    if args.bert_learning_rate is not None:
+        config.bert_learning_rate = args.bert_learning_rate
+    if args.save_dir is not None:
+        config.save_dir = args.save_dir
+
+    model = CorefModel(config=config)
 
     if args.mode == "train":
         if args.weights is not None or args.warm_start:
