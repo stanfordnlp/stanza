@@ -53,8 +53,6 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         sp (SpanPredictor)
     """
     def __init__(self,
-                 config_path: Optional[str] = None,
-                 section: Optional[str] = None,
                  epochs_trained: int = 0,
                  build_optimizers: bool = True,
                  config: Optional[dict] = None):
@@ -67,10 +65,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             epochs_trained (int): the number of epochs finished
                 (useful for warm start)
         """
-        if config is not None:
-            self.config = config
-        else:
-            self.config = CorefModel._load_config(config_path, section)
+        if config is None:
+            raise ValueError("Cannot create a model without a config")
+        self.config = config
         self.epochs_trained = epochs_trained
         self._docs: Dict[str, List[Doc]] = {}
         self._build_model()
@@ -79,7 +76,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         self.schedulers = {}
 
         # TODO make this actually configurable
-        if self.config.lora:
+        if hasattr(self.config, 'lora') and self.config.lora:
             self.__peft_config = LoraConfig(inference_mode=False,
                                             r=self.config.lora_rank,
                                             target_modules=["query", "value",
@@ -195,13 +192,13 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         """
         Loads pretrained weights of modules saved in a file located at path.
         If path is None, the last saved model with current configuration
-        in data_dir is loaded.
+        in save_dir is loaded.
         Assumes files are named like {configuration}_(e{epoch}_{time})*.pt.
         """
         if path is None:
             pattern = rf"{self.config.section}_\(e(\d+)_[^()]*\).*\.pt"
             files = []
-            for f in os.listdir(self.config.data_dir):
+            for f in os.listdir(self.config.save_dir):
                 match_obj = re.match(pattern, f)
                 if match_obj:
                     files.append((int(match_obj.group(1)), f))
@@ -209,9 +206,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 if noexception:
                     logger.debug("No weights have been loaded", flush=True)
                     return
-                raise OSError(f"No weights found in {self.config.data_dir}!")
+                raise OSError(f"No weights found in {self.config.save_dir}!")
             _, path = sorted(files)[-1]
-            path = os.path.join(self.config.data_dir, path)
+            path = os.path.join(self.config.save_dir, path)
 
         if map_location is None:
             map_location = self.config.device
@@ -333,7 +330,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
         time = datetime.strftime(datetime.now(), "%Y.%m.%d_%H.%M")
         if save_path is None:
-            save_path = os.path.join(self.config.data_dir,
+            save_path = os.path.join(self.config.save_dir,
                                      f"{self.config.section}"
                                      f"_e{self.epochs_trained}_{time}.pt")
         savedict = {name: module.state_dict() for name, module in to_save}
@@ -341,6 +338,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             savedict["bert_lora"] = get_peft_model_state_dict(self.bert)
         savedict["epochs_trained"] = self.epochs_trained  # type: ignore
         savedict["config"] = self.config
+        save_dir = os.path.split(save_path)[0]
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
         torch.save(savedict, save_path)
 
     def train(self):
@@ -402,11 +402,15 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     logger.info("Saving new best model: F1 %.4f > %.4f", scores[1], best_f1)
                 best_f1 = scores[1]
                 # TODO: choose a different default save dir
-                save_path = os.path.join(self.config.data_dir,
+                save_path = os.path.join(self.config.save_dir,
                                          f"{self.config.section}.pt")
                 self.save_weights(save_path, save_optimizers=False)
-            # TODO: make save_each an option here
-            self.save_weights()
+            if self.config.save_each_checkpoint:
+                self.save_weights()
+            else:
+                checkpoint_path = os.path.join(self.config.save_dir,
+                                               f"{self.config.section}.checkpoint.pt")
+                self.save_weights(checkpoint_path)
 
     # ========================================================= Private methods
 

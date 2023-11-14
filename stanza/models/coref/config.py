@@ -12,7 +12,9 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
     """ Contains values needed to set up the coreference model. """
     section: str
 
+    # TODO: can either eliminate data_dir or use it for the train/dev/test data
     data_dir: str
+    save_dir: str
 
     train_data: str
     dev_data: str
@@ -47,3 +49,5 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
 
     tokenizer_kwargs: Dict[str, dict]
     conll_log_dir: str
+
+    save_each_checkpoint: bool

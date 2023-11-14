@@ -53,14 +53,12 @@ if __name__ == "__main__":
                                 " if there aren't any, an error is raised.")
     args = argparser.parse_args()
 
-    model = CorefModel(args.config_file, args.experiment, build_optimizers=False)
-
+    model = CorefModel.load_model(path=args.weights,
+                                  map_location="cpu",
+                                  ignore={"bert_optimizer", "general_optimizer",
+                                          "bert_scheduler", "general_scheduler"})
     if args.batch_size:
         model.config.a_scoring_batch_size = args.batch_size
-
-    model.load_weights(path=args.weights, map_location="cpu",
-                       ignore={"bert_optimizer", "general_optimizer",
-                               "bert_scheduler", "general_scheduler"})
     model.training = False
 
     with jsonlines.open(args.input_file, mode="r") as input_data:
