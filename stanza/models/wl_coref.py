@@ -72,6 +72,8 @@ if __name__ == "__main__":
                            help="If set, update the learning rate for the transformer")
     argparser.add_argument("--save_dir", default=None,
                            help="If set, update the save directory for writing models")
+    argparser.add_argument("--log_norms", action="store_true", default=None,
+                           help="If set, log all of the trainable norms each epoch.  Very noisy!")
     args = argparser.parse_args()
 
     if args.warm_start and args.weights is not None:
@@ -85,6 +87,8 @@ if __name__ == "__main__":
         config.bert_learning_rate = args.bert_learning_rate
     if args.save_dir is not None:
         config.save_dir = args.save_dir
+    if args.log_norms is not None:
+        config.log_norms = args.log_norms
 
     model = CorefModel(config=config)
 

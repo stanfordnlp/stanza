@@ -97,7 +97,6 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         self._coref_criterion = CorefLoss(self.config.bce_loss_weight)
         self._span_criterion = torch.nn.CrossEntropyLoss(reduction="sum")
 
-
     @property
     def training(self) -> bool:
         """ Represents whether the model is in the training mode """
@@ -247,6 +246,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 else:
                     self.trainable[key].load_state_dict(state_dict, strict=False)
                 logger.debug(f"Loaded {key}")
+        if self.config.log_norms:
+            self.log_norms()
 
     @staticmethod
     def load_model(path: str,
@@ -345,6 +346,15 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             os.makedirs(save_dir, exist_ok=True)
         torch.save(savedict, save_path)
 
+    def log_norms(self):
+        lines = ["NORMS FOR MODEL PARAMTERS"]
+        for t_name, trainable in self.trainable.items():
+            for name, param in trainable.named_parameters():
+                if param.requires_grad:
+                    lines.append("  %s: %s %.6g  (%d)" % (t_name, name, torch.norm(param).item(), param.numel()))
+        logger.info("\n".join(lines))
+
+
     def train(self):
         """
         Trains all the trainable blocks in the model using the config provided.
@@ -356,6 +366,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         best_f1 = None
         for epoch in range(self.epochs_trained, self.config.train_epochs):
             self.training = True
+            if self.config.log_norms:
+                self.log_norms()
             running_c_loss = 0.0
             running_s_loss = 0.0
             random.shuffle(docs_ids)
