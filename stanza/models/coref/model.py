@@ -409,6 +409,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
             self.epochs_trained += 1
             scores = self.evaluate()
+            prev_best_f1 = best_f1
             if best_f1 is None or scores[1] > best_f1:
                 if best_f1 is None:
                     logger.info("Saving new best model: F1 %.4f", scores[1])
@@ -425,6 +426,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 checkpoint_path = os.path.join(self.config.save_dir,
                                                f"{self.config.section}.checkpoint.pt")
                 self.save_weights(checkpoint_path)
+            if prev_best_f1 is not None and prev_best_f1 != best_f1:
+                logger.info("Epoch %d finished.\nSentence F1 %.5f p %.5f r %.5f\nBest F1 %.5f\nPrevious best F1 %.5f", self.epochs_trained, scores[1], scores[2], scores[3], best_f1, prev_best_f1)
+            else:
+                logger.info("Epoch %d finished.\nSentence F1 %.5f p %.5f r %.5f\nBest F1 %.5f", self.epochs_trained, scores[1], scores[2], scores[3], best_f1)
 
     # ========================================================= Private methods
 
