@@ -51,3 +51,5 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
     conll_log_dir: str
 
     save_each_checkpoint: bool
+    log_norms: bool
+
