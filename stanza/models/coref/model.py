@@ -80,11 +80,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             logger.debug("Creating lora adapter with rank %d", self.config.lora_rank)
             self.__peft_config = LoraConfig(inference_mode=False,
                                             r=self.config.lora_rank,
-                                            target_modules=["query", "value",
-                                                            "output.dense", "intermediate.dense"],
+                                            target_modules=self.config.lora_targets,
                                             lora_alpha=self.config.lora_alpha,
                                             lora_dropout=self.config.lora_dropout,
-                                            modules_to_save=["pooler"],
+                                            modules_to_save=self.config.lora_fully_tune,
                                             bias="none")
 
             self.bert = get_peft_model(self.bert, self.__peft_config)
