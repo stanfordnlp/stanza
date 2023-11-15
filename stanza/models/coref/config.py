@@ -4,7 +4,7 @@ For description of all config values, refer to config.toml.
 """
 
 from dataclasses import dataclass
-from typing import Dict
+from typing import Dict, List
 
 
 @dataclass
@@ -39,6 +39,9 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
     lora_alpha: int
     lora_rank: int
     lora_dropout: float
+
+    lora_targets: List[str]
+    lora_fully_tune: List[str]
 
     bert_finetune: bool
     dropout_rate: float

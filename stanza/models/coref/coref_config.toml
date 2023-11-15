@@ -71,6 +71,9 @@ lora = false
 lora_alpha = 128
 lora_dropout = 0.1
 lora_rank = 64
+lora_targets = []
+lora_fully_tune = []
+
 
 # Training settings ==================
 
@@ -118,6 +121,8 @@ bert_model = "roberta-large"
 bert_model = "roberta-large"
 bert_learning_rate = 0.00005
 lora = true
+lora_targets = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_fully_tune = [ "pooler" ]
 
 [roberta_no_finetune]
 bert_model = "roberta-large"
