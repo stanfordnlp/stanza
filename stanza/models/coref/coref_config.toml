@@ -1,0 +1,151 @@
+# =============================================================================
+# Before you start changing anything here, read the comments.
+# All of them can be found below in the "DEFAULT" section
+
+[DEFAULT]
+
+# The directory that contains extracted files of everything you've downloaded.
+data_dir = "data/coref"
+
+# where to put checkpoints and final models
+save_dir = "saved_models/coref"
+
+# Train, dev and test jsonlines
+train_data = "data/coref/english_train_head.jsonlines"
+dev_data = "data/coref/english_development_head.jsonlines"
+test_data = "data/coref/english_test_head.jsonlines"
+
+# The device where everything is to be placed. "cuda:N"/"cpu" are supported.
+device = "cuda:0"
+
+save_each_checkpoint = false
+log_norms = false
+
+# Bert settings ======================
+
+# Base bert model architecture and tokenizer
+bert_model = "bert-large-cased"
+
+# Controls max length of sequences passed through bert to obtain its
+# contextual embeddings
+# Must be less than or equal to 512
+bert_window_size = 512
+
+
+# General model settings =============
+
+# Controls the dimensionality of feature embeddings
+embedding_size = 20
+
+# Controls the dimensionality of distance embeddings used by SpanPredictor
+sp_embedding_size = 64
+
+# Controls the number of spans for which anaphoricity can be scores in one
+# batch. Only affects final scoring; mention extraction and rough scoring
+# are less memory intensive, so they are always done in just one batch.
+a_scoring_batch_size = 512
+
+# AnaphoricityScorer FFNN parameters
+hidden_size = 1024
+n_hidden_layers = 1
+
+
+# Mention extraction settings ========
+
+# Mention extractor will check spans up to max_span_len words
+# The default value is chosen to be big enough to hold any dev data span
+max_span_len = 64
+
+
+# Pruning settings ===================
+
+# Controls how many pairs should be preserved per mention
+# after applying rough scoring.
+rough_k = 50
+
+
+# Lora settings ===================
+
+# LoRA settings
+lora = false
+lora_alpha = 128
+lora_dropout = 0.1
+lora_rank = 64
+
+# Training settings ==================
+
+# Controls whether to fine-tune bert_model
+bert_finetune = true
+
+# Controls the dropout rate throughout all models
+dropout_rate = 0.3
+
+# Bert learning rate (only used if bert_finetune is set)
+bert_learning_rate = 1e-6
+
+# Task learning rate
+learning_rate = 3e-4
+
+# For how many epochs the training is done
+train_epochs = 25
+
+# Controls the weight of binary cross entropy loss added to nlml loss
+bce_loss_weight = 0.5
+
+# The directory that will contain conll prediction files
+conll_log_dir = "data/conll_logs"
+
+# =============================================================================
+# Extra keyword arguments to be passed to bert tokenizers of specified models
+[DEFAULT.tokenizer_kwargs]
+    [DEFAULT.tokenizer_kwargs.roberta-large]
+        "add_prefix_space" = true
+
+    [DEFAULT.tokenizer_kwargs.spanbert-large-cased]
+        "do_lower_case" = false
+
+    [DEFAULT.tokenizer_kwargs.bert-large-cased]
+        "do_lower_case" = false
+
+# =============================================================================
+# The sections listed here do not need to make use of all config variables
+# If a variable is omitted, its default value will be used instead
+
+[roberta]
+bert_model = "roberta-large"
+
+[roberta_lora]
+bert_model = "roberta-large"
+bert_learning_rate = 0.00005
+lora = true
+
+[roberta_no_finetune]
+bert_model = "roberta-large"
+bert_finetune = false
+
+[roberta_no_bce]
+bert_model = "roberta-large"
+bce_loss_weight = 0.0
+
+[spanbert]
+bert_model = "SpanBERT/spanbert-large-cased"
+
+[spanbert_no_bce]
+bert_model = "SpanBERT/spanbert-large-cased"
+bce_loss_weight = 0.0
+
+[bert]
+bert_model = "bert-large-cased"
+
+[longformer]
+bert_model = "allenai/longformer-large-4096"
+bert_window_size = 2048
+
+[debug]
+bert_window_size = 384
+bert_finetune = false
+device = "cpu:0"
+
+[debug_gpu]
+bert_window_size = 384
+bert_finetune = false
