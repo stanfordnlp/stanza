@@ -102,5 +102,6 @@ if __name__ == "__main__":
         model.load_weights(path=args.weights, map_location="cpu",
                            ignore={"bert_optimizer", "general_optimizer",
                                    "bert_scheduler", "general_scheduler"})
-        model.evaluate(data_split=args.data_split,
-                       word_level_conll=args.word_level)
+        results = model.evaluate(data_split=args.data_split,
+                                 word_level_conll=args.word_level)
+        logger.info(results)
