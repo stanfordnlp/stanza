@@ -124,6 +124,13 @@ lora = true
 lora_targets = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_fully_tune = [ "pooler" ]
 
+[deberta_lora]
+bert_model = "microsoft/deberta-v3-large"
+bert_learning_rate = 0.00001
+lora = true
+lora_targets = [ "query_proj", "value_proj", "output.dense" ]
+lora_fully_tune = [  ]
+
 [roberta_no_finetune]
 bert_model = "roberta-large"
 bert_finetune = false
