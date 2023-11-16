@@ -257,6 +257,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         config = state_dicts.pop('config', None)
         if config is None:
             raise ValueError("Cannot load this format model without config in the dicts")
+        if not hasattr(config, 'lora_targets'):
+            setattr(config, 'lora_targets', [ "query", "value", "output.dense", "intermediate.dense" ])
+        if not hasattr(config, 'lora_fully_tune'):
+            setattr(config, 'lora_fully_tune', [ "pooler" ])
         model = CorefModel(config=config, build_optimizers=False, epochs_trained=epochs_trained)
         model.load_state_dicts(state_dicts, ignore)
         return model
