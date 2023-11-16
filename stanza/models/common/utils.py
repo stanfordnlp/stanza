@@ -392,8 +392,11 @@ def set_random_seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
     random.seed(seed)
+    # some of these calls are probably redundant
+    torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
     return seed
 
 def find_missing_tags(known_tags, test_tags):
