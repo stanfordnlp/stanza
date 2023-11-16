@@ -234,6 +234,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         May also have optimizer and/or schedule state
         """
         for key, state_dict in state_dicts.items():
+            logger.debug("Loading state: %s", key)
             if not ignore or key not in ignore:
                 if key.endswith("_optimizer"):
                     self.optimizers[key].load_state_dict(state_dict)
