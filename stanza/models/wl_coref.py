@@ -14,6 +14,7 @@ import time
 import numpy as np  # type: ignore
 import torch        # type: ignore
 
+from stanza.models.common.utils import set_random_seed
 from stanza.models.coref.model import CorefModel
 
 
@@ -31,12 +32,7 @@ def output_running_time():
         logger.info(f"Total running time: {delta}")
 
 
-def seed(value: int) -> None:
-    """ Seed random number generators to get reproducible results """
-    random.seed(value)
-    np.random.seed(value)
-    torch.manual_seed(value)
-    torch.cuda.manual_seed_all(value)           # type: ignore
+def deterministic() -> None:
     torch.backends.cudnn.deterministic = True   # type: ignore
     torch.backends.cudnn.benchmark = False      # type: ignore
 
@@ -79,7 +75,8 @@ if __name__ == "__main__":
     if args.warm_start and args.weights is not None:
         raise ValueError("The following options are incompatible: '--warm_start' and '--weights'")
 
-    seed(2020)
+    set_random_seed(2020)
+    deterministic()
     config = CorefModel._load_config(args.config_file, args.experiment)
     if args.batch_size:
         config.a_scoring_batch_size = args.batch_size
