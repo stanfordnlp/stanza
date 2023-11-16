@@ -22,7 +22,8 @@ class CorefProcessor(UDProcessor):
         # (except its config)
         # TODO: separate any pretrains if possible
         # TODO: add device parameter to the load mechanism
-        config_update = {'log_norms': False}
+        config_update = {'log_norms': False,
+                         'device': device}
         model = CorefModel.load_model(path=config['model_path'],
                                       ignore={"bert_optimizer", "general_optimizer",
                                               "bert_scheduler", "general_scheduler"},
