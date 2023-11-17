@@ -9,7 +9,6 @@ from transformers import AutoModel, AutoTokenizer  # type: ignore
 from stanza.models.coref.config import Config
 from stanza.models.coref.const import Doc
 
-
 logger = logging.getLogger('stanza')
 
 def get_subwords_batches(doc: Doc,

@@ -15,7 +15,7 @@ import torch
 from tqdm import tqdm   # type: ignore
 import transformers     # type: ignore
 
-from stanza.models.coref import bert, conll, utils
+from stanza.models.coref import bert, llama, conll, utils
 from stanza.models.coref.anaphoricity_scorer import AnaphoricityScorer
 from stanza.models.coref.cluster_checker import ClusterChecker
 from stanza.models.coref.config import Config
@@ -467,7 +467,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         return out[subword_mask_tensor]
 
     def _build_model(self):
-        self.bert, self.tokenizer = bert.load_bert(self.config)
+        if self.config.llama:
+            self.bert, self.tokenizer = llama.load_llama(self.config)
+        else:
+            self.bert, self.tokenizer = bert.load_bert(self.config)
+        breakpoint()
         self.pw = PairwiseEncoder(self.config).to(self.config.device)
 
         bert_emb = self.bert.config.hidden_size

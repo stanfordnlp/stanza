@@ -25,6 +25,9 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
     bert_model: str
     bert_window_size: int
 
+    llama: bool
+    llama_model: str
+
     embedding_size: int
     sp_embedding_size: int
     a_scoring_batch_size: int

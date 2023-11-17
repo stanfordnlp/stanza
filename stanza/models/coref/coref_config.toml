@@ -63,6 +63,12 @@ max_span_len = 64
 # after applying rough scoring.
 rough_k = 50
 
+# Llama settings ===================
+
+# use llama?
+llama = false
+llama_model = ""
+
 
 # Lora settings ===================
 
@@ -116,6 +122,13 @@ conll_log_dir = "data/conll_logs"
 
 [roberta]
 bert_model = "roberta-large"
+
+[llama_lora]
+llama_model = "h2oai/h2ogpt-4096-llama2-7b"
+llama = true
+bert_learning_rate = 0.00005
+lora_targets = [ "query_proj", "value_proj", "output.dense" ]
+lora_fully_tune = [  ]
 
 [roberta_lora]
 bert_model = "roberta-large"
