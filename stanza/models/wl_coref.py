@@ -88,7 +88,6 @@ if __name__ == "__main__":
         config.log_norms = args.log_norms
 
     model = CorefModel(config=config)
-    breakpoint()
 
     if args.mode == "train":
         if args.weights is not None or args.warm_start:

@@ -28,6 +28,8 @@ from stanza.models.coref.tokenizer_customization import TOKENIZER_FILTERS, TOKEN
 from stanza.models.coref.utils import GraphNode
 from stanza.models.coref.word_encoder import WordEncoder
 
+from bitsandbytes.optim import Adam8bit
+
 from peft import LoraConfig, get_peft_model, get_peft_model_state_dict, set_peft_model_state_dict
 
 logger = logging.getLogger('stanza')
@@ -471,7 +473,6 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             self.bert, self.tokenizer = llama.load_llama(self.config)
         else:
             self.bert, self.tokenizer = bert.load_bert(self.config)
-        breakpoint()
         self.pw = PairwiseEncoder(self.config).to(self.config.device)
 
         bert_emb = self.bert.config.hidden_size
@@ -501,9 +502,14 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
         if self.config.bert_finetune:
             logger.debug("Making bert optimizer with LR of %f", self.config.bert_learning_rate)
-            self.optimizers["bert_optimizer"] = torch.optim.Adam(
-                self.bert.parameters(), lr=self.config.bert_learning_rate
-            )
+            if not self.config.llama:
+                self.optimizers["bert_optimizer"] = torch.optim.Adam(
+                    self.bert.parameters(), lr=self.config.bert_learning_rate
+                )
+            else:
+                self.optimizers["bert_optimizer"] = Adam8bit(
+                    self.bert.parameters(), lr=self.config.bert_learning_rate
+                )
             self.schedulers["bert_scheduler"] = \
                 transformers.get_linear_schedule_with_warmup(
                     self.optimizers["bert_optimizer"],

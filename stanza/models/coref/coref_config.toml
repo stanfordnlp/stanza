@@ -124,10 +124,11 @@ conll_log_dir = "data/conll_logs"
 bert_model = "roberta-large"
 
 [llama_lora]
-llama_model = "h2oai/h2ogpt-4096-llama2-7b"
+llama_model = "meta-llama/Llama-2-7b-hf"
 llama = true
+lora = true
 bert_learning_rate = 0.00005
-lora_targets = [ "query_proj", "value_proj", "output.dense" ]
+lora_targets = [ "q_proj", "v_proj", "o_proj", "mlp.gate_proj", "mlp.up_proj", "mlp.down_proj" ]
 lora_fully_tune = [  ]
 
 [roberta_lora]

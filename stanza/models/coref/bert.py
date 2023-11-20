@@ -39,13 +39,21 @@ def get_subwords_batches(doc: Doc,
             while end and doc["sent_id"][doc["word_id"][end - 1]] == sent_id:
                 end -= 1
 
+        # llama-like decoder models don't use cls, sep, or pad tokens. Instead,
+        # we typically use eos for padding like in GPT2. I made up the rest of 
+        # the tokens, which seem pretty sensible given we are going to be tuning
+        # anyways: bos for cls, bos for sep.
         length = end - start
-        batch = [tok.cls_token] + subwords[start:end] + [tok.sep_token]
+        if config.llama == False:
+            batch = [tok.cls_token] + subwords[start:end] + [tok.sep_token]
+        else:
+            batch = [tok.bos_token] + subwords[start:end] + [tok.bos_token]
         batch_ids = [-1] + list(range(start, end)) + [-1]
 
         # Padding to desired length
         # -1 means the token is a special token
-        batch += [tok.pad_token] * (batch_size - length)
+        batch += ([tok.eos_token if config.llama else tok.pad_token] * 
+                (batch_size - length))
         batch_ids += [-1] * (batch_size - length)
 
         subwords_batches.append([tok.convert_tokens_to_ids(token)
