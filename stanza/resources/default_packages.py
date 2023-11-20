@@ -764,11 +764,15 @@ TRANSFORMER_NICKNAMES = {
 
 def known_nicknames():
     """
-    Return a set of all the transformer nicknames
+    Return a list of all the transformer nicknames
+
+    We return a list so that we can sort them in decreasing key length
     """
-    nicknames = set(value for key, value in TRANSFORMER_NICKNAMES.items())
+    nicknames = list(value for key, value in TRANSFORMER_NICKNAMES.items())
 
     # previously unspecific transformers get "transformer" as the nickname
-    nicknames.add("transformer")
+    nicknames.append("transformer")
+
+    nicknames = sorted(nicknames, key=lambda x: -len(x))
 
     return nicknames
