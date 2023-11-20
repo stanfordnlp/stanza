@@ -1,6 +1,7 @@
 """ see __init__.py """
 
 from datetime import datetime
+import json
 import logging
 import os
 import pickle
@@ -9,7 +10,6 @@ import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import numpy as np      # type: ignore
-import jsonlines        # type: ignore
 import toml
 import torch
 from tqdm import tqdm   # type: ignore
@@ -607,24 +607,32 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         filter_func = TOKENIZER_FILTERS.get(self.config.bert_model,
                                             lambda _: True)
         token_map = TOKENIZER_MAPS.get(self.config.bert_model, {})
-        with jsonlines.open(path, mode="r") as data_f:
-            for doc in data_f:
-                doc["span_clusters"] = [[tuple(mention) for mention in cluster]
-                                   for cluster in doc["span_clusters"]]
-                word2subword = []
-                subwords = []
-                word_id = []
-                for i, word in enumerate(doc["cased_words"]):
-                    tokenized_word = (token_map[word]
-                                      if word in token_map
-                                      else self.tokenizer.tokenize(word))
-                    tokenized_word = list(filter(filter_func, tokenized_word))
-                    word2subword.append((len(subwords), len(subwords) + len(tokenized_word)))
-                    subwords.extend(tokenized_word)
-                    word_id.extend([i] * len(tokenized_word))
-                doc["word2subword"] = word2subword
-                doc["subwords"] = subwords
-                doc["word_id"] = word_id
-                out.append(doc)
+        try:
+            with open(path, encoding="utf-8") as fin:
+                data_f = json.load(fin)
+        except json.decoder.JSONDecodeError:
+            # read the old jsonlines format if necessary
+            with open(path, encoding="utf-8") as fin:
+                text = "[" + ",\n".join(fin) + "]"
+            data_f = json.loads(text)
+        logger.debug("Loaded %d docs" % len(data_f))
+        for doc in data_f:
+            doc["span_clusters"] = [[tuple(mention) for mention in cluster]
+                               for cluster in doc["span_clusters"]]
+            word2subword = []
+            subwords = []
+            word_id = []
+            for i, word in enumerate(doc["cased_words"]):
+                tokenized_word = (token_map[word]
+                                  if word in token_map
+                                  else self.tokenizer.tokenize(word))
+                tokenized_word = list(filter(filter_func, tokenized_word))
+                word2subword.append((len(subwords), len(subwords) + len(tokenized_word)))
+                subwords.extend(tokenized_word)
+                word_id.extend([i] * len(tokenized_word))
+            doc["word2subword"] = word2subword
+            doc["subwords"] = subwords
+            doc["word_id"] = word_id
+            out.append(doc)
         logger.debug("Tokenization OK", flush=True)
         return out

@@ -1,6 +1,6 @@
 import argparse
 
-import jsonlines
+import json
 import torch
 from tqdm import tqdm
 
@@ -61,8 +61,15 @@ if __name__ == "__main__":
         model.config.a_scoring_batch_size = args.batch_size
     model.training = False
 
-    with jsonlines.open(args.input_file, mode="r") as input_data:
-        docs = [build_doc(doc, model) for doc in input_data]
+    try:
+        with open(args.input_file, encoding="utf-8") as fin:
+            input_data = json.load(fin)
+    except json.decoder.JSONDecodeError:
+        # read the old jsonlines format if necessary
+        with open(args.input_file, encoding="utf-8") as fin:
+            text = "[" + ",\n".join(fin) + "]"
+        input_data = json.loads(text)
+    docs = [build_doc(doc, model) for doc in input_data]
 
     with torch.no_grad():
         for doc in tqdm(docs, unit="docs"):
@@ -73,5 +80,6 @@ if __name__ == "__main__":
             for key in ("word2subword", "subwords", "word_id", "head2span"):
                 del doc[key]
 
-    with jsonlines.open(args.output_file, mode="w") as output_data:
-        output_data.write_all(docs)
+    with open(args.output_file, mode="w") as fout:
+        for doc in docs:
+            json.dump(doc, fout)
