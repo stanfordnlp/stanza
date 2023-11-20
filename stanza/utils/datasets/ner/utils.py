@@ -56,6 +56,8 @@ def write_sentences(output_filename, dataset):
     with open(output_filename, "w", encoding="utf-8") as fout:
         for sent_idx, sentence in enumerate(dataset):
             for word_idx, word in enumerate(sentence):
+                if len(word) > 2:
+                    word = word[:2]
                 try:
                     fout.write("%s\t%s\n" % word)
                 except TypeError:
@@ -78,6 +80,28 @@ def write_dataset(datasets, output_dir, short_name, suffix="bio", shard_names=SH
 
     convert_bio_to_json(output_dir, output_dir, short_name, suffix, shard_names=shard_names, shards=shards)
 
+
+def write_multitag_json(output_filename, dataset):
+    json_dataset = []
+    for sentence in dataset:
+        json_sentence = []
+        for word in sentence:
+            word = {'text': word[0],
+                    'ner': word[1],
+                    'multi_ner': word[2]}
+            json_sentence.append(word)
+        json_dataset.append(json_sentence)
+    with open(output_filename, 'w', encoding='utf-8') as fout:
+        json.dump(json_dataset, fout, indent=2)
+
+def write_multitag_dataset(datasets, output_dir, short_name, suffix="bio", shard_names=SHARDS, shards=SHARDS):
+    for shard, dataset in zip(shard_names, datasets):
+        output_filename = os.path.join(output_dir, "%s.%s.%s" % (short_name, shard, suffix))
+        write_sentences(output_filename, dataset)
+
+    for shard, dataset in zip(shard_names, datasets):
+        output_filename = os.path.join(output_dir, "%s.%s.json" % (short_name, shard))
+        write_multitag_json(output_filename, dataset)
 
 def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comments=True, keep_broken_tags=False, keep_all_columns=False, separator="\t"):
     """
