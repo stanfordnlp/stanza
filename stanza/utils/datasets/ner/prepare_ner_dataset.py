@@ -442,6 +442,7 @@ import stanza.utils.default_paths as default_paths
 
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
+import stanza.utils.datasets.ner.build_en_combined as build_en_combined
 import stanza.utils.datasets.ner.conll_to_iob as conll_to_iob
 import stanza.utils.datasets.ner.convert_ar_aqmar as convert_ar_aqmar
 import stanza.utils.datasets.ner.convert_bn_daffodil as convert_bn_daffodil
@@ -1137,6 +1138,18 @@ def process_en_ontonotes_ww_multi(paths, short_name):
     # TODO: pass in options?
     ontonotes_multitag.build_multitag_dataset(paths['NER_DATA_DIR'], short_name, True, True)
 
+def process_en_combined(paths, short_name):
+    """
+    Combine WW, OntoNotes, and CoNLL into a 3 channel dataset
+    """
+    print("================= Preparing OntoNotes =================")
+    process_en_ontonotes(paths, "en_ontonotes")
+    print("========== Preparing 9 Class Worldwide ================")
+    process_en_worldwide_9class(paths, "en_worldwide-9class")
+    print("=============== Preparing CoNLL 03 ====================")
+    process_en_conll03(paths, "en_conll03")
+    build_en_combined.build_combined_dataset(paths['NER_DATA_DIR'], short_name)
+
 
 def process_en_conllpp(paths, short_name):
     """
@@ -1183,6 +1196,7 @@ DATASET_MAPPING = {
     "en_conllpp":        process_en_conllpp,
     "en_ontonotes":      process_en_ontonotes,
     "en_ontonotes-ww-multi": process_en_ontonotes_ww_multi,
+    "en_combined":       process_en_combined,
     "en_worldwide-4class": process_en_worldwide_4class,
     "en_worldwide-9class": process_en_worldwide_9class,
     "fa_arman":          process_fa_arman,
