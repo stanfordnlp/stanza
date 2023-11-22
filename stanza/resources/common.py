@@ -256,7 +256,7 @@ def maintain_processor_list(resources, lang, package, processors, allow_pretrain
     # resolve package
     if package:
         logger.debug(f'Processing parameter "package"...')
-        if package in resources[lang][PACKAGES]:
+        if PACKAGES in resources[lang] and package in resources[lang][PACKAGES]:
             for key, value in resources[lang][PACKAGES][package].items():
                 if key not in processor_list:
                     logger.debug(f'Found {key}: {value}.')

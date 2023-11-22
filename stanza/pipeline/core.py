@@ -29,6 +29,7 @@ from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.ner_processor import NERProcessor
 from stanza.resources.common import DEFAULT_MODEL_DIR, DEFAULT_RESOURCES_URL, DEFAULT_RESOURCES_VERSION, ModelSpecification, add_dependencies, add_mwt, download_models, download_resources_json, flatten_processor_list, load_resources_json, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
+from stanza.resources.default_packages import PACKAGES
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
@@ -257,7 +258,10 @@ class Pipeline:
             self.load_list = []
         self.load_list = self.update_kwargs(kwargs, self.load_list)
         if len(self.load_list) == 0:
-            raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))
+            if lang not in resources or PACKAGES not in resources[lang]:
+                raise ValueError(f'No processors to load for language {lang}.  Language {lang} is currently unsupported')
+            else:
+                raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))
         load_table = make_table(['Processor', 'Package'], [(row[0], ";".join(model_spec.package for model_spec in row[1])) for row in self.load_list])
         logger.info(f'Loading these models for language: {lang} ({lang_name}):\n{load_table}')
 
