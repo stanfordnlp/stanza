@@ -3,7 +3,6 @@ Processor that attaches coref annotations to a document
 """
 
 from stanza.models.coref.coref_chain import CorefMention, CorefChain
-from stanza.models.coref.predict import build_doc
 
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
@@ -55,7 +54,7 @@ class CorefProcessor(UDProcessor):
             "cased_words": cased_words,
             "sent_id": sent_ids
         }
-        coref_input = build_doc(coref_input, self._model)
+        coref_input = self._model.build_doc(coref_input)
         results = self._model.run(coref_input)
         clusters = []
         for span_cluster in results.span_clusters:
