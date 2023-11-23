@@ -21,7 +21,7 @@ import zipfile
 from stanza import __resources_version__
 from stanza.models.common.constant import lcode2lang, two_to_three_letters, three_to_two_letters
 from stanza.resources.default_packages import PACKAGES, TRANSFORMERS, TRANSFORMER_NICKNAMES
-from stanza.resources.default_packages import default_treebanks, no_pretrain_languages, default_pretrains, pos_pretrains, depparse_pretrains, ner_pretrains, default_charlms, pos_charlms, depparse_charlms, ner_charlms, lemma_charlms, known_nicknames, default_ners, default_sentiment, default_constituency, default_tokenizer
+from stanza.resources.default_packages import *
 from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
@@ -348,6 +348,8 @@ def process_default_zips(args):
         for processor, package in packages.items():
             if processor == 'lemma' and package == 'identity':
                 continue
+            if processor == 'optional':
+                continue
             models_needed[processor].add(package)
             dependencies = get_dependencies(processor, lang, package)
             for dependency in dependencies:
@@ -425,7 +427,28 @@ def get_default_processors(resources, lang):
     if lang in default_constituency:
         default_processors['constituency'] = default_constituency[lang]
 
+    optional = get_default_optional_processors(resources, lang)
+    if optional:
+        default_processors['optional'] = optional
+
     return default_processors
+
+def get_default_optional_processors(resources, lang):
+    optional_processors = {}
+    if lang in optional_constituency:
+        optional_processors['constituency'] = optional_constituency[lang]
+
+    return optional_processors
+
+def update_processor_add_transformer(resources, lang, current_processors, processor, transformer):
+    if processor not in current_processors:
+        return
+
+    new_model = current_processors[processor].replace('_charlm', "_" + transformer).replace('_nocharlm', "_" + transformer)
+    if new_model in resources[lang][processor]:
+        current_processors[processor] = new_model
+    else:
+        print("WARNING: wanted to use %s for %s accurate %s, but that model does not exist" % (new_model, lang, processor))
 
 def get_default_accurate(resources, lang):
     """
@@ -446,16 +469,24 @@ def get_default_accurate(resources, lang):
     transformer = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(lang, None), None)
     if transformer is not None:
         for processor in 'pos', 'depparse', 'constituency':
-            if processor not in default_processors:
-                continue
+            update_processor_add_transformer(resources, lang, default_processors, processor, transformer)
 
-            new_model = default_processors[processor].replace('_charlm', "_" + transformer).replace('_nocharlm', "_" + transformer)
-            if new_model in resources[lang][processor]:
-                default_processors[processor] = new_model
-            else:
-                print("WARNING: wanted to use %s for %s default_accurate %s, but that model does not exist" % (new_model, lang, processor))
+    optional = get_optional_accurate(resources, lang)
+    if optional:
+        default_processors['optional'] = optional
 
     return default_processors
+
+def get_optional_accurate(resources, lang):
+    optional_processors = get_default_optional_processors(resources, lang)
+
+    transformer = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(lang, None), None)
+    if transformer is not None:
+        for processor in 'pos', 'depparse', 'constituency':
+            update_processor_add_transformer(resources, lang, optional_processors, processor, transformer)
+
+    return optional_processors
+
 
 def get_default_fast(resources, lang):
     """

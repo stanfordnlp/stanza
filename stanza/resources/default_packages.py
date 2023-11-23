@@ -399,6 +399,10 @@ default_constituency = {
     "zh-hans": "ctb-51_charlm",
 }
 
+optional_constituency = {
+    "tr": "starlang_charlm",
+}
+
 # an alternate tokenizer for languages which aren't trained from a base UD source
 default_tokenizer = {
     "my": "alt",
