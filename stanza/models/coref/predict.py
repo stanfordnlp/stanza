@@ -5,36 +5,6 @@ import torch
 from tqdm import tqdm
 
 from stanza.models.coref.model import CorefModel
-from stanza.models.coref.tokenizer_customization import *
-
-
-def build_doc(doc: dict, model: CorefModel) -> dict:
-    filter_func = TOKENIZER_FILTERS.get(model.config.bert_model,
-                                        lambda _: True)
-    token_map = TOKENIZER_MAPS.get(model.config.bert_model, {})
-
-    word2subword = []
-    subwords = []
-    word_id = []
-    for i, word in enumerate(doc["cased_words"]):
-        tokenized_word = (token_map[word]
-                          if word in token_map
-                          else model.tokenizer.tokenize(word))
-        tokenized_word = list(filter(filter_func, tokenized_word))
-        word2subword.append((len(subwords), len(subwords) + len(tokenized_word)))
-        subwords.extend(tokenized_word)
-        word_id.extend([i] * len(tokenized_word))
-    doc["word2subword"] = word2subword
-    doc["subwords"] = subwords
-    doc["word_id"] = word_id
-
-    doc["head2span"] = []
-    if "speaker" not in doc:
-        doc["speaker"] = ["_" for _ in doc["cased_words"]]
-    doc["word_clusters"] = []
-    doc["span_clusters"] = []
-
-    return doc
 
 
 if __name__ == "__main__":
@@ -69,7 +39,7 @@ if __name__ == "__main__":
         with open(args.input_file, encoding="utf-8") as fin:
             text = "[" + ",\n".join(fin) + "]"
         input_data = json.loads(text)
-    docs = [build_doc(doc, model) for doc in input_data]
+    docs = [model.build_doc(doc) for doc in input_data]
 
     with torch.no_grad():
         for doc in tqdm(docs, unit="docs"):

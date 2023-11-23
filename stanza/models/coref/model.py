@@ -248,6 +248,35 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         if self.config.log_norms:
             self.log_norms()
 
+    def build_doc(self, doc: dict) -> dict:
+        filter_func = TOKENIZER_FILTERS.get(self.config.bert_model,
+                                            lambda _: True)
+        token_map = TOKENIZER_MAPS.get(self.config.bert_model, {})
+
+        word2subword = []
+        subwords = []
+        word_id = []
+        for i, word in enumerate(doc["cased_words"]):
+            tokenized_word = (token_map[word]
+                              if word in token_map
+                              else self.tokenizer.tokenize(word))
+            tokenized_word = list(filter(filter_func, tokenized_word))
+            word2subword.append((len(subwords), len(subwords) + len(tokenized_word)))
+            subwords.extend(tokenized_word)
+            word_id.extend([i] * len(tokenized_word))
+        doc["word2subword"] = word2subword
+        doc["subwords"] = subwords
+        doc["word_id"] = word_id
+
+        doc["head2span"] = []
+        if "speaker" not in doc:
+            doc["speaker"] = ["_" for _ in doc["cased_words"]]
+        doc["word_clusters"] = []
+        doc["span_clusters"] = []
+
+        return doc
+
+
     @staticmethod
     def load_model(path: str,
                    map_location: str = "cpu",
