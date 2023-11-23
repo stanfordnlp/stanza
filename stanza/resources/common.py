@@ -227,6 +227,12 @@ def maintain_processor_list(resources, lang, package, processors, allow_pretrain
                         f'Found {key}: {resources[lang][PACKAGES][value][key]}.'
                     )
                     processor_list[key].append(resources[lang][PACKAGES][value][key])
+                # optional defaults will be activated if specifically turned on
+                elif value in resources[lang][PACKAGES] and 'optional' in resources[lang][PACKAGES][value] and key in resources[lang][PACKAGES][value]['optional']:
+                    logger.debug(
+                        f"Found {key}: {resources[lang][PACKAGES][value]['optional'][key]}."
+                    )
+                    processor_list[key].append(resources[lang][PACKAGES][value]['optional'][key])
                 # allow processors to be set to variants that we didn't implement
                 elif value in PROCESSOR_VARIANTS[key]:
                     logger.debug(
