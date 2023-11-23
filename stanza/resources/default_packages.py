@@ -198,12 +198,16 @@ specific_default_pretrains = {
     "zh-hant": "conll17",
 }
 
-default_pretrains = dict(default_treebanks)
-for lang in no_pretrain_languages:
-    default_pretrains.pop(lang, None)
-for lang in specific_default_pretrains.keys():
-    default_pretrains[lang] = specific_default_pretrains[lang]
 
+def build_default_pretrains(default_treebanks):
+    default_pretrains = dict(default_treebanks)
+    for lang in no_pretrain_languages:
+        default_pretrains.pop(lang, None)
+    for lang in specific_default_pretrains.keys():
+        default_pretrains[lang] = specific_default_pretrains[lang]
+    return default_pretrains
+
+default_pretrains = build_default_pretrains(default_treebanks)
 
 pos_pretrains = {
     "en": {
