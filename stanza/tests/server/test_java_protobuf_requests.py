@@ -2,6 +2,7 @@ import tempfile
 
 import pytest
 
+from stanza.models.common.utils import misc_to_space_after, space_after_to_misc
 from stanza.models.constituency import tree_reader
 from stanza.server import java_protobuf_requests
 from stanza.tests import *
@@ -85,5 +86,5 @@ def test_nbsp_doc():
 
     assert doc.sentences[0].text == "Please note that neither the e-mail address nor name of the sender have been verified."
     assert doc.sentences[0].words[12].misc == "SpacesAfter=\\u00A0"
-    assert java_protobuf_requests.misc_to_space_after(doc.sentences[0].words[12].misc) == ' '
-    assert java_protobuf_requests.space_after_to_misc(' ') == "SpacesAfter=\\u00A0"
+    assert misc_to_space_after(doc.sentences[0].words[12].misc) == ' '
+    assert space_after_to_misc(' ') == "SpacesAfter=\\u00A0"
