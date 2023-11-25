@@ -4,7 +4,6 @@ from datetime import datetime
 import json
 import logging
 import os
-import pickle
 import random
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple
@@ -575,16 +574,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
     def _get_docs(self, path: str) -> List[Doc]:
         if path not in self._docs:
-            basename = os.path.basename(path)
-            model_name = self.config.bert_model.replace("/", "_")
-            cache_filename = f"{model_name}_{basename}.pickle"
-            if os.path.exists(cache_filename):
-                with open(cache_filename, mode="rb") as cache_f:
-                    self._docs[path] = pickle.load(cache_f)
-            else:
-                self._docs[path] = self._tokenize_docs(path)
-                with open(cache_filename, mode="wb") as cache_f:
-                    pickle.dump(self._docs[path], cache_f)
+            self._docs[path] = self._tokenize_docs(path)
         return self._docs[path]
 
     @staticmethod
