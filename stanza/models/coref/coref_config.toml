@@ -131,11 +131,15 @@ lora = true
 lora_targets = [ "query_proj", "value_proj", "output.dense" ]
 lora_fully_tune = [  ]
 
+[electra]
+bert_model = "google/electra-large-discriminator"
+bert_learning_rate = 0.00002
+
 [electra_lora]
 bert_model = "google/electra-large-discriminator"
-bert_learning_rate = 0.00001
+bert_learning_rate = 0.000025
 lora = true
-lora_targets = [ "query", "value", "output.dense" ]
+lora_targets = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_fully_tune = [  ]
 
 [roberta_no_finetune]
