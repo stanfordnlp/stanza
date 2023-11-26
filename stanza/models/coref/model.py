@@ -11,7 +11,6 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 import numpy as np      # type: ignore
 import toml
 import torch
-from tqdm import tqdm   # type: ignore
 import transformers     # type: ignore
 
 from stanza.models.coref import bert, conll, utils
@@ -28,6 +27,9 @@ from stanza.models.coref.utils import GraphNode
 from stanza.models.coref.word_encoder import WordEncoder
 
 from peft import LoraConfig, get_peft_model, get_peft_model_state_dict, set_peft_model_state_dict
+
+from stanza.utils.get_tqdm import get_tqdm   # type: ignore
+tqdm = get_tqdm()
 
 logger = logging.getLogger('stanza')
 
