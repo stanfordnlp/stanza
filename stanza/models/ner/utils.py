@@ -190,6 +190,7 @@ def process_tags(sentences, scheme):
 
     result = []
     for words, tags in zip(all_words, all_tags):
+        # TODO: add a convert_basic_to_bio option as well
         # process tags
         # tags is a list of each column of tags for each word in this sentence
         # copy the tags to a list so we can edit them

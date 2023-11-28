@@ -176,8 +176,9 @@ class Trainer(BaseTrainer):
         if args: self.args.update(args)
         # if predict_tagset was not explicitly set in the args,
         # we use the value the model was trained with
-        if self.args.get('predict_tagset', None) is None:
-            self.args['predict_tagset'] = checkpoint['config'].get('predict_tagset', None)
+        for keep_arg in ('predict_tagset', 'train_scheme', 'scheme'):
+            if self.args.get(keep_arg, None) is None:
+                self.args[keep_arg] = checkpoint['config'].get(keep_arg, None)
 
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
 

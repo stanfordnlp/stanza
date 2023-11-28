@@ -13,7 +13,7 @@ from stanza.models.ner.utils import process_tags, normalize_empty_tags
 logger = logging.getLogger('stanza')
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False, preprocess_tags=True, bert_tokenizer=None):
+    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False, preprocess_tags=True, bert_tokenizer=None, scheme=None):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -21,7 +21,7 @@ class DataLoader:
         self.doc = doc
         self.preprocess_tags = preprocess_tags
 
-        data = self.load_doc(self.doc)
+        data = self._load_doc(self.doc, scheme)
 
         # filter out the long sentences if bert is used
         if self.args.get('bert_model', False):
@@ -146,13 +146,14 @@ class DataLoader:
         for i in range(self.__len__()):
             yield self.__getitem__(i)
 
-    def load_doc(self, doc):
+    def _load_doc(self, doc, scheme):
         # preferentially load the MULTI_NER in case we are training /
         # testing a model with multiple layers of tags
         data = doc.get([TEXT, NER, MULTI_NER], as_sentences=True, from_token=True)
         data = [[[token[0], token[2]] if token[2] else [token[0], (token[1],)] for token in sentence] for sentence in data]
         if self.preprocess_tags: # preprocess tags
-            data = process_tags(data, self.args.get('scheme', 'bio'))
+            if scheme is None:
+                data = process_tags(data, self.args.get('scheme', 'bio'))
             data = normalize_empty_tags(data)
         return data
 
