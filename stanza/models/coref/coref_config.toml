@@ -85,6 +85,7 @@ dropout_rate = 0.3
 
 # Bert learning rate (only used if bert_finetune is set)
 bert_learning_rate = 1e-6
+bert_finetune_begin_epoch = 0.5
 
 # Task learning rate
 learning_rate = 3e-4

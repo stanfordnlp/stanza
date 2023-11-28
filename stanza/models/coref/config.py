@@ -47,6 +47,9 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
     dropout_rate: float
     learning_rate: float
     bert_learning_rate: float
+    # we find that setting this to a small but non-zero number
+    # makes the model less likely to forget how to do anything
+    bert_finetune_begin_epoch: float
     train_epochs: int
     bce_loss_weight: float
 
