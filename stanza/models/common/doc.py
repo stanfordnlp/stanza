@@ -423,13 +423,13 @@ class Document(StanzaObject):
     def _attach_coref_mentions(self, chains):
         for sentence in self.sentences:
             for word in sentence.words:
-                word.coref_chain = None
+                word.coref_chain = []
 
         for chain in chains:
             for mention in chain.mentions:
                 sentence = self.sentences[mention.sentence]
                 for word_idx in range(mention.start_word, mention.end_word):
-                    sentence.words[word_idx].coref_chain = chain
+                    sentence.words[word_idx].coref_chain.append(chain)
 
     def reindex_sentences(self, start_index):
         for sent_id, sentence in zip(range(start_index, start_index + len(self.sentences)), self.sentences):
@@ -1334,9 +1334,13 @@ class Word(StanzaObject):
     @property
     def coref_chain(self):
         """
-        coref_chain points to a CorefChain namedtuple, which has a list of mentions and a representative mention.
+        coref_chain points to a list of CorefChain namedtuple, which has a list of mentions and a representative mention.
 
         Useful for disambiguating words such as "him" (in languages where coref is available)
+
+        Theoretically it is possible for multiple corefs to occur at the same word.  For example,
+          "Chris Manning's NLP Group"
+        could have "Chris Manning" and "Chris Manning's NLP Group" as overlapping entities
         """
         return self._coref_chain
 
