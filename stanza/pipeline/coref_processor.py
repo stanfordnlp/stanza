@@ -124,7 +124,7 @@ class CorefProcessor(UDProcessor):
             representative = mentions[best_span]
             representative_text = extract_text(document, representative.sentence, representative.start_word, representative.end_word)
 
-            chain = CorefChain(mentions, representative, representative_text)
+            chain = CorefChain(len(clusters), mentions, representative_text, best_span)
             clusters.append(chain)
 
         document.coref = clusters
