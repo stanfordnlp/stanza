@@ -16,6 +16,7 @@ import networkx as nx
 from stanza.models.common.stanza_object import StanzaObject
 from stanza.models.ner.utils import decode_from_bioes
 from stanza.models.constituency import tree_reader
+from stanza.models.coref.coref_chain import CorefMention, CorefChain, CorefAttachment
 
 class MWTProcessingType(Enum):
     FLATTEN = 0 # flatten the current token into one ID instead of MWT
@@ -43,11 +44,19 @@ END_CHAR = 'end_char'
 TYPE = 'type'
 SENTIMENT = 'sentiment'
 CONSTITUENCY = 'constituency'
-COREF = 'coref'
+COREF_CHAINS = 'coref_chains'
 
 # field indices when converting the document to conll
 FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
 FIELD_NUM = len(FIELD_TO_IDX)
+
+class DocJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, CorefMention):
+            return obj.__dict__
+        if isinstance(obj, CorefAttachment):
+            return obj.to_json()
+        return json.JSONEncoder.default(self, obj)
 
 class Document(StanzaObject):
     """ A document class that stores attributes of a document and carries a list of sentences.
@@ -423,13 +432,17 @@ class Document(StanzaObject):
     def _attach_coref_mentions(self, chains):
         for sentence in self.sentences:
             for word in sentence.words:
-                word.coref_chain = []
+                word.coref_chains = []
 
         for chain in chains:
-            for mention in chain.mentions:
+            for mention_idx, mention in enumerate(chain.mentions):
                 sentence = self.sentences[mention.sentence]
                 for word_idx in range(mention.start_word, mention.end_word):
-                    sentence.words[word_idx].coref_chain.append(chain)
+                    is_start = word_idx == mention.start_word
+                    is_end = word_idx == mention.end_word - 1
+                    is_representative = mention_idx == chain.representative_index
+                    attachment = CorefAttachment(chain, is_start, is_end, is_representative)
+                    sentence.words[word_idx].coref_chains.append(attachment)
 
     def reindex_sentences(self, start_index):
         for sent_id, sentence in zip(range(start_index, start_index + len(self.sentences)), self.sentences):
@@ -441,7 +454,7 @@ class Document(StanzaObject):
         return [sentence.to_dict() for sentence in self.sentences]
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
 
     def __format__(self, spec):
         if spec == 'c':
@@ -863,7 +876,7 @@ class Sentence(StanzaObject):
         return ret
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
 
     def __format__(self, spec):
         if spec != 'c' and spec != 'C':
@@ -924,6 +937,22 @@ def dict_to_conll_text(token_dict, id_connector="-"):
         elif key == NER:
             # TODO: potentially need to escape =|\ in the NER
             misc.append("{}={}".format(key, token_dict[key]))
+        elif key == COREF_CHAINS:
+            chains = token_dict[key]
+            if len(chains) > 0:
+                misc_chains = []
+                for chain in chains:
+                    if chain.is_start and chain.is_end:
+                        coref_position = "unit-"
+                    elif chain.is_start:
+                        coref_position = "start-"
+                    elif chain.is_end:
+                        coref_position = "end-"
+                    else:
+                        coref_position = "middle-"
+                    is_representative = "repr-" if chain.is_representative else ""
+                    misc_chains.append("%s%sid%d" % (coref_position, is_representative, chain.chain.index))
+                misc.append("{}={}".format(key, ",".join(misc_chains)))
         elif key == MISC:
             # avoid appending a blank misc entry.
             # otherwise the resulting misc field in the conll doc will wind up being blank text
@@ -1064,7 +1093,7 @@ class Token(StanzaObject):
         self._sent = value
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
 
     def __format__(self, spec):
         if spec == 'C':
@@ -1134,7 +1163,7 @@ class Word(StanzaObject):
         self._parent = None
         self._sent = sentence
         self._mexp = word_entry.get(MEXP, None)
-        self._coref_chain = None
+        self._coref_chains = None
 
         if self._misc is not None:
             init_from_misc(self)
@@ -1332,9 +1361,9 @@ class Word(StanzaObject):
         self._upos = value if self._is_null(value) == False else None
 
     @property
-    def coref_chain(self):
+    def coref_chains(self):
         """
-        coref_chain points to a list of CorefChain namedtuple, which has a list of mentions and a representative mention.
+        coref_chains points to a list of CorefChain namedtuple, which has a list of mentions and a representative mention.
 
         Useful for disambiguating words such as "him" (in languages where coref is available)
 
@@ -1342,12 +1371,12 @@ class Word(StanzaObject):
           "Chris Manning's NLP Group"
         could have "Chris Manning" and "Chris Manning's NLP Group" as overlapping entities
         """
-        return self._coref_chain
+        return self._coref_chains
 
-    @coref_chain.setter
-    def coref_chain(self, chain):
-        """ Set the backref for the coref chain """
-        self._coref_chain = chain
+    @coref_chains.setter
+    def coref_chains(self, chain):
+        """ Set the backref for the coref chains """
+        self._coref_chains = chain
 
     @property
     def sent(self):
@@ -1360,7 +1389,7 @@ class Word(StanzaObject):
         self._sent = value
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
 
     def __format__(self, spec):
         if spec == 'C':
@@ -1377,7 +1406,7 @@ class Word(StanzaObject):
         token_dict = self.to_dict()
         return dict_to_conll_text(token_dict, '.')
 
-    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, MEXP]):
+    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, MEXP, COREF_CHAINS]):
         """ Dumps the word into a dictionary.
         """
         word_dict = {}
@@ -1528,7 +1557,7 @@ class Span(StanzaObject):
         return span_dict
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
 
     def pretty_print(self):
         """ Print the span in one line. """
