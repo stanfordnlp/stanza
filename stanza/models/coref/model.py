@@ -515,7 +515,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     def _build_optimizers(self):
         n_docs = len(self._get_docs(self.config.train_data))
         self.optimizers: Dict[str, torch.optim.Optimizer] = {}
-        self.schedulers: Dict[str, torch.optim.lr_scheduler.LambdaLR] = {}
+        self.schedulers: Dict[str, torch.optim.lr_scheduler.LRScheduler] = {}
 
         if not getattr(self.config, 'lora', False):
             for param in self.bert.parameters():
@@ -526,11 +526,17 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             self.optimizers["bert_optimizer"] = torch.optim.Adam(
                 self.bert.parameters(), lr=self.config.bert_learning_rate
             )
-            self.schedulers["bert_scheduler"] = \
-                transformers.get_linear_schedule_with_warmup(
-                    self.optimizers["bert_optimizer"],
-                    n_docs, n_docs * self.config.train_epochs
-                )
+            start_finetuning = int(n_docs * self.config.bert_finetune_begin_epoch)
+            if start_finetuning > 0:
+                logger.info("Will begin finetuning transformer at iteration %d", start_finetuning)
+            zero_scheduler = torch.optim.lr_scheduler.ConstantLR(self.optimizers["bert_optimizer"], factor=0, total_iters=start_finetuning)
+            warmup_scheduler = transformers.get_linear_schedule_with_warmup(
+                self.optimizers["bert_optimizer"],
+                start_finetuning, n_docs * self.config.train_epochs - start_finetuning)
+            self.schedulers["bert_scheduler"] = torch.optim.lr_scheduler.SequentialLR(
+                self.optimizers["bert_optimizer"],
+                schedulers=[zero_scheduler, warmup_scheduler],
+                milestones=[n_docs * self.config.bert_finetune_begin_epoch])
 
         # Must ensure the same ordering of parameters between launches
         modules = sorted((key, value) for key, value in self.trainable.items()
