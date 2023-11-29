@@ -28,7 +28,10 @@ def process_dataset(short_name, conll_path, ner_output_path):
         raise ImportError("Please install the datasets package to process CoNLL03 with Stanza")
 
     if short_name == 'en_ontonotes':
-        config_name = 'english_v12'
+        # there is an english_v12, but it is filled with junk annotations
+        # for example, near the end:
+        #   And John_O, I realize
+        config_name = 'english_v4'
     elif short_name in ('zh_ontonotes', 'zh-hans_ontonotes'):
         config_name = 'chinese_v4'
     elif short_name == 'ar_ontonotes':
