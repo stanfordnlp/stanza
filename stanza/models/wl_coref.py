@@ -87,18 +87,21 @@ if __name__ == "__main__":
     if args.log_norms is not None:
         config.log_norms = args.log_norms
 
-    model = CorefModel(config=config)
-
     if args.mode == "train":
+        model = CorefModel(config=config)
         if args.weights is not None or args.warm_start:
             model.load_weights(path=args.weights, map_location="cpu",
                                noexception=args.warm_start)
         with output_running_time():
             model.train()
     else:
-        model.load_weights(path=args.weights, map_location="cpu",
-                           ignore={"bert_optimizer", "general_optimizer",
-                                   "bert_scheduler", "general_scheduler"})
+        config_update = {
+            'log_norms': args.log_norms if args.log_norms is not None else False
+        }
+        model = CorefModel.load_model(path=args.weights, map_location="cpu",
+                                      ignore={"bert_optimizer", "general_optimizer",
+                                              "bert_scheduler", "general_scheduler"},
+                                      config_update=config_update)
         results = model.evaluate(data_split=args.data_split,
                                  word_level_conll=args.word_level)
         logger.info(results)
