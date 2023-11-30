@@ -1,6 +1,41 @@
-""" Runs experiments with CorefModel.
+"""
+Runs experiments with CorefModel.
 
 Try 'python wl_coref.py -h' for more details.
+
+Code based on
+
+https://github.com/KarelDO/wl-coref/tree/master
+https://arxiv.org/abs/2310.06165
+
+This was a fork of
+
+https://github.com/vdobrovolskii/wl-coref
+https://aclanthology.org/2021.emnlp-main.605/
+
+If you use Stanza's coref module in your work, please cite the following:
+
+@misc{doosterlinck2023cawcoref,
+  title={CAW-coref: Conjunction-Aware Word-level Coreference Resolution},
+  author={Karel D'Oosterlinck and Semere Kiros Bitew and Brandon Papineau and Christopher Potts and Thomas Demeester and Chris Develder},
+  year={2023},
+  eprint={2310.06165},
+  archivePrefix={arXiv},
+  primaryClass={cs.CL},
+  url = "https://arxiv.org/abs/2310.06165",
+}
+
+@inproceedings{dobrovolskii-2021-word,
+  title = "Word-Level Coreference Resolution",
+  author = "Dobrovolskii, Vladimir",
+  booktitle = "Proceedings of the 2021 Conference on Empirical Methods in Natural Language Processing",
+  month = nov,
+  year = "2021",
+  address = "Online and Punta Cana, Dominican Republic",
+  publisher = "Association for Computational Linguistics",
+  url = "https://aclanthology.org/2021.emnlp-main.605",
+  pages = "7670--7675"
+}
 """
 
 import argparse
