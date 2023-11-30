@@ -642,7 +642,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             with open(path, encoding="utf-8") as fin:
                 text = "[" + ",\n".join(fin) + "]"
             data_f = json.loads(text)
-        logger.debug("Loaded %d docs" % len(data_f))
+        logger.info("Loaded %d docs from %s", len(data_f), path)
         for doc in data_f:
             doc["span_clusters"] = [[tuple(mention) for mention in cluster]
                                for cluster in doc["span_clusters"]]
