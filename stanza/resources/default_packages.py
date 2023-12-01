@@ -414,7 +414,7 @@ default_tokenizer = {
 #}
 
 optional_coref = {
-    "en": "ontonotes_roberta-large",
+    "en": "ontonotes_electra-large",
 }
 
 """
