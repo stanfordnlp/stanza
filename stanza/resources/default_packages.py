@@ -39,7 +39,7 @@ default_treebanks = {
     "gd":      "arcosg",
     "gl":      "ctg",
     "got":     "proiel",
-    "grc":     "proiel",
+    "grc":     "perseus",
     "gv":      "cadhan",
     "hbo":     "ptnk",
     "he":      "combined",
