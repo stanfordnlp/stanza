@@ -570,6 +570,15 @@ TRANSFORMERS = {
     #  TODO: the rest of the chart
     "fr": "camembert/camembert-large",
 
+    # Ancient Greek has a surprising number of transformers, considering
+    #    Model           POS        Depparse
+    # None              0.8812
+    # Microbert M       0.8883
+    # Microbert MX      0.8910
+    # Microbert MXP     0.8916
+    # Pranaydeeps Bert  0.9139
+
+
     # a couple possibilities to experiment with for Hebrew
     # dev scores for POS and depparse
     # https://huggingface.co/imvladikon/alephbertgimmel-base-512
@@ -741,6 +750,13 @@ TRANSFORMER_NICKNAMES = {
     "camembert-base": "camembert-base",
     "camembert/camembert-large": "camembert-large",
     "dbmdz/electra-base-french-europeana-cased-discriminator": "dbmdz-electra",
+
+    # grc
+    "pranaydeeps/Ancient-Greek-BERT": "grc-pranaydeeps",
+    "lgessler/microbert-ancient-greek-m": "grc-microbert-m",
+    "lgessler/microbert-ancient-greek-mx": "grc-microbert-mx",
+    "lgessler/microbert-ancient-greek-mxp": "grc-microbert-mxp",
+    "altsoph/bert-base-ancientgreek-uncased": "grc-altsoph",
 
     # he
     "imvladikon/alephbertgimmel-base-512" : "alephbertgimmel",
