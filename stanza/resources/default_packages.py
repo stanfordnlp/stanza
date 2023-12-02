@@ -571,13 +571,13 @@ TRANSFORMERS = {
     "fr": "camembert/camembert-large",
 
     # Ancient Greek has a surprising number of transformers, considering
-    #    Model           POS        Depparse
-    # None              0.8812
-    # Microbert M       0.8883
-    # Microbert MX      0.8910
-    # Microbert MXP     0.8916
-    # Pranaydeeps Bert  0.9139
-
+    #    Model           POS        Depparse LAS
+    # None              0.8812       0.7684
+    # Microbert M       0.8883       0.7706
+    # Microbert MX      0.8910       0.7755
+    # Microbert MXP     0.8916       0.7742
+    # Pranaydeeps Bert  0.9139       0.7987
+    "pranaydeeps/Ancient-Greek-BERT": "grc-pranaydeeps",
 
     # a couple possibilities to experiment with for Hebrew
     # dev scores for POS and depparse
