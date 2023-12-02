@@ -577,7 +577,7 @@ TRANSFORMERS = {
     # Microbert MX      0.8910       0.7755
     # Microbert MXP     0.8916       0.7742
     # Pranaydeeps Bert  0.9139       0.7987
-    "pranaydeeps/Ancient-Greek-BERT": "grc-pranaydeeps",
+    "grc": "pranaydeeps/Ancient-Greek-BERT",
 
     # a couple possibilities to experiment with for Hebrew
     # dev scores for POS and depparse
