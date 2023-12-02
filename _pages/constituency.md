@@ -77,7 +77,7 @@ Bert models can be used by setting the package parameter when creating
 a pipeline:
 
 ```python
-pipe = stanza.Pipeline(lang='en', processors='tokenize,pos,constituency', package={'constituency': 'wsj_bert'})
+pipe = stanza.Pipeline(lang='en', processors='tokenize,pos,constituency', package='default_accurate')
 ```
 
 Note that the following scores are slight underestimates.  They use the CoreNLP scorer, which gives scores slightly lower than the evalb script.
