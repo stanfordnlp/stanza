@@ -12,6 +12,13 @@ Note that prior to version 1.0.0, the Stanza library was named as "StanfordNLP".
 
 | Version | Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Notes |
 | :--- | :----------------------------------- | :--- |
+| 1.7.0 | 2023&#8209;12&#8209;02 | Neural Coref model! ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.7.0)) |
+| 1.6.1 | 2023&#8209;10&#8209;05 | Patch for broken Arabic POS tagger. ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.6.1)) |
+| 1.6.0 | 2023&#8209;10&#8209;02 | Multiple default models and a combined EN NER model. ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.6.0)) |
+| 1.5.1 | 2023&#8209;09&#8209;08 | CharLM and transformer integration in depparse. ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.5.1)) |
+| 1.5.0 | 2023&#8209;03&#8209;13 | Ssurgeon interface, conparser experiments. ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.5.0)) |
+| 1.4.2 | 2022&#8209;09&#8209;14 | Minor version bump to improve (python) dependencies. ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.4.2)) |
+| 1.4.1 | 2022&#8209;09&#8209;14 | Improvements to pos, conparse, and sentiment, jupyter visualization, and wider language coverage. ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.4.1)) |
 | 1.4.0 | 2022&#8209;04&#8209;22 | Transformers added to NER and Constituency Parser. ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.4.0)) |
 | 1.3.0 | 2021&#8209;10&#8209;05 | Multilingual Pipeline, Constituency Parser. ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.3.0)) |
 | 1.2.3 | 2021&#8209;08&#8209;09 | Additional NER models for AF, IT.  A couple minor bugfixes.  Additional NER finetuning support. ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.2.3)) |
