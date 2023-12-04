@@ -489,7 +489,7 @@ def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
     """
     List the non-alias languages in the resources file
     """
-    download_resources_json(model_dir, resources_url, resources_branch, resources_version, proxies)
+    download_resources_json(model_dir, resources_url, resources_branch, resources_version, resources_filepath=None, proxies=proxies)
     resources = load_resources_json(model_dir)
     # isinstance(str) is because of fields such as "url"
     # 'alias' is because we want to skip German, alias of de, for example
@@ -567,7 +567,7 @@ def download(
     if download_json or not os.path.exists(os.path.join(model_dir, 'resources.json')):
         if not download_json:
             logger.warning("Asked to skip downloading resources.json, but the file does not exist.  Downloading anyway")
-        download_resources_json(model_dir, resources_url, resources_branch, resources_version, proxies)
+        download_resources_json(model_dir, resources_url, resources_branch, resources_version, resources_filepath=None, proxies=proxies)
 
     resources = load_resources_json(model_dir)
     if lang not in resources:
