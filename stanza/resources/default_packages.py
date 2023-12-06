@@ -765,7 +765,10 @@ TRANSFORMER_NICKNAMES = {
     "xlm-roberta-base": "roberta",
 
     # id
-    "indolem/indobert-base-uncased": "indobert",
+    "indolem/indobert-base-uncased":         "indobert",
+    "indobenchmark/indobert-large-p1":       "indobenchmark-large-p1",
+    "indobenchmark/indobert-base-p1":        "indobenchmark-base-p1",
+    "indobenchmark/indobert-lite-large-p1":  "indobenchmark-lite-large-p1",
 
     # it
     "dbmdz/electra-base-italian-xxl-cased-discriminator": "electra",
