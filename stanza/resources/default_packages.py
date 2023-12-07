@@ -614,6 +614,9 @@ TRANSFORMERS = {
     # no_bert                                    89.95     84.74
     # flax-community/indonesian-roberta-large    89.78 (!)  xxx
     # flax-community/indonesian-roberta-base     90.14      xxx
+    # indobenchmark/indobert-base-p2             90.09
+    # indobenchmark/indobert-base-p1             90.14
+    # indobenchmark/indobert-large-p1            90.19
     # indolem/indobert-base-uncased              90.21     88.60
     # cahya/bert-base-indonesian-1.5G            90.32     88.15
     # cahya/roberta-base-indonesian-1.5G         90.40     87.27
@@ -769,6 +772,11 @@ TRANSFORMER_NICKNAMES = {
     "indobenchmark/indobert-large-p1":       "indobenchmark-large-p1",
     "indobenchmark/indobert-base-p1":        "indobenchmark-base-p1",
     "indobenchmark/indobert-lite-large-p1":  "indobenchmark-lite-large-p1",
+    "indobenchmark/indobert-lite-base-p1":   "indobenchmark-lite-base-p1",
+    "indobenchmark/indobert-large-p2":       "indobenchmark-large-p2",
+    "indobenchmark/indobert-base-p2":        "indobenchmark-base-p2",
+    "indobenchmark/indobert-lite-large-p2":  "indobenchmark-lite-large-p2",
+    "indobenchmark/indobert-lite-base-p2":   "indobenchmark-lite-base-p2",
 
     # it
     "dbmdz/electra-base-italian-xxl-cased-discriminator": "electra",
