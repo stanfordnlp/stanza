@@ -693,6 +693,19 @@ TRANSFORMERS = {
     # neuralmind/bert-large-portuguese-cased: 0.9343
     "pt": "neuralmind/bert-large-portuguese-cased",
 
+    # Tamil options: quite a few, need to run a bunch of experiments
+    #                               dev pos    dev depparse las
+    # no transformer                 82.82        69.12
+    # ai4bharat/indic-bert           82.98        70.47
+    # lgessler/microbert-tamil-mxp   83.21        69.28
+    # monsoon-nlp/tamillion          83.37        69.28
+    # l3cube-pune/tamil-bert         85.27        72.53
+    # d42kw01f/Tamil-RoBERTa         85.59        70.55
+    # google/muril-base-cased        85.67        72.68
+    # google/muril-large-cased       86.30        72.45
+    "ta": "google/muril-large-cased",
+
+
     # https://huggingface.co/dbmdz/bert-base-turkish-128k-cased
     # helps the Turkish model quite a bit
     "tr": "dbmdz/bert-base-turkish-128k-cased",
@@ -785,13 +798,20 @@ TRANSFORMER_NICKNAMES = {
     "rinna/japanese-roberta-base": "rinna-roberta",
 
     # mr
-    "l3cube-pune/marathi-roberta": "l3cube-roberta",
+    "l3cube-pune/marathi-roberta": "l3cube-marathi-roberta",
 
     # pl
     "allegro/herbert-base-cased": "herbert",
 
     # pt
     "neuralmind/bert-large-portuguese-cased": "bertimbau",
+
+    # ta: tamil
+    "monsoon-nlp/tamillion":         "tamillion",
+    "lgessler/microbert-tamil-m":    "ta-microbert-m",
+    "lgessler/microbert-tamil-mxp":  "ta-microbert-mxp",
+    "l3cube-pune/tamil-bert":        "l3cube-tamil-bert",
+    "d42kw01f/Tamil-RoBERTa":        "ta-d42kw01f-roberta",
 
     # tr
     "dbmdz/bert-base-turkish-128k-cased": "bert",
@@ -803,6 +823,11 @@ TRANSFORMER_NICKNAMES = {
     # zh
     "hfl/chinese-roberta-wwm-ext": "roberta",
     "hfl/chinese-electra-180g-large-discriminator": "electra-large",
+
+    # multi-lingual Indic
+    "ai4bharat/indic-bert": "indic-bert",
+    "google/muril-base-cased": "muril-base-cased",
+    "google/muril-large-cased": "muril-large-cased",
 }
 
 def known_nicknames():
