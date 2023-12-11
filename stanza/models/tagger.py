@@ -183,6 +183,8 @@ def load_training_data(args, pretrain):
         train_file_data, _, _ = CoNLL.conll2dict(input_file=train_file)
         logger.info("Train File {}, Data Size: {}".format(train_file, len(train_file_data)))
         train_docs.append(Document(train_file_data))
+    if sum(len(x.sentences) for x in train_docs) == 0:
+        raise RuntimeError("Training data for the tagger is empty: %s" % args['train_file'])
     # we want to ensure that the model is able te output _ for empty columns,
     # but create batches whereby if a doc has upos/xpos tags we include them all.
     # therefore, we create seperate datasets and loaders for each input training file,
