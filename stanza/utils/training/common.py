@@ -365,7 +365,7 @@ def choose_transformer(short_language, command_args, extra_args, warn=True, laye
     Choose a transformer using the default options for this language
     """
     bert_args = []
-    if command_args.use_bert and '--bert_model' not in extra_args:
+    if command_args is not None and command_args.use_bert and '--bert_model' not in extra_args:
         if short_language in TRANSFORMERS:
             bert_args = ['--bert_model', TRANSFORMERS.get(short_language)]
             if layers and short_language in TRANSFORMER_LAYERS and '--bert_hidden_layers' not in extra_args:

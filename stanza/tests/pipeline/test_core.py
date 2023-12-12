@@ -34,7 +34,7 @@ def test_download_missing_ner_model():
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
-        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain', 'tokenize']
+        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'mwt', 'ner', 'pretrain', 'tokenize']
         assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes_charlm.pt']
 
 
@@ -48,7 +48,7 @@ def test_download_missing_resources():
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
-        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain', 'tokenize']
+        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'mwt', 'ner', 'pretrain', 'tokenize']
         assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes_charlm.pt']
 
 
@@ -101,7 +101,7 @@ def test_download_not_repeated():
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
-        assert en_dir_listing == ['tokenize']
+        assert en_dir_listing == ['mwt', 'tokenize']
         tokenize_path = os.path.join(en_dir, "tokenize", "combined.pt")
         mod_time = os.path.getmtime(tokenize_path)
 
@@ -148,7 +148,7 @@ def check_download_method_updates(download_method):
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
-        assert en_dir_listing == ['tokenize']
+        assert en_dir_listing == ['mwt', 'tokenize']
         tokenize_path = os.path.join(en_dir, "tokenize", "combined.pt")
 
         with open(tokenize_path, "w") as fout:

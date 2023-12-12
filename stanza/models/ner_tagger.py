@@ -14,6 +14,7 @@ import argparse
 import logging
 import numpy as np
 import random
+import re
 import json
 import torch
 from torch import nn, optim
@@ -73,7 +74,7 @@ def build_argparse():
     parser.add_argument('--emb_finetune_known_only', dest='emb_finetune_known_only', action='store_true', help="Finetune the embedding matrix only for words in the embedding.  (Default: finetune words not in the embedding as well)  This may be useful for very large datasets where obscure words are only trained once in a while, such as French-WikiNER")
     parser.add_argument('--no_input_transform', dest='input_transform', action='store_false', help="Do not use input transformation layer before tagger lstm.")
     parser.add_argument('--scheme', type=str, default='bioes', help="The tagging scheme to use: bio or bioes.")
-
+    parser.add_argument('--train_scheme', type=str, default=None, help="The tagging scheme to use when training: bio or bioes.  Overrides --scheme for the training set")
 
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
@@ -163,7 +164,7 @@ def get_known_tags(tags):
                 known_tags[tag_idx].add(tag)
     return [sorted(x) for x in known_tags]
 
-def warn_missing_tags(tag_vocab, data_tags, error_msg):
+def warn_missing_tags(tag_vocab, data_tags, error_msg, bioes_to_bio=False):
     """
     Check for tags missing from the tag_vocab.
 
@@ -186,6 +187,8 @@ def warn_missing_tags(tag_vocab, data_tags, error_msg):
             current_error_msg = error_msg
 
         current_tags = set([word[tag_set_idx] for sentence in data_tags for word in sentence])
+        if bioes_to_bio:
+            current_tags = set([re.sub("^E-", "I-", re.sub("^S-", "B-", x)) for x in current_tags])
         utils.warn_missing_tags(tag_set, current_tags, current_error_msg)
 
 def train(args):
@@ -237,7 +240,7 @@ def train(args):
     logger.info("Loaded %d sentences of training data", len(train_doc.sentences))
     if len(train_doc.sentences) == 0:
         raise ValueError("File %s exists but has no usable training data" % args['train_file'])
-    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
+    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False, scheme=args.get('train_scheme'))
     vocab = train_batch.vocab
     logger.info("Loading dev data from %s", args['eval_file'])
     with open(args['eval_file']) as fin:
@@ -267,7 +270,10 @@ def train(args):
 
     if args['finetune']:
         warn_missing_tags(trainer.vocab['tag'], train_batch.tags, "training set")
-    warn_missing_tags(trainer.vocab['tag'], dev_batch.tags, "dev set")
+    # the evaluation will coerce the tags to the proper scheme,
+    # so we won't need to alert for not having S- or E- tags
+    bioes_to_bio = args['train_scheme'] == 'bio' and args['scheme'] == 'bioes'
+    warn_missing_tags(trainer.vocab['tag'], dev_batch.tags, "dev set", bioes_to_bio=bioes_to_bio)
 
     # TODO: might still want to add multiple layers of tag evaluation to the scorer
     dev_gold_tags = [[x[trainer.args['predict_tagset']] for x in tags] for tags in dev_batch.tags]
@@ -399,7 +405,8 @@ def evaluate(args):
     with open(args['eval_file']) as fin:
         doc = Document(json.load(fin))
     batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True, bert_tokenizer=trainer.model.bert_tokenizer)
-    warn_missing_tags(trainer.vocab['tag'], batch.tags, "eval_file")
+    bioes_to_bio = loaded_args['train_scheme'] == 'bio' and loaded_args['scheme'] == 'bioes'
+    warn_missing_tags(trainer.vocab['tag'], batch.tags, "eval_file", bioes_to_bio=bioes_to_bio)
 
     logger.info("Start evaluation...")
     preds = []

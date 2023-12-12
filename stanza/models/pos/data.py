@@ -280,4 +280,47 @@ class Dataset:
                         data[sent_idx][tok_idx][feat_idx] = '_'
         return data
 
+class ShuffledDataset:
+    """A wrapper around one or more datasets which shuffles the data in batch_size chunks
 
+    This means that if multiple datasets are passed in, the batches
+    from each dataset are shuffled together, with one batch being
+    entirely members of the same dataset.
+
+    The main use case of this is that in the tagger, there are cases
+    where batches from different datasets will have different
+    properties, such as having or not having UPOS tags.  We found that
+    it is actually somewhat tricky to make the model's loss function
+    (in model.py) properly represent batches with mixed w/ and w/o
+    property, whereas keeping one entire batch together makes it a lot
+    easier to process.
+
+    The mechanism for the shuffling is that the iterator first makes a
+    list long enough to represent each batch from each dataset,
+    tracking the index of the dataset it is coming from, then shuffles
+    that list.  Another alternative would be to use a weighted
+    randomization approach, but this is very simple and the memory
+    requirements are not too onerous.
+
+    Note that the batch indices are wasteful in the case of only one
+    underlying dataset, which is actually the most common use case,
+    but the overhead is small enough that it probably isn't worth
+    special casing the one dataset version.
+    """
+    def __init__(self, datasets, batch_size):
+        self.batch_size = batch_size
+        self.datasets = datasets
+        self.loaders = [x.to_loader(batch_size=self.batch_size, shuffle=True) for x in self.datasets]
+
+    def __iter__(self):
+        iterators = [iter(x) for x in self.loaders]
+        lengths = [len(x) for x in self.loaders]
+        indices = [[x] * y for x, y in enumerate(lengths)]
+        indices = [idx for inner in indices for idx in inner]
+        random.shuffle(indices)
+
+        for idx in indices:
+            yield(next(iterators[idx]))
+
+    def __len__(self):
+        return sum(len(x) for x in self.datasets)

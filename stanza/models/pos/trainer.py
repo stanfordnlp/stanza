@@ -50,6 +50,9 @@ class Trainer(BaseTrainer):
             self.model.train()
             self.optimizer.zero_grad()
         loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text)
+        if loss == 0.0:
+            return loss
+
         loss_val = loss.data.item()
         if eval:
             return loss_val

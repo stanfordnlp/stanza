@@ -202,6 +202,11 @@ class CompositeVocab(BaseVocab):
     def items(self, idx):
         return self._id2unit[idx]
 
+    def __str__(self):
+        pieces = ["[" + ",".join(x) + "]" for _, x in self._id2unit.items()]
+        rep = "<{}:\n {}>".format(type(self), "\n ".join(pieces))
+        return rep
+
 class BaseMultiVocab:
     """ A convenient vocab container that can store multiple BaseVocab instances, and support 
     safe serialization of all instances via state dicts. Each subclass of this base class 

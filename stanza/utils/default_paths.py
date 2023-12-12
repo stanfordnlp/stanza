@@ -20,6 +20,7 @@ def get_default_paths():
         "CHARLM_DATA_DIR": DATA_ROOT + "/charlm",
         "SENTIMENT_DATA_DIR": DATA_ROOT + "/sentiment",
         "CONSTITUENCY_DATA_DIR": DATA_ROOT + "/constituency",
+        "COREF_DATA_DIR": DATA_ROOT + "/coref",
 
         # Set directories to store external word vector data
         "WORDVEC_DIR": "extern_data/wordvec",
@@ -32,6 +33,7 @@ def get_default_paths():
         "NERBASE": "extern_data/ner",
         "CONSTITUENCY_BASE": "extern_data/constituency",
         "SENTIMENT_BASE": "extern_data/sentiment",
+        "COREF_BASE": "extern_data/coref",
 
         # there's a stanford github, stanfordnlp/handparsed-treebank,
         # with some data for different languages

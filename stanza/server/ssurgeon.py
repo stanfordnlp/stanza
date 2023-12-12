@@ -13,6 +13,7 @@ import os
 import re
 import sys
 
+from stanza.models.common.utils import misc_to_space_after, space_after_to_misc
 from stanza.protobuf import SsurgeonRequest, SsurgeonResponse
 from stanza.server import java_protobuf_requests
 from stanza.utils.conll import CoNLL
@@ -124,7 +125,7 @@ def build_word_entry(word_index, graph_word):
         "mwt_misc": graph_word.mwtMisc,
     }
     # TODO: do "before" as well
-    word_entry[MISC] = java_protobuf_requests.space_after_to_misc(graph_word.after)
+    word_entry[MISC] = space_after_to_misc(graph_word.after)
     if graph_word.conllUMisc:
         word_entry[MISC] = java_protobuf_requests.substitute_space_misc(graph_word.conllUMisc, word_entry[MISC])
     return word_entry
@@ -184,11 +185,18 @@ def convert_response_to_doc(doc, semgrex_response):
             old_comments = list(sentence.comments)
             sentence = Sentence(mwt_tokens, doc)
 
-            token_text = [token.text if (token_idx == len(sentence.tokens) - 1 or
-                                         (token.misc and "SpaceAfter=No" in token.misc.split("|")) or
-                                         (token.words[-1].misc and "SpaceAfter=No" in token.words[-1].misc.split("|")))
-                         else token.text + " "
-                         for token_idx, token in enumerate(sentence.tokens)]
+            token_text = []
+            for token_idx, token in enumerate(sentence.tokens):
+                token_text.append(token.text)
+                if token_idx == len(sentence.tokens) - 1:
+                    break
+                token_space_after = misc_to_space_after(token.misc)
+                if token_space_after == ' ':
+                    # in some treebanks, the word might have more interesting
+                    # space after annotations than the token
+                    token_space_after = misc_to_space_after(token.words[-1].misc)
+                token_text.append(token_space_after)
+
             sentence_text = "".join(token_text)
 
             for comment in old_comments:

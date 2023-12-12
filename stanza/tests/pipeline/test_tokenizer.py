@@ -19,6 +19,31 @@ EN_DOC_GOLD_TOKENS = """
 <Token id=5;words=[<Word id=5;text=California>]>
 <Token id=6;words=[<Word id=6;text=.>]>
 
+<Token id=1-2;words=[<Word id=1;text=Joe>, <Word id=2;text='s>]>
+<Token id=3;words=[<Word id=3;text=favorite>]>
+<Token id=4;words=[<Word id=4;text=food>]>
+<Token id=5;words=[<Word id=5;text=is>]>
+<Token id=6;words=[<Word id=6;text=pizza>]>
+<Token id=7;words=[<Word id=7;text=.>]>
+
+<Token id=1;words=[<Word id=1;text=He>]>
+<Token id=2;words=[<Word id=2;text=enjoys>]>
+<Token id=3;words=[<Word id=3;text=going>]>
+<Token id=4;words=[<Word id=4;text=to>]>
+<Token id=5;words=[<Word id=5;text=the>]>
+<Token id=6;words=[<Word id=6;text=beach>]>
+<Token id=7;words=[<Word id=7;text=.>]>
+""".strip()
+
+# spaCy doesn't have MWT
+EN_DOC_SPACY_TOKENS = """
+<Token id=1;words=[<Word id=1;text=Joe>]>
+<Token id=2;words=[<Word id=2;text=Smith>]>
+<Token id=3;words=[<Word id=3;text=lives>]>
+<Token id=4;words=[<Word id=4;text=in>]>
+<Token id=5;words=[<Word id=5;text=California>]>
+<Token id=6;words=[<Word id=6;text=.>]>
+
 <Token id=1;words=[<Word id=1;text=Joe>]>
 <Token id=2;words=[<Word id=2;text='s>]>
 <Token id=3;words=[<Word id=3;text=favorite>]>
@@ -35,8 +60,8 @@ EN_DOC_GOLD_TOKENS = """
 <Token id=6;words=[<Word id=6;text=beach>]>
 <Token id=7;words=[<Word id=7;text=.>]>
 """.strip()
-EN_DOC_POSTPROCESSOR_TOKENS_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], ['Joe', "'s", 'favorite', 'food', 'is', 'pizza', '.'], ['He', 'enjoys', 'going', 'to', 'the', 'beach', '.']]
-EN_DOC_POSTPROCESSOR_COMBINED_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], ['Joe\'s', 'favorite', 'food', 'is', 'pizza', '.'], ['He', 'enjoys', 'going', "to the beach", '.']]
+EN_DOC_POSTPROCESSOR_TOKENS_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], [("Joe's", True), 'favorite', 'food', 'is', 'pizza', '.'], ['He', 'enjoys', 'going', 'to', 'the', 'beach', '.']]
+EN_DOC_POSTPROCESSOR_COMBINED_LIST = [['Joe', 'Smith', 'lives', 'in', 'California', '.'], ['Joe', "'s", 'favorite', 'food', 'is', 'pizza', '.'], ['He', 'enjoys', 'going', "to the beach", '.']]
 
 EN_DOC_POSTPROCESSOR_COMBINED_TOKENS = """
 <Token id=1;words=[<Word id=1;text=Joe>]>
@@ -46,12 +71,13 @@ EN_DOC_POSTPROCESSOR_COMBINED_TOKENS = """
 <Token id=5;words=[<Word id=5;text=California>]>
 <Token id=6;words=[<Word id=6;text=.>]>
 
-<Token id=1;words=[<Word id=1;text=Joe's>]>
-<Token id=2;words=[<Word id=2;text=favorite>]>
-<Token id=3;words=[<Word id=3;text=food>]>
-<Token id=4;words=[<Word id=4;text=is>]>
-<Token id=5;words=[<Word id=5;text=pizza>]>
-<Token id=6;words=[<Word id=6;text=.>]>
+<Token id=1;words=[<Word id=1;text=Joe>]>
+<Token id=2;words=[<Word id=2;text='s>]>
+<Token id=3;words=[<Word id=3;text=favorite>]>
+<Token id=4;words=[<Word id=4;text=food>]>
+<Token id=5;words=[<Word id=5;text=is>]>
+<Token id=6;words=[<Word id=6;text=pizza>]>
+<Token id=7;words=[<Word id=7;text=.>]>
 
 <Token id=1;words=[<Word id=1;text=He>]>
 <Token id=2;words=[<Word id=2;text=enjoys>]>
@@ -127,6 +153,23 @@ EN_DOC_PRETOKENIZED_LIST_GOLD_TOKENS = """
 
 EN_DOC_NO_SSPLIT = ["This is a sentence. This is another.", "This is a third."]
 EN_DOC_NO_SSPLIT_SENTENCES = [['This', 'is', 'a', 'sentence', '.', 'This', 'is', 'another', '.'], ['This', 'is', 'a', 'third', '.']]
+
+FR_DOC = "Le prince va manger du poulet aux les magasins aujourd'hui."
+FR_DOC_POSTPROCESSOR_TOKENS_LIST = [['Le', 'prince', 'va', 'manger', ('du', True), 'poulet', ('aux', True), 'les', 'magasins', "aujourd'hui", '.']]
+FR_DOC_POSTPROCESSOR_COMBINED_MWT_LIST = [['Le', 'prince', 'va', 'manger', ('du', True), 'poulet', ('aux', True), 'les', 'magasins', ("aujourd'hui", ["aujourd'", "hui"]), '.']]
+FR_DOC_PRETOKENIZED_LIST_GOLD_TOKENS = """
+<Token id=1;words=[<Word id=1;text=Le>]>
+<Token id=2;words=[<Word id=2;text=prince>]>
+<Token id=3;words=[<Word id=3;text=va>]>
+<Token id=4;words=[<Word id=4;text=manger>]>
+<Token id=5-6;words=[<Word id=5;text=de>, <Word id=6;text=le>]>
+<Token id=7;words=[<Word id=7;text=poulet>]>
+<Token id=8-9;words=[<Word id=8;text=à>, <Word id=9;text=les>]>
+<Token id=10;words=[<Word id=10;text=les>]>
+<Token id=11;words=[<Word id=11;text=magasins>]>
+<Token id=12-13;words=[<Word id=12;text=aujourd'>, <Word id=13;text=hui>]>
+<Token id=14;words=[<Word id=14;text=.>]>
+"""
 
 JA_DOC = "北京は中国の首都です。 北京の人口は2152万人です。\n" # add some random whitespaces that need to be skipped
 JA_DOC_GOLD_TOKENS = """
@@ -301,11 +344,11 @@ def test_pretokenized_multidoc():
 
 def test_postprocessor():
 
-    def dummy_postprocessor(input):
+    def dummy_postprocessor(in_doc):
         # Importantly, EN_DOC_POSTPROCESSOR_COMBINED_LIST returns a few tokens joinde
         # with space. As some languages (such as VN) contains tokens with space in between
         # its important to have joined space tested as one of the tokens
-        assert input == EN_DOC_POSTPROCESSOR_TOKENS_LIST
+        assert in_doc == EN_DOC_POSTPROCESSOR_TOKENS_LIST
         return EN_DOC_POSTPROCESSOR_COMBINED_LIST
 
     nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR,
@@ -313,6 +356,22 @@ def test_postprocessor():
                              'tokenize_postprocessor': dummy_postprocessor})
     doc = nlp(EN_DOC)
     assert EN_DOC_POSTPROCESSOR_COMBINED_TOKENS.strip() == '\n\n'.join([sent.tokens_string() for sent in doc.sentences]).strip()
+
+def test_postprocessor_mwt():
+
+    def dummy_postprocessor(input):
+        # Importantly, EN_DOC_POSTPROCESSOR_COMBINED_LIST returns a few tokens joinde
+        # with space. As some languages (such as VN) contains tokens with space in between
+        # its important to have joined space tested as one of the tokens
+        assert input == FR_DOC_POSTPROCESSOR_TOKENS_LIST
+        return FR_DOC_POSTPROCESSOR_COMBINED_MWT_LIST
+
+    nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR,
+                             'lang': 'fr',
+                             'tokenize_postprocessor': dummy_postprocessor})
+    doc = nlp(FR_DOC)
+    assert FR_DOC_PRETOKENIZED_LIST_GOLD_TOKENS.strip() == '\n\n'.join([sent.tokens_string() for sent in doc.sentences]).strip()
+
 
 def test_postprocessor_typeerror():
     with pytest.raises(ValueError):
@@ -357,7 +416,7 @@ def test_spacy():
 
     # make sure the loaded tokenizer is actually spacy
     assert "SpacyTokenizer" == nlp.processors['tokenize']._variant.__class__.__name__
-    assert EN_DOC_GOLD_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
+    assert EN_DOC_SPACY_TOKENS == '\n\n'.join([sent.tokens_string() for sent in doc.sentences])
     assert all([doc.text[token._start_char: token._end_char] == token.text for sent in doc.sentences for token in sent.tokens])
 
 def test_spacy_no_ssplit():

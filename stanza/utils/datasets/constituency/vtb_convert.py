@@ -107,14 +107,19 @@ def is_valid_line(line):
 
 # not clear if TP is supposed to be NP or PP - needs a native speaker to decode
 WEIRD_LABELS = sorted(set(["WP", "YP", "SNP", "STC", "UPC", "(TP", "Xp", "XP", "WHVP", "WHPR", "NO", "WHADV", "(SC (", "(VOC (", "(Adv (", "(SP (", "ADV-MDP", "(SPL", "(ADV (", "(V-MWE ("] + list(REMAPPING.keys())))
+# the 2023 dataset has TP and WHADV as actual labels
+WEIRD_LABELS_2023 = sorted(set(["WP", "YP", "SNP", "STC", "UPC", "Xp", "XP", "WHVP", "WHPR", "NO", "(SC (", "(VOC (", "(Adv (", "(SP (", "ADV-MDP", "(SPL", "(ADV (", "(V-MWE ("] + list(REMAPPING.keys())))
 
-
-def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False):
+def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False, updated_tagset=False):
     """
     :param orig_file: original directory storing original trees
     :param new_file: new directory storing formatted constituency trees
     This function writes new trees to the corresponding files in new_file
     """
+    if updated_tagset:
+        weird_labels = WEIRD_LABELS_2023
+    else:
+        weird_labels = WEIRD_LABELS
     errors = defaultdict(list)
     with open(orig_file, 'r', encoding='utf-8') as reader, open(new_file, 'w', encoding='utf-8') as writer:
         content = reader.readlines()
@@ -166,7 +171,7 @@ def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False):
                     # TODO: this block eliminates 3 trees from VLSP-22
                     # maybe those trees can be salvaged?
                     bad_label = False
-                    for weird_label in WEIRD_LABELS:
+                    for weird_label in weird_labels:
                         if tree.find(weird_label) >= 0:
                             bad_label = True
                             errors[weird_label].append("Weird label {} from {} line {}: {}".format(weird_label, orig_file, line_idx, tree))
@@ -190,14 +195,14 @@ def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False):
 
     return errors
 
-def convert_files(file_list, new_dir, verbose=False, fix_errors=True, convert_brackets=False):
+def convert_files(file_list, new_dir, verbose=False, fix_errors=True, convert_brackets=False, updated_tagset=False):
     errors = defaultdict(list)
     for filename in file_list:
         base_name, _ = os.path.splitext(os.path.split(filename)[-1])
         new_path = os.path.join(new_dir, base_name)
         new_file_path = f'{new_path}.mrg'
         # Convert the tree and write to new_file_path
-        new_errors = convert_file(filename, new_file_path, fix_errors, convert_brackets)
+        new_errors = convert_file(filename, new_file_path, fix_errors, convert_brackets, updated_tagset)
         for e in new_errors:
             errors[e].extend(new_errors[e])
 
@@ -239,7 +244,6 @@ def main():
         'new_dir',
         help='The location of new directory storing the new formatted trees'
     )
-
     args = parser.parse_args()
 
     org_dir = args.org_dir

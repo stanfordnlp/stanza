@@ -23,6 +23,8 @@ from stanza.pipeline.external.pythainlp import PyThaiNLPTokenizer
 
 logger = logging.getLogger('stanza')
 
+TOKEN_TOO_LONG_REPLACEMENT = "<UNK>"
+
 # class for running the tokenizer
 @register_processor(name=TOKENIZE)
 class TokenizeProcessor(UDProcessor):
@@ -110,7 +112,7 @@ class TokenizeProcessor(UDProcessor):
         for sentence in document:
             for token in sentence:
                 if len(token['text']) > max_seq_len:
-                    token['text'] = "<UNK>"
+                    token['text'] = TOKEN_TOO_LONG_REPLACEMENT
 
         return doc.Document(document, raw_text)
 

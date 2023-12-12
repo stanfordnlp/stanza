@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, pad_sequence, PackedSequence
 
 from stanza.models.common.data import map_to_ids, get_long_tensor
+from stanza.models.common.exceptions import ForwardCharlmNotFoundError, BackwardCharlmNotFoundError
 from stanza.models.common.packed_lstm import PackedLSTM
 from stanza.models.common.dropout import WordDropout, LockedDropout
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
@@ -95,9 +96,9 @@ class NERTagger(nn.Module):
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args['charlm']:
                 if args['charlm_forward_file'] is None or not os.path.exists(args['charlm_forward_file']):
-                    raise FileNotFoundError('Could not find forward character model: {}  Please specify with --charlm_forward_file'.format(args['charlm_forward_file']))
+                    raise ForwardCharlmNotFoundError('Could not find forward character model: {}  Please specify with --charlm_forward_file'.format(args['charlm_forward_file']), args['charlm_forward_file'])
                 if args['charlm_backward_file'] is None or not os.path.exists(args['charlm_backward_file']):
-                    raise FileNotFoundError('Could not find backward character model: {}  Please specify with --charlm_backward_file'.format(args['charlm_backward_file']))
+                    raise BackwardCharlmNotFoundError('Could not find backward character model: {}  Please specify with --charlm_backward_file'.format(args['charlm_backward_file']), args['charlm_backward_file'])
                 add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(args['charlm_forward_file'], finetune=False))
                 add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(args['charlm_backward_file'], finetune=False))
                 input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()

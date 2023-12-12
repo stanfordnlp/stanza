@@ -1,6 +1,7 @@
 from collections import deque
 import subprocess
 
+from stanza.models.common.utils import misc_to_space_after
 from stanza.models.constituency.parse_tree import Tree
 from stanza.protobuf import DependencyGraph, FlattenedParseTree
 from stanza.server.client import resolve_classpath
@@ -306,86 +307,6 @@ def substitute_space_misc(misc, space_misc):
     if len(new_pieces) == 0:
         return None
     return "|".join(new_pieces)
-
-def space_after_to_misc(space):
-    """
-    Convert whitespace back to the escaped format - either SpaceAfter=No or SpacesAfter=...
-    """
-    if not space:
-        return "SpaceAfter=No"
-    if space == " ":
-        return ""
-    spaces = []
-    for char in space:
-        if char == ' ':
-            spaces.append('\\s')
-        elif char == '\t':
-            spaces.append('\\t')
-        elif char == '\r':
-            spaces.append('\\r')
-        elif char == '\n':
-            spaces.append('\\n')
-        elif char == '|':
-            spaces.append('\\p')
-        elif char == '\\':
-            spaces.append('\\\\')
-        else:
-            spaces.append(char)
-    space_after = "".join(spaces)
-    return "SpacesAfter=%s" % space_after
-
-def misc_to_space_after(misc):
-    """
-    Convert either SpaceAfter=No or the SpacesAfter annotation
-
-    see https://universaldependencies.org/misc.html#spacesafter
-
-    We compensate for some treebanks using SpaceAfter=\n instead of SpacesAfter=\n
-    On the way back, though, those annotations will be turned into SpacesAfter
-
-    # TODO: some treebanks also have SpacesBefore on the first token, and we should honor that
-    """
-    if not misc:
-        return " "
-    pieces = misc.split("|")
-    if any(piece.lower() == "spaceafter=no" for piece in pieces):
-        return ""
-    if "SpaceAfter=Yes" in pieces:
-        # as of UD 2.11, the Cantonese treebank had this as a misc feature
-        return " "
-    if "SpaceAfter=No~" in pieces:
-        # as of UD 2.11, a weird typo in the Russian Taiga dataset
-        return ""
-    for piece in pieces:
-        if piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter="):
-            misc_space = piece.split("=", maxsplit=1)[1]
-            spaces = []
-            pos = 0
-            while pos < len(misc_space):
-                if misc_space[pos:pos+2] == '\\s':
-                    spaces.append(' ')
-                    pos += 2
-                elif misc_space[pos:pos+2] == '\\t':
-                    spaces.append('\t')
-                    pos += 2
-                elif misc_space[pos:pos+2] == '\\r':
-                    spaces.append('\r')
-                    pos += 2
-                elif misc_space[pos:pos+2] == '\\n':
-                    spaces.append('\n')
-                    pos += 2
-                elif misc_space[pos:pos+2] == '\\p':
-                    spaces.append('|')
-                    pos += 2
-                elif misc_space[pos:pos+2] == '\\\\':
-                    spaces.append('\\')
-                    pos += 2
-                else:
-                    spaces.append(misc_space[pos])
-                    pos += 1
-            space_after = "".join(spaces)
-            return space_after
-    return " "
 
 class JavaProtobufContext(object):
     """

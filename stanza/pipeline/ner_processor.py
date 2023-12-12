@@ -7,6 +7,7 @@ import torch
 import logging
 
 from stanza.models.common import doc
+from stanza.models.common.exceptions import ForwardCharlmNotFoundError, BackwardCharlmNotFoundError
 from stanza.models.common.utils import unsort
 from stanza.models.ner.data import DataLoader
 from stanza.models.ner.trainer import Trainer
@@ -68,7 +69,12 @@ class NERProcessor(UDProcessor):
             if predict_tagset is not None:
                 args['predict_tagset'] = predict_tagset
 
-            trainer = Trainer(args=args, model_file=model_path, pretrain=pretrain, device=device, foundation_cache=pipeline.foundation_cache)
+            try:
+                trainer = Trainer(args=args, model_file=model_path, pretrain=pretrain, device=device, foundation_cache=pipeline.foundation_cache)
+            except ForwardCharlmNotFoundError as e:
+                raise ForwardCharlmNotFoundError("Could not find the forward charlm %s.  Please specify the correct path with ner_forward_charlm_path" % e.filename, e.filename) from None
+            except BackwardCharlmNotFoundError as e:
+                raise BackwardCharlmNotFoundError("Could not find the backward charlm %s.  Please specify the correct path with ner_backward_charlm_path" % e.filename, e.filename) from None
             self.trainers.append(trainer)
 
         self._trainer = self.trainers[0]

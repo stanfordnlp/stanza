@@ -60,7 +60,6 @@ setup(
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
-        'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
@@ -84,12 +83,13 @@ setup(
         'protobuf>=3.15.0',
         'requests', 
         'networkx',
+        'toml',
         'torch>=1.3.0',
         'tqdm',
     ],
 
     # List required Python versions
-    python_requires='>=3.6',
+    python_requires='>=3.8',
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -105,7 +105,11 @@ setup(
         ],
         'transformers': [
             'transformers>=3.0.0',
+            'peft>=0.6.1',
         ],
+        'datasets': [
+            'datasets',
+        ]
     },
 
     # If there are data files included in your packages that need to be

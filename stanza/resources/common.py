@@ -227,6 +227,12 @@ def maintain_processor_list(resources, lang, package, processors, allow_pretrain
                         f'Found {key}: {resources[lang][PACKAGES][value][key]}.'
                     )
                     processor_list[key].append(resources[lang][PACKAGES][value][key])
+                # optional defaults will be activated if specifically turned on
+                elif value in resources[lang][PACKAGES] and 'optional' in resources[lang][PACKAGES][value] and key in resources[lang][PACKAGES][value]['optional']:
+                    logger.debug(
+                        f"Found {key}: {resources[lang][PACKAGES][value]['optional'][key]}."
+                    )
+                    processor_list[key].append(resources[lang][PACKAGES][value]['optional'][key])
                 # allow processors to be set to variants that we didn't implement
                 elif value in PROCESSOR_VARIANTS[key]:
                     logger.debug(
@@ -256,9 +262,9 @@ def maintain_processor_list(resources, lang, package, processors, allow_pretrain
     # resolve package
     if package:
         logger.debug(f'Processing parameter "package"...')
-        if package in resources[lang][PACKAGES]:
+        if PACKAGES in resources[lang] and package in resources[lang][PACKAGES]:
             for key, value in resources[lang][PACKAGES][package].items():
-                if key not in processor_list:
+                if key != 'optional' and key not in processor_list:
                     logger.debug(f'Found {key}: {value}.')
                     processor_list[key].append(value)
         else:
@@ -483,7 +489,7 @@ def list_available_languages(model_dir=DEFAULT_MODEL_DIR,
     """
     List the non-alias languages in the resources file
     """
-    download_resources_json(model_dir, resources_url, resources_branch, resources_version, proxies)
+    download_resources_json(model_dir, resources_url, resources_branch, resources_version, resources_filepath=None, proxies=proxies)
     resources = load_resources_json(model_dir)
     # isinstance(str) is because of fields such as "url"
     # 'alias' is because we want to skip German, alias of de, for example
@@ -561,7 +567,7 @@ def download(
     if download_json or not os.path.exists(os.path.join(model_dir, 'resources.json')):
         if not download_json:
             logger.warning("Asked to skip downloading resources.json, but the file does not exist.  Downloading anyway")
-        download_resources_json(model_dir, resources_url, resources_branch, resources_version, proxies)
+        download_resources_json(model_dir, resources_url, resources_branch, resources_version, resources_filepath=None, proxies=proxies)
 
     resources = load_resources_json(model_dir)
     if lang not in resources:

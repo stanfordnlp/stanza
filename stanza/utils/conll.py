@@ -9,6 +9,9 @@ from stanza.models.common.doc import Document
 from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, NER, START_CHAR, END_CHAR
 from stanza.models.common.doc import FIELD_TO_IDX, FIELD_NUM
 
+class CoNLLError(ValueError):
+    pass
+
 class CoNLL:
 
     @staticmethod
@@ -39,7 +42,7 @@ class CoNLL:
                 if ignore_gapping and '.' in array[0]:
                     continue
                 if len(array) != FIELD_NUM:
-                    raise ValueError(f"Cannot parse CoNLL line {line_idx+1}: expecting {FIELD_NUM} fields, {len(array)} found at line {line_idx}\n  {array}")
+                    raise CoNLLError(f"Cannot parse CoNLL line {line_idx+1}: expecting {FIELD_NUM} fields, {len(array)} found at line {line_idx}\n  {array}")
                 sent += [array]
         if len(sent) > 0:
             doc.append(sent)
@@ -61,7 +64,7 @@ class CoNLL:
                 try:
                     token_dict = CoNLL.convert_conll_token(token_conll)
                 except ValueError as e:
-                    raise ValueError("Could not process sentence %d token %d: %s" % (sent_idx, token_idx, str(e))) from e
+                    raise CoNLLError("Could not process sentence %d token %d: %s" % (sent_idx, token_idx, str(e))) from e
                 if '.' in token_dict[ID]:
                     token_dict[ID] = tuple(int(x) for x in token_dict[ID].split(".", maxsplit=1))
                     sent_empty.append(token_dict)
@@ -117,6 +120,40 @@ class CoNLL:
     def conll2doc(input_file=None, input_str=None, ignore_gapping=True, zip_file=None):
         doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file)
         return Document(doc_dict, text=None, comments=doc_comments, empty_sentences=doc_empty)
+
+    @staticmethod
+    def conll2multi_docs(input_file=None, input_str=None, ignore_gapping=True, zip_file=None):
+        doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file)
+
+        docs = []
+        current_doc = []
+        current_comments = []
+        current_empty = []
+        current_doc_id = None
+        for doc, comments, empty in zip(doc_dict, doc_comments, doc_empty):
+            for comment in comments:
+                if comment.startswith("# doc_id ="):
+                    doc_id = comment.split("=", maxsplit=1)[1]
+                    if len(current_doc) == 0:
+                        current_doc_id = doc_id
+                    elif doc_id != current_doc_id:
+                        new_doc = Document(current_doc, text=None, comments=current_comments, empty_sentences=current_empty)
+                        docs.append(new_doc)
+                        current_doc_id = doc_id
+                    else:
+                        continue
+                    current_doc = [doc]
+                    current_comments = [comments]
+                    current_empty = [empty]
+                    break
+            else: # no comments defined a new doc_id, so just add it to the current document
+                current_doc.append(doc)
+                current_comments.append(comments)
+                current_empty.append(empty)
+        if len(current_doc) > 0:
+            new_doc = Document(current_doc, text=None, comments=current_comments, empty_sentences=current_empty)
+            docs.append(new_doc)
+        return docs
 
     @staticmethod
     def dict2conll(doc_dict, filename):

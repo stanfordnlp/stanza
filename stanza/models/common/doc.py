@@ -9,15 +9,24 @@ import json
 import pickle
 import warnings
 
+from enum import Enum
+
 import networkx as nx
 
 from stanza.models.common.stanza_object import StanzaObject
 from stanza.models.ner.utils import decode_from_bioes
 from stanza.models.constituency import tree_reader
+from stanza.models.coref.coref_chain import CorefMention, CorefChain, CorefAttachment
+
+class MWTProcessingType(Enum):
+    FLATTEN = 0 # flatten the current token into one ID instead of MWT
+    PROCESS = 1 # process the current token as an MWT and expand it as such
+    SKIP = 2 # do nothing on this token, simply increment IDs
 
 multi_word_token_id = re.compile(r"([0-9]+)-([0-9]+)")
 multi_word_token_misc = re.compile(r".*MWT=Yes.*")
 
+MEXP = 'manual_expansion'
 ID = 'id'
 TEXT = 'text'
 LEMMA = 'lemma'
@@ -35,10 +44,19 @@ END_CHAR = 'end_char'
 TYPE = 'type'
 SENTIMENT = 'sentiment'
 CONSTITUENCY = 'constituency'
+COREF_CHAINS = 'coref_chains'
 
 # field indices when converting the document to conll
 FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
 FIELD_NUM = len(FIELD_TO_IDX)
+
+class DocJSONEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, CorefMention):
+            return obj.__dict__
+        if isinstance(obj, CorefAttachment):
+            return obj.to_json()
+        return json.JSONEncoder.default(self, obj)
 
 class Document(StanzaObject):
     """ A document class that stores attributes of a document and carries a list of sentences.
@@ -60,6 +78,7 @@ class Document(StanzaObject):
 
         self._process_sentences(sentences, comments, empty_sentences)
         self._ents = []
+        self._coref = []
         if self._text is not None:
             self.build_ents()
 
@@ -140,8 +159,10 @@ class Document(StanzaObject):
         for sent_idx, (tokens, empty_words) in enumerate(zip(sentences, empty_sentences)):
             try:
                 sentence = Sentence(tokens, doc=self, empty_words=empty_words)
+            except IndexError as e:
+                raise IndexError("Could not process document at sentence %d" % sent_idx) from e
             except ValueError as e:
-                raise ValueError("Could not process document at sentence %d: %s" % (sent_idx, str(e))) from e
+                raise ValueError("Could not process document at sentence %d" % sent_idx) from e
             self.sentences.append(sentence)
             begin_idx, end_idx = sentence.tokens[0].start_char, sentence.tokens[-1].end_char
             if all((self.text is not None, begin_idx is not None, end_idx is not None)): sentence.text = self.text[begin_idx: end_idx]
@@ -274,25 +295,51 @@ class Document(StanzaObject):
                             setattr(unit, field, content)
                     cidx += 1
 
-    def set_mwt_expansions(self, expansions, fake_dependencies=False):
+    def set_mwt_expansions(self, expansions,
+                           fake_dependencies=False,
+                           process_manual_expanded=None):
         """ Extend the multi-word tokens annotated by tokenizer. A list of list of expansions
-        will be expected for each multi-word token.
+        will be expected for each multi-word token. Use `process_manual_expanded` to limit
+        processing for tokens marked manually expanded:
+
+        There are two types of MWT expansions: those with `misc`: `MWT=True`, and those with
+        `manual_expansion`: True. The latter of which means that it is an expansion which the
+        user manually specified through a postprocessor; the former means that it is a MWT
+        which the detector picked out, but needs to be automatically expanded.
+
+        process_manual_expanded = None - default; doesn't process manually expanded tokens
+                                = True - process only manually expanded tokens (with `manual_expansion`: True)
+                                = False - process only tokens explicitly tagged as MWT (`misc`: `MWT=True`)
         """
+
         idx_e = 0
         for sentence in self.sentences:
             idx_w = 0
             for token in sentence.tokens:
                 idx_w += 1
-                m = (len(token.id) > 1)
-                n = multi_word_token_misc.match(token.misc) if token.misc is not None else None
-                if not m and not n:
+                is_multi = (len(token.id) > 1)
+                is_mwt = (multi_word_token_misc.match(token.misc) if token.misc is not None else None)
+                is_manual_expansion = token.manual_expansion
+
+                perform_mwt_processing = MWTProcessingType.FLATTEN
+
+                if (process_manual_expanded and is_manual_expansion):
+                    perform_mwt_processing = MWTProcessingType.PROCESS
+                elif (process_manual_expanded==False and is_mwt):
+                    perform_mwt_processing = MWTProcessingType.PROCESS
+                elif (process_manual_expanded==False and is_manual_expansion):
+                    perform_mwt_processing = MWTProcessingType.SKIP
+                elif (process_manual_expanded==None and (is_mwt or is_multi)):
+                    perform_mwt_processing = MWTProcessingType.PROCESS
+
+                if perform_mwt_processing == MWTProcessingType.FLATTEN:
                     for word in token.words:
                         token.id = (idx_w, )
                         # delete dependency information
                         word.deps = None
                         word.head, word.deprel = None, None
                         word.id = idx_w
-                else:
+                elif perform_mwt_processing == MWTProcessingType.PROCESS:
                     expanded = [x for x in expansions[idx_e].split(' ') if len(x) > 0]
                     idx_e += 1
                     idx_w_end = idx_w + len(expanded) - 1
@@ -303,6 +350,12 @@ class Document(StanzaObject):
                     for i, e_word in enumerate(expanded):
                         token.words.append(Word(sentence, {ID: idx_w + i, TEXT: e_word}))
                     idx_w = idx_w_end
+                elif perform_mwt_processing == MWTProcessingType.SKIP:
+                    token.id = tuple(orig_id + idx_e for orig_id in token.id)
+                    for i in token.words:
+                        i.id += idx_e
+                    idx_w = token.id[-1]
+                    token.manual_expansion = None
 
             # reprocess the words using the new tokens
             sentence.words = []
@@ -325,14 +378,16 @@ class Document(StanzaObject):
     def get_mwt_expansions(self, evaluation=False):
         """ Get the multi-word tokens. For training, return a list of
         (multi-word token, extended multi-word token); otherwise, return a list of
-        multi-word token only.
+        multi-word token only. By default doesn't skip already expanded tokens, but
+        `skip_already_expanded` will return only tokens marked as MWT.
         """
         expansions = []
         for sentence in self.sentences:
             for token in sentence.tokens:
-                m = (len(token.id) > 1)
-                n = multi_word_token_misc.match(token.misc) if token.misc is not None else None
-                if m or n:
+                is_multi = (len(token.id) > 1)
+                is_mwt = multi_word_token_misc.match(token.misc) if token.misc is not None else None
+                is_manual_expansion = token.manual_expansion
+                if (is_multi and not is_manual_expansion) or is_mwt:
                     src = token.text
                     dst = ' '.join([word.text for word in token.words])
                     expansions.append([src, dst])
@@ -361,6 +416,34 @@ class Document(StanzaObject):
         """ Returns a list of list of comments for the sentences """
         return [[comment for comment in sentence.comments] for sentence in self.sentences]
 
+    @property
+    def coref(self):
+        """
+        Access the coref lists of the document
+        """
+        return self._coref
+
+    @coref.setter
+    def coref(self, chains):
+        """ Set the document's coref lists """
+        self._coref = chains
+        self._attach_coref_mentions(chains)
+
+    def _attach_coref_mentions(self, chains):
+        for sentence in self.sentences:
+            for word in sentence.words:
+                word.coref_chains = []
+
+        for chain in chains:
+            for mention_idx, mention in enumerate(chain.mentions):
+                sentence = self.sentences[mention.sentence]
+                for word_idx in range(mention.start_word, mention.end_word):
+                    is_start = word_idx == mention.start_word
+                    is_end = word_idx == mention.end_word - 1
+                    is_representative = mention_idx == chain.representative_index
+                    attachment = CorefAttachment(chain, is_start, is_end, is_representative)
+                    sentence.words[word_idx].coref_chains.append(attachment)
+
     def reindex_sentences(self, start_index):
         for sent_id, sentence in zip(range(start_index, start_index + len(self.sentences)), self.sentences):
             sentence.sent_id = str(sent_id)
@@ -371,7 +454,7 @@ class Document(StanzaObject):
         return [sentence.to_dict() for sentence in self.sentences]
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
 
     def __format__(self, spec):
         if spec == 'c':
@@ -729,7 +812,10 @@ class Sentence(StanzaObject):
                 head = Word(self, word_entry)
             else:
                 # id is index in words list + 1
-                head = self.words[word.head - 1]
+                try:
+                    head = self.words[word.head - 1]
+                except IndexError as e:
+                    raise IndexError("Word head {} is not a valid word index for word {}".format(word.head, word.id)) from e
                 if word.head != head.id:
                     raise ValueError("Dependency tree is incorrectly constructed")
             self.dependencies.append((head, word.deprel, word))
@@ -790,7 +876,7 @@ class Sentence(StanzaObject):
         return ret
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
 
     def __format__(self, spec):
         if spec != 'c' and spec != 'C':
@@ -851,6 +937,22 @@ def dict_to_conll_text(token_dict, id_connector="-"):
         elif key == NER:
             # TODO: potentially need to escape =|\ in the NER
             misc.append("{}={}".format(key, token_dict[key]))
+        elif key == COREF_CHAINS:
+            chains = token_dict[key]
+            if len(chains) > 0:
+                misc_chains = []
+                for chain in chains:
+                    if chain.is_start and chain.is_end:
+                        coref_position = "unit-"
+                    elif chain.is_start:
+                        coref_position = "start-"
+                    elif chain.is_end:
+                        coref_position = "end-"
+                    else:
+                        coref_position = "middle-"
+                    is_representative = "repr-" if chain.is_representative else ""
+                    misc_chains.append("%s%sid%d" % (coref_position, is_representative, chain.chain.index))
+                misc.append("{}={}".format(key, ",".join(misc_chains)))
         elif key == MISC:
             # avoid appending a blank misc entry.
             # otherwise the resulting misc field in the conll doc will wind up being blank text
@@ -893,6 +995,7 @@ class Token(StanzaObject):
         self._start_char = token_entry.get(START_CHAR, None)
         self._end_char = token_entry.get(END_CHAR, None)
         self._sent = sentence
+        self._mexp = token_entry.get(MEXP, None)
 
         if self._misc is not None:
             init_from_misc(self)
@@ -906,6 +1009,16 @@ class Token(StanzaObject):
     def id(self, value):
         """ Set the token's id value. """
         self._id = value
+
+    @property
+    def manual_expansion(self):
+        """ Access the whether this token was manually expanded. """
+        return self._mexp
+
+    @manual_expansion.setter
+    def manual_expansion(self, value):
+        """ Set the whether this token was manually expanded. """
+        self._mexp = value
 
     @property
     def text(self):
@@ -980,7 +1093,7 @@ class Token(StanzaObject):
         self._sent = value
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
 
     def __format__(self, spec):
         if spec == 'C':
@@ -993,7 +1106,7 @@ class Token(StanzaObject):
     def to_conll_text(self):
         return "\n".join(dict_to_conll_text(x) for x in self.to_dict())
 
-    def to_dict(self, fields=[ID, TEXT, MISC, START_CHAR, END_CHAR, NER, MULTI_NER]):
+    def to_dict(self, fields=[ID, TEXT, MISC, START_CHAR, END_CHAR, NER, MULTI_NER, MEXP]):
         """ Dumps the token into a list of dictionary for this token with its extended words
         if the token is a multi-word token.
         """
@@ -1049,6 +1162,8 @@ class Word(StanzaObject):
         self._end_char = word_entry.get(END_CHAR, None)
         self._parent = None
         self._sent = sentence
+        self._mexp = word_entry.get(MEXP, None)
+        self._coref_chains = None
 
         if self._misc is not None:
             init_from_misc(self)
@@ -1056,6 +1171,16 @@ class Word(StanzaObject):
         # use the setter, which will go up to the sentence and set the
         # dependencies on that graph
         self.deps = word_entry.get(DEPS, None)
+
+    @property
+    def manual_expansion(self):
+        """ Access the whether this token was manually expanded. """
+        return self._mexp
+
+    @manual_expansion.setter
+    def manual_expansion(self, value):
+        """ Set the whether this token was manually expanded. """
+        self._mexp = value
 
     @property
     def id(self):
@@ -1236,6 +1361,24 @@ class Word(StanzaObject):
         self._upos = value if self._is_null(value) == False else None
 
     @property
+    def coref_chains(self):
+        """
+        coref_chains points to a list of CorefChain namedtuple, which has a list of mentions and a representative mention.
+
+        Useful for disambiguating words such as "him" (in languages where coref is available)
+
+        Theoretically it is possible for multiple corefs to occur at the same word.  For example,
+          "Chris Manning's NLP Group"
+        could have "Chris Manning" and "Chris Manning's NLP Group" as overlapping entities
+        """
+        return self._coref_chains
+
+    @coref_chains.setter
+    def coref_chains(self, chain):
+        """ Set the backref for the coref chains """
+        self._coref_chains = chain
+
+    @property
     def sent(self):
         """ Access the pointer to the sentence that this word belongs to. """
         return self._sent
@@ -1246,7 +1389,7 @@ class Word(StanzaObject):
         self._sent = value
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
 
     def __format__(self, spec):
         if spec == 'C':
@@ -1263,7 +1406,7 @@ class Word(StanzaObject):
         token_dict = self.to_dict()
         return dict_to_conll_text(token_dict, '.')
 
-    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR]):
+    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, MEXP, COREF_CHAINS]):
         """ Dumps the word into a dictionary.
         """
         word_dict = {}
@@ -1414,7 +1557,7 @@ class Span(StanzaObject):
         return span_dict
 
     def __repr__(self):
-        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False)
+        return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
 
     def pretty_print(self):
         """ Print the span in one line. """

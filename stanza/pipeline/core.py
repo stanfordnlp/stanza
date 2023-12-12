@@ -25,10 +25,13 @@ from stanza.pipeline.mwt_processor import MWTProcessor
 from stanza.pipeline.pos_processor import POSProcessor
 from stanza.pipeline.lemma_processor import LemmaProcessor
 from stanza.pipeline.constituency_processor import ConstituencyProcessor
+from stanza.pipeline.coref_processor import CorefProcessor
 from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.ner_processor import NERProcessor
 from stanza.resources.common import DEFAULT_MODEL_DIR, DEFAULT_RESOURCES_URL, DEFAULT_RESOURCES_VERSION, ModelSpecification, add_dependencies, add_mwt, download_models, download_resources_json, flatten_processor_list, load_resources_json, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
+from stanza.resources.default_packages import PACKAGES
+from stanza.utils.conll import CoNLL, CoNLLError
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
@@ -257,7 +260,10 @@ class Pipeline:
             self.load_list = []
         self.load_list = self.update_kwargs(kwargs, self.load_list)
         if len(self.load_list) == 0:
-            raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))
+            if lang not in resources or PACKAGES not in resources[lang]:
+                raise ValueError(f'No processors to load for language {lang}.  Language {lang} is currently unsupported')
+            else:
+                raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))
         load_table = make_table(['Processor', 'Package'], [(row[0], ";".join(model_spec.package for model_spec in row[1])) for row in self.load_list])
         logger.info(f'Loading these models for language: {lang} ({lang_name}):\n{load_table}')
 
@@ -476,13 +482,22 @@ def main():
     parser.add_argument('--lang', type=str, default='en', help='Language of the pipeline to use')
     parser.add_argument('--input_file', type=str, required=True, help='Input file to read')
     parser.add_argument('--processors', type=str, default='tokenize,pos,lemma,depparse', help='Processors to use')
-    args = parser.parse_args()
+    args, extra_args = parser.parse_known_args()
 
-    with open(args.input_file, encoding="utf-8") as fin:
-        text = fin.read()
+    try:
+        doc = CoNLL.conll2doc(args.input_file)
+        extra_args = {
+            "tokenize_pretokenized": True
+        }
+    except CoNLLError:
+        logger.debug("Input file %s does not appear to be a conllu file.  Will read it as a text file")
+        with open(args.input_file, encoding="utf-8") as fin:
+            doc = fin.read()
+        extra_args = {}
 
-    pipe = Pipeline(args.lang, processors=args.processors)
-    doc = pipe(text)
+    pipe = Pipeline(args.lang, processors=args.processors, **extra_args)
+
+    doc = pipe(doc)
 
     print("{:C}".format(doc))
 

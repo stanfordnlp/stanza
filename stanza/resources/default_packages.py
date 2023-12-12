@@ -39,7 +39,7 @@ default_treebanks = {
     "gd":      "arcosg",
     "gl":      "ctg",
     "got":     "proiel",
-    "grc":     "proiel",
+    "grc":     "perseus",
     "gv":      "cadhan",
     "hbo":     "ptnk",
     "he":      "combined",
@@ -198,12 +198,16 @@ specific_default_pretrains = {
     "zh-hant": "conll17",
 }
 
-default_pretrains = dict(default_treebanks)
-for lang in no_pretrain_languages:
-    default_pretrains.pop(lang, None)
-for lang in specific_default_pretrains.keys():
-    default_pretrains[lang] = specific_default_pretrains[lang]
 
+def build_default_pretrains(default_treebanks):
+    default_pretrains = dict(default_treebanks)
+    for lang in no_pretrain_languages:
+        default_pretrains.pop(lang, None)
+    for lang in specific_default_pretrains.keys():
+        default_pretrains[lang] = specific_default_pretrains[lang]
+    return default_pretrains
+
+default_pretrains = build_default_pretrains(default_treebanks)
 
 pos_pretrains = {
     "en": {
@@ -338,6 +342,80 @@ ner_charlms = {
     },
 }
 
+# default ner for languages
+default_ners = {
+    "af": "nchlt",
+    "ar": "aqmar_charlm",
+    "bg": "bsnlp19",
+    "da": "ddt",
+    "de": "germeval2014",
+    "en": "ontonotes-ww-multi_charlm",
+    "es": "conll02",
+    "fa": "arman",
+    "fi": "turku",
+    "fr": "wikiner",
+    "hu": "combined",
+    "hy": "armtdp",
+    "it": "fbk",
+    "ja": "gsd",
+    "kk": "kazNERD",
+    "mr": "l3cube",
+    "my": "ucsy",
+    "nb": "norne",
+    "nl": "conll02",
+    "nn": "norne",
+    "pl": "nkjp",
+    "ru": "wikiner",
+    "sd": "siner",
+    "sv": "suc3shuffle",
+    "th": "lst20",
+    "tr": "starlang",
+    "uk": "languk",
+    "vi": "vlsp",
+    "zh-hans": "ontonotes",
+}
+
+# a few languages have sentiment classifier models
+default_sentiment = {
+    "en": "sstplus",
+    "de": "sb10k",
+    "es": "tass2020",
+    "mr": "l3cube",
+    "vi": "vsfc",
+    "zh-hans": "ren",
+}
+
+# also, a few languages (very few, currently) have constituency parser models
+default_constituency = {
+    "da": "arboretum_charlm",
+    "en": "ptb3-revised_charlm",
+    "es": "combined_charlm",
+    "id": "icon_charlm",
+    "it": "vit_charlm",
+    "ja": "alt_charlm",
+    "pt": "cintil_charlm",
+    #"tr": "starlang_charlm",
+    "vi": "vlsp22_charlm",
+    "zh-hans": "ctb-51_charlm",
+}
+
+optional_constituency = {
+    "tr": "starlang_charlm",
+}
+
+# an alternate tokenizer for languages which aren't trained from a base UD source
+default_tokenizer = {
+    "my": "alt",
+}
+
+# ideally we would have a less expensive model as the base model
+#default_coref = {
+#    "en": "ontonotes_roberta-large_finetuned",
+#}
+
+optional_coref = {
+    "en": "ontonotes_electra-large",
+}
 
 """
 default transformers to use for various languages
@@ -492,6 +570,15 @@ TRANSFORMERS = {
     #  TODO: the rest of the chart
     "fr": "camembert/camembert-large",
 
+    # Ancient Greek has a surprising number of transformers, considering
+    #    Model           POS        Depparse LAS
+    # None              0.8812       0.7684
+    # Microbert M       0.8883       0.7706
+    # Microbert MX      0.8910       0.7755
+    # Microbert MXP     0.8916       0.7742
+    # Pranaydeeps Bert  0.9139       0.7987
+    "grc": "pranaydeeps/Ancient-Greek-BERT",
+
     # a couple possibilities to experiment with for Hebrew
     # dev scores for POS and depparse
     # https://huggingface.co/imvladikon/alephbertgimmel-base-512
@@ -527,6 +614,9 @@ TRANSFORMERS = {
     # no_bert                                    89.95     84.74
     # flax-community/indonesian-roberta-large    89.78 (!)  xxx
     # flax-community/indonesian-roberta-base     90.14      xxx
+    # indobenchmark/indobert-base-p2             90.09
+    # indobenchmark/indobert-base-p1             90.14
+    # indobenchmark/indobert-large-p1            90.19
     # indolem/indobert-base-uncased              90.21     88.60
     # cahya/bert-base-indonesian-1.5G            90.32     88.15
     # cahya/roberta-base-indonesian-1.5G         90.40     87.27
@@ -603,6 +693,19 @@ TRANSFORMERS = {
     # neuralmind/bert-large-portuguese-cased: 0.9343
     "pt": "neuralmind/bert-large-portuguese-cased",
 
+    # Tamil options: quite a few, need to run a bunch of experiments
+    #                               dev pos    dev depparse las
+    # no transformer                 82.82        69.12
+    # ai4bharat/indic-bert           82.98        70.47
+    # lgessler/microbert-tamil-mxp   83.21        69.28
+    # monsoon-nlp/tamillion          83.37        69.28
+    # l3cube-pune/tamil-bert         85.27        72.53
+    # d42kw01f/Tamil-RoBERTa         85.59        70.55
+    # google/muril-base-cased        85.67        72.68
+    # google/muril-large-cased       86.30        72.45
+    "ta": "google/muril-large-cased",
+
+
     # https://huggingface.co/dbmdz/bert-base-turkish-128k-cased
     # helps the Turkish model quite a bit
     "tr": "dbmdz/bert-base-turkish-128k-cased",
@@ -664,6 +767,13 @@ TRANSFORMER_NICKNAMES = {
     "camembert/camembert-large": "camembert-large",
     "dbmdz/electra-base-french-europeana-cased-discriminator": "dbmdz-electra",
 
+    # grc
+    "pranaydeeps/Ancient-Greek-BERT": "grc-pranaydeeps",
+    "lgessler/microbert-ancient-greek-m": "grc-microbert-m",
+    "lgessler/microbert-ancient-greek-mx": "grc-microbert-mx",
+    "lgessler/microbert-ancient-greek-mxp": "grc-microbert-mxp",
+    "altsoph/bert-base-ancientgreek-uncased": "grc-altsoph",
+
     # he
     "imvladikon/alephbertgimmel-base-512" : "alephbertgimmel",
 
@@ -671,7 +781,15 @@ TRANSFORMER_NICKNAMES = {
     "xlm-roberta-base": "roberta",
 
     # id
-    "indolem/indobert-base-uncased": "indobert",
+    "indolem/indobert-base-uncased":         "indobert",
+    "indobenchmark/indobert-large-p1":       "indobenchmark-large-p1",
+    "indobenchmark/indobert-base-p1":        "indobenchmark-base-p1",
+    "indobenchmark/indobert-lite-large-p1":  "indobenchmark-lite-large-p1",
+    "indobenchmark/indobert-lite-base-p1":   "indobenchmark-lite-base-p1",
+    "indobenchmark/indobert-large-p2":       "indobenchmark-large-p2",
+    "indobenchmark/indobert-base-p2":        "indobenchmark-base-p2",
+    "indobenchmark/indobert-lite-large-p2":  "indobenchmark-lite-large-p2",
+    "indobenchmark/indobert-lite-base-p2":   "indobenchmark-lite-base-p2",
 
     # it
     "dbmdz/electra-base-italian-xxl-cased-discriminator": "electra",
@@ -680,13 +798,20 @@ TRANSFORMER_NICKNAMES = {
     "rinna/japanese-roberta-base": "rinna-roberta",
 
     # mr
-    "l3cube-pune/marathi-roberta": "l3cube-roberta",
+    "l3cube-pune/marathi-roberta": "l3cube-marathi-roberta",
 
     # pl
     "allegro/herbert-base-cased": "herbert",
 
     # pt
     "neuralmind/bert-large-portuguese-cased": "bertimbau",
+
+    # ta: tamil
+    "monsoon-nlp/tamillion":         "tamillion",
+    "lgessler/microbert-tamil-m":    "ta-microbert-m",
+    "lgessler/microbert-tamil-mxp":  "ta-microbert-mxp",
+    "l3cube-pune/tamil-bert":        "l3cube-tamil-bert",
+    "d42kw01f/Tamil-RoBERTa":        "ta-d42kw01f-roberta",
 
     # tr
     "dbmdz/bert-base-turkish-128k-cased": "bert",
@@ -698,15 +823,24 @@ TRANSFORMER_NICKNAMES = {
     # zh
     "hfl/chinese-roberta-wwm-ext": "roberta",
     "hfl/chinese-electra-180g-large-discriminator": "electra-large",
+
+    # multi-lingual Indic
+    "ai4bharat/indic-bert": "indic-bert",
+    "google/muril-base-cased": "muril-base-cased",
+    "google/muril-large-cased": "muril-large-cased",
 }
 
 def known_nicknames():
     """
-    Return a set of all the transformer nicknames
+    Return a list of all the transformer nicknames
+
+    We return a list so that we can sort them in decreasing key length
     """
-    nicknames = set(value for key, value in TRANSFORMER_NICKNAMES.items())
+    nicknames = list(value for key, value in TRANSFORMER_NICKNAMES.items())
 
     # previously unspecific transformers get "transformer" as the nickname
-    nicknames.add("transformer")
+    nicknames.append("transformer")
+
+    nicknames = sorted(nicknames, key=lambda x: -len(x))
 
     return nicknames

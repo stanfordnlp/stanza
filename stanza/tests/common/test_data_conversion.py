@@ -416,3 +416,86 @@ def test_read_doc_id():
     assert "{:C}".format(doc) == ESTONIAN_DOC_ID
     assert doc.sentences[0].doc_id == 'this_is_a_doc'
 
+SIMPLE_DEPENDENCY_INDEX_ERROR = """
+# text = Teferi's best friend is Karn
+# sent_id = 0
+# notes = this sentence has a dependency index outside the sentence.  it should throw an IndexError
+1	Teferi	_	_	_	_	0	root	_	start_char=0|end_char=6|ner=S-PERSON
+2	's	_	_	_	_	1	dep	_	start_char=6|end_char=8|ner=O
+3	best	_	_	_	_	2	dep	_	start_char=9|end_char=13|ner=O
+4	friend	_	_	_	_	3	dep	_	start_char=14|end_char=20|ner=O
+5	is	_	_	_	_	4	dep	_	start_char=21|end_char=23|ner=O
+6	Karn	_	_	_	_	8	dep	_	start_char=24|end_char=28|ner=S-PERSON
+""".strip()
+
+def test_read_dependency_errors():
+    with pytest.raises(IndexError):
+        doc = CoNLL.conll2doc(input_str=SIMPLE_DEPENDENCY_INDEX_ERROR)
+
+MULTIPLE_DOC_IDS = """
+# doc_id = doc_1
+# sent_id = weblog-juancole.com_juancole_20051126063000_ENG_20051126_063000-0020
+# text = His mother was also killed in the attack.
+1	His	his	PRON	PRP$	Case=Gen|Gender=Masc|Number=Sing|Person=3|Poss=Yes|PronType=Prs	2	nmod:poss	2:nmod:poss	_
+2	mother	mother	NOUN	NN	Number=Sing	5	nsubj:pass	5:nsubj:pass	_
+3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	5	aux:pass	5:aux:pass	_
+4	also	also	ADV	RB	_	5	advmod	5:advmod	_
+5	killed	kill	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	0:root	_
+6	in	in	ADP	IN	_	8	case	8:case	_
+7	the	the	DET	DT	Definite=Def|PronType=Art	8	det	8:det	_
+8	attack	attack	NOUN	NN	Number=Sing	5	obl	5:obl:in	SpaceAfter=No
+9	.	.	PUNCT	.	_	5	punct	5:punct	_
+
+# doc_id = doc_1
+# sent_id = weblog-juancole.com_juancole_20051126063000_ENG_20051126_063000-0028
+# text = This item is a small one and easily missed.
+1	This	this	DET	DT	Number=Sing|PronType=Dem	2	det	2:det	_
+2	item	item	NOUN	NN	Number=Sing	6	nsubj	6:nsubj|9:nsubj:pass	_
+3	is	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	6	cop	6:cop	_
+4	a	a	DET	DT	Definite=Ind|PronType=Art	6	det	6:det	_
+5	small	small	ADJ	JJ	Degree=Pos	6	amod	6:amod	_
+6	one	one	NOUN	NN	Number=Sing	0	root	0:root	_
+7	and	and	CCONJ	CC	_	9	cc	9:cc	_
+8	easily	easily	ADV	RB	_	9	advmod	9:advmod	_
+9	missed	miss	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	6	conj	6:conj:and	SpaceAfter=No
+10	.	.	PUNCT	.	_	6	punct	6:punct	_
+
+# doc_id = doc_2
+# sent_id = weblog-juancole.com_juancole_20051126063000_ENG_20051126_063000-0029
+# text = But in my view it is highly significant.
+1	But	but	CCONJ	CC	_	8	cc	8:cc	_
+2	in	in	ADP	IN	_	4	case	4:case	_
+3	my	my	PRON	PRP$	Case=Gen|Number=Sing|Person=1|Poss=Yes|PronType=Prs	4	nmod:poss	4:nmod:poss	_
+4	view	view	NOUN	NN	Number=Sing	8	obl	8:obl:in	_
+5	it	it	PRON	PRP	Case=Nom|Gender=Neut|Number=Sing|Person=3|PronType=Prs	8	nsubj	8:nsubj	_
+6	is	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	8	cop	8:cop	_
+7	highly	highly	ADV	RB	_	8	advmod	8:advmod	_
+8	significant	significant	ADJ	JJ	Degree=Pos	0	root	0:root	SpaceAfter=No
+9	.	.	PUNCT	.	_	8	punct	8:punct	_
+
+# sent_id = weblog-juancole.com_juancole_20051126063000_ENG_20051126_063000-0040
+# text = The trial begins again Nov.28.
+1	The	the	DET	DT	Definite=Def|PronType=Art	2	det	2:det	_
+2	trial	trial	NOUN	NN	Number=Sing	3	nsubj	3:nsubj	_
+3	begins	begin	VERB	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	0	root	0:root	_
+4	again	again	ADV	RB	_	3	advmod	3:advmod	_
+5	Nov.	November	PROPN	NNP	Abbr=Yes|Number=Sing	3	obl:tmod	3:obl:tmod	SpaceAfter=No
+6	28	28	NUM	CD	NumForm=Digit|NumType=Card	5	nummod	5:nummod	SpaceAfter=No
+7	.	.	PUNCT	.	_	3	punct	3:punct	_
+
+""".lstrip()
+
+def test_read_multiple_doc_ids():
+    docs = CoNLL.conll2multi_docs(input_str=MULTIPLE_DOC_IDS)
+    assert len(docs) == 2
+    assert len(docs[0].sentences) == 2
+    assert len(docs[1].sentences) == 2
+
+    # remove the first doc_id comment
+    text = "\n".join(MULTIPLE_DOC_IDS.split("\n")[1:])
+    docs = CoNLL.conll2multi_docs(input_str=text)
+    assert len(docs) == 3
+    assert len(docs[0].sentences) == 1
+    assert len(docs[1].sentences) == 1
+    assert len(docs[2].sentences) == 2
+

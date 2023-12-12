@@ -20,7 +20,7 @@ from stanza.resources.common import download, DEFAULT_MODEL_DIR
 from stanza.resources.default_packages import default_charlms, pos_charlms
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_treebank
-from stanza.utils.training.run_pos import pos_batch_size, wordvec_args
+from stanza.utils.training.run_pos import wordvec_args
 from stanza.utils.training.common import add_charlm_args, build_charlm_args, choose_charlm
 
 logger = logging.getLogger('stanza')
@@ -91,7 +91,6 @@ def process_treebank(treebank, model_type, paths, args) -> None:
         base_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
                      "--lang", short_language,
                      "--shorthand", short_name,
-                     "--batch_size", pos_batch_size(short_name),
                      "--mode", "predict"]
         # fmt: on
 

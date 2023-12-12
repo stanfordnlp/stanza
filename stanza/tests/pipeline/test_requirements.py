@@ -49,7 +49,7 @@ def test_missing_requirements():
             {'processors': 'tokenize,mwt,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en', 'lemma_pos': True},
             # 1 expected exception
             [
-                {'processor_type': 'LemmaProcessor', 'processors_list': ['tokenize', 'lemma'],
+                {'processor_type': 'LemmaProcessor', 'processors_list': ['tokenize', 'mwt', 'lemma'],
                  'provided_reqs': set(['tokenize', 'mwt']), 'requires': set(['tokenize', 'pos'])}
             ]
         )

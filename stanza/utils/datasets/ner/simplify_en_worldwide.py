@@ -121,7 +121,7 @@ def copy_and_simplify(base_path, simplify):
     with tempfile.TemporaryDirectory(dir=base_path) as tempdir:
         # Condense Labels
         input_dir = os.path.join(base_path, "en-worldwide-newswire")
-        final_dir = os.path.join(base_path, "4class" if simplify else "8class")
+        final_dir = os.path.join(base_path, "4class" if simplify else "9class")
         os.makedirs(tempdir, exist_ok=True)
         os.makedirs(final_dir, exist_ok=True)
         for root, dirs, files in os.walk(input_dir):
