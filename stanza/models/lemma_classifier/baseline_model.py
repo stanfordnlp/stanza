@@ -1,5 +1,7 @@
 """
 Baseline model for the existing lemmatizer which always predicts "be" and never "have" on the "'s" token.
+
+The BaselineModel class can be updated to any arbitrary token and predicton lemma, not just "be" on the "s" token.
 """
 
 import stanza
