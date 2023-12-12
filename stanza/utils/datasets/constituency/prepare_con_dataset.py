@@ -259,6 +259,7 @@ def process_vlsp22(paths, dataset_name, *args):
     parser.add_argument('--n_splits', default=None, type=int, help='Split the data into this many pieces.  Relevant as there is no set training/dev split, so this allows for N models on N different dev sets')
     parser.add_argument('--test_split', default=default_make_test_split, action='store_true', help='Split 1/10th of the data as a test split as well.  Useful for experimental results.  Less relevant since there is now an official test set')
     parser.add_argument('--no_test_split', dest='test_split', action='store_false', help='Split 1/10th of the data as a test split as well.  Useful for experimental results.  Less relevant since there is now an official test set')
+    parser.add_argument('--seed', default=1234, type=int, help='Random seed to use when splitting')
     args = parser.parse_args(args=list(*args))
 
     if os.path.exists(args.subdir):
@@ -287,7 +288,7 @@ def process_vlsp22(paths, dataset_name, *args):
             for rotation in range(args.n_splits):
                 # there is a shuffle inside the split routine,
                 # so we need to reset the random seed each time
-                random.seed(1234)
+                random.seed(args.seed)
                 rotation_name = "%s-%d-%d" % (dataset_name, rotation, args.n_splits)
                 if args.test_split:
                     rotation_name = rotation_name + "t"
