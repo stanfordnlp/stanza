@@ -523,6 +523,7 @@ def standard_model_file_name(args, model_type):
         seed = str(seed)
 
     model_file = args['save_name'].format(shorthand=args['shorthand'],
+                                          batch_size=args['batch_size'],
                                           embedding=embedding,
                                           finetune=finetune,
                                           seed=seed,
