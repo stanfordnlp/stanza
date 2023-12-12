@@ -31,6 +31,7 @@ from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.ner_processor import NERProcessor
 from stanza.resources.common import DEFAULT_MODEL_DIR, DEFAULT_RESOURCES_URL, DEFAULT_RESOURCES_VERSION, ModelSpecification, add_dependencies, add_mwt, download_models, download_resources_json, flatten_processor_list, load_resources_json, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
 from stanza.resources.default_packages import PACKAGES
+from stanza.utils.conll import CoNLL, CoNLLError
 from stanza.utils.helper_func import make_table
 
 logger = logging.getLogger('stanza')
@@ -481,13 +482,22 @@ def main():
     parser.add_argument('--lang', type=str, default='en', help='Language of the pipeline to use')
     parser.add_argument('--input_file', type=str, required=True, help='Input file to read')
     parser.add_argument('--processors', type=str, default='tokenize,pos,lemma,depparse', help='Processors to use')
-    args = parser.parse_args()
+    args, extra_args = parser.parse_known_args()
 
-    with open(args.input_file, encoding="utf-8") as fin:
-        text = fin.read()
+    try:
+        doc = CoNLL.conll2doc(args.input_file)
+        extra_args = {
+            "tokenize_pretokenized": True
+        }
+    except CoNLLError:
+        logger.debug("Input file %s does not appear to be a conllu file.  Will read it as a text file")
+        with open(args.input_file, encoding="utf-8") as fin:
+            doc = fin.read()
+        extra_args = {}
 
-    pipe = Pipeline(args.lang, processors=args.processors)
-    doc = pipe(text)
+    pipe = Pipeline(args.lang, processors=args.processors, **extra_args)
+
+    doc = pipe(doc)
 
     print("{:C}".format(doc))
 

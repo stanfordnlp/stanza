@@ -9,6 +9,9 @@ from stanza.models.common.doc import Document
 from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, NER, START_CHAR, END_CHAR
 from stanza.models.common.doc import FIELD_TO_IDX, FIELD_NUM
 
+class CoNLLError(ValueError):
+    pass
+
 class CoNLL:
 
     @staticmethod
@@ -39,7 +42,7 @@ class CoNLL:
                 if ignore_gapping and '.' in array[0]:
                     continue
                 if len(array) != FIELD_NUM:
-                    raise ValueError(f"Cannot parse CoNLL line {line_idx+1}: expecting {FIELD_NUM} fields, {len(array)} found at line {line_idx}\n  {array}")
+                    raise CoNLLError(f"Cannot parse CoNLL line {line_idx+1}: expecting {FIELD_NUM} fields, {len(array)} found at line {line_idx}\n  {array}")
                 sent += [array]
         if len(sent) > 0:
             doc.append(sent)
@@ -61,7 +64,7 @@ class CoNLL:
                 try:
                     token_dict = CoNLL.convert_conll_token(token_conll)
                 except ValueError as e:
-                    raise ValueError("Could not process sentence %d token %d: %s" % (sent_idx, token_idx, str(e))) from e
+                    raise CoNLLError("Could not process sentence %d token %d: %s" % (sent_idx, token_idx, str(e))) from e
                 if '.' in token_dict[ID]:
                     token_dict[ID] = tuple(int(x) for x in token_dict[ID].split(".", maxsplit=1))
                     sent_empty.append(token_dict)
