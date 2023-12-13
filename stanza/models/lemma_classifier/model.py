@@ -26,7 +26,7 @@ class LemmaClassifier(nn.Module):
         # Embedding layer with GloVe embeddings
         self.embedding = nn.Embedding.from_pretrained(embeddings, padding_idx=padding_idx)
 
-        # Optionally, include charlm embeddings   TODO: review from John
+        # Optionally, include charlm embeddings  
         self.use_charlm = kwargs.get("charlm")
 
         if self.use_charlm:
@@ -59,8 +59,6 @@ class LemmaClassifier(nn.Module):
         Returns:
             torch.tensor: Output logits of the neural network
         """
-        inputs = []
-
         # Token embeddings
         glove = get_glove(self.embedding_dim)
         # UNKNOWN_TOKEN will be our <UNK> token
@@ -74,15 +72,17 @@ class LemmaClassifier(nn.Module):
         for unk_token_idx in unk_token_indices:
             embedded[unk_token_idx] = glove[UNKNOWN_TOKEN]
         
-        inputs += embedded
 
         # # Charlm   TODO: How to get chars, charoffsets, charlens, and char_orig_idx. Also, do we have to pack? Also, can the append be the same as it is now?
-        # if self.use_charlm:
-        #     char_reps_forward = self.charmodel_forward.get_representation(chars[0], charoffsets[0], charlens, char_orig_idx)
-        #     char_reps_backward = self.charmodel_backward.get_representation(chars[1], charoffsets[1], charlens, char_orig_idx)
-        #     inputs += [char_reps_forward, char_reps_backward]
 
-        lstm_out, (hidden, _) = self.lstm(inputs)
+        # TODO: fix this!!
+        if self.use_charlm:
+            char_reps_forward = self.charmodel_forward.build_char_representation(# sentence)
+            char_reps_backward = self.charmodel_backward.build_char_representation(# sentence)
+        
+        embeddings = torch.cat((embedded, char_reps_forward, char_reps_backward), 1)
+        print(embeddings, embeddings.shape)
+        lstm_out, (hidden, _) = self.lstm(embeddings)
 
         # Extract the hidden state at the index of the token
         lstm_out = lstm_out[pos_index]
