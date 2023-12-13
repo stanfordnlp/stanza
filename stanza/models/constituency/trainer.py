@@ -462,8 +462,9 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     """
     train_constituents = parse_tree.Tree.get_unique_constituent_labels(train_trees)
     logger.info("Unique constituents in training set: %s", train_constituents)
-    check_constituents(train_constituents, dev_trees, "dev")
-    check_constituents(train_constituents, silver_trees, "silver")
+    if args['check_valid_states']:
+        check_constituents(train_constituents, dev_trees, "dev")
+        check_constituents(train_constituents, silver_trees, "silver")
     constituent_counts = parse_tree.Tree.get_constituent_counts(train_trees)
     logger.info("Constituent node counts: %s", constituent_counts)
 
@@ -489,9 +490,10 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     logger.info("Total unique transitions in train set: %d", len(train_transitions))
     logger.info("Unique transitions in training set: %s", train_transitions)
     expanded_train_transitions = set(train_transitions + [x for trans in train_transitions for x in trans.components()])
-    parse_transitions.check_transitions(expanded_train_transitions, dev_transitions, "dev")
-    # theoretically could just train based on the items in the silver dataset
-    parse_transitions.check_transitions(expanded_train_transitions, silver_transitions, "silver")
+    if args['check_valid_states']:
+        parse_transitions.check_transitions(expanded_train_transitions, dev_transitions, "dev")
+        # theoretically could just train based on the items in the silver dataset
+        parse_transitions.check_transitions(expanded_train_transitions, silver_transitions, "silver")
 
     verify_transitions(train_trees, train_sequences, args['transition_scheme'], unary_limit, args['reversed'], "train")
     verify_transitions(dev_trees, dev_sequences, args['transition_scheme'], unary_limit, args['reversed'], "dev")

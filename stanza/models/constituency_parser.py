@@ -418,6 +418,8 @@ def build_argparse():
     parser.add_argument('--save_each_name', type=str, default=None, help="Save each model in sequence to this pattern.  Mostly for testing")
 
     parser.add_argument('--seed', type=int, default=1234)
+
+    parser.add_argument('--no_check_valid_states', default=True, action='store_false', dest='check_valid_states', help="Don't check the constituents or transitions in the dev set when starting a new parser.  Warning: the parser will never guess unknown constituents")
     utils.add_device_args(parser)
 
     # Numbers are on a VLSP dataset, before adding attn or other improvements
