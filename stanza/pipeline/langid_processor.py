@@ -21,10 +21,10 @@ class LangIDProcessor(UDProcessor):
 
     # set of processor requirements this processor fulfills
     PROVIDES_DEFAULT = set([LANGID])
-    
+
     # set of processor requirements for this processor
     REQUIRES_DEFAULT = set([])
-    
+
     # default max sequence length
     MAX_SEQ_LENGTH_DEFAULT = 1000
 
@@ -57,12 +57,12 @@ class LangIDProcessor(UDProcessor):
         return prediction_labels
 
     # regexes for cleaning text
-    http_regex = re.compile("https?:\/\/t\.co/[a-zA-Z0-9]+")
+    http_regex = re.compile(r"https?:\/\/t\.co/[a-zA-Z0-9]+")
     handle_regex = re.compile("@[a-zA-Z0-9_]+")
     hashtag_regex = re.compile("#[a-zA-Z]+")
     punctuation_regex = re.compile("[!.]+")
     all_regexes = [http_regex, handle_regex, hashtag_regex, punctuation_regex]
-    
+
     @staticmethod
     def clean_text(text):
         """
@@ -114,7 +114,7 @@ class LangIDProcessor(UDProcessor):
         """
         Handle single str or Document
         """
-        
+
         wrapped_doc = [doc]
         return self._process_list(wrapped_doc)[0]
 
