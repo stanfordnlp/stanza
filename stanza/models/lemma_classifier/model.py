@@ -2,23 +2,44 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import utils
+import os
+from constants import *
+from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from torchtext.vocab import GloVe
 from torchtext.data import get_tokenizer
-from constants import *
+
 
 
 # Define a custom model for your binary classifier
 class LemmaClassifier(nn.Module):
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, embeddings, padding_idx = 0):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, embeddings, padding_idx = 0, **kwargs):
         super(LemmaClassifier, self).__init__()
+
+        self.unsaved_modules = []
+
+        def add_unsaved_module(name, module):
+            self.unsaved_modules += [name]
+            setattr(self, name, module)
 
         self.embedding_dim = embedding_dim
 
         # Embedding layer with GloVe embeddings
         self.embedding = nn.Embedding.from_pretrained(embeddings, padding_idx=padding_idx)
+
+        # Optionally, include charlm embeddings   TODO: review from John
+        self.use_charlm = kwargs.get("charlm")
+
+        if self.use_charlm:
+            if kwargs.get("charlm_forward_file") is None or not os.path.exists(kwargs.get("charlm_forward_file")):
+                raise FileNotFoundError(f'Could not find forward character model: {kwargs.get("charlm_forward_file", "FILE_NOT_PROVIDED")}')
+            if kwargs.get("charlm_backward_file") is None or not os.path.exists(kwargs.get("charlm_backward_file")):
+                raise FileNotFoundError(f'Could not find backward character model: {kwargs.get("charlm_backward_file", "FILE_NOT_PROVIDED")}')
+            add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(kwargs.get("charlm_forward_file"), finetune=False))
+            add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(kwargs.get("charlm_backward_file"), finetune=False))
+            self.embedding_dim += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
         
         # LSTM layer
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim, batch_first=True, bidirectional=True)
+        self.lstm = nn.LSTM(self.embedding_dim, hidden_dim, batch_first=True, bidirectional=True)
 
         # MLP layers
         self.mlp = nn.Sequential(
@@ -38,6 +59,8 @@ class LemmaClassifier(nn.Module):
         Returns:
             torch.tensor: Output logits of the neural network
         """
+        inputs = []
+
         # Token embeddings
         glove = get_glove(self.embedding_dim)
         # UNKNOWN_TOKEN will be our <UNK> token
@@ -50,8 +73,16 @@ class LemmaClassifier(nn.Module):
         embedded = self.embedding(masked_indices)
         for unk_token_idx in unk_token_indices:
             embedded[unk_token_idx] = glove[UNKNOWN_TOKEN]
+        
+        inputs += embedded
 
-        lstm_out, (hidden, _) = self.lstm(embedded)
+        # # Charlm   TODO: How to get chars, charoffsets, charlens, and char_orig_idx. Also, do we have to pack? Also, can the append be the same as it is now?
+        # if self.use_charlm:
+        #     char_reps_forward = self.charmodel_forward.get_representation(chars[0], charoffsets[0], charlens, char_orig_idx)
+        #     char_reps_backward = self.charmodel_backward.get_representation(chars[1], charoffsets[1], charlens, char_orig_idx)
+        #     inputs += [char_reps_forward, char_reps_backward]
+
+        lstm_out, (hidden, _) = self.lstm(inputs)
 
         # Extract the hidden state at the index of the token
         lstm_out = lstm_out[pos_index]
