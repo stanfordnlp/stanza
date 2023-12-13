@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import utils
+import os 
 from os import path
 from os import remove
 from torchtext.vocab import GloVe
@@ -15,13 +16,12 @@ from typing import List, Tuple, Any
 from constants import get_glove, UNKNOWN_TOKEN_IDX
 
 
-
 class LemmaClassifierTrainer():
     """
     Class to assist with training a LemmaClassifier
     """
 
-    def __init__(self, vocab_size: int, embeddings: str, embedding_dim: int, hidden_dim: int, output_dim: int):
+    def __init__(self, vocab_size: int, embeddings: str, embedding_dim: int, hidden_dim: int, output_dim: int, use_charlm: bool, **kwargs):
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
@@ -32,11 +32,12 @@ class LemmaClassifierTrainer():
             self.embeddings = get_glove(embedding_dim)
             self.vocab_size = len(self.embeddings.itos)
 
-        self.model = LemmaClassifier(vocab_size, embedding_dim, hidden_dim, output_dim, self.embeddings.vectors)
-        self.criterion = nn.CrossEntropyLoss()  # TODO maybe make this custom
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)  # TODO maybe also make this custom
+        self.model = LemmaClassifier(vocab_size, embedding_dim, hidden_dim, output_dim, self.embeddings.vectors, charlm=use_charlm,
+                                     charlm_forward_file=kwargs.get("forward_charlm_file"), charlm_backward_file=kwargs.get("backward_charlm_file"))
+        self.criterion = nn.CrossEntropyLoss()  
+        self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)  
 
-    def train(self, texts_batch: List[List[str]], positions_batch: List[int], labels_batch: List[int], num_epochs: int, save_name: str) -> None:
+    def train(self, texts_batch: List[List[str]], positions_batch: List[int], labels_batch: List[int], num_epochs: int, save_name: str, **kwargs) -> None:
 
         """
         Trains a model on batches of texts, position indices of the target token, and labels (lemma annotation) for the target token.
@@ -49,11 +50,15 @@ class LemmaClassifierTrainer():
             save_name (str): Path to file where trained model should be saved. 
         """
 
+        if kwargs.get("train_path"):
+            texts_batch, positions_batch, labels_batch = utils.load_dataset(kwargs.get("train_path"), label_decoder=kwargs.get("label_decoder", {}))
+            print(f"Loaded dataset successfully from {kwargs.get('train_path')}")
+            print(f"Label decoder: {kwargs.get('label_decoder')}")
+
         assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
         if path.exists(save_name):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
-        
-
+    
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
             for texts, position, label in zip(texts_batch, positions_batch, labels_batch):
@@ -61,11 +66,11 @@ class LemmaClassifierTrainer():
                     raise ValueError(f"Found position {position} in text: {texts}, which is not possible.")
                 
                 # Any token not in self.embeddings.stoi will be given the UNKNOWN_TOKEN_IDX, which is resolved to a true embedding in LemmaClassifier's forward() func
-                texts = torch.tensor([self.embeddings.stoi[word.lower()] if word.lower() in self.embeddings.stoi else UNKNOWN_TOKEN_IDX for word in texts])  
+                token_ids = torch.tensor([self.embeddings.stoi[word.lower()] if word.lower() in self.embeddings.stoi else UNKNOWN_TOKEN_IDX for word in texts])  
                 
                 self.optimizer.zero_grad()
 
-                output = self.model(texts, position)
+                output = self.model(token_ids, position, texts)
                 target = torch.tensor(label, dtype=torch.long)
                 loss = self.criterion(output, target)
 
@@ -77,14 +82,6 @@ class LemmaClassifierTrainer():
 
         torch.save(self.model.state_dict(), save_name)
         print(f"Saved model state dict to {save_name}")
-        
-    # TODO: consider just migrating this into the prev function
-    def train_from_file(self, train_path, num_epochs, label_decoder, save_name) -> None:
-        sentence_batches, idx_batches, label_batches = utils.load_dataset(train_path, label_decoder=label_decoder)
-        print("loaded dataset successfully")
-        self.train(sentence_batches, idx_batches, label_batches, num_epochs, save_name)
-
-
 
 
 if __name__ == "__main__":
@@ -103,7 +100,10 @@ if __name__ == "__main__":
                                      embeddings="glove",
                                      embedding_dim=embedding_dim,
                                      hidden_dim=hidden_dim,
-                                     output_dim=output_dim)
+                                     output_dim=output_dim,
+                                     use_charlm=True,
+                                     forward_charlm_file=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"),
+                                     backward_charlm_file=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"))
     
     tokenized_sentence = ['the', 'cat', "'s", 'tail', 'is', 'long']
     text_batches = [tokenized_sentence]
@@ -117,4 +117,4 @@ if __name__ == "__main__":
     trainer.train(text_batches, index_batches, target_batches, 10, path.join(path.dirname(__file__), demo_model_path))
 
     train_file = path.join(path.dirname(__file__), "test_output.txt")
-    trainer.train_from_file(train_file, 10, {"be": 0, "have": 1}, "big_demo_model.pt")
+    trainer.train([], [], [], 10, "big_demo_model.pt", train_path=train_file, label_decoder={"be": 0, "have": 1})

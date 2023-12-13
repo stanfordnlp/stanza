@@ -7,10 +7,9 @@ from constants import *
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from torchtext.vocab import GloVe
 from torchtext.data import get_tokenizer
+from typing import List, Tuple
 
 
-
-# Define a custom model for your binary classifier
 class LemmaClassifier(nn.Module):
     def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, embeddings, padding_idx = 0, **kwargs):
         super(LemmaClassifier, self).__init__()
@@ -21,6 +20,7 @@ class LemmaClassifier(nn.Module):
             self.unsaved_modules += [name]
             setattr(self, name, module)
 
+        self.word_emb_dim = embedding_dim
         self.embedding_dim = embedding_dim
 
         # Embedding layer with GloVe embeddings
@@ -48,24 +48,24 @@ class LemmaClassifier(nn.Module):
             nn.Linear(64, output_dim)
         )
 
-    def forward(self, text: torch.tensor, pos_index: int):
+    def forward(self, token_ids: torch.tensor, pos_index: int, words: List[str]):
         """
         Computes the forward pass of the neural net
 
         Args:
-            text (torch.tensor): Tensor of the tokenized indices of the words in the input sentence, with unknown words having their index set to UNKNOWN_TOKEN_IDX
+            token_ids (torch.tensor): Tensor of the tokenized indices of the words in the input sentence, with unknown words having their index set to UNKNOWN_TOKEN_IDX
             pos_index (int): The position index of the target token for lemmatization classification in the sentence.
 
         Returns:
             torch.tensor: Output logits of the neural network
         """
         # Token embeddings
-        glove = get_glove(self.embedding_dim)
+        glove = get_glove(self.word_emb_dim)
         # UNKNOWN_TOKEN will be our <UNK> token
         # UNKNOWN_TOKEN_IDX will be the custom index for the <UNK> token
-        unk_token_indices = utils.extract_unknown_token_indices(text, UNKNOWN_TOKEN_IDX)
-        unknown_mask = (text == UNKNOWN_TOKEN_IDX)
-        masked_indices = text.masked_fill(unknown_mask, 0)  # Replace UNKNOWN_TOKEN_IDX with 0 for embedding lookup
+        unk_token_indices = utils.extract_unknown_token_indices(token_ids, UNKNOWN_TOKEN_IDX)
+        unknown_mask = (token_ids == UNKNOWN_TOKEN_IDX)
+        masked_indices = token_ids.masked_fill(unknown_mask, 0)  # Replace UNKNOWN_TOKEN_IDX with 0 for embedding lookup
 
         # replace 0 token vectors with the true unknown 
         embedded = self.embedding(masked_indices)
@@ -73,16 +73,13 @@ class LemmaClassifier(nn.Module):
             embedded[unk_token_idx] = glove[UNKNOWN_TOKEN]
         
 
-        # # Charlm   TODO: How to get chars, charoffsets, charlens, and char_orig_idx. Also, do we have to pack? Also, can the append be the same as it is now?
-
-        # TODO: fix this!!
+        # Charlm   TODO: How to get chars, charoffsets, charlens, and char_orig_idx. Also, do we have to pack? Also, can the append be the same as it is now?
         if self.use_charlm:
-            char_reps_forward = self.charmodel_forward.build_char_representation(# sentence)
-            char_reps_backward = self.charmodel_backward.build_char_representation(# sentence)
+            char_reps_forward = self.charmodel_forward.build_char_representation([words])
+            char_reps_backward = self.charmodel_backward.build_char_representation([words])
         
-        embeddings = torch.cat((embedded, char_reps_forward, char_reps_backward), 1)
-        print(embeddings, embeddings.shape)
-        lstm_out, (hidden, _) = self.lstm(embeddings)
+            embedded = torch.cat((embedded, char_reps_forward[0], char_reps_backward[0]), 1)
+        lstm_out, (hidden, _) = self.lstm(embedded)
 
         # Extract the hidden state at the index of the token
         lstm_out = lstm_out[pos_index]
