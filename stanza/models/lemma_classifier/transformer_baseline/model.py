@@ -2,64 +2,52 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import os
+import sys
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from torchtext.vocab import GloVe
 from torchtext.data import get_tokenizer
 from transformers import BertTokenizer, BertModel
+from typing import List, Tuple, Any 
 
 
 class LemmaClassifierWithTransformer(nn.Module):
 
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, embeddings, padding_idx = 0, **kwargs):
+    def __init__(self, output_dim):
         super(LemmaClassifierWithTransformer, self).__init__()
 
         # Get the embedding through transformer 
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        self.bert = BertModel.from_pretrained('bert-base-uncased')
 
-        # define an MLP layerr
+        config = self.bert.config 
+        embedding_size = config.hidden_size
+
+        # define an MLP layer
+        self.mlp = nn.Sequential(
+            nn.Linear(embedding_size, 64),
+            nn.ReLU(),
+            nn.Linear(64, output_dim)
+        )
     
-    def forward(self):
+    def forward(self, text: List[str], pos_index: int):
 
         # Get the transformer embeddings 
+        input_ids = self.tokenizer.convert_tokens_to_ids(text)
+
+        # Convert tokens to IDs and put them into a tensor
+        input_ids_tensor = torch.tensor([input_ids])
+
+        # Forward pass through BERT
+        with torch.no_grad():
+            outputs = self.bert(input_ids_tensor)
+        
+        # Get embeddings for all tokens
+        last_hidden_state = outputs.last_hidden_state
+        token_embeddings = last_hidden_state[0]
+
+        # Get target embedding
+        target_pos_embedding = token_embeddings[pos_index]
 
         # pass to the MLP
-        pass 
-
-
-# Load pre-trained BERT model and tokenizer
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-model = BertModel.from_pretrained('bert-base-uncased')
-
-# Sample sentence
-sentence = "Contextual embeddings with BERT."
-
-# Tokenize and prepare input
-tokens = tokenizer.encode_plus(sentence, add_special_tokens=True, return_tensors='pt')
-input_ids = tokens['input_ids']
-attention_mask = tokens['attention_mask']
-
-# Forward pass through BERT model
-with torch.no_grad():
-    outputs = model(input_ids, attention_mask=attention_mask)
-
-# Extract embeddings from a specific layer (e.g., last layer)
-last_hidden_states = outputs.last_hidden_state
-
-# Assuming you want the embeddings for the entire sequence
-word_embeddings = last_hidden_states[0]
-print(word_embeddings, word_embeddings.shape)
-# Tokenize the word "Contextual"
-tokenized_word = tokenizer.tokenize("Contextual")
-
-# Find the position of the tokenized word in the list of tokens
-word_index = tokens['input_ids'][0].tolist().index(tokenizer.convert_tokens_to_ids(tokenized_word[0]))
-
-# Extract the corresponding embedding from word_embeddings
-contextual_embedding_for_word = last_hidden_states[0, word_index]
-print(contextual_embedding_for_word, contextual_embedding_for_word.shape)
-
-# Now, contextual_embedding_for_word contains the representation for the word "Contextual"
-
-
-
-
-
+        output = self.mlp(target_pos_embedding)
+        return output
