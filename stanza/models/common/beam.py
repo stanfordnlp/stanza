@@ -3,7 +3,7 @@ import torch
 
 import stanza.models.common.seq2seq_constant as constant
 
-"""
+r"""
  Adapted and modified from the OpenNMT project.
 
  Class for managing the internals of the beam search process.
@@ -135,7 +135,7 @@ class Beam(object):
             if len(self.copy) > 0:
                 cpy.append(self.copy[j][k])
             k = self.prevKs[j][k]
-         
+
         hyp = hyp[::-1]
         cpy = cpy[::-1]
         # postprocess: if cpy index is not -1, use cpy index instead of hyp word
