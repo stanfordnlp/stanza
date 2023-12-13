@@ -164,24 +164,7 @@ def harmonic_mean(a, weights=None):
             return sum(weights) / sum(w/x for x, w in zip(a, weights))
 
 # torch utils
-def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, charlm_learning_rate=0.0):
-    base_parameters = [p for n, p in model.named_parameters()
-                       if p.requires_grad and not n.startswith("bert_model.")
-                       and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
-    parameters = [{'param_group_name': 'base', 'params': base_parameters}]
-
-    charlm_parameters = [p for n, p in model.named_parameters()
-                         if p.requires_grad and (n.startswith("charmodel_forward.") or n.startswith("charmodel_backward."))]
-    if len(charlm_parameters) > 0 and charlm_learning_rate > 0:
-        parameters.append({'param_group_name': 'charlm', 'params': charlm_parameters, 'lr': lr * charlm_learning_rate})
-
-    bert_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
-    if len(bert_parameters) > 0 and bert_learning_rate > 0:
-        parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': lr * bert_learning_rate})
-
-    extra_args = {}
-    if weight_decay is not None:
-        extra_args["weight_decay"] = weight_decay
+def dispatch_optimizer(name, parameters, lr=None, betas=None, eps=None, momentum=None, **extra_args):
     if name == 'amsgrad':
         return torch.optim.Adam(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
     elif name == 'amsgradw':
@@ -206,6 +189,61 @@ def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, wei
         return madgrad.MADGRAD(parameters, lr=lr, momentum=momentum, **extra_args)
     else:
         raise ValueError("Unsupported optimizer: {}".format(name))
+
+
+def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, charlm_learning_rate=0.0, is_peft=False):
+    base_parameters = [p for n, p in model.named_parameters()
+                       if p.requires_grad and not n.startswith("bert_model.")
+                       and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
+    parameters = [{'param_group_name': 'base', 'params': base_parameters}]
+
+    charlm_parameters = [p for n, p in model.named_parameters()
+                         if p.requires_grad and (n.startswith("charmodel_forward.") or n.startswith("charmodel_backward."))]
+    if len(charlm_parameters) > 0 and charlm_learning_rate > 0:
+        parameters.append({'param_group_name': 'charlm', 'params': charlm_parameters, 'lr': lr * charlm_learning_rate})
+
+    if not is_peft:
+        bert_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
+        if len(bert_parameters) > 0 and bert_learning_rate > 0:
+            parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': lr * bert_learning_rate})
+    else:
+        # because PEFT handles what to hand to an optimizer, we don't want to touch that
+        trainable_params = [v for n, v in model.bert_model.parameters() if v.requires_grad]
+        parameters.append({'param_group_name': 'bert', 'params': trainable_params, 'lr': lr * bert_learning_rate})
+
+    extra_args = {}
+    if weight_decay is not None:
+        extra_args["weight_decay"] = weight_decay
+
+    return dispatch_optimizer(name, parameters, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
+
+def get_split_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, charlm_learning_rate=0.0, is_peft=False):
+    """Same as `get_optimizer`, but splits the optimizer for Bert into a seperate optimizer"""
+    base_parameters = [p for n, p in model.named_parameters()
+                       if p.requires_grad and not n.startswith("bert_model.")
+                       and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
+    parameters = [{'param_group_name': 'base', 'params': base_parameters}]
+
+    charlm_parameters = [p for n, p in model.named_parameters()
+                         if p.requires_grad and (n.startswith("charmodel_forward.") or n.startswith("charmodel_backward."))]
+    if len(charlm_parameters) > 0 and charlm_learning_rate > 0:
+        parameters.append({'param_group_name': 'charlm', 'params': charlm_parameters, 'lr': lr * charlm_learning_rate})
+
+    if not is_peft:
+        bert_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
+        bert_parameters = [{'param_group_name': 'bert', 'params': bert_parameters, 'lr': lr * bert_learning_rate}]
+    else:
+        # because PEFT handles what to hand to an optimizer, we don't want to touch that
+        trainable_params = [v for n, v in model.bert_model.named_parameters() if v.requires_grad]
+        bert_parameters = [{'param_group_name': 'bert', 'params': trainable_params, 'lr': lr * bert_learning_rate}]
+
+    extra_args = {}
+    if weight_decay is not None:
+        extra_args["weight_decay"] = weight_decay
+
+    return {"general_optimizer": dispatch_optimizer(name, parameters, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args),
+            "bert_optimizer": dispatch_optimizer(name, bert_parameters, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)}
+
 
 def change_lr(optimizer, new_lr):
     for param_group in optimizer.param_groups:

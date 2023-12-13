@@ -37,7 +37,17 @@ class Trainer(BaseTrainer):
             self.vocab = vocab
             self.model = Tagger(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, share_hid=args['share_hid'], foundation_cache=foundation_cache)
         self.model = self.model.to(device)
-        self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6, weight_decay=self.args.get('initial_weight_decay', None), bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
+        self.optimizers = utils.get_split_optimizer(self.args['optim'], self.model, self.args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6, weight_decay=self.args.get('initial_weight_decay', None), bert_learning_rate=self.args.get('bert_learning_rate', 0.0), is_peft=self.args.get("peft", False))
+
+        self.schedulers = {}
+
+        if self.args["bert_finetune"]:
+            import transformers
+            warmup_scheduler = transformers.get_linear_schedule_with_warmup(
+                self.optimizers["bert_optimizer"],
+                # todo late starting?
+                0, self.args["max_steps"])
+            self.schedulers["bert_scheduler"] = warmup_scheduler
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
@@ -48,7 +58,8 @@ class Trainer(BaseTrainer):
             self.model.eval()
         else:
             self.model.train()
-            self.optimizer.zero_grad()
+            for optimizer in self.optimizers.values():
+                optimizer.zero_grad()
         loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text)
         if loss == 0.0:
             return loss
@@ -59,7 +70,11 @@ class Trainer(BaseTrainer):
 
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
-        self.optimizer.step()
+
+        for optimizer in self.optimizers.values():
+            optimizer.step()
+        for scheduler in self.schedulers.values():
+            scheduler.step()
         return loss_val
 
     def predict(self, batch, unsort=True):
