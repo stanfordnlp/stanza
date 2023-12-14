@@ -145,9 +145,15 @@ class Tagger(nn.Module):
 
     def log_norms(self):
         lines = ["NORMS FOR MODEL PARAMTERS"]
+        pieces = []
         for name, param in self.named_parameters():
-            if param.requires_grad and name.split(".")[0] not in ('charmodel_forward', 'charmodel_backward'):
-                lines.append("  %s %.6g" % (name, torch.norm(param).item()))
+            if param.requires_grad:
+                pieces.append((name, "%.6g" % torch.norm(param).item(), "%d" % param.numel()))
+        name_len = max(len(x[0]) for x in pieces)
+        norm_len = max(len(x[1]) for x in pieces)
+        line_format = "  %-" + str(name_len) + "s   %" + str(norm_len) + "s     %s"
+        for line in pieces:
+            lines.append(line_format % line)
         logger.info("\n".join(lines))
 
     def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text):
