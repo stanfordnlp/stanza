@@ -1,5 +1,6 @@
 import stanza
 import torch
+import os
 from typing import List, Tuple, Any, Mapping
 
 def load_doc_from_conll_file(path: str):
@@ -24,6 +25,11 @@ def load_dataset(data_path: str, label_decoder: Mapping[str, int]) -> Tuple[List
         3. List[int]: A list of labels for the target token's lemma
 
     """
+
+    if data_path is None or not os.path.exists(data_path):
+        raise FileNotFoundError(f"Data file {data_path} could not be found.")
+    if not label_decoder:
+        raise ValueError(f"Label decoder {label_decoder} is invalid.")
 
     sentences, indices, labels = [], [], []
 

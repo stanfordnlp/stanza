@@ -7,14 +7,15 @@ import torch.nn as nn
 import torch.optim as optim
 import utils
 import os 
+import logging
 from os import path
 from os import remove
-from torchtext.vocab import GloVe
-from torchtext.data import get_tokenizer
 from model import LemmaClassifier
 from typing import List, Tuple, Any
 from constants import get_glove, UNKNOWN_TOKEN_IDX
 
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class LemmaClassifierTrainer():
     """
@@ -22,20 +23,49 @@ class LemmaClassifierTrainer():
     """
 
     def __init__(self, vocab_size: int, embeddings: str, embedding_dim: int, hidden_dim: int, output_dim: int, use_charlm: bool, **kwargs):
+        """
+        Initializes the LemmaClassifierTrainer class.
+        
+        Args:
+            vocab_size (int): Size of the vocab being used (if custom vocab)
+            embeddings (str): What word embeddings to use (currently only supports GloVe) TODO add more!
+            embedding_dim (int): Size of embedding dimension to use on the aforementioned word embeddings
+            hidden_dim (int): Size of hidden vectors in LSTM layers
+            output_dim (int): Size of output vector from MLP layer
+            use_charlm (bool): Whether to use charlm embeddings as well
+
+        Kwargs:
+            forward_charlm_file (str): Path to the forward pass embeddings for the charlm 
+            backward_charlm_file (str): Path to the backward pass embeddings for the charlm
+            lr (float): Learning rate, defaults to 0.001.
+
+        Raises:
+            FileNotFoundError: If the forward charlm file is not present
+            FileNotFoundError: If the backward charlm file is not present
+        """
         self.vocab_size = vocab_size
         self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
 
+        # Load word embeddings
         self.embeddings = None
         if embeddings == "glove":
             self.embeddings = get_glove(embedding_dim)
             self.vocab_size = len(self.embeddings.itos)
 
+        # Load CharLM embeddings
+        forward_charlm_file = kwargs.get("forward_charlm_file")
+        backward_charlm_file = kwargs.get("backward_charlm_file")
+        if use_charlm and forward_charlm_file is not None and not os.path.exists(forward_charlm_file):
+            raise FileNotFoundError(f"Could not find foward charlm file: {forward_charlm_file}")
+        if use_charlm and backward_charlm_file is not None and not os.path.exists(backward_charlm_file):
+            raise FileNotFoundError(f"Could not find foward charlm file: {backward_charlm_file}")
+
         self.model = LemmaClassifier(vocab_size, embedding_dim, hidden_dim, output_dim, self.embeddings.vectors, charlm=use_charlm,
-                                     charlm_forward_file=kwargs.get("forward_charlm_file"), charlm_backward_file=kwargs.get("backward_charlm_file"))
+                                     charlm_forward_file=forward_charlm_file, charlm_backward_file=backward_charlm_file)
         self.criterion = nn.CrossEntropyLoss()  
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.001)  
+        self.optimizer = optim.Adam(self.model.parameters(), lr=kwargs.get("lr", 0.001))  
 
     def train(self, texts_batch: List[List[str]], positions_batch: List[int], labels_batch: List[int], num_epochs: int, save_name: str, **kwargs) -> None:
 
@@ -48,12 +78,18 @@ class LemmaClassifierTrainer():
             labels_batch (List[int]): Batches of labels for the target token, one per input sentence. 
             num_epochs (int): Number of training epochs
             save_name (str): Path to file where trained model should be saved. 
+
+        Kwargs:
+            train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line. 
+            label_decoder (Mapping[str, int]): A map between target token lemmas and their corresponding integers for the labels 
+        
         """
 
-        if kwargs.get("train_path"):
-            texts_batch, positions_batch, labels_batch = utils.load_dataset(kwargs.get("train_path"), label_decoder=kwargs.get("label_decoder", {}))
-            print(f"Loaded dataset successfully from {kwargs.get('train_path')}")
-            print(f"Label decoder: {kwargs.get('label_decoder')}")
+        train_path, label_decoder = kwargs.get("train_path"), kwargs.get("label_decoder", {})
+        if train_path:  # use file to train model
+            texts_batch, positions_batch, labels_batch = utils.load_dataset(train_path, label_decoder=label_decoder)
+            logging.info(f"Loaded dataset successfully from {train_path}")
+            logging.info(f"Using label decoder: {label_decoder}")
 
         assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
         if path.exists(save_name):
@@ -77,11 +113,11 @@ class LemmaClassifierTrainer():
                 loss.backward()
                 self.optimizer.step()
             
-            print(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
+            logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
 
 
         torch.save(self.model.state_dict(), save_name)
-        print(f"Saved model state dict to {save_name}")
+        logging.info(f"Saved model state dict to {save_name}")
 
 
 if __name__ == "__main__":
@@ -96,14 +132,21 @@ if __name__ == "__main__":
     hidden_dim = 256
     output_dim = 2  # Binary classification (be or have)
 
+    # trainer = LemmaClassifierTrainer(vocab_size=vocab_size, 
+    #                                  embeddings="glove",
+    #                                  embedding_dim=embedding_dim,
+    #                                  hidden_dim=hidden_dim,
+    #                                  output_dim=output_dim,
+    #                                  use_charlm=True,
+    #                                  forward_charlm_file=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"),
+    #                                  backward_charlm_file=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"))
     trainer = LemmaClassifierTrainer(vocab_size=vocab_size, 
-                                     embeddings="glove",
-                                     embedding_dim=embedding_dim,
-                                     hidden_dim=hidden_dim,
-                                     output_dim=output_dim,
-                                     use_charlm=True,
-                                     forward_charlm_file=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"),
-                                     backward_charlm_file=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"))
+                                    embeddings="glove",
+                                    embedding_dim=embedding_dim,
+                                    hidden_dim=hidden_dim,
+                                    output_dim=output_dim,
+                                    use_charlm=False
+                                    )
     
     tokenized_sentence = ['the', 'cat', "'s", 'tail', 'is', 'long']
     text_batches = [tokenized_sentence]

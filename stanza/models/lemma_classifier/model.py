@@ -1,47 +1,69 @@
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import utils
 import os
 from constants import *
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
-from torchtext.vocab import GloVe
-from torchtext.data import get_tokenizer
 from typing import List, Tuple
 
 
 class LemmaClassifier(nn.Module):
+    """
+    Model architecture:
+        Extracts word embeddings over the sentence, passes embeddings into a bi-LSTM to get a sentence encoding.
+        From the LSTM output, we get the embedding fo the specific token that we classify on. That embedding 
+        is fed into an MLP for classification.
+    """
     def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, embeddings, padding_idx = 0, **kwargs):
-        super(LemmaClassifier, self).__init__()
+        """
+        Args:
+            vocab_size (int): Size of the vocab being used (if custom vocab)
+            embeddings (str): What word embeddings to use (currently only supports GloVe) TODO add more!
+            embedding_dim (int): Size of embedding dimension to use on the aforementioned word embeddings
+            hidden_dim (int): Size of hidden vectors in LSTM layers
+            output_dim (int): Size of output vector from MLP layer
+            padding_idx (int, optional): Padding index for the embedding layerr. Defaults to 0.
 
+        Raises:
+            FileNotFoundError: if the forward or backward charlm file cannot be found.
+        """
+        super(LemmaClassifier, self).__init__()
+        self.input_size = 0
         self.unsaved_modules = []
 
         def add_unsaved_module(name, module):
             self.unsaved_modules += [name]
             setattr(self, name, module)
-
-        self.word_emb_dim = embedding_dim
+    
         self.embedding_dim = embedding_dim
+        self.input_size += embedding_dim
 
         # Embedding layer with GloVe embeddings
-        self.embedding = nn.Embedding.from_pretrained(embeddings, padding_idx=padding_idx)
+        self.glove = get_glove(self.embedding_dim)
+        self.embedding_layer = nn.Embedding.from_pretrained(embeddings, padding_idx=padding_idx)
 
         # Optionally, include charlm embeddings  
         self.use_charlm = kwargs.get("charlm")
 
         if self.use_charlm:
-            if kwargs.get("charlm_forward_file") is None or not os.path.exists(kwargs.get("charlm_forward_file")):
+            charlm_forward_file = kwargs.get("charlm_forward_file")
+            charlm_backward_file = kwargs.get("charlm_backward_file")
+            if charlm_forward_file is None or not os.path.exists(charlm_forward_file):
                 raise FileNotFoundError(f'Could not find forward character model: {kwargs.get("charlm_forward_file", "FILE_NOT_PROVIDED")}')
-            if kwargs.get("charlm_backward_file") is None or not os.path.exists(kwargs.get("charlm_backward_file")):
+            if charlm_backward_file is None or not os.path.exists(charlm_backward_file):
                 raise FileNotFoundError(f'Could not find backward character model: {kwargs.get("charlm_backward_file", "FILE_NOT_PROVIDED")}')
-            add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(kwargs.get("charlm_forward_file"), finetune=False))
-            add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(kwargs.get("charlm_backward_file"), finetune=False))
-            self.embedding_dim += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
+            add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(charlm_forward_file, finetune=False))
+            add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(charlm_backward_file, finetune=False))
+            
+            self.input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
         
-        # LSTM layer
-        self.lstm = nn.LSTM(self.embedding_dim, hidden_dim, batch_first=True, bidirectional=True)
+        self.lstm = nn.LSTM(
+            self.input_size, 
+            hidden_dim, 
+            batch_first=True, 
+            bidirectional=True
+                        )
 
-        # MLP layers
         self.mlp = nn.Sequential(
             nn.Linear(hidden_dim * 2, 64),
             nn.ReLU(),
@@ -59,8 +81,7 @@ class LemmaClassifier(nn.Module):
         Returns:
             torch.tensor: Output logits of the neural network
         """
-        # Token embeddings
-        glove = get_glove(self.word_emb_dim)
+        
         # UNKNOWN_TOKEN will be our <UNK> token
         # UNKNOWN_TOKEN_IDX will be the custom index for the <UNK> token
         unk_token_indices = utils.extract_unknown_token_indices(token_ids, UNKNOWN_TOKEN_IDX)
@@ -68,20 +89,19 @@ class LemmaClassifier(nn.Module):
         masked_indices = token_ids.masked_fill(unknown_mask, 0)  # Replace UNKNOWN_TOKEN_IDX with 0 for embedding lookup
 
         # replace 0 token vectors with the true unknown 
-        embedded = self.embedding(masked_indices)
+        embedded = self.embedding_layer(masked_indices)
         for unk_token_idx in unk_token_indices:
-            embedded[unk_token_idx] = glove[UNKNOWN_TOKEN]
+            embedded[unk_token_idx] = self.glove[UNKNOWN_TOKEN]
         
-
-        # Charlm   TODO: How to get chars, charoffsets, charlens, and char_orig_idx. Also, do we have to pack? Also, can the append be the same as it is now?
         if self.use_charlm:
-            char_reps_forward = self.charmodel_forward.build_char_representation([words])
+            char_reps_forward = self.charmodel_forward.build_char_representation([words])  # takes [[str]]
             char_reps_backward = self.charmodel_backward.build_char_representation([words])
         
-            embedded = torch.cat((embedded, char_reps_forward[0], char_reps_backward[0]), 1)
+            embedded = torch.cat((embedded, char_reps_forward[0], char_reps_backward[0]), 1)   # take [0] because we only use the first sentence
+        
         lstm_out, (hidden, _) = self.lstm(embedded)
 
-        # Extract the hidden state at the index of the token
+        # Extract the hidden state at the index of the token to classify
         lstm_out = lstm_out[pos_index]
 
         # MLP forward pass

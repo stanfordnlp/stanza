@@ -132,7 +132,7 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, labe
     # run eval on each example from dataset
     for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file"):
         # tokenize raw text sentence using model
-        GLOVE = get_glove(model.embedding_dim)   # TODO make this dynamic
+        GLOVE = get_glove(model.input_size)   # TODO make this dynamic
 
         # TODO: See if John approves of this fix
         tokenized_sentence = [GLOVE.stoi[word.lower()] if word.lower() in GLOVE.stoi else UNKNOWN_TOKEN_IDX for word in sentence]  # handle unknown tokens by randomizing their embedding
