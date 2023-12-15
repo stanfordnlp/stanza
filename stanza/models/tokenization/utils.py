@@ -428,7 +428,7 @@ def reassemble_doc_from_tokens(tokens, mwts, expansions, raw_text):
 
         for indx, (word, mwt, expansion) in enumerate(zip(sent_words, sent_mwts, sent_expansions)):
             try:
-                offset_index = raw_text.index(word)
+                offset_index = raw_text.index(word, new_offset)
             except ValueError as e:
                 sub_start = max(0, new_offset - 20)
                 sub_end = min(len(raw_text), new_offset + 20)
@@ -437,8 +437,8 @@ def reassemble_doc_from_tokens(tokens, mwts, expansions, raw_text):
 
             wd = {
                 "id": (indx+1,), "text": word,
-                "start_char":  new_offset+offset_index,
-                "end_char":  new_offset+offset_index+len(word)
+                "start_char":  offset_index,
+                "end_char":    offset_index+len(word)
             }
             if expansion:
                 wd["manual_expansion"] = True
@@ -447,11 +447,8 @@ def reassemble_doc_from_tokens(tokens, mwts, expansions, raw_text):
 
             sentence_doc.append(wd)
 
-            # we crop the raw_text variable to prevent .index() from double-indexing an
-            # earlier token. essentially, for each word, we are only interested in its *offset*
-            # from the start of string
-            raw_text = raw_text[offset_index+len(word):]
-            new_offset += offset_index+len(word)
+            # start the next search after the previous word ended
+            new_offset = offset_index+len(word)
 
         corrected_doc.append(sentence_doc)
 
