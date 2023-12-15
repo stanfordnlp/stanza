@@ -118,8 +118,7 @@ def add_token(token_list, word, token):
 
     CoreNLP tokens have components of both word and token from stanza.
 
-    We pass along "after" but not "before", and the "after" is limited
-    to whether or not there is a space after the token
+    We pass along "after" but not "before"
     """
     if token is None and isinstance(word.id, int):
         raise AssertionError("Only expected word w/o token for 'extra' words")
@@ -150,12 +149,7 @@ def add_token(token_list, word, token):
             # we are absolutely not followed by space
             pass
         else:
-            space_after = misc_to_space_after(token.misc)
-            if space_after == ' ':
-                # in some treebanks, the word might have more interesting
-                # space after annotations than the token
-                space_after = misc_to_space_after(word.misc)
-            query_token.after = space_after
+            query_token.after = token.spaces_after
 
         query_token.index = word.id
     else:
