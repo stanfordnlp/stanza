@@ -157,6 +157,25 @@ class TokenizeProcessor(UDProcessor):
                             word._start_char -= charoffset
                             word._end_char -= charoffset
 
+            # Here we need to fix up the SpacesAfter for the very last token
+            # and the SpacesBefore for the first token of the next doc
+            # After all, we had connected the text with \n\n
+            # Need to be careful about this - in a case such as
+            #   " -text one- "
+            #   " -text two- "
+            # We want the SpacesBefore for the second document to reflect
+            # the extra space at the start of its text
+            # and the SpacesAfter for the first document to reflect
+            # the whitespace after its text
+            if len(sentences) > 0:
+                last_token = sentences[-1].tokens[-1]
+                last_whitespace = thisdoc.text[last_token.end_char:]
+                last_token.spaces_after = last_whitespace
+
+                first_token = sentences[0].tokens[0]
+                first_whitespace = thisdoc.text[:first_token.start_char]
+                first_token.spaces_before = first_whitespace
+
             thisdoc.num_tokens = sum(len(sent.tokens) for sent in sentences)
             thisdoc.num_words = sum(len(sent.words) for sent in sentences)
             sentst = senten
