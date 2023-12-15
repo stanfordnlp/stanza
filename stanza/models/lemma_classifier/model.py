@@ -18,12 +18,17 @@ class LemmaClassifier(nn.Module):
         """
         Args:
             vocab_size (int): Size of the vocab being used (if custom vocab)
-            embeddings (str): What word embeddings to use (currently only supports GloVe) TODO add more!
+            embeddings (word vectors for embedding): What word embeddings to use (currently only supports GloVe) TODO add more!
             embedding_dim (int): Size of embedding dimension to use on the aforementioned word embeddings
             hidden_dim (int): Size of hidden vectors in LSTM layers
             output_dim (int): Size of output vector from MLP layer
             padding_idx (int, optional): Padding index for the embedding layerr. Defaults to 0.
 
+        Kwargs:
+            charlm (bool): Whether or not to use the charlm embeddings
+            charlm_forward_file (str): The path to the forward pass model for the character language model
+            charlm_backward_file (str): The path to the forward pass model for the character language model.
+        
         Raises:
             FileNotFoundError: if the forward or backward charlm file cannot be found.
         """
@@ -77,6 +82,7 @@ class LemmaClassifier(nn.Module):
         Args:
             token_ids (torch.tensor): Tensor of the tokenized indices of the words in the input sentence, with unknown words having their index set to UNKNOWN_TOKEN_IDX
             pos_index (int): The position index of the target token for lemmatization classification in the sentence.
+            words (List[str]): A list of the tokenized strings of the input sentence.
 
         Returns:
             torch.tensor: Output logits of the neural network

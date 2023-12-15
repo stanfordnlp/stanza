@@ -8,6 +8,7 @@ import torch.optim as optim
 import utils
 import os 
 import logging
+import argparse
 from os import path
 from os import remove
 from model import LemmaClassifier
@@ -122,42 +123,49 @@ class LemmaClassifierTrainer():
 
 if __name__ == "__main__":
 
-    demo_model_path = path.join(path.dirname(__file__), "demo_model.pt")
-    if path.exists(demo_model_path):
-        remove(demo_model_path)
-
-    # Define the hyperparameters
-    vocab_size = 10000  # Adjust based on your dataset
-    embedding_dim = 100
-    hidden_dim = 256
-    output_dim = 2  # Binary classification (be or have)
-
-    # trainer = LemmaClassifierTrainer(vocab_size=vocab_size, 
-    #                                  embeddings="glove",
-    #                                  embedding_dim=embedding_dim,
-    #                                  hidden_dim=hidden_dim,
-    #                                  output_dim=output_dim,
-    #                                  use_charlm=True,
-    #                                  forward_charlm_file=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"),
-    #                                  backward_charlm_file=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"))
-    trainer = LemmaClassifierTrainer(vocab_size=vocab_size, 
-                                    embeddings="glove",
-                                    embedding_dim=embedding_dim,
-                                    hidden_dim=hidden_dim,
-                                    output_dim=output_dim,
-                                    use_charlm=False
-                                    )
     
-    tokenized_sentence = ['the', 'cat', "'s", 'tail', 'is', 'long']
-    text_batches = [tokenized_sentence]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--vocab_size", type=int, default=10000, help="Number of tokens in vocab")
+    parser.add_argument("--embedding_dim", type=int, default=100, help="Number of dimensions in word embeddings (currently using GloVe)")
+    parser.add_argument("--hidden_dim", type=int, default=256, help="Size of hidden layer")
+    parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
+    parser.add_argument("--use_charlm", type=bool, default=True, help="Whether not to use the charlm embeddings")
+    parser.add_argument("--forward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
+    parser.add_argument("--backward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
+    parser.add_argument("--save_name", type=str, default=path.join(path.dirname(__file__), "saved_models", "lemma_classifier_model.pt"), help="Path to model save file")
+    parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
+    parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
+    parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(__file__), "test_output.txt"), help="Full path to training file")
 
-    # Convert the tokenized input to a tensor
-    positional_index = tokenized_sentence.index("'s")
-    target = torch.tensor(0, dtype=torch.long)  # 0 for "be" and 1 for "have"
-    index_batches = [positional_index]
-    target_batches = [target]
-    # Train
-    trainer.train(text_batches, index_batches, target_batches, 10, path.join(path.dirname(__file__), demo_model_path))
+    args = parser.parse_args()
 
-    train_file = path.join(path.dirname(__file__), "test_output.txt")
-    trainer.train([], [], [], 10, "big_demo_model.pt", train_path=train_file, label_decoder={"be": 0, "have": 1})
+    vocab_size = args.vocab_size
+    embedding_dim = args.embedding_dim
+    hidden_dim = args.hidden_dim
+    output_dim = args.output_dim
+    use_charlm = args.use_charlm
+    forward_charlm_file = args.forward_charlm_file
+    backward_charlm_file = args.backward_charlm_file
+    save_name = args.save_name 
+    lr = args.lr
+    num_epochs = args.num_epochs
+    train_file = args.train_file
+
+    if os.path.exists(save_name):
+        raise FileExistsError(f"Save name {save_name} already exists. Training would override existing data. Aborting...")
+    if not os.path.exists(train_file):
+        raise FileNotFoundError(f"Training file {train_file} not found. Try again with a valid path.")
+
+    trainer = LemmaClassifierTrainer(vocab_size=vocab_size,
+                                     embeddings="glove",
+                                     embedding_dim=embedding_dim,
+                                     hidden_dim=hidden_dim,
+                                     output_dim=output_dim,
+                                     use_charlm=use_charlm,
+                                     forward_charlm_file=forward_charlm_file,
+                                     backward_charlm_file=backward_charlm_file,
+                                     lr=lr
+                                     )
+    trainer.train(
+        [], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file, label_decoder={"be": 0, "have": 1}
+    )

@@ -9,6 +9,9 @@ sys.path.append(parentdir)
 import stanza
 import torch
 import utils
+import logging 
+import argparse
+import os 
 
 from typing import Any, List, Tuple, Mapping
 from collections import defaultdict
@@ -16,7 +19,10 @@ from constants import get_glove
 from model import LemmaClassifier
 from constants import *
 from tqdm import tqdm
+from transformer_baseline.model import LemmaClassifierWithTransformer
 from numpy import random
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: List[List[Any]], verbose=True):
@@ -76,7 +82,7 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
     return multi_class_result, confusion   
 
 
-def model_predict(model: LemmaClassifier, text: List[int], position_idx: int) -> int:
+def model_predict(model: LemmaClassifier, text: List[int], position_idx: int, words: List[str]) -> int:
     """
     A LemmaClassifier is used to predict on a single text example, given the position index of the target token.
 
@@ -84,6 +90,7 @@ def model_predict(model: LemmaClassifier, text: List[int], position_idx: int) ->
         model (LemmaClassifier): A trained LemmaClassifier that is able to predict on a target token.
         text (List[int]): A tokenized sentence with the proper embeddings corresponding to `model`.
         position_idx (int): The (zero-indexed) position of the target token in `text`.
+        words (List[str]): A list of the tokenized strings of the input sentence.
     
     Returns:
         (int): The index of the predicted class in `model`'s output.
@@ -95,7 +102,7 @@ def model_predict(model: LemmaClassifier, text: List[int], position_idx: int) ->
 
     text_tensor = torch.tensor(text)
     with torch.no_grad():
-        logits = model(text_tensor, position_idx)
+        logits = model(text_tensor, position_idx, words)
         predicted_class = torch.argmax(logits).item()
     
     return predicted_class
@@ -127,17 +134,18 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, labe
     # load in eval data 
     text_batches, index_batches, label_batches = utils.load_dataset(eval_path, label_decoder=label_decoder)
     
+    logging.info(f"Evaluating model from {model_path} on evaluation file {eval_path}")
+
     correct = 0
     gold_tags, pred_tags = [label_batches], []
+    GLOVE = get_glove(model.embedding_dim)
     # run eval on each example from dataset
     for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file"):
         # tokenize raw text sentence using model
-        GLOVE = get_glove(model.input_size)   # TODO make this dynamic
-
         # TODO: See if John approves of this fix
         tokenized_sentence = [GLOVE.stoi[word.lower()] if word.lower() in GLOVE.stoi else UNKNOWN_TOKEN_IDX for word in sentence]  # handle unknown tokens by randomizing their embedding
 
-        pred = model_predict(model, tokenized_sentence, pos_index)
+        pred = model_predict(model, tokenized_sentence, pos_index, sentence)
         correct += 1 if pred == label else 0 
         pred_tags += [pred]
 
@@ -151,31 +159,143 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, labe
     return mc_results, confusion, accuracy
 
 
+def transformer_pred(model: LemmaClassifierWithTransformer, text: List[str], pos_idx: int):
+    """
+    A LemmaClassifierWithTransformer is used to predict on a single text example, given the position index of the target token.
+
+    Args:
+        model (LemmaClassifierWithTransformer): A trained LemmaClassifierWithTransformer that is able to predict on a target token.
+        text (List[str]): A sentence of words with each word as its own element.
+        position_idx (int): The (zero-indexed) position of the target token in `text`.
+    
+    Returns:
+        (int): The index of the predicted class in `model`'s output.
+    """
+    assert len(text) != 0, f"Text arg is empty. Please provide a proper input for model evaluation."
+    if not isinstance(text[0], str):
+        raise TypeError(f"Text variable must contain tokenized version of sentence, but instead found type {type(text[0])}.")
+    
+    with torch.no_grad():
+        logits = model(text, pos_idx)
+        predicted_class = torch.argmax(logits).item()
+    return predicted_class
+
+
+def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, eval_path: str, label_decoder: Mapping[str, int], verbose: bool = True):
+    """
+    Helper function for transformer-model evaluation
+
+    Args:
+        model (LemmaClassifierWithTransformer): An instance of the LemmaClassifierWithTransformer class that has architecture initialized which
+                                                 matches the model saved in `model_path`.
+        model_path (str): Path to the saved model weights that will be loaded into `model`.
+        eval_path (str): Path to the saved evaluation dataset.
+        label_decoder (Mapping[str, int]): A map between target token lemmas and their corresponding integers for the labels
+        verbose (bool, optional): True if `evaluate_sequences()` should print the F1, Precision, and Recall for each class. Defaults to True.
+
+    Returns:
+        1. Multi-class results (Mapping[int, Mapping[str, float]]): first map has keys as the classes (lemma indices) and value is 
+                                                                    another map with key of "f1", "precision", or "recall" with corresponding values.
+        2. Confusion Matrix (Mapping[int, Mapping[int, int]]): A confusion matrix with keys equal to the index of the gold tag, and a value of the 
+                                                               map with the key as the predicted tag and corresponding count of that (gold, pred) pair.
+        3. Accuracy (float): the total accuracy (num correct / total examples) across the evaluation set.
+    """
+    # load model
+    print(f"EMBEDDING SIZE : {model.transformer.config.hidden_size}")
+    model.load_state_dict(torch.load(model_path))
+    model.eval()  # set to eval mode
+
+    # load in eval data 
+    text_batches, index_batches, label_batches = utils.load_dataset(eval_path, label_decoder=label_decoder)
+    
+    logging.info(f"Evaluating model from {model_path} on evaluation file {eval_path}")
+
+    correct = 0
+    gold_tags, pred_tags = [label_batches], []
+    # run eval on each example from dataset
+    for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file"):
+        pred = transformer_pred(model, sentence, pos_index)
+        correct += 1 if pred == label else 0 
+        pred_tags += [pred]
+
+    print("Finished evaluating on dataset. Computing scores...")
+    accuracy = correct / len(label_batches)
+    mc_results, confusion = evaluate_sequences(gold_tags, [pred_tags], verbose=verbose)  
+    # add brackets around batches of gold and pred tags because each batch is an element within the sequences in this helper
+    if verbose:
+        print(f"Accuracy: {accuracy} ({correct}/{len(label_batches)})")
+    
+    return mc_results, confusion, accuracy
+
 
 def main():
 
-    vocab_size = 10000  # Adjust based on your dataset
-    embedding_dim = 100
-    hidden_dim = 256
-    output_dim = 2  # Binary classification (be or have)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--vocab_size", type=int, default=10000, help="Number of tokens in vocab")
+    parser.add_argument("--embedding_dim", type=int, default=100, help="Number of dimensions in word embeddings (currently using GloVe)")
+    parser.add_argument("--hidden_dim", type=int, default=256, help="Size of hidden layer")
+    parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
+    parser.add_argument("--use_charlm", type=bool, default=True, help="Whether not to use the charlm embeddings")
+    parser.add_argument("--forward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
+    parser.add_argument("--backward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
+    parser.add_argument("--save_name", type=str, default=os.path.join(os.path.dirname(__file__), "saved_models", "lemma_classifier_model.pt"), help="Path to model save file")
+    parser.add_argument("--model_type", type=str, default="roberta", help="Which transformer to use ('bert' or 'roberta' or 'lstm')")
+    parser.add_argument("--eval_path", type=str, help="path to evaluation file")
 
-    model = LemmaClassifier(vocab_size=vocab_size,
-                            embedding_dim=embedding_dim,
-                            hidden_dim=hidden_dim,
-                            output_dim=output_dim,
-                            embeddings=get_glove(embedding_dim).vectors)
-    
-    model_path = os.path.join(os.path.dirname(__file__), "big_demo_model.pt")
-    eval_path = os.path.join(os.path.dirname(__file__), "test_output.txt")
+    args = parser.parse_args()
+
+    vocab_size = args.vocab_size
+    embedding_dim = args.embedding_dim
+    hidden_dim = args.hidden_dim
+    output_dim = args.output_dim
+    use_charlm = args.use_charlm
+    forward_charlm_file = args.forward_charlm_file
+    backward_charlm_file = args.backward_charlm_file
+    save_name = args.save_name 
+    model_type = args.model_type
+    eval_path = args.eval_path
+
+    if model_type.lower() == "lstm" and use_charlm:
+        # Evaluate charlm
+        model = LemmaClassifier(vocab_size=vocab_size,
+                                embedding_dim=embedding_dim,
+                                hidden_dim=hidden_dim,
+                                output_dim=output_dim,
+                                embeddings=get_glove(embedding_dim).vectors,
+                                charlm=True,
+                                charlm_forward_file=forward_charlm_file,
+                                charlm_backward_file=backward_charlm_file)
+    elif model_type.lower() == "lstm" and not use_charlm:
+        # Evaluate standard model (bi-LSTM with GloVe embeddings, no charlm)
+        model = LemmaClassifier(vocab_size=vocab_size,
+                                embedding_dim=embedding_dim,
+                                hidden_dim=hidden_dim,
+                                output_dim=output_dim,
+                                embeddings=get_glove(embedding_dim).vectors,
+                                )
+    elif model_type.lower() == "roberta":
+        # Evaluate Transformer (BERT or ROBERTA)
+        model = LemmaClassifierWithTransformer(output_dim=output_dim, model_type="roberta")
+    elif model_type.lower() == "bert":
+        # Evaluate Transformer (BERT or ROBERTA)
+        model = LemmaClassifierWithTransformer(output_dim=output_dim, model_type="bert")
+
+    # TODO  make this an argparse
     label_decoder = {"be": 0, "have": 1}
 
-    mcc_results, confusion, acc = evaluate_model(model, model_path, eval_path, label_decoder)
+    if model_type.lower() == "lstm":
+        # for LSTM models
+        mcc_results, confusion, acc = evaluate_model(model, save_name, eval_path, label_decoder)
 
-    print(f"MCC Results: {dict(mcc_results)}")
-    print("______________________________________________")
-    print(f"Confusion: {dict(confusion)}")
-    print("______________________________________________")
-    print(f"Accuracy: {acc}")
+    elif model_type.lower() == "roberta" or model_type.lower() == "bert":
+        # for transformer
+        mcc_results, confusion, acc = evaluate_transformer(model, save_name, eval_path, label_decoder)
+
+    logging.info(f"MCC Results: {dict(mcc_results)}")
+    logging.info("______________________________________________")
+    logging.info(f"Confusion: {dict(confusion)}")
+    logging.info("______________________________________________")
+    logging.info(f"Accuracy: {acc}")
 
     
 

@@ -8,6 +8,7 @@ import torch
 import torch.optim as optim
 from typing import List, Tuple, Any 
 from os import path
+import argparse
 import os
 import sys
 import logging
@@ -88,28 +89,30 @@ class TransformerBaselineTrainer:
 
 
 def main():
+    parser = argparse.ArgumentParser()
 
-    # Train on single set of examples
-    demo_model_path = path.join(path.dirname(__file__), "demo_model.pt")
-    if os.path.exists(demo_model_path):
-        os.remove(demo_model_path)
-    
-    trainer = TransformerBaselineTrainer(output_dim=64, model_type="roberta")
-    
-    tokenized_sentence = ['the', 'cat', "'s", 'tail', 'is', 'long']
-    text_batches = [tokenized_sentence]
-    # Convert the tokenized input to a tensor
-    
-    positional_index = tokenized_sentence.index("'s")
-    target = torch.tensor(0, dtype=torch.long)  # 0 for "be" and 1 for "have"
-    index_batches = [positional_index]
-    target_batches = [target]
-    # Train
-    trainer.train(text_batches, index_batches, target_batches, 10, path.join(path.dirname(__file__), demo_model_path))
+    parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
+    parser.add_argument("--save_name", type=str, default=path.join(path.dirname(path.dirname(__file__)), "saved_models", "big_model_roberta.pt"), help="Path to model save file")
+    parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
+    parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_output.txt"), help="Full path to training file")
+    parser.add_argument("--model_type", type=str, default="roberta", help="Which transformer to use ('bert' or 'roberta')")
 
-    train_file = path.join(path.dirname(path.dirname(__file__)), "test_output.txt")
-    model_save_name = path.join(path.dirname(path.dirname(__file__)), "saved_models", "big_model_roberta.pt")
-    trainer.train([], [], [], 10, model_save_name, train_path=train_file, label_decoder={"be": 0, "have": 1})
+    args = parser.parse_args()
+
+    output_dim = args.output_dim
+    save_name = args.save_name
+    num_epochs = args.num_epochs
+    train_file = args.train_file
+    model_type = args.model_type
+
+    if os.path.exists(save_name):
+        raise FileExistsError(f"Save name {save_name} already exists. Training would override existing data. Aborting...")
+    if not os.path.exists(train_file):
+        raise FileNotFoundError(f"Training file {train_file} not found. Try again with a valid path.")
+    
+    trainer = TransformerBaselineTrainer(output_dim=output_dim, model_type=model_type)
+
+    trainer.train([], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file, label_decoder={"be": 0, "have": 1})
 
 
 if __name__ == "__main__":

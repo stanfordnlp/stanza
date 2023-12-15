@@ -1,6 +1,8 @@
 import stanza
 import utils 
 import os
+import argparse
+
 from typing import List, Tuple, Any
 
 """
@@ -77,11 +79,22 @@ class DataProcessor():
 
 if __name__ == "__main__":
 
-    coNLL_path = os.path.join(os.path.dirname(__file__), "en_gum-ud-train.conllu")
-    doc = utils.load_doc_from_conll_file(coNLL_path)
+    parser = argparse.ArgumentParser()
 
-    processor = DataProcessor(target_word="'s", target_upos=["AUX"])
-    output_path = os.path.join(os.path.dirname(__file__), "test_output.txt")
+    parser.add_argument("--conll_path", type=str, default=os.path.join(os.path.dirname(__file__), "en_gum-ud-train.conllu"), help="path to the conll file to translate")
+    parser.add_argument("--target_word", type=str, default="'s", help="Token to classify on, e.g. 's.")
+    parser.add_argument("--target_upos", type=str, default="AUX", help="upos on target token")
+    parser.add_argument("--output_path", type=str, default="test_output.txt", help="Path for output file")
+
+    args = parser.parse_args()
+
+    conll_path = args.conll_path
+    target_word = args.target_word
+    target_upos = args.target_upos
+    output_path = args.output_path
+
+    doc = utils.load_doc_from_conll_file(conll_path)
+    processor = DataProcessor(target_word=target_word, target_upos=[target_upos])
     
     def keep_sentence(sentence):
         for word in sentence.words:
@@ -91,4 +104,4 @@ if __name__ == "__main__":
 
     processor.process_document(doc, keep_sentence, output_path)
 
-    print(processor.read_processed_data(output_path))
+    # print(processor.read_processed_data(output_path))  # print out examples
