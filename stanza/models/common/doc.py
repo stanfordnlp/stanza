@@ -572,6 +572,9 @@ class Sentence(StanzaObject):
                     self.tokens.append(Token(self, entry, words=[new_word]))
                 new_word.parent = self.tokens[-1]
 
+        # put all of the whitespace annotations (if any) on the Tokens instead of the Words
+        for token in self.tokens:
+            token.consolidate_whitespace()
         self.rebuild_dependencies()
 
     def has_enhanced_dependencies(self):
@@ -1062,6 +1065,34 @@ class Token(StanzaObject):
     def misc(self, value):
         """ Set the token's miscellaneousness value. """
         self._misc = value if self._is_null(value) == False else None
+
+    def consolidate_whitespace(self):
+        """
+        Remove whitespace misc annotations from the Words and mark the whitespace on the Tokens
+        """
+        num_words = len(self.words)
+        for word_idx, word in enumerate(self.words):
+            misc = word.misc
+            if not misc:
+                continue
+            pieces = misc.split("|")
+            if word_idx == 0:
+                if any(piece.startswith("SpacesBefore=") for piece in pieces):
+                    self.spaces_before = misc_to_space_before(misc)
+            else:
+                if any(piece.startswith("SpacesBefore=") for piece in pieces):
+                    raise ValueError("Found a SpacesBefore MISC annotation on a Word that was not the first Word in a Token")
+            if word_idx == num_words - 1:
+                if any(piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter=") for piece in pieces):
+                    self.spaces_after = misc_to_space_after(misc)
+            else:
+                if any(piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter=") for piece in pieces):
+                    unexpected_space_after = misc_to_space_after(misc)
+                    if unexpected_space_after == "":
+                        warnings.warn("Unexpected SpaceAfter=No annotation on a word in the middle of an MWT")
+                    else:
+                        raise ValueError("Unexpected SpacesAfter on a word in the middle on an MWT")
+
 
     @property
     def spaces_before(self):
