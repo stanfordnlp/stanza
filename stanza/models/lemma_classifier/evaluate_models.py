@@ -201,7 +201,6 @@ def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, 
         3. Accuracy (float): the total accuracy (num correct / total examples) across the evaluation set.
     """
     # load model
-    print(f"EMBEDDING SIZE : {model.transformer.config.hidden_size}")
     model.load_state_dict(torch.load(model_path))
     model.eval()  # set to eval mode
 
@@ -282,6 +281,8 @@ def main():
 
     # TODO  make this an argparse
     label_decoder = {"be": 0, "have": 1}
+    
+    logging.info(f"Attempting evaluation of model from {save_name} on file {eval_path}")
 
     if model_type.lower() == "lstm":
         # for LSTM models
