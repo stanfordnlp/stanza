@@ -38,7 +38,7 @@ def test_spaces_no_mwt():
 EXPECTED_MWT = """
 # text = She's not a nice person.
 # sent_id = 0
-1-2	She's	_	_	_	_	_	_	_	SpacesBefore=\\s\\s|start_char=2|end_char=7
+1-2	She's	_	_	_	_	_	_	_	start_char=2|end_char=7|SpacesBefore=\\s\\s
 1	She	_	_	_	_	0	_	_	_
 2	's	_	_	_	_	1	_	_	_
 3	not	_	_	_	_	2	_	_	start_char=8|end_char=11
@@ -58,7 +58,7 @@ EXPECTED_MWT = """
 7	the	_	_	_	_	6	_	_	start_char=58|end_char=61
 8	Cerritos	_	_	_	_	7	_	_	start_char=62|end_char=70
 9	are	_	_	_	_	8	_	_	start_char=71|end_char=74
-10-11	Jennifer's	_	_	_	_	_	_	_	SpaceAfter=No|start_char=75|end_char=85
+10-11	Jennifer's	_	_	_	_	_	_	_	start_char=75|end_char=85|SpaceAfter=No
 10	Jennifer	_	_	_	_	9	_	_	_
 11	's	_	_	_	_	10	_	_	_
 12	.	_	_	_	_	11	_	_	start_char=85|end_char=86|SpacesAfter=\\s\\s

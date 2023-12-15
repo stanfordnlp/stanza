@@ -1022,6 +1022,8 @@ class Token(StanzaObject):
         self._end_char = token_entry.get(END_CHAR, None)
         self._sent = sentence
         self._mexp = token_entry.get(MEXP, None)
+        self._spaces_before = ""
+        self._spaces_after = " "
 
         if self._misc is not None:
             init_from_misc(self)
@@ -1070,6 +1072,8 @@ class Token(StanzaObject):
         """
         Remove whitespace misc annotations from the Words and mark the whitespace on the Tokens
         """
+        found_after = False
+        found_before = False
         num_words = len(self.words)
         for word_idx, word in enumerate(self.words):
             misc = word.misc
@@ -1079,66 +1083,61 @@ class Token(StanzaObject):
             if word_idx == 0:
                 if any(piece.startswith("SpacesBefore=") for piece in pieces):
                     self.spaces_before = misc_to_space_before(misc)
+                    found_before = True
             else:
                 if any(piece.startswith("SpacesBefore=") for piece in pieces):
-                    raise ValueError("Found a SpacesBefore MISC annotation on a Word that was not the first Word in a Token")
+                    warnings.warn("Found a SpacesBefore MISC annotation on a Word that was not the first Word in a Token")
             if word_idx == num_words - 1:
                 if any(piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter=") for piece in pieces):
                     self.spaces_after = misc_to_space_after(misc)
+                    found_after = True
             else:
                 if any(piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter=") for piece in pieces):
                     unexpected_space_after = misc_to_space_after(misc)
                     if unexpected_space_after == "":
                         warnings.warn("Unexpected SpaceAfter=No annotation on a word in the middle of an MWT")
                     else:
-                        raise ValueError("Unexpected SpacesAfter on a word in the middle on an MWT")
+                        warnings.warn("Unexpected SpacesAfter on a word in the middle on an MWT")
             pieces = [x for x in pieces if not x.startswith("SpacesAfter=") and not x.startswith("SpaceAfter=") and not x.startswith("SpacesBefore=")]
             word.misc = "|".join(pieces)
 
+        misc = self.misc
+        if misc:
+            pieces = misc.split("|")
+            if any(piece.startswith("SpacesBefore=") for piece in pieces):
+                spaces_before = misc_to_space_before(misc)
+                if found_before:
+                    if spaces_before != self.spaces_before:
+                        warnings.warn("Found conflicting SpacesBefore on a token and its word!")
+                else:
+                    self.spaces_before = spaces_before
+            if any(piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter=") for piece in pieces):
+                spaces_after = misc_to_space_after(misc)
+                if found_after:
+                    if spaces_after != self.spaces_after:
+                        warnings.warn("Found conflicting SpaceAfter / SpacesAfter on a token and its word!")
+                else:
+                    self.spaces_after = spaces_after
+            pieces = [x for x in pieces if not x.startswith("SpacesAfter=") and not x.startswith("SpaceAfter=") and not x.startswith("SpacesBefore=")]
+            self.misc = "|".join(pieces)
+
     @property
     def spaces_before(self):
-        """ SpacesBefore for the token.  Attached to the MISC field, although the plan is to switch it to be on the token itself """
-        space_before = misc_to_space_before(self.misc)
-        return space_before
+        """ SpacesBefore for the token. Translated from the MISC fields """
+        return self._spaces_before
 
     @spaces_before.setter
     def spaces_before(self, value):
-        # TODO: instead of cramming this into the MISC field, make the spaces a separate field
-        misc = self.misc
-        if not misc:
-            misc = space_before_to_misc(value)
-            self.misc = misc
-        else:
-            pieces = misc.split("|")
-            pieces = [x for x in pieces if x and not x.lower().split("=", maxsplit=1)[0] == 'spacesbefore']
-            space_misc = space_before_to_misc(value)
-            if space_misc:
-                pieces.append(space_misc)
-            misc = "|".join(pieces)
-            self.misc = misc
-
+        self._spaces_before = value
 
     @property
     def spaces_after(self):
-        """ SpaceAfter or SpacesAfter for the token.  Currently uses the MISC field """
-        space_after = misc_to_space_after(self.misc)
-        return space_after
+        """ SpaceAfter or SpacesAfter for the token.  Translated from the MISC field """
+        return self._spaces_after
 
     @spaces_after.setter
     def spaces_after(self, value):
-        # TODO: instead of cramming this into the MISC field, make the spaces a separate field
-        misc = self.misc
-        if not misc:
-            misc = space_after_to_misc(value)
-            self.misc = misc
-        else:
-            pieces = misc.split("|")
-            pieces = [x for x in pieces if x and not x.lower().split("=", maxsplit=1)[0] in ("spaceafter", "spacesafter")]
-            space_misc = space_after_to_misc(value)
-            if space_misc:
-                pieces.append(space_misc)
-            misc = "|".join(pieces)
-            self.misc = misc
+        self._spaces_after = value
 
     @property
     def words(self):
@@ -1216,6 +1215,23 @@ class Token(StanzaObject):
             for field in fields:
                 if getattr(self, field) is not None:
                     token_dict[field] = getattr(self, field)
+            if MISC in fields:
+                spaces_after = self.spaces_after
+                if spaces_after is not None and spaces_after != ' ':
+                    space_misc = space_after_to_misc(spaces_after)
+                    if token_dict.get(MISC):
+                        token_dict[MISC] = token_dict[MISC] + "|" + space_misc
+                    else:
+                        token_dict[MISC] = space_misc
+
+                spaces_before = self.spaces_before
+                if spaces_before is not None and spaces_before != '':
+                    space_misc = space_before_to_misc(spaces_before)
+                    if token_dict.get(MISC):
+                        token_dict[MISC] = token_dict[MISC] + "|" + space_misc
+                    else:
+                        token_dict[MISC] = space_misc
+
             ret.append(token_dict)
         for word in self.words:
             word_dict = word.to_dict()

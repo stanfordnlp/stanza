@@ -358,7 +358,7 @@ ITALIAN_MWT_MISC_INPUT = """
 3-4	farepace	_	_	_	_	_	_	_	Players=GonnaPlay|SpaceAfter=No
 3	fare	fare	VERB	V	VerbForm=Inf	0	root	_	_
 4	pace	pace	NOUN	S	Gender=Fem|Number=Sing	3	obj	_	_
-5-6	col	_	_	_	_	_	_	_	SpaceAfter=No|Haters=GonnaHate
+5-6	col	_	_	_	_	_	_	_	Haters=GonnaHate|SpaceAfter=No
 5	con	con	ADP	E	_	7	case	_	_
 6	il	il	DET	RD	Definite=Def|Gender=Masc|Number=Sing|PronType=Art	7	det	_	_
 7	cervello	cervello	NOUN	S	Gender=Masc|Number=Sing	3	obl	_	RandomFeature=foo
