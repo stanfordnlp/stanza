@@ -96,8 +96,8 @@ EN_DOC_CONLLU_GOLD = """
 3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	start_char=13|end_char=16|ner=O
 4	born	bear	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=17|end_char=21|ner=O
 5	in	in	ADP	IN	_	6	case	_	start_char=22|end_char=24|ner=O
-6	Hawaii	Hawaii	PROPN	NNP	Number=Sing	4	obl	_	start_char=25|end_char=31|ner=S-GPE
-7	.	.	PUNCT	.	_	4	punct	_	start_char=31|end_char=32|ner=O
+6	Hawaii	Hawaii	PROPN	NNP	Number=Sing	4	obl	_	start_char=25|end_char=31|ner=S-GPE|SpaceAfter=No
+7	.	.	PUNCT	.	_	4	punct	_	start_char=31|end_char=32|ner=O|SpacesAfter=\\s\\s
 
 # text = He was elected president in 2008.
 # sent_id = 1
@@ -108,8 +108,8 @@ EN_DOC_CONLLU_GOLD = """
 3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=41|end_char=48|ner=O
 4	president	president	NOUN	NN	Number=Sing	3	xcomp	_	start_char=49|end_char=58|ner=O
 5	in	in	ADP	IN	_	6	case	_	start_char=59|end_char=61|ner=O
-6	2008	2008	NUM	CD	NumForm=Digit|NumType=Card	3	obl	_	start_char=62|end_char=66|ner=S-DATE
-7	.	.	PUNCT	.	_	3	punct	_	start_char=66|end_char=67|ner=O
+6	2008	2008	NUM	CD	NumForm=Digit|NumType=Card	3	obl	_	start_char=62|end_char=66|ner=S-DATE|SpaceAfter=No
+7	.	.	PUNCT	.	_	3	punct	_	start_char=66|end_char=67|ner=O|SpacesAfter=\\s\\s
 
 # text = Obama attended Harvard.
 # sent_id = 2
@@ -117,8 +117,8 @@ EN_DOC_CONLLU_GOLD = """
 # sentiment = 1
 1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=69|end_char=74|ner=S-PERSON
 2	attended	attend	VERB	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	_	start_char=75|end_char=83|ner=O
-3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=84|end_char=91|ner=S-ORG
-4	.	.	PUNCT	.	_	2	punct	_	start_char=91|end_char=92|ner=O
+3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=84|end_char=91|ner=S-ORG|SpaceAfter=No
+4	.	.	PUNCT	.	_	2	punct	_	start_char=91|end_char=92|ner=O|SpaceAfter=No
 """.strip()
 
 EN_DOC_CONLLU_GOLD_MULTIDOC = """
@@ -131,8 +131,8 @@ EN_DOC_CONLLU_GOLD_MULTIDOC = """
 3	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	4	aux:pass	_	start_char=13|end_char=16|ner=O
 4	born	bear	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=17|end_char=21|ner=O
 5	in	in	ADP	IN	_	6	case	_	start_char=22|end_char=24|ner=O
-6	Hawaii	Hawaii	PROPN	NNP	Number=Sing	4	obl	_	start_char=25|end_char=31|ner=S-GPE
-7	.	.	PUNCT	.	_	4	punct	_	start_char=31|end_char=32|ner=O
+6	Hawaii	Hawaii	PROPN	NNP	Number=Sing	4	obl	_	start_char=25|end_char=31|ner=S-GPE|SpaceAfter=No
+7	.	.	PUNCT	.	_	4	punct	_	start_char=31|end_char=32|ner=O|SpaceAfter=No
 
 # text = He was elected president in 2008.
 # sent_id = 1
@@ -143,8 +143,8 @@ EN_DOC_CONLLU_GOLD_MULTIDOC = """
 3	elected	elect	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	0	root	_	start_char=7|end_char=14|ner=O
 4	president	president	NOUN	NN	Number=Sing	3	xcomp	_	start_char=15|end_char=24|ner=O
 5	in	in	ADP	IN	_	6	case	_	start_char=25|end_char=27|ner=O
-6	2008	2008	NUM	CD	NumForm=Digit|NumType=Card	3	obl	_	start_char=28|end_char=32|ner=S-DATE
-7	.	.	PUNCT	.	_	3	punct	_	start_char=32|end_char=33|ner=O
+6	2008	2008	NUM	CD	NumForm=Digit|NumType=Card	3	obl	_	start_char=28|end_char=32|ner=S-DATE|SpaceAfter=No
+7	.	.	PUNCT	.	_	3	punct	_	start_char=32|end_char=33|ner=O|SpaceAfter=No
 
 # text = Obama attended Harvard.
 # sent_id = 2
@@ -152,8 +152,8 @@ EN_DOC_CONLLU_GOLD_MULTIDOC = """
 # sentiment = 1
 1	Obama	Obama	PROPN	NNP	Number=Sing	2	nsubj	_	start_char=0|end_char=5|ner=S-PERSON
 2	attended	attend	VERB	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	_	start_char=6|end_char=14|ner=O
-3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=15|end_char=22|ner=S-ORG
-4	.	.	PUNCT	.	_	2	punct	_	start_char=22|end_char=23|ner=O
+3	Harvard	Harvard	PROPN	NNP	Number=Sing	2	obj	_	start_char=15|end_char=22|ner=S-ORG|SpaceAfter=No
+4	.	.	PUNCT	.	_	2	punct	_	start_char=22|end_char=23|ner=O|SpaceAfter=No
 """.strip()
 
 class TestEnglishPipeline:
