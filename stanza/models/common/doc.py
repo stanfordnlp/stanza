@@ -14,6 +14,7 @@ from enum import Enum
 import networkx as nx
 
 from stanza.models.common.stanza_object import StanzaObject
+from stanza.models.common.utils import misc_to_space_after, space_after_to_misc
 from stanza.models.ner.utils import decode_from_bioes
 from stanza.models.constituency import tree_reader
 from stanza.models.coref.coref_chain import CorefMention, CorefChain, CorefAttachment
@@ -81,6 +82,25 @@ class Document(StanzaObject):
         self._coref = []
         if self._text is not None:
             self.build_ents()
+            self.mark_whitespace()
+
+    def mark_whitespace(self):
+        # TODO: add SpacesBefore as well
+        for sentence in self._sentences:
+            # TODO: pairwise, once we move to minimum 3.10
+            for prev_token, next_token in zip(sentence.tokens[:-1], sentence.tokens[1:]):
+                whitespace = self._text[prev_token.end_char:next_token.start_char]
+                prev_token.spaces_after = whitespace
+        for prev_sentence, next_sentence in zip(self._sentences[:-1], self._sentences[1:]):
+            prev_token = prev_sentence.tokens[-1]
+            next_token = next_sentence.tokens[0]
+            whitespace = self._text[prev_token.end_char:next_token.start_char]
+            prev_token.spaces_after = whitespace
+        if len(self._sentences) > 0 and len(self._sentences[-1].tokens) > 0:
+            final_token = self._sentences[-1].tokens[-1]
+            whitespace = self._text[final_token.end_char:]
+            final_token.spaces_after = whitespace
+
 
     @property
     def lang(self):
@@ -1041,6 +1061,39 @@ class Token(StanzaObject):
         self._misc = value if self._is_null(value) == False else None
 
     @property
+    def spaces_after(self):
+        """ SpaceAfter or SpacesAfter for the token.  Currently uses the MISC field """
+        space_after = misc_to_space_after(self.misc)
+        # Some treebanks have the SpaceAfter on the *words* and not the tokens.
+        # TODO: We should probably unify that when reading CoNLL-U
+        if space_after == ' ':
+            space_after = misc_to_space_after(self.words[-1].misc)
+        return space_after
+
+    @spaces_after.setter
+    def spaces_after(self, value):
+        # TODO: instead of cramming this into the MISC field, make the spaces a separate field
+        misc = self.misc
+        if not misc:
+            misc = space_after_to_misc(value)
+            self.misc = misc
+        else:
+            pieces = misc.split("|")
+            pieces = [x for x in pieces if x and not x.lower().split("=", maxsplit=1)[0] in ("spaceafter", "spacesafter")]
+            space_misc = space_after_to_misc(value)
+            if space_misc:
+                pieces.append(space_misc)
+            misc = "|".join(pieces)
+            self.misc = misc
+        # handle the Word spaceafter as well - erase any SpaceAfter or SpacesAfter
+        misc = self.words[-1].misc
+        if misc:
+            pieces = misc.split("|")
+            pieces = [x for x in pieces if x and not x.lower().split("=", maxsplit=1)[0] in ("spaceafter", "spacesafter")]
+            misc = "|".join(pieces)
+            self.words[-1].misc = misc
+
+    @property
     def words(self):
         """ Access the list of syntactic words underlying this token. """
         return self._words
@@ -1123,6 +1176,14 @@ class Token(StanzaObject):
                 word_dict[NER] = getattr(self, NER)
             if len(self.id) == 1 and MULTI_NER in fields and getattr(self, MULTI_NER) is not None: # propagate MULTI_NER label to Word if it is a single-word token
                 word_dict[MULTI_NER] = getattr(self, MULTI_NER)
+            if len(self.id) == 1 and MISC in fields:
+                spaces_after = self.spaces_after
+                if spaces_after is not None and spaces_after != ' ':
+                    space_misc = space_after_to_misc(spaces_after)
+                    if word_dict.get(MISC):
+                        word_dict[MISC] = word_dict[MISC] + "|" + space_misc
+                    else:
+                        word_dict[MISC] = space_misc
             ret.append(word_dict)
         return ret
 
