@@ -371,6 +371,5 @@ def test_ssurgeon_mwt_misc():
     the RandomFeature=foo is on account of a silly bug in the initial
     version of passing in MWT misc features
     """
-    # currently commented out because the public version of CoreNLP doesn't support it
-    #check_empty_test(ITALIAN_MWT_MISC_INPUT)
+    check_empty_test(ITALIAN_MWT_MISC_INPUT)
 
