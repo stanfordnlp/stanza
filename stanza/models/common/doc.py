@@ -14,7 +14,7 @@ from enum import Enum
 import networkx as nx
 
 from stanza.models.common.stanza_object import StanzaObject
-from stanza.models.common.utils import misc_to_space_after, space_after_to_misc
+from stanza.models.common.utils import misc_to_space_after, space_after_to_misc, misc_to_space_before, space_before_to_misc
 from stanza.models.ner.utils import decode_from_bioes
 from stanza.models.constituency import tree_reader
 from stanza.models.coref.coref_chain import CorefMention, CorefChain, CorefAttachment
@@ -85,7 +85,6 @@ class Document(StanzaObject):
             self.mark_whitespace()
 
     def mark_whitespace(self):
-        # TODO: add SpacesBefore as well
         for sentence in self._sentences:
             # TODO: pairwise, once we move to minimum 3.10
             for prev_token, next_token in zip(sentence.tokens[:-1], sentence.tokens[1:]):
@@ -100,6 +99,10 @@ class Document(StanzaObject):
             final_token = self._sentences[-1].tokens[-1]
             whitespace = self._text[final_token.end_char:]
             final_token.spaces_after = whitespace
+        if len(self._sentences) > 0 and len(self._sentences[0].tokens) > 0:
+            first_token = self._sentences[0].tokens[0]
+            whitespace = self._text[:first_token.start_char]
+            first_token.spaces_before = whitespace
 
 
     @property
@@ -1061,6 +1064,38 @@ class Token(StanzaObject):
         self._misc = value if self._is_null(value) == False else None
 
     @property
+    def spaces_before(self):
+        """ SpacesBefore for the token.  Attached to the MISC field, although the plan is to switch it to be on the token itself """
+        space_before = misc_to_space_before(self.misc)
+        if space_before == '':
+            space_before = misc_to_space_before(self.words[0].misc)
+        return space_before
+
+    @spaces_before.setter
+    def spaces_before(self, value):
+        # TODO: instead of cramming this into the MISC field, make the spaces a separate field
+        misc = self.misc
+        if not misc:
+            misc = space_before_to_misc(value)
+            self.misc = misc
+        else:
+            pieces = misc.split("|")
+            pieces = [x for x in pieces if x and not x.lower().split("=", maxsplit=1)[0] == 'spacesbefore']
+            space_misc = space_before_to_misc(value)
+            if space_misc:
+                pieces.append(space_misc)
+            misc = "|".join(pieces)
+            self.misc = misc
+        # handle the Word spaceafter as well - erase any SpaceAfter or SpacesAfter
+        misc = self.words[-1].misc
+        if misc:
+            pieces = misc.split("|")
+            pieces = [x for x in pieces if x and not x.lower().split("=", maxsplit=1)[0] == 'spacesbefore']
+            misc = "|".join(pieces)
+            self.words[-1].misc = misc
+
+
+    @property
     def spaces_after(self):
         """ SpaceAfter or SpacesAfter for the token.  Currently uses the MISC field """
         space_after = misc_to_space_after(self.misc)
@@ -1180,6 +1215,14 @@ class Token(StanzaObject):
                 spaces_after = self.spaces_after
                 if spaces_after is not None and spaces_after != ' ':
                     space_misc = space_after_to_misc(spaces_after)
+                    if word_dict.get(MISC):
+                        word_dict[MISC] = word_dict[MISC] + "|" + space_misc
+                    else:
+                        word_dict[MISC] = space_misc
+
+                spaces_before = self.spaces_before
+                if spaces_before is not None and spaces_before != '':
+                    space_misc = space_before_to_misc(spaces_before)
                     if word_dict.get(MISC):
                         word_dict[MISC] = word_dict[MISC] + "|" + space_misc
                     else:
