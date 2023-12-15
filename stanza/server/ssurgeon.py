@@ -190,12 +190,7 @@ def convert_response_to_doc(doc, semgrex_response):
                 token_text.append(token.text)
                 if token_idx == len(sentence.tokens) - 1:
                     break
-                token_space_after = misc_to_space_after(token.misc)
-                if token_space_after == ' ':
-                    # in some treebanks, the word might have more interesting
-                    # space after annotations than the token
-                    token_space_after = misc_to_space_after(token.words[-1].misc)
-                token_text.append(token_space_after)
+                token_text.append(token.spaces_after)
 
             sentence_text = "".join(token_text)
 

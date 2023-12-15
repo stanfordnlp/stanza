@@ -1092,14 +1092,13 @@ class Token(StanzaObject):
                         warnings.warn("Unexpected SpaceAfter=No annotation on a word in the middle of an MWT")
                     else:
                         raise ValueError("Unexpected SpacesAfter on a word in the middle on an MWT")
-
+            pieces = [x for x in pieces if not x.startswith("SpacesAfter=") and not x.startswith("SpaceAfter=") and not x.startswith("SpacesBefore=")]
+            word.misc = "|".join(pieces)
 
     @property
     def spaces_before(self):
         """ SpacesBefore for the token.  Attached to the MISC field, although the plan is to switch it to be on the token itself """
         space_before = misc_to_space_before(self.misc)
-        if space_before == '':
-            space_before = misc_to_space_before(self.words[0].misc)
         return space_before
 
     @spaces_before.setter
@@ -1117,23 +1116,12 @@ class Token(StanzaObject):
                 pieces.append(space_misc)
             misc = "|".join(pieces)
             self.misc = misc
-        # handle the Word spaceafter as well - erase any SpaceAfter or SpacesAfter
-        misc = self.words[-1].misc
-        if misc:
-            pieces = misc.split("|")
-            pieces = [x for x in pieces if x and not x.lower().split("=", maxsplit=1)[0] == 'spacesbefore']
-            misc = "|".join(pieces)
-            self.words[-1].misc = misc
 
 
     @property
     def spaces_after(self):
         """ SpaceAfter or SpacesAfter for the token.  Currently uses the MISC field """
         space_after = misc_to_space_after(self.misc)
-        # Some treebanks have the SpaceAfter on the *words* and not the tokens.
-        # TODO: We should probably unify that when reading CoNLL-U
-        if space_after == ' ':
-            space_after = misc_to_space_after(self.words[-1].misc)
         return space_after
 
     @spaces_after.setter
@@ -1151,13 +1139,6 @@ class Token(StanzaObject):
                 pieces.append(space_misc)
             misc = "|".join(pieces)
             self.misc = misc
-        # handle the Word spaceafter as well - erase any SpaceAfter or SpacesAfter
-        misc = self.words[-1].misc
-        if misc:
-            pieces = misc.split("|")
-            pieces = [x for x in pieces if x and not x.lower().split("=", maxsplit=1)[0] in ("spaceafter", "spacesafter")]
-            misc = "|".join(pieces)
-            self.words[-1].misc = misc
 
     @property
     def words(self):
