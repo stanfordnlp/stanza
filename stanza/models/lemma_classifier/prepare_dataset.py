@@ -41,8 +41,6 @@ class DataProcessor():
             keep_condition (callable): A function that outputs a boolean representing whether to analyze (True) or not analyze the sentence for a target word.
             save_name (str): Path to the file for storing output
         """
-        if os.path.exists(save_name):
-            raise ValueError(f"Output path {save_name} already exists. Aborting...")
         with open(save_name, "w+", encoding="utf-8") as output_f:
             for sentence in doc.sentences:
                 # for each sentence, we need to determine if it should be added to the output file.
