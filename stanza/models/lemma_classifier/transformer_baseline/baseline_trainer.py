@@ -140,6 +140,11 @@ def main():
         raise FileExistsError(f"Save name {save_name} already exists. Training would override existing data. Aborting...")
     if not os.path.exists(train_file):
         raise FileNotFoundError(f"Training file {train_file} not found. Try again with a valid path.")
+
+    logging.info("Running training script with the following args:")
+    for arg in vars(args):
+        logging.info(f"{arg}: {getattr(args, arg)}")
+    logging.info("------------------------------------------------------------")
     
     trainer = TransformerBaselineTrainer(output_dim=output_dim, model_type=model_type, loss_func=loss_fn)
 

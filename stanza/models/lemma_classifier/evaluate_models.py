@@ -243,6 +243,11 @@ def main():
 
     args = parser.parse_args()
 
+    logging.info("Running training script with the following args:")
+    for arg in vars(args):
+        logging.info(f"{arg}: {getattr(args, arg)}")
+    logging.info("------------------------------------------------------------")
+
     vocab_size = args.vocab_size
     embedding_dim = args.embedding_dim
     hidden_dim = args.hidden_dim

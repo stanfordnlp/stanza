@@ -185,7 +185,10 @@ if __name__ == "__main__":
     if not os.path.exists(train_file):
         raise FileNotFoundError(f"Training file {train_file} not found. Try again with a valid path.")
 
-    logging.info(f"WEIGHTED LOSS: {weighted_loss}")
+    logging.info("Running training script with the following args:")
+    for arg in vars(args):
+        logging.info(f"{arg}: {getattr(args, arg)}")
+    logging.info("------------------------------------------------------------")
 
     trainer = LemmaClassifierTrainer(vocab_size=vocab_size,
                                      embeddings="glove",
