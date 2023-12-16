@@ -39,6 +39,7 @@ class LemmaClassifierTrainer():
             forward_charlm_file (str): Path to the forward pass embeddings for the charlm 
             backward_charlm_file (str): Path to the backward pass embeddings for the charlm
             lr (float): Learning rate, defaults to 0.001.
+            loss_func (str): Which loss function to use (either 'ce' or 'weighted_bce') 
 
         Raises:
             FileNotFoundError: If the forward charlm file is not present
@@ -65,7 +66,18 @@ class LemmaClassifierTrainer():
 
         self.model = LemmaClassifier(vocab_size, embedding_dim, hidden_dim, output_dim, self.embeddings.vectors, charlm=use_charlm,
                                      charlm_forward_file=forward_charlm_file, charlm_backward_file=backward_charlm_file)
-        self.criterion = nn.CrossEntropyLoss()  
+        
+        # Find loss function
+        loss_fn = kwargs.get("loss_func", "ce").lower() 
+        if loss_fn == "ce":
+            self.criterion = nn.CrossEntropyLoss()
+            self.weighted_loss = False
+        elif loss_fn == "weighted_bce":
+            self.criteron = nn.BCEWithLogitsLoss()  
+            self.weighted_loss = True  # used to add weights during train time.
+        else:
+            raise ValueError("Must enter a valid loss function (e.g. 'ce' or 'weighted_bce')")
+
         self.optimizer = optim.Adam(self.model.parameters(), lr=kwargs.get("lr", 0.001))  
 
     def train(self, texts_batch: List[List[str]], positions_batch: List[int], labels_batch: List[int], num_epochs: int, save_name: str, **kwargs) -> None:
@@ -88,14 +100,23 @@ class LemmaClassifierTrainer():
 
         train_path, label_decoder = kwargs.get("train_path"), kwargs.get("label_decoder", {})
         if train_path:  # use file to train model
-            texts_batch, positions_batch, labels_batch = utils.load_dataset(train_path, label_decoder=label_decoder)
+            texts_batch, positions_batch, labels_batch, counts = utils.load_dataset(train_path, label_decoder=label_decoder, get_counts=self.weighted_loss)
             logging.info(f"Loaded dataset successfully from {train_path}")
             logging.info(f"Using label decoder: {label_decoder}")
 
         assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
         if path.exists(save_name):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
-    
+        
+        # Configure weighted loss, if necessary
+        if self.weighted_loss:
+            weights = [0 for _ in label_decoder.keys()]  # each key in the label decoder is one class, we have one weight per class
+            total_samples = sum(counts.values())
+            for class_idx in counts:
+                weights[class_idx] = total_samples / (counts[class_idx] * len(counts))  # weight_i = total / (# examples in class i * num classes)
+                weights = torch.tensor(weights)
+            self.criterion = nn.BCEWithLogitsLoss(weight=weights)
+
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
             for texts, position, label in zip(texts_batch, positions_batch, labels_batch):
@@ -108,7 +129,13 @@ class LemmaClassifierTrainer():
                 self.optimizer.zero_grad()
 
                 output = self.model(token_ids, position, texts)
-                target = torch.tensor(label, dtype=torch.long)
+                
+                # Compute loss, which is different if using CE or BCEWithLogitsLoss
+                if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
+                    target_vec = [1, 0] if label == 0 else [0, 1]
+                    target = torch.tensor(target_vec, dtype=torch.float32)
+                else:  # CELoss accepts target as just raw label
+                    target = torch.tensor(label, dtype=torch.long)
                 loss = self.criterion(output, target)
 
                 loss.backward()
@@ -132,10 +159,11 @@ if __name__ == "__main__":
     parser.add_argument("--use_charlm", type=bool, default=True, help="Whether not to use the charlm embeddings")
     parser.add_argument("--forward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
     parser.add_argument("--backward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
-    parser.add_argument("--save_name", type=str, default=path.join(path.dirname(__file__), "saved_models", "lemma_classifier_model.pt"), help="Path to model save file")
+    parser.add_argument("--save_name", type=str, default=path.join(path.dirname(__file__), "saved_models", "lemma_classifier_model_weighted_loss.pt"), help="Path to model save file")
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
     parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(__file__), "test_output.txt"), help="Full path to training file")
+    parser.add_argument("--weighted_loss", type=bool, default=True, help="Whether to use weighted loss during training.")
 
     args = parser.parse_args()
 
@@ -150,11 +178,14 @@ if __name__ == "__main__":
     lr = args.lr
     num_epochs = args.num_epochs
     train_file = args.train_file
+    weighted_loss = args.weighted_loss
 
     if os.path.exists(save_name):
         raise FileExistsError(f"Save name {save_name} already exists. Training would override existing data. Aborting...")
     if not os.path.exists(train_file):
         raise FileNotFoundError(f"Training file {train_file} not found. Try again with a valid path.")
+
+    logging.info(f"WEIGHTED LOSS: {weighted_loss}")
 
     trainer = LemmaClassifierTrainer(vocab_size=vocab_size,
                                      embeddings="glove",
@@ -164,7 +195,8 @@ if __name__ == "__main__":
                                      use_charlm=use_charlm,
                                      forward_charlm_file=forward_charlm_file,
                                      backward_charlm_file=backward_charlm_file,
-                                     lr=lr
+                                     lr=lr,
+                                     loss_func="weighted_bce" if weighted_loss else "ce"
                                      )
     trainer.train(
         [], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file, label_decoder={"be": 0, "have": 1}

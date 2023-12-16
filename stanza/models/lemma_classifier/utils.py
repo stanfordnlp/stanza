@@ -10,7 +10,7 @@ def load_doc_from_conll_file(path: str):
     return stanza.utils.conll.CoNLL.conll2doc(path)
 
 
-def load_dataset(data_path: str, label_decoder: Mapping[str, int]) -> Tuple[List[List[str]], List[int], List[int]]:
+def load_dataset(data_path: str, label_decoder: Mapping[str, int], get_counts: bool = False) -> Tuple[List[List[str]], List[int], List[int], Mapping[int, int]]:
 
     """
     Loads a data file into data batches for tokenized text sentences, token indices, and true labels for each sentence.
@@ -18,11 +18,13 @@ def load_dataset(data_path: str, label_decoder: Mapping[str, int]) -> Tuple[List
     Args:
         data_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line. 
         label_decoder (Mapping[str, int]): A map between target token lemmas and their corresponding integers for the labels
+        get_counts (optional, bool): Whether there should be a map of the label index to counts
 
     Returns:
         1. List[List[str]]: A list of sentences, where each token is a separate entry
         2. List[int]: A list of indexes for the target token corresponding to its sentence
         3. List[int]: A list of labels for the target token's lemma
+        4 (Optional): A mapping of label ID to counts in the dataset.
 
     """
 
@@ -31,7 +33,7 @@ def load_dataset(data_path: str, label_decoder: Mapping[str, int]) -> Tuple[List
     if not label_decoder:
         raise ValueError(f"Label decoder {label_decoder} is invalid.")
 
-    sentences, indices, labels = [], [], []
+    sentences, indices, labels, counts = [], [], [], {}
 
     with open(data_path, "r+", encoding="utf-8") as f:
         for line in f.readlines():
@@ -51,8 +53,13 @@ def load_dataset(data_path: str, label_decoder: Mapping[str, int]) -> Tuple[List
             sentences.append(sentence)
             indices.append(index)
             labels.append(label_id)
+
+            if get_counts:
+                if label_id not in counts:
+                    counts[label_id] = 0
+                counts[label_id] += 1 
     
-    return sentences, indices, labels
+    return sentences, indices, labels, counts
 
 
 def extract_unknown_token_indices(tokenized_indices: torch.tensor, unknown_token_idx: int) -> List[int]:
