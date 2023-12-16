@@ -5,15 +5,16 @@ The code in this file works to train a lemma classifier for 's
 import torch 
 import torch.nn as nn
 import torch.optim as optim
-import utils
 import os 
 import logging
 import argparse
 from os import path
 from os import remove
-from model import LemmaClassifier
 from typing import List, Tuple, Any
-from constants import get_glove, UNKNOWN_TOKEN_IDX
+
+from stanza.models.lemma_classifier import utils
+from stanza.models.lemma_classifier.constants import get_glove, UNKNOWN_TOKEN_IDX
+from stanza.models.lemma_classifier.model import LemmaClassifier
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -147,10 +148,7 @@ class LemmaClassifierTrainer():
         torch.save(self.model.state_dict(), save_name)
         logging.info(f"Saved model state dict to {save_name}")
 
-
-if __name__ == "__main__":
-
-    
+def build_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument("--vocab_size", type=int, default=10000, help="Number of tokens in vocab")
     parser.add_argument("--embedding_dim", type=int, default=100, help="Number of dimensions in word embeddings (currently using GloVe)")
@@ -164,8 +162,11 @@ if __name__ == "__main__":
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
     parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(__file__), "test_output.txt"), help="Full path to training file")
     parser.add_argument("--weighted_loss", type=bool, default=True, help="Whether to use weighted loss during training.")
+    return parser
 
-    args = parser.parse_args()
+def main(args=None):
+    parser = build_argparse()
+    args = parser.parse_args(args)
 
     vocab_size = args.vocab_size
     embedding_dim = args.embedding_dim
@@ -204,3 +205,7 @@ if __name__ == "__main__":
     trainer.train(
         [], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file, label_decoder={"be": 0, "have": 1}
     )
+
+if __name__ == "__main__":
+    main()
+

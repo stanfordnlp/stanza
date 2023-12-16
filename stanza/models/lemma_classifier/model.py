@@ -1,11 +1,11 @@
 import torch
 import torch.nn as nn
-import utils
 import os
-from constants import *
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from typing import List, Tuple
 
+from stanza.models.lemma_classifier import utils
+from stanza.models.lemma_classifier.constants import *
 
 class LemmaClassifier(nn.Module):
     """
