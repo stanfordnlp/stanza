@@ -77,8 +77,7 @@ class DataProcessor():
         return output
 
 
-if __name__ == "__main__":
-
+def main(args=None):
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--conll_path", type=str, default=os.path.join(os.path.dirname(__file__), "en_gum-ud-train.conllu"), help="path to the conll file to translate")
@@ -86,7 +85,7 @@ if __name__ == "__main__":
     parser.add_argument("--target_upos", type=str, default="AUX", help="upos on target token")
     parser.add_argument("--output_path", type=str, default="test_output.txt", help="Path for output file")
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     conll_path = args.conll_path
     target_word = args.target_word
@@ -105,3 +104,6 @@ if __name__ == "__main__":
     processor.process_document(doc, keep_sentence, output_path)
 
     # print(processor.read_processed_data(output_path))  # print out examples
+
+if __name__ == "__main__":
+    main()
