@@ -61,9 +61,9 @@ class LemmaClassifierTrainer():
         forward_charlm_file = kwargs.get("forward_charlm_file")
         backward_charlm_file = kwargs.get("backward_charlm_file")
         if use_charlm and forward_charlm_file is not None and not os.path.exists(forward_charlm_file):
-            raise FileNotFoundError(f"Could not find foward charlm file: {forward_charlm_file}")
+            raise FileNotFoundError(f"Could not find forward charlm file: {forward_charlm_file}")
         if use_charlm and backward_charlm_file is not None and not os.path.exists(backward_charlm_file):
-            raise FileNotFoundError(f"Could not find foward charlm file: {backward_charlm_file}")
+            raise FileNotFoundError(f"Could not find backward charlm file: {backward_charlm_file}")
 
         self.model = LemmaClassifier(vocab_size, embedding_dim, hidden_dim, output_dim, self.embeddings.vectors, charlm=use_charlm,
                                      charlm_forward_file=forward_charlm_file, charlm_backward_file=backward_charlm_file)
