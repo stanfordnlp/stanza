@@ -1,7 +1,9 @@
-import stanza
-import utils 
-import os
 import argparse
+import os
+import re
+
+import stanza
+from stanza.models.lemma_classifier import utils
 
 from typing import List, Tuple, Any
 
@@ -13,9 +15,10 @@ Furthermore, it will store tuples of the Stanza document object, the position in
 
 class DataProcessor():
 
-    def __init__(self, target_word: str, target_upos: List[str]):
+    def __init__(self, target_word: str, target_upos: List[str], allowed_lemmas: str):
         self.target_word = target_word 
         self.target_upos = target_upos
+        self.allowed_lemmas = re.compile(allowed_lemmas)
     
     def find_all_occurrences(self, sentence) -> List[int]:
         """
@@ -48,8 +51,9 @@ class DataProcessor():
                     tokens = [token.text for token in sentence.words]
                     indexes = self.find_all_occurrences(sentence)
                     for idx in indexes:
-                        # for each example found, we write the tokens along with the target word index and lemma
-                        output_f.write(f'{" ".join(tokens)} {idx} {sentence.words[idx].lemma}\n')                    
+                        if self.allowed_lemmas.fullmatch(sentence.words[idx].lemma):
+                            # for each example found, we write the tokens along with the target word index and lemma
+                            output_f.write(f'{" ".join(tokens)} {idx} {sentence.words[idx].lemma}\n')
 
     def read_processed_data(self, file_name: str) -> List[dict]:
         """
@@ -84,6 +88,7 @@ def main(args=None):
     parser.add_argument("--target_word", type=str, default="'s", help="Token to classify on, e.g. 's.")
     parser.add_argument("--target_upos", type=str, default="AUX", help="upos on target token")
     parser.add_argument("--output_path", type=str, default="test_output.txt", help="Path for output file")
+    parser.add_argument("--allowed_lemmas", type=str, default=".*", help="A regex for allowed lemmas.  If not set, all lemmas are allowed")
 
     args = parser.parse_args(args)
 
@@ -91,9 +96,10 @@ def main(args=None):
     target_word = args.target_word
     target_upos = args.target_upos
     output_path = args.output_path
+    allowed_lemmas = args.allowed_lemmas
 
     doc = utils.load_doc_from_conll_file(conll_path)
-    processor = DataProcessor(target_word=target_word, target_upos=[target_upos])
+    processor = DataProcessor(target_word=target_word, target_upos=[target_upos], allowed_lemmas=allowed_lemmas)
     
     def keep_sentence(sentence):
         for word in sentence.words:
