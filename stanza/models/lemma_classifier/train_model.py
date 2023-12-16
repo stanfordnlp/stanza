@@ -154,9 +154,10 @@ def build_argparse():
     parser.add_argument("--embedding_dim", type=int, default=100, help="Number of dimensions in word embeddings (currently using GloVe)")
     parser.add_argument("--hidden_dim", type=int, default=256, help="Size of hidden layer")
     parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
-    parser.add_argument("--use_charlm", type=bool, default=True, help="Whether not to use the charlm embeddings")
-    parser.add_argument("--forward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
-    parser.add_argument("--backward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
+    parser.add_argument("--charlm", action='store_true', dest='use_charlm', default=False, help="Whether not to use the charlm embeddings")
+    parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
+    parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
+    parser.add_argument("--charlm_backward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
     parser.add_argument("--save_name", type=str, default=path.join(path.dirname(__file__), "saved_models", "lemma_classifier_model_weighted_loss.pt"), help="Path to model save file")
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
@@ -173,8 +174,8 @@ def main(args=None):
     hidden_dim = args.hidden_dim
     output_dim = args.output_dim
     use_charlm = args.use_charlm
-    forward_charlm_file = args.forward_charlm_file
-    backward_charlm_file = args.backward_charlm_file
+    forward_charlm_file = args.charlm_forward_file
+    backward_charlm_file = args.charlm_backward_file
     save_name = args.save_name 
     lr = args.lr
     num_epochs = args.num_epochs
