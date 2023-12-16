@@ -145,6 +145,9 @@ class LemmaClassifierTrainer():
             logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
 
 
+        save_dir = os.path.split(save_name)[0]
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
         torch.save(self.model.state_dict(), save_name)
         logging.info(f"Saved model state dict to {save_name}")
 
