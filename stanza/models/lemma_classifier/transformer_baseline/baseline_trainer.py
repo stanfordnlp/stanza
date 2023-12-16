@@ -28,18 +28,28 @@ class TransformerBaselineTrainer:
     To find the model spec, refer to `model.py` in this directory.
     """
 
-    def __init__(self, output_dim: int, model_type: str):
+    def __init__(self, output_dim: int, model_type: str, loss_func: str):
         """
         Creates the Trainer object
 
         Args:
             output_dim (int): The dimension of the output layer from the MLP in the classifier model.
             model_type (str): What kind of transformer to use for embeddings ('bert' or 'roberta')
+            loss_func (str): Which loss function to use (either 'ce' or 'weighted_bce') 
         """
         self.output_dim = output_dim 
 
         self.model = LemmaClassifierWithTransformer(output_dim=self.output_dim, model_type=model_type)
-        self.criterion = nn.CrossEntropyLoss() 
+        # Find loss function
+        if loss_func == "ce":
+            self.criterion = nn.CrossEntropyLoss()
+            self.weighted_loss = False
+        elif loss_func == "weighted_bce":
+            self.criteron = nn.BCEWithLogitsLoss()  
+            self.weighted_loss = True  # used to add weights during train time.
+        else:
+            raise ValueError("Must enter a valid loss function (e.g. 'ce' or 'weighted_bce')")
+        
         self.optimizer = optim.Adam(self.model.parameters(), lr=0.001) 
 
     def train(self, texts_batch: List[List[str]], positions_batch: List[int], labels_batch: List[int], num_epochs: int, save_name: str, **kwargs):
@@ -60,12 +70,25 @@ class TransformerBaselineTrainer:
 
         """
 
+        if not kwargs.get("label_decoder"):
+            raise ValueError(f"Needs label decoder to proceed.")
+
         if kwargs.get("train_path"):
-            texts_batch, positions_batch, labels_batch = utils.load_dataset(kwargs.get("train_path"), label_decoder=kwargs.get("label_decoder"))
+            texts_batch, positions_batch, labels_batch, counts = utils.load_dataset(kwargs.get("train_path"), label_decoder=kwargs.get("label_decoder"), 
+                                                                                    get_counts=self.weighted_loss)
         
         assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
         if path.exists(save_name):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
+        
+        # Configure weighted loss, if necessary
+        if self.weighted_loss:
+            weights = [0 for _ in kwargs.get("label_decoder", {}).keys()]  # each key in the label decoder is one class, we have one weight per class
+            total_samples = sum(counts.values())
+            for class_idx in counts:
+                weights[class_idx] = total_samples / (counts[class_idx] * len(counts))  # weight_i = total / (# examples in class i * num classes)
+                weights = torch.tensor(weights)
+            self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
@@ -75,7 +98,13 @@ class TransformerBaselineTrainer:
                 
                 self.optimizer.zero_grad()
                 output = self.model(texts, position)
-                target = torch.tensor(label, dtype=torch.long)
+                
+                # Compute loss, which is different if using CE or BCEWithLogitsLoss
+                if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
+                    target_vec = [1, 0] if label == 0 else [0, 1]
+                    target = torch.tensor(target_vec, dtype=torch.float32)
+                else:  # CELoss accepts target as just raw label
+                    target = torch.tensor(label, dtype=torch.long)
                 loss = self.criterion(output, target)
 
                 loss.backward()
@@ -92,10 +121,11 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
-    parser.add_argument("--save_name", type=str, default=path.join(path.dirname(path.dirname(__file__)), "saved_models", "big_model_roberta.pt"), help="Path to model save file")
+    parser.add_argument("--save_name", type=str, default=path.join(path.dirname(path.dirname(__file__)), "saved_models", "big_model_roberta_weighted_loss.pt"), help="Path to model save file")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
     parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_output.txt"), help="Full path to training file")
     parser.add_argument("--model_type", type=str, default="roberta", help="Which transformer to use ('bert' or 'roberta')")
+    parser.add_argument("--loss_fn", type=str, default="weighted_bce", help="Which loss function to train with (e.g. 'ce' or 'weighted_bce')")
 
     args = parser.parse_args()
 
@@ -104,13 +134,14 @@ def main():
     num_epochs = args.num_epochs
     train_file = args.train_file
     model_type = args.model_type
+    loss_fn = args.loss_fn
 
     if os.path.exists(save_name):
         raise FileExistsError(f"Save name {save_name} already exists. Training would override existing data. Aborting...")
     if not os.path.exists(train_file):
         raise FileNotFoundError(f"Training file {train_file} not found. Try again with a valid path.")
     
-    trainer = TransformerBaselineTrainer(output_dim=output_dim, model_type=model_type)
+    trainer = TransformerBaselineTrainer(output_dim=output_dim, model_type=model_type, loss_func=loss_fn)
 
     trainer.train([], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file, label_decoder={"be": 0, "have": 1})
 
