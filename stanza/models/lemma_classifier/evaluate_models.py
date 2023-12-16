@@ -132,7 +132,7 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, labe
     model.eval()  # set to eval mode
 
     # load in eval data 
-    text_batches, index_batches, label_batches = utils.load_dataset(eval_path, label_decoder=label_decoder)
+    text_batches, index_batches, label_batches, _ = utils.load_dataset(eval_path, label_decoder=label_decoder)
     
     logging.info(f"Evaluating model from {model_path} on evaluation file {eval_path}")
 
@@ -205,7 +205,7 @@ def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, 
     model.eval()  # set to eval mode
 
     # load in eval data 
-    text_batches, index_batches, label_batches = utils.load_dataset(eval_path, label_decoder=label_decoder)
+    text_batches, index_batches, label_batches, _ = utils.load_dataset(eval_path, label_decoder=label_decoder)
     
     logging.info(f"Evaluating model from {model_path} on evaluation file {eval_path}")
 
