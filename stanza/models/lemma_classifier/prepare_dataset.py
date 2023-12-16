@@ -98,7 +98,7 @@ if __name__ == "__main__":
     
     def keep_sentence(sentence):
         for word in sentence.words:
-            if word.text == "'s" and word.upos == "AUX":
+            if word.text == target_word and word.upos == target_upos:
                 return True 
         return False
 
