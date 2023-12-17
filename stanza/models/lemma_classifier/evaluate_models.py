@@ -242,9 +242,6 @@ def main(args=None):
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
     parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
     parser.add_argument("--charlm_backward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
-    parser.add_argument("--charlm", action="store_true", dest="use_charlm", default=False, help="Whether not to use the charlm embeddings")
-    parser.add_argument("--forward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
-    parser.add_argument("--backward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
     parser.add_argument("--save_name", type=str, default=os.path.join(os.path.dirname(__file__), "saved_models", "lemma_classifier_model.pt"), help="Path to model save file")
     parser.add_argument("--model_type", type=str, default="roberta", help="Which transformer to use ('bert' or 'roberta' or 'lstm')")
     parser.add_argument("--eval_file", type=str, help="path to evaluation file")
@@ -261,8 +258,8 @@ def main(args=None):
     hidden_dim = args.hidden_dim
     output_dim = args.output_dim
     use_charlm = args.charlm
-    forward_charlm_file = args.forward_charlm_file
-    backward_charlm_file = args.backward_charlm_file
+    forward_charlm_file = args.charlm_forward_file
+    backward_charlm_file = args.charlm_backward_file
     save_name = args.save_name 
     model_type = args.model_type
     eval_path = args.eval_file
