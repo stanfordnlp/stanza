@@ -38,6 +38,14 @@ def run_treebank(mode, paths, treebank, short_name,
         eval_args = base_args + eval_args + charlm_args + extra_args
         evaluate_models.main(eval_args)
 
+    if mode == Mode.SCORE_TEST:
+        eval_args = []
+        if "--eval_file" not in extra_args:
+            eval_file = os.path.join("data", "lemma_classifier", "%s.test.lemma" % short_name)
+            eval_args += ['--eval_file', eval_file]
+        eval_args = base_args + eval_args + charlm_args + extra_args
+        evaluate_models.main(eval_args)
+
 def main():
     common.main(run_treebank, "lemma_classifier", "lemma_classifier", add_lemma_args, sub_argparse=train_model.build_argparse(), build_model_filename=build_model_filename, choose_charlm_method=choose_lemma_charlm)
 
