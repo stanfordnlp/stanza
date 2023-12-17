@@ -12,13 +12,9 @@ from os import path
 from os import remove
 from typing import List, Tuple, Any
 
-import utils 
-from constants import get_glove, UNKNOWN_TOKEN_IDX
-from model import LemmaClassifier
-
-# from stanza.models.lemma_classifier import utils
-# from stanza.models.lemma_classifier.constants import get_glove, UNKNOWN_TOKEN_IDX
-# from stanza.models.lemma_classifier.model import LemmaClassifier
+from stanza.models.lemma_classifier import utils
+from stanza.models.lemma_classifier.constants import get_glove, UNKNOWN_TOKEN_IDX
+from stanza.models.lemma_classifier.model import LemmaClassifier
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
