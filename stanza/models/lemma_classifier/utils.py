@@ -10,7 +10,7 @@ def load_doc_from_conll_file(path: str):
     return stanza.utils.conll.CoNLL.conll2doc(path)
 
 
-def load_dataset(data_path: str, label_decoder: Mapping[str, int], get_counts: bool = False) -> Tuple[List[List[str]], List[int], List[int], Mapping[int, int]]:
+def load_dataset(data_path: str, get_counts: bool = False) -> Tuple[List[List[str]], List[int], List[int], Mapping[int, int], Mapping[str, int]]:
 
     """
     Loads a data file into data batches for tokenized text sentences, token indices, and true labels for each sentence.
@@ -25,15 +25,14 @@ def load_dataset(data_path: str, label_decoder: Mapping[str, int], get_counts: b
         2. List[int]: A list of indexes for the target token corresponding to its sentence
         3. List[int]: A list of labels for the target token's lemma
         4 (Optional): A mapping of label ID to counts in the dataset.
+        5. Mapping[str, int]: A map between the labels and their indexes
 
     """
 
     if data_path is None or not os.path.exists(data_path):
         raise FileNotFoundError(f"Data file {data_path} could not be found.")
-    if not label_decoder:
-        raise ValueError(f"Label decoder {label_decoder} is invalid.")
 
-    sentences, indices, labels, counts = [], [], [], {}
+    sentences, indices, labels, counts, label_decoder = [], [], [], {}, {}
 
     with open(data_path, "r+", encoding="utf-8") as f:
         for line in f.readlines():
@@ -48,18 +47,18 @@ def load_dataset(data_path: str, label_decoder: Mapping[str, int], get_counts: b
 
             label_id = label_decoder.get(label, None)
             if label_id is None:
-                ValueError(f"Label {label} was not found in the label decoder ({label_decoder}).")
+                label_decoder[label] = len(label_decoder)
 
             sentences.append(sentence)
             indices.append(index)
-            labels.append(label_id)
+            labels.append(label_decoder[label])
 
             if get_counts:
-                if label_id not in counts:
-                    counts[label_id] = 0
-                counts[label_id] += 1 
+                if label_decoder[label] not in counts:
+                    counts[label_decoder[label]] = 0
+                counts[label_decoder[label]] += 1 
     
-    return sentences, indices, labels, counts
+    return sentences, indices, labels, counts, label_decoder
 
 
 def extract_unknown_token_indices(tokenized_indices: torch.tensor, unknown_token_idx: int) -> List[int]:

@@ -12,9 +12,13 @@ from os import path
 from os import remove
 from typing import List, Tuple, Any
 
-from stanza.models.lemma_classifier import utils
-from stanza.models.lemma_classifier.constants import get_glove, UNKNOWN_TOKEN_IDX
-from stanza.models.lemma_classifier.model import LemmaClassifier
+import utils 
+from constants import get_glove, UNKNOWN_TOKEN_IDX
+from model import LemmaClassifier
+
+# from stanza.models.lemma_classifier import utils
+# from stanza.models.lemma_classifier.constants import get_glove, UNKNOWN_TOKEN_IDX
+# from stanza.models.lemma_classifier.model import LemmaClassifier
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -94,14 +98,12 @@ class LemmaClassifierTrainer():
             save_name (str): Path to file where trained model should be saved. 
 
         Kwargs:
-            train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line. 
-            label_decoder (Mapping[str, int]): A map between target token lemmas and their corresponding integers for the labels 
-        
+            train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line.         
         """
 
-        train_path, label_decoder = kwargs.get("train_path"), kwargs.get("label_decoder", {})
+        train_path = kwargs.get("train_path")
         if train_path:  # use file to train model
-            texts_batch, positions_batch, labels_batch, counts = utils.load_dataset(train_path, label_decoder=label_decoder, get_counts=self.weighted_loss)
+            texts_batch, positions_batch, labels_batch, counts, label_decoder = utils.load_dataset(train_path, get_counts=self.weighted_loss)
             logging.info(f"Loaded dataset successfully from {train_path}")
             logging.info(f"Using label decoder: {label_decoder}")
 
@@ -161,11 +163,11 @@ def build_argparse():
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
     parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
     parser.add_argument("--charlm_backward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
-    parser.add_argument("--save_name", type=str, default=path.join(path.dirname(__file__), "saved_models", "lemma_classifier_model_weighted_loss.pt"), help="Path to model save file")
+    parser.add_argument("--save_name", type=str, default=path.join(path.dirname(__file__), "saved_models", "lemma_classifier_model_weighted_loss_charlm_new.pt"), help="Path to model save file")
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
-    parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(__file__), "test_output.txt"), help="Full path to training file")
-    parser.add_argument("--weighted_loss", type=bool, default=True, help="Whether to use weighted loss during training.")
+    parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(__file__), "test_sets", "combined_train.txt"), help="Full path to training file")
+    parser.add_argument("--weighted_loss", action='store_true', dest='weighted_loss', default=False, help="Whether to use weighted loss during training.")
     return parser
 
 def main(args=None):
@@ -206,8 +208,9 @@ def main(args=None):
                                      lr=lr,
                                      loss_func="weighted_bce" if weighted_loss else "ce"
                                      )
+
     trainer.train(
-        [], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file, label_decoder={"be": 0, "have": 1}
+        [], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file
     )
 
 if __name__ == "__main__":

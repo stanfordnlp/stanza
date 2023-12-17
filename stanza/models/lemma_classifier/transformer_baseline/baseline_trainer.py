@@ -66,16 +66,11 @@ class TransformerBaselineTrainer:
         
         Kwargs:
             train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line. 
-            label_decoder (Mapping[str, int]): A map between target token lemmas and their corresponding integers for the labels 
-
         """
 
-        if not kwargs.get("label_decoder"):
-            raise ValueError(f"Needs label decoder to proceed.")
-
         if kwargs.get("train_path"):
-            texts_batch, positions_batch, labels_batch, counts = utils.load_dataset(kwargs.get("train_path"), label_decoder=kwargs.get("label_decoder"), 
-                                                                                    get_counts=self.weighted_loss)
+            texts_batch, positions_batch, labels_batch, counts, label_decoder = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss)
+            logging.info(f"Using label decoder : {label_decoder}")
         
         assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
         if path.exists(save_name):
@@ -83,11 +78,12 @@ class TransformerBaselineTrainer:
         
         # Configure weighted loss, if necessary
         if self.weighted_loss:
-            weights = [0 for _ in kwargs.get("label_decoder", {}).keys()]  # each key in the label decoder is one class, we have one weight per class
+            weights = [0 for _ in label_decoder.keys()]  # each key in the label decoder is one class, we have one weight per class
             total_samples = sum(counts.values())
             for class_idx in counts:
                 weights[class_idx] = total_samples / (counts[class_idx] * len(counts))  # weight_i = total / (# examples in class i * num classes)
                 weights = torch.tensor(weights)
+                logging.info(f"WEIGHTS, {weights}")
             self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
         for epoch in range(num_epochs):
@@ -121,9 +117,9 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
-    parser.add_argument("--save_name", type=str, default=path.join(path.dirname(path.dirname(__file__)), "saved_models", "big_model_roberta_weighted_loss.pt"), help="Path to model save file")
+    parser.add_argument("--save_name", type=str, default=path.join(path.dirname(path.dirname(__file__)), "saved_models", "big_model_bert_weighted_loss.pt"), help="Path to model save file")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
-    parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_output.txt"), help="Full path to training file")
+    parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_sets", "combined_train.txt"), help="Full path to training file")
     parser.add_argument("--model_type", type=str, default="roberta", help="Which transformer to use ('bert' or 'roberta')")
     parser.add_argument("--loss_fn", type=str, default="weighted_bce", help="Which loss function to train with (e.g. 'ce' or 'weighted_bce')")
 
@@ -148,7 +144,7 @@ def main():
     
     trainer = TransformerBaselineTrainer(output_dim=output_dim, model_type=model_type, loss_func=loss_fn)
 
-    trainer.train([], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file, label_decoder={"be": 0, "have": 1})
+    trainer.train([], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file)
 
 
 if __name__ == "__main__":

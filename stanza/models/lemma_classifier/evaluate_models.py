@@ -77,7 +77,7 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
     
     if verbose:
         for lemma in multi_class_result:
-            print(f"Lemma '{lemma}' had precision {100 * multi_class_result[lemma]['precision']}, recall {100 * multi_class_result[lemma]['recall']} and F1 score of {100 * multi_class_result[lemma]['f1']}")
+            logging.info(f"Lemma '{lemma}' had precision {100 * multi_class_result[lemma]['precision']}, recall {100 * multi_class_result[lemma]['recall']} and F1 score of {100 * multi_class_result[lemma]['f1']}")
 
     return multi_class_result, confusion   
 
@@ -108,8 +108,7 @@ def model_predict(model: LemmaClassifier, text: List[int], position_idx: int, wo
     return predicted_class
 
 
-def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, label_decoder: Mapping[str, int], 
-                   verbose: bool = True) -> Tuple[Mapping, Mapping, float]:
+def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verbose: bool = True) -> Tuple[Mapping, Mapping, float]:
     """
     Helper function for model evaluation
 
@@ -132,7 +131,7 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, labe
     model.eval()  # set to eval mode
 
     # load in eval data 
-    text_batches, index_batches, label_batches, _ = utils.load_dataset(eval_path, label_decoder=label_decoder)
+    text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path)
     
     logging.info(f"Evaluating model from {model_path} on evaluation file {eval_path}")
 
@@ -149,12 +148,12 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, labe
         correct += 1 if pred == label else 0 
         pred_tags += [pred]
 
-    print("Finished evaluating on dataset. Computing scores...")
+    logging.info("Finished evaluating on dataset. Computing scores...")
     accuracy = correct / len(label_batches)
     mc_results, confusion = evaluate_sequences(gold_tags, [pred_tags], verbose=verbose)  
     # add brackets around batches of gold and pred tags because each batch is an element within the sequences in this helper
     if verbose:
-        print(f"Accuracy: {accuracy} ({correct}/{len(label_batches)})")
+        logging.info(f"Accuracy: {accuracy} ({correct}/{len(label_batches)})")
     
     return mc_results, confusion, accuracy
 
@@ -181,7 +180,7 @@ def transformer_pred(model: LemmaClassifierWithTransformer, text: List[str], pos
     return predicted_class
 
 
-def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, eval_path: str, label_decoder: Mapping[str, int], verbose: bool = True):
+def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, eval_path: str, verbose: bool = True):
     """
     Helper function for transformer-model evaluation
 
@@ -190,7 +189,6 @@ def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, 
                                                  matches the model saved in `model_path`.
         model_path (str): Path to the saved model weights that will be loaded into `model`.
         eval_path (str): Path to the saved evaluation dataset.
-        label_decoder (Mapping[str, int]): A map between target token lemmas and their corresponding integers for the labels
         verbose (bool, optional): True if `evaluate_sequences()` should print the F1, Precision, and Recall for each class. Defaults to True.
 
     Returns:
@@ -205,7 +203,7 @@ def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, 
     model.eval()  # set to eval mode
 
     # load in eval data 
-    text_batches, index_batches, label_batches, _ = utils.load_dataset(eval_path, label_decoder=label_decoder)
+    text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path)
     
     logging.info(f"Evaluating model from {model_path} on evaluation file {eval_path}")
 
@@ -217,12 +215,12 @@ def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, 
         correct += 1 if pred == label else 0 
         pred_tags += [pred]
 
-    print("Finished evaluating on dataset. Computing scores...")
+    logging.info("Finished evaluating on dataset. Computing scores...")
     accuracy = correct / len(label_batches)
     mc_results, confusion = evaluate_sequences(gold_tags, [pred_tags], verbose=verbose)  
     # add brackets around batches of gold and pred tags because each batch is an element within the sequences in this helper
     if verbose:
-        print(f"Accuracy: {accuracy} ({correct}/{len(label_batches)})")
+        logging.info(f"Accuracy: {accuracy} ({correct}/{len(label_batches)})")
     
     return mc_results, confusion, accuracy
 
@@ -234,7 +232,7 @@ def main():
     parser.add_argument("--embedding_dim", type=int, default=100, help="Number of dimensions in word embeddings (currently using GloVe)")
     parser.add_argument("--hidden_dim", type=int, default=256, help="Size of hidden layer")
     parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
-    parser.add_argument("--use_charlm", type=bool, default=True, help="Whether not to use the charlm embeddings")
+    parser.add_argument("--charlm", action="store_true", dest="use_charlm", default=False, help="Whether not to use the charlm embeddings")
     parser.add_argument("--forward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
     parser.add_argument("--backward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
     parser.add_argument("--save_name", type=str, default=os.path.join(os.path.dirname(__file__), "saved_models", "lemma_classifier_model.pt"), help="Path to model save file")
@@ -283,19 +281,16 @@ def main():
     elif model_type.lower() == "bert":
         # Evaluate Transformer (BERT or ROBERTA)
         model = LemmaClassifierWithTransformer(output_dim=output_dim, model_type="bert")
-
-    # TODO  make this an argparse
-    label_decoder = {"be": 0, "have": 1}
     
     logging.info(f"Attempting evaluation of model from {save_name} on file {eval_path}")
 
     if model_type.lower() == "lstm":
         # for LSTM models
-        mcc_results, confusion, acc = evaluate_model(model, save_name, eval_path, label_decoder)
+        mcc_results, confusion, acc = evaluate_model(model, save_name, eval_path)
 
     elif model_type.lower() == "roberta" or model_type.lower() == "bert":
         # for transformer
-        mcc_results, confusion, acc = evaluate_transformer(model, save_name, eval_path, label_decoder)
+        mcc_results, confusion, acc = evaluate_transformer(model, save_name, eval_path)
 
     logging.info(f"MCC Results: {dict(mcc_results)}")
     logging.info("______________________________________________")
