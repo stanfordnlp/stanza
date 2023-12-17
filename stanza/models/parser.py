@@ -11,6 +11,7 @@ Training and evaluation for the parser.
 
 import sys
 import os
+import copy
 import shutil
 import time
 import argparse
@@ -43,7 +44,6 @@ def build_argparse():
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
     parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
-
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
@@ -58,6 +58,8 @@ def build_argparse():
     parser.add_argument('--transformed_dim', type=int, default=125)
     parser.add_argument('--num_layers', type=int, default=3)
     parser.add_argument('--char_num_layers', type=int, default=1)
+    parser.add_argument('--checkpoint_save_name', type=str, default=None, help="File name to save the most recent checkpoint")
+    parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
     parser.add_argument('--pretrain_max_vocab', type=int, default=250000)
     parser.add_argument('--word_dropout', type=float, default=0.33)
     parser.add_argument('--dropout', type=float, default=0.5)
@@ -77,6 +79,7 @@ def build_argparse():
     parser.add_argument('--bert_finetune', default=False, action='store_true', help='Finetune the bert (or other transformer)')
     parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
     parser.add_argument('--bert_learning_rate', default=1.0, type=float, help='Scale the learning rate for transformer finetuning by this much')
+    parser.add_argument('--second_bert_learning_rate', default=1e-3, type=float, help='Secondary stage transformer finetuning learning rate scale')
 
     parser.add_argument('--no_pretrain', dest='pretrain', action='store_false', help="Turn off pretrained embeddings.")
     parser.add_argument('--no_linearization', dest='linearization', action='store_false', help="Turn off linearization term.")
@@ -84,17 +87,20 @@ def build_argparse():
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
+    parser.add_argument('--second_optim', type=str, default=None, help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
+    parser.add_argument('--second_lr', type=float, default=3e-4, help='Secondary stage learning rate')
     parser.add_argument('--beta2', type=float, default=0.95)
 
     parser.add_argument('--max_steps', type=int, default=50000)
     parser.add_argument('--eval_interval', type=int, default=100)
-    parser.add_argument('--max_steps_before_stop', type=int, default=3000)
+    parser.add_argument('--max_steps_before_stop', type=int, default=1000)
     parser.add_argument('--batch_size', type=int, default=5000)
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/depparse', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_parser.pt", help="File name to save the model")
+    parser.add_argument('--continue_from', type=str, default=None, help="File name to preload the model to continue training from")
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
@@ -191,7 +197,19 @@ def train(args):
         wandb.run.define_metric('dev_score', summary='max')
 
     logger.info("Training parser...")
-    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, device=args['device'])
+    # calculate checkpoint file name and the sav
+    model_to_load = None # used for general loading and reloading
+    checkpoint_file = None # used explicitly as the *PATH TO THE CHECKPOINT* could be None if we don't want to save chkpt
+    if args.get("checkpoint"):
+        model_to_load = utils.checkpoint_name(args.get("save_dir"), model_file, args.get("checkpoint_save_name"))
+        checkpoint_file = copy.deepcopy(model_to_load)
+    if args["continue_from"]:
+        model_to_load = args["continue_from"]
+
+    if model_to_load is not None and os.path.exists(model_to_load):
+        trainer = Trainer(args=args, pretrain=pretrain, vocab=vocab, model_file=model_to_load, device=args['device'], ignore_model_config=True)
+    else:
+        trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, device=args['device'])
 
     global_step = 0
     max_steps = args['max_steps']
@@ -201,7 +219,7 @@ def train(args):
     global_start_time = time.time()
     format_str = 'Finished STEP {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
 
-    using_amsgrad = False
+    is_second_stage = False
     last_best_step = 0
     # start training
     train_loss = 0
@@ -247,14 +265,26 @@ def train(args):
                 dev_score_history += [dev_score]
 
             if global_step - last_best_step >= args['max_steps_before_stop']:
-                if not using_amsgrad:
-                    logger.info("Switching to AMSGrad")
+                if not is_second_stage and args.get('second_optim', None) is not None:
+                    logger.info("Switching to second optimizer: {}".format(args.get('second_optim', None)))
+                    args["second_stage"] = True
+                    # if the loader gets a model file, it uses secondary optimizer
+                    trainer = Trainer(args=args, vocab=trainer.vocab, pretrain=pretrain,
+                                      model_file=model_file, device=args['device'])
+                    logger.info('Reloading best model to continue from current local optimum')
+                    is_second_stage = True
                     last_best_step = global_step
-                    using_amsgrad = True
-                    trainer.optimizer = optim.Adam(trainer.model.parameters(), amsgrad=True, lr=args['lr'], betas=(.9, args['beta2']), eps=1e-6)
                 else:
                     do_break = True
                     break
+
+            if global_step % args['eval_interval'] == 0:
+                # if we need to save checkpoint, do so
+                # (save after switching the optimizer, if applicable, so that
+                # the new optimizer is the optimizer used if a restart happens)
+                if checkpoint_file is not None:
+                    trainer.save(checkpoint_file, save_optimizer=True)
+                    logger.info("new model checkpoint saved.")
 
             if global_step >= args['max_steps']:
                 do_break = True
