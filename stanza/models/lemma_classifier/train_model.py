@@ -15,7 +15,9 @@ from typing import List, Tuple, Any
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.constants import get_glove, UNKNOWN_TOKEN_IDX
 from stanza.models.lemma_classifier.model import LemmaClassifier
+from stanza.utils.get_tqdm import get_tqdm
 
+tqdm = get_tqdm()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -118,7 +120,7 @@ class LemmaClassifierTrainer():
 
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
-            for texts, position, label in zip(texts_batch, positions_batch, labels_batch):
+            for texts, position, label in tqdm(zip(texts_batch, positions_batch, labels_batch)):
                 if position < 0 or position > len(texts) - 1:  # validate position index
                     raise ValueError(f"Found position {position} in text: {texts}, which is not possible.")
                 
