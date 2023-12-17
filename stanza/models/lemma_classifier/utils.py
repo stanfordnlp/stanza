@@ -17,7 +17,6 @@ def load_dataset(data_path: str, get_counts: bool = False) -> Tuple[List[List[st
 
     Args:
         data_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line. 
-        label_decoder (Mapping[str, int]): A map between target token lemmas and their corresponding integers for the labels
         get_counts (optional, bool): Whether there should be a map of the label index to counts
 
     Returns:
