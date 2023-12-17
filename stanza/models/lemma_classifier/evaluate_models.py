@@ -6,21 +6,24 @@ parentdir = os.path.dirname(parentdir)
 parentdir = os.path.dirname(parentdir)
 sys.path.append(parentdir)
 
-import stanza
-import torch
-import utils
 import logging 
 import argparse
 import os 
 
 from typing import Any, List, Tuple, Mapping
 from collections import defaultdict
-from constants import get_glove
-from model import LemmaClassifier
-from constants import *
-from tqdm import tqdm
-from transformer_baseline.model import LemmaClassifierWithTransformer
 from numpy import random
+
+from tqdm import tqdm
+import torch
+
+import stanza
+
+from stanza.models.lemma_classifier.constants import get_glove
+from stanza.models.lemma_classifier import utils
+from stanza.models.lemma_classifier.constants import *
+from stanza.models.lemma_classifier.model import LemmaClassifier
+from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -225,21 +228,29 @@ def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, 
     return mc_results, confusion, accuracy
 
 
-def main():
+def main(args=None):
 
+    # TODO: can unify this script with train_model.py?
+    # TODO: can save the model type in the model .pt, then
+    # automatically figure out what type of model we are using by
+    # looking in the file
     parser = argparse.ArgumentParser()
     parser.add_argument("--vocab_size", type=int, default=10000, help="Number of tokens in vocab")
     parser.add_argument("--embedding_dim", type=int, default=100, help="Number of dimensions in word embeddings (currently using GloVe)")
     parser.add_argument("--hidden_dim", type=int, default=256, help="Size of hidden layer")
     parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
+    parser.add_argument("--charlm", action='store_true', default=False, help="Whether not to use the charlm embeddings")
+    parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
+    parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
+    parser.add_argument("--charlm_backward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
     parser.add_argument("--charlm", action="store_true", dest="use_charlm", default=False, help="Whether not to use the charlm embeddings")
     parser.add_argument("--forward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
     parser.add_argument("--backward_charlm_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
     parser.add_argument("--save_name", type=str, default=os.path.join(os.path.dirname(__file__), "saved_models", "lemma_classifier_model.pt"), help="Path to model save file")
     parser.add_argument("--model_type", type=str, default="roberta", help="Which transformer to use ('bert' or 'roberta' or 'lstm')")
-    parser.add_argument("--eval_path", type=str, help="path to evaluation file")
+    parser.add_argument("--eval_file", type=str, help="path to evaluation file")
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     logging.info("Running training script with the following args:")
     for arg in vars(args):
@@ -250,12 +261,12 @@ def main():
     embedding_dim = args.embedding_dim
     hidden_dim = args.hidden_dim
     output_dim = args.output_dim
-    use_charlm = args.use_charlm
+    use_charlm = args.charlm
     forward_charlm_file = args.forward_charlm_file
     backward_charlm_file = args.backward_charlm_file
     save_name = args.save_name 
     model_type = args.model_type
-    eval_path = args.eval_path
+    eval_path = args.eval_file
 
     if model_type.lower() == "lstm" and use_charlm:
         # Evaluate charlm
