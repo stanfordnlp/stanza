@@ -4,10 +4,8 @@ import os
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from typing import List, Tuple
 
-import utils 
-from constants import * 
-# from stanza.models.lemma_classifier import utils
-# from stanza.models.lemma_classifier.constants import *
+from stanza.models.lemma_classifier import utils
+from stanza.models.lemma_classifier.constants import *
 
 class LemmaClassifier(nn.Module):
     """
