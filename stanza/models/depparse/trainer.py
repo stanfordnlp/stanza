@@ -2,6 +2,7 @@
 A trainer class to handle training and testing of models.
 """
 
+import copy
 import sys
 import logging
 import torch
@@ -28,17 +29,42 @@ def unpack_batch(batch, device):
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, device=None, foundation_cache=None):
+    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None,
+                 device=None, foundation_cache=None, ignore_model_config=False):
+        orig_args = copy.deepcopy(args)
+        # whether the training is in primary or secondary stage
+        # during FT (loading weights), etc., the training is considered to be in "secondary stage"
+        # during this time, we (optionally) use a different set of optimizers than that during "primary stage".
+        #
+        # Regardless, we use TWO SETS of optimizers; once primary converges, we switch to secondary
         if model_file is not None:
             # load everything from file
-            self.load(model_file, pretrain, args, foundation_cache)
+            self.load(model_file, pretrain, args, foundation_cache, device)
         else:
             # build model from scratch
             self.args = args
             self.vocab = vocab
             self.model = Parser(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None)
-        self.model = self.model.to(device)
-        self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
+            self.model = self.model.to(device)
+            self.__init_optim()
+
+        if ignore_model_config:
+            self.args = orig_args
+
+        if self.args.get('wandb'):
+            import wandb
+            # track gradients!
+            wandb.watch(self.model, log_freq=4, log="all", log_graph=True)
+
+    def __init_optim(self):
+        if (self.args.get("second_stage", False) and self.args.get('second_optim')):
+            self.optimizer = utils.get_optimizer(self.args['second_optim'], self.model,
+                                                 self.args['second_lr'], betas=(0.9, self.args['beta2']), eps=1e-6,
+                                                 bert_learning_rate=self.args.get('second_bert_learning_rate', 0.0))
+        else:
+            self.optimizer = utils.get_optimizer(self.args['optim'], self.model,
+                                                self.args['lr'], betas=(0.9, self.args['beta2']),
+                                                eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
@@ -76,7 +102,7 @@ class Trainer(BaseTrainer):
             pred_tokens = utils.unsort(pred_tokens, orig_idx)
         return pred_tokens
 
-    def save(self, filename, skip_modules=True):
+    def save(self, filename, skip_modules=True, save_optimizer=False):
         model_state = self.model.state_dict()
         # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
         if skip_modules:
@@ -88,13 +114,17 @@ class Trainer(BaseTrainer):
                 'vocab': self.vocab.state_dict(),
                 'config': self.args
                 }
+
+        if save_optimizer and self.optimizer is not None:
+            params['optimizer_state_dict'] = self.optimizer.state_dict()
+
         try:
             torch.save(params, filename, _use_new_zipfile_serialization=False)
             logger.info("Model saved to {}".format(filename))
         except BaseException:
             logger.warning("Saving failed... continuing anyway.")
 
-    def load(self, filename, pretrain, args=None, foundation_cache=None):
+    def load(self, filename, pretrain, args=None, foundation_cache=None, device=None):
         """
         Load a model from file, with preloaded pretrain embeddings. Here we allow the pretrain to be None or a dummy input,
         and the actual use of pretrain embeddings will depend on the boolean config "pretrain" in the loaded args.
@@ -119,4 +149,11 @@ class Trainer(BaseTrainer):
             foundation_cache = NoTransformerFoundationCache(foundation_cache)
         self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache)
         self.model.load_state_dict(checkpoint['model'], strict=False)
+        if device is not None:
+            self.model = self.model.to(device)
+
+        self.__init_optim()
+        optim_state_dict = checkpoint.get("optimizer_state_dict")
+        if optim_state_dict:
+            self.optimizer.load_state_dict(optim_state_dict)
 
