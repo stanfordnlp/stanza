@@ -119,7 +119,6 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verb
         model (LemmaClassifier): An instance of the LemmaClassifier class that has architecture initialized which matches the model saved in `model_path`.
         model_path (str): Path to the saved model weights that will be loaded into `model`.
         eval_path (str): Path to the saved evaluation dataset.
-        label_decoder (Mapping[str, int]): A map between target token lemmas and their corresponding integers for the labels
         verbose (bool, optional): True if `evaluate_sequences()` should print the F1, Precision, and Recall for each class. Defaults to True.
 
     Returns:
