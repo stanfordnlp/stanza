@@ -129,11 +129,13 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verb
         3. Accuracy (float): the total accuracy (num correct / total examples) across the evaluation set.
     """
     # load model
-    model.load_state_dict(torch.load(model_path))
+    model_state = torch.load(model_path)
+    model.load_state_dict(model_state['params'])
     model.eval()  # set to eval mode
 
     # load in eval data 
-    text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path)
+    label_decoder = model_state['label_decoder']
+    text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path, label_decoder=label_decoder)
     
     logging.info(f"Evaluating model from {model_path} on evaluation file {eval_path}")
 
@@ -201,11 +203,14 @@ def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, 
         3. Accuracy (float): the total accuracy (num correct / total examples) across the evaluation set.
     """
     # load model
-    model.load_state_dict(torch.load(model_path))
+    # TODO: need to save the label_decoder in the model file for the transformer version
+    model_state = torch.load(model_path)
+    model.load_state_dict(model_state['params'])
     model.eval()  # set to eval mode
 
     # load in eval data 
-    text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path)
+    label_decoder = model_state['label_decoder']
+    text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path, label_decoder=label_decoder)
     
     logging.info(f"Evaluating model from {model_path} on evaluation file {eval_path}")
 

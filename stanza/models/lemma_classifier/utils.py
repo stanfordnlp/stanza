@@ -10,7 +10,7 @@ def load_doc_from_conll_file(path: str):
     return stanza.utils.conll.CoNLL.conll2doc(path)
 
 
-def load_dataset(data_path: str, get_counts: bool = False) -> Tuple[List[List[str]], List[int], List[int], Mapping[int, int], Mapping[str, int]]:
+def load_dataset(data_path: str, get_counts: bool = False, label_decoder: dict = None) -> Tuple[List[List[str]], List[int], List[int], Mapping[int, int], Mapping[str, int]]:
 
     """
     Loads a data file into data batches for tokenized text sentences, token indices, and true labels for each sentence.
@@ -31,7 +31,14 @@ def load_dataset(data_path: str, get_counts: bool = False) -> Tuple[List[List[st
     if data_path is None or not os.path.exists(data_path):
         raise FileNotFoundError(f"Data file {data_path} could not be found.")
 
-    sentences, indices, labels, counts, label_decoder = [], [], [], {}, {}
+    sentences, indices, labels, counts = [], [], [], {}
+    if label_decoder is None:
+        label_decoder = {}
+    else:
+        # if labels in the test set aren't in the original model,
+        # the model will never predict those labels,
+        # but we can still use those labels in a confusion matrix
+        label_decoder = dict(label_decoder)
 
     with open(data_path, "r+", encoding="utf-8") as f:
         for line in f.readlines():

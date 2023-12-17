@@ -146,7 +146,11 @@ class LemmaClassifierTrainer():
         save_dir = os.path.split(save_name)[0]
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
-        torch.save(self.model.state_dict(), save_name)
+        state_dict = {
+            "params": self.model.state_dict(),
+            "label_decoder": label_decoder,
+        }
+        torch.save(state_dict, save_name)
         logging.info(f"Saved model state dict to {save_name}")
 
 def build_argparse():
