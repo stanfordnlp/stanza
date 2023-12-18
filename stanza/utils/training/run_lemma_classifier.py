@@ -5,10 +5,9 @@ from stanza.models.lemma_classifier import evaluate_models
 from stanza.models.lemma_classifier.constants import ModelType
 from stanza.models.lemma_classifier.transformer_baseline import baseline_trainer
 
-from stanza.resources.default_packages import TRANSFORMERS
-
+from stanza.resources.default_packages import default_pretrains, TRANSFORMERS
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, add_charlm_args, build_lemma_charlm_args, choose_lemma_charlm
+from stanza.utils.training.common import Mode, add_charlm_args, build_lemma_charlm_args, choose_lemma_charlm, find_wordvec_pretrain
 
 def add_lemma_args(parser):
     add_charlm_args(parser)
@@ -23,11 +22,15 @@ def build_model_filename(paths, short_name, command_args, extra_args):
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
     short_language, dataset = short_name.split("_", 1)
-    charlm_args = build_lemma_charlm_args(short_language, dataset, command_args.charlm)
 
     base_args = []
     if '--save_name' not in extra_args:
-        base_args = ['--save_name', build_model_filename(paths, short_name, command_args, extra_args)]
+        base_args += ['--save_name', build_model_filename(paths, short_name, command_args, extra_args)]
+
+    embedding_args = build_lemma_charlm_args(short_language, dataset, command_args.charlm)
+    if '--wordvec_pretrain_file' not in extra_args:
+        wordvec_pretrain = find_wordvec_pretrain(short_language, default_pretrains, {}, dataset)
+        embedding_args += ["--wordvec_pretrain_file", wordvec_pretrain]
 
     bert_args = []
     if command_args.model_type is ModelType.TRANSFORMER:
@@ -43,8 +46,9 @@ def run_treebank(mode, paths, treebank, short_name,
             train_file = os.path.join("data", "lemma_classifier", "%s.train.lemma" % short_name)
             train_args += ['--train_file', train_file]
         train_args = base_args + train_args + extra_args
+
         if command_args.model_type == ModelType.LSTM:
-            train_args = charlm_args + train_args
+            train_args = embedding_args + train_args
             train_model.main(train_args)
         else:
             model_type_args = ["--model_type", command_args.model_type.name.lower()]
@@ -57,7 +61,7 @@ def run_treebank(mode, paths, treebank, short_name,
             eval_file = os.path.join("data", "lemma_classifier", "%s.dev.lemma" % short_name)
             eval_args += ['--eval_file', eval_file]
         model_type_args = ["--model_type", command_args.model_type.name.lower()]
-        eval_args = bert_args + model_type_args + base_args + eval_args + charlm_args + extra_args
+        eval_args = bert_args + model_type_args + base_args + eval_args + embedding_args + extra_args
         evaluate_models.main(eval_args)
 
     if mode == Mode.SCORE_TEST:
@@ -66,7 +70,7 @@ def run_treebank(mode, paths, treebank, short_name,
             eval_file = os.path.join("data", "lemma_classifier", "%s.test.lemma" % short_name)
             eval_args += ['--eval_file', eval_file]
         model_type_args = ["--model_type", command_args.model_type.name.lower()]
-        eval_args = bert_args + model_type_args + base_args + eval_args + charlm_args + extra_args
+        eval_args = bert_args + model_type_args + base_args + eval_args + embedding_args + extra_args
         evaluate_models.main(eval_args)
 
 def main():

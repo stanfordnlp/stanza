@@ -16,8 +16,12 @@ from numpy import random
 
 from tqdm import tqdm
 import torch
+import torch.nn as nn
 
-from stanza.models.lemma_classifier.constants import get_glove
+import stanza
+
+from stanza.models.common.foundation_cache import load_pretrain
+from stanza.models.common.vocab import UNK_ID
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.constants import *
 from stanza.models.lemma_classifier.model import LemmaClassifier
@@ -152,6 +156,9 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verb
     model.load_state_dict(model_state['params'])
     model.eval()  # set to eval mode
 
+    # TODO: maybe push the mapping inside the model
+    vocab_map = model.vocab_map
+
     # load in eval data 
     label_decoder = model_state['label_decoder']
     text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path, label_decoder=label_decoder)
@@ -160,13 +167,13 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verb
 
     correct = 0
     gold_tags, pred_tags = [label_batches], []
-    GLOVE = get_glove(model.embedding_dim)
     # run eval on each example from dataset
     for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file"):
-        # tokenize raw text sentence using model
-        tokenized_sentence = [GLOVE.stoi[word.lower()] if word.lower() in GLOVE.stoi else UNKNOWN_TOKEN_IDX for word in sentence]  # handle unknown tokens by randomizing their embedding
+        # convert words to embedding ID using the model's vocab_map
+        # TODO: could push this whole thing into the model
+        token_ids = [model.vocab_map.get(word.lower(), UNK_ID) for word in sentence]
 
-        pred = model_predict(model, tokenized_sentence, pos_index, sentence)
+        pred = model_predict(model, token_ids, pos_index, sentence)
         correct += 1 if pred == label else 0 
         pred_tags += [pred]
 
@@ -261,6 +268,7 @@ def main(args=None):
     parser.add_argument("--embedding_dim", type=int, default=100, help="Number of dimensions in word embeddings (currently using GloVe)")
     parser.add_argument("--hidden_dim", type=int, default=256, help="Size of hidden layer")
     parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument("--charlm", action='store_true', default=False, help="Whether not to use the charlm embeddings")
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
     parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
@@ -281,6 +289,7 @@ def main(args=None):
     embedding_dim = args.embedding_dim
     hidden_dim = args.hidden_dim
     output_dim = args.output_dim
+    wordvec_pretrain_file = args.wordvec_pretrain_file
     use_charlm = args.charlm
     forward_charlm_file = args.charlm_forward_file
     backward_charlm_file = args.charlm_backward_file
@@ -288,24 +297,35 @@ def main(args=None):
     model_type = args.model_type
     eval_path = args.eval_file
 
-    if model_type.lower() == "lstm" and use_charlm:
-        # Evaluate charlm
-        model = LemmaClassifier(vocab_size=vocab_size,
-                                embedding_dim=embedding_dim,
-                                hidden_dim=hidden_dim,
-                                output_dim=output_dim,
-                                embeddings=get_glove(embedding_dim).vectors,
-                                charlm=True,
-                                charlm_forward_file=forward_charlm_file,
-                                charlm_backward_file=backward_charlm_file)
-    elif model_type.lower() == "lstm" and not use_charlm:
-        # Evaluate standard model (bi-LSTM with GloVe embeddings, no charlm)
-        model = LemmaClassifier(vocab_size=vocab_size,
-                                embedding_dim=embedding_dim,
-                                hidden_dim=hidden_dim,
-                                output_dim=output_dim,
-                                embeddings=get_glove(embedding_dim).vectors,
-                                )
+    if model_type.lower() == "lstm":
+        # TODO: refactor
+        pt = load_pretrain(wordvec_pretrain_file)
+        emb_matrix = pt.emb
+        embeddings = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix))
+        vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pt.vocab) }
+        vocab_size = emb_matrix.shape[0]
+        embedding_dim = emb_matrix.shape[1]
+
+        if use_charlm:
+            # Evaluate charlm
+            model = LemmaClassifier(vocab_size=vocab_size,
+                                    embedding_dim=embedding_dim,
+                                    hidden_dim=hidden_dim,
+                                    output_dim=output_dim,
+                                    vocab_map=vocab_map,
+                                    pt_embedding=embeddings,
+                                    charlm=True,
+                                    charlm_forward_file=forward_charlm_file,
+                                    charlm_backward_file=backward_charlm_file)
+        else:
+            # Evaluate standard model (bi-LSTM with GloVe embeddings, no charlm)
+            model = LemmaClassifier(vocab_size=vocab_size,
+                                    embedding_dim=embedding_dim,
+                                    hidden_dim=hidden_dim,
+                                    output_dim=output_dim,
+                                    vocab_map=vocab_map,
+                                    pt_embedding=embeddings,
+                                    )
     elif model_type.lower() == "roberta":
         # Evaluate Transformer (BERT or ROBERTA)
         model = LemmaClassifierWithTransformer(output_dim=output_dim, transformer_name="roberta-base")
