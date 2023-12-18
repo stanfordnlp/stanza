@@ -2,6 +2,7 @@ import stanza
 import torch
 import os
 from typing import List, Tuple, Any, Mapping
+from collections import Counter
 
 def load_doc_from_conll_file(path: str):
     """"
@@ -31,7 +32,7 @@ def load_dataset(data_path: str, get_counts: bool = False, label_decoder: dict =
     if data_path is None or not os.path.exists(data_path):
         raise FileNotFoundError(f"Data file {data_path} could not be found.")
 
-    sentences, indices, labels, counts = [], [], [], {}
+    sentences, indices, labels, counts = [], [], [], Counter()
     if label_decoder is None:
         label_decoder = {}
     else:
@@ -60,9 +61,7 @@ def load_dataset(data_path: str, get_counts: bool = False, label_decoder: dict =
             labels.append(label_decoder[label])
 
             if get_counts:
-                if label_decoder[label] not in counts:
-                    counts[label_decoder[label]] = 0
-                counts[label_decoder[label]] += 1 
+                counts[label_decoder[label]] += 1
     
     return sentences, indices, labels, counts, label_decoder
 
