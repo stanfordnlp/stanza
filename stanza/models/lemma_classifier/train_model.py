@@ -12,8 +12,9 @@ from os import path
 from os import remove
 from typing import List, Tuple, Any
 
+from stanza.models.common.foundation_cache import load_pretrain
+from stanza.models.common.vocab import UNK_ID
 from stanza.models.lemma_classifier import utils
-from stanza.models.lemma_classifier.constants import get_glove, UNKNOWN_TOKEN_IDX
 from stanza.models.lemma_classifier.model import LemmaClassifier
 from stanza.utils.get_tqdm import get_tqdm
 
@@ -26,13 +27,13 @@ class LemmaClassifierTrainer():
     Class to assist with training a LemmaClassifier
     """
 
-    def __init__(self, vocab_size: int, embeddings: str, embedding_dim: int, hidden_dim: int, output_dim: int, use_charlm: bool, **kwargs):
+    def __init__(self, vocab_size: int, embedding_file: str, embedding_dim: int, hidden_dim: int, output_dim: int, use_charlm: bool, **kwargs):
         """
         Initializes the LemmaClassifierTrainer class.
         
         Args:
             vocab_size (int): Size of the vocab being used (if custom vocab)
-            embeddings (str): What word embeddings to use (currently only supports GloVe) TODO add more!
+            embedding_file (str): What word embeddings file to use.  Use a Stanza pretrain .pt
             embedding_dim (int): Size of embedding dimension to use on the aforementioned word embeddings
             hidden_dim (int): Size of hidden vectors in LSTM layers
             output_dim (int): Size of output vector from MLP layer
@@ -48,16 +49,18 @@ class LemmaClassifierTrainer():
             FileNotFoundError: If the forward charlm file is not present
             FileNotFoundError: If the backward charlm file is not present
         """
-        self.vocab_size = vocab_size
-        self.embedding_dim = embedding_dim
         self.hidden_dim = hidden_dim
         self.output_dim = output_dim
 
         # Load word embeddings
-        self.embeddings = None
-        if embeddings == "glove":
-            self.embeddings = get_glove(embedding_dim)
-            self.vocab_size = len(self.embeddings.itos)
+        pt = load_pretrain(embedding_file)
+        emb_matrix = pt.emb
+        # TODO: could refactor only the trained embeddings, then turn freezing back on, then don't save the full PT with the model
+        self.embeddings = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=False)
+        self.embeddings.weight.requires_grad = True
+        self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pt.vocab) }
+        self.vocab_size = emb_matrix.shape[0]
+        self.embedding_dim = emb_matrix.shape[1]
 
         # Load CharLM embeddings
         forward_charlm_file = kwargs.get("forward_charlm_file")
@@ -67,7 +70,8 @@ class LemmaClassifierTrainer():
         if use_charlm and backward_charlm_file is not None and not os.path.exists(backward_charlm_file):
             raise FileNotFoundError(f"Could not find backward charlm file: {backward_charlm_file}")
 
-        self.model = LemmaClassifier(vocab_size, embedding_dim, hidden_dim, output_dim, self.embeddings.vectors, charlm=use_charlm,
+        # TODO: embedding_dim and vocab_size are read off the embeddings file
+        self.model = LemmaClassifier(self.vocab_size, self.embedding_dim, hidden_dim, output_dim, self.vocab_map, self.embeddings, charlm=use_charlm,
                                      charlm_forward_file=forward_charlm_file, charlm_backward_file=backward_charlm_file)
         
         # Find loss function
@@ -119,6 +123,7 @@ class LemmaClassifierTrainer():
             logging.info(f"Using weights {weights} for weighted loss.")
             self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
+        logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
             for texts, position, label in tqdm(zip(texts_batch, positions_batch, labels_batch), total=len(texts_batch)):
@@ -126,7 +131,8 @@ class LemmaClassifierTrainer():
                     raise ValueError(f"Found position {position} in text: {texts}, which is not possible.")
                 
                 # Any token not in self.embeddings.stoi will be given the UNKNOWN_TOKEN_IDX, which is resolved to a true embedding in LemmaClassifier's forward() func
-                token_ids = torch.tensor([self.embeddings.stoi[word.lower()] if word.lower() in self.embeddings.stoi else UNKNOWN_TOKEN_IDX for word in texts])  
+                token_ids = [self.vocab_map.get(word.lower(), UNK_ID) for word in texts]
+                token_ids = torch.tensor(token_ids)
                 
                 self.optimizer.zero_grad()
 
@@ -144,7 +150,7 @@ class LemmaClassifierTrainer():
                 self.optimizer.step()
             
             logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
-
+            logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
 
         save_dir = os.path.split(save_name)[0]
         if save_dir:
@@ -162,6 +168,7 @@ def build_argparse():
     parser.add_argument("--embedding_dim", type=int, default=100, help="Number of dimensions in word embeddings (currently using GloVe)")
     parser.add_argument("--hidden_dim", type=int, default=256, help="Size of hidden layer")
     parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument("--charlm", action='store_true', dest='use_charlm', default=False, help="Whether not to use the charlm embeddings")
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
     parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
@@ -181,6 +188,7 @@ def main(args=None):
     embedding_dim = args.embedding_dim
     hidden_dim = args.hidden_dim
     output_dim = args.output_dim
+    wordvec_pretrain_file = args.wordvec_pretrain_file
     use_charlm = args.use_charlm
     forward_charlm_file = args.charlm_forward_file
     backward_charlm_file = args.charlm_backward_file
@@ -201,7 +209,7 @@ def main(args=None):
     logging.info("------------------------------------------------------------")
 
     trainer = LemmaClassifierTrainer(vocab_size=vocab_size,
-                                     embeddings="glove",
+                                     embedding_file=wordvec_pretrain_file,
                                      embedding_dim=embedding_dim,
                                      hidden_dim=hidden_dim,
                                      output_dim=output_dim,
