@@ -2,13 +2,13 @@ import torch
 import torch.nn as nn
 import os
 import sys
-from transformers import BertTokenizer, BertModel, RobertaModel, RobertaTokenizer
+from transformers import AutoTokenizer, AutoModel
 from typing import List, Tuple, Any 
 
 
 class LemmaClassifierWithTransformer(nn.Module):
 
-    def __init__(self, output_dim: int, model_type: str):
+    def __init__(self, output_dim: int, transformer_name: str):
         """
         Model architecture:
 
@@ -25,14 +25,8 @@ class LemmaClassifierWithTransformer(nn.Module):
         # Get the embedding through transformer 
 
         # Choose transformer
-        if model_type == "bert":
-            self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-            self.transformer = BertModel.from_pretrained('bert-base-uncased')
-        elif model_type == "roberta":
-            self.tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
-            self.transformer = RobertaModel.from_pretrained('roberta-base')
-        else:
-            raise ValueError("Unhandled model type %s" % model_type)
+        self.tokenizer = AutoTokenizer.from_pretrained(transformer_name)
+        self.transformer = AutoModel.from_pretrained(transformer_name)
         config = self.transformer.config
 
         embedding_size = config.hidden_size

@@ -26,18 +26,18 @@ class TransformerBaselineTrainer:
     To find the model spec, refer to `model.py` in this directory.
     """
 
-    def __init__(self, output_dim: int, model_type: str, loss_func: str):
+    def __init__(self, output_dim: int, transformer_name: str, loss_func: str):
         """
         Creates the Trainer object
 
         Args:
             output_dim (int): The dimension of the output layer from the MLP in the classifier model.
-            model_type (str): What kind of transformer to use for embeddings ('bert' or 'roberta')
+            transformer_name (str): What kind of transformer to use for embeddings
             loss_func (str): Which loss function to use (either 'ce' or 'weighted_bce') 
         """
         self.output_dim = output_dim 
 
-        self.model = LemmaClassifierWithTransformer(output_dim=self.output_dim, model_type=model_type)
+        self.model = LemmaClassifierWithTransformer(output_dim=self.output_dim, transformer_name=transformer_name)
         # Find loss function
         if loss_func == "ce":
             self.criterion = nn.CrossEntropyLoss()
@@ -126,6 +126,7 @@ def main(args=None):
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
     parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_sets", "combined_train.txt"), help="Full path to training file")
     parser.add_argument("--model_type", type=str, default="roberta", help="Which transformer to use ('bert' or 'roberta')")
+    parser.add_argument("--bert_model", type=str, default=None, help="Use a specific transformer instead of the default bert/roberta")
     parser.add_argument("--loss_fn", type=str, default="weighted_bce", help="Which loss function to train with (e.g. 'ce' or 'weighted_bce')")
 
     args = parser.parse_args(args)
@@ -134,8 +135,17 @@ def main(args=None):
     save_name = args.save_name
     num_epochs = args.num_epochs
     train_file = args.train_file
-    model_type = args.model_type
     loss_fn = args.loss_fn
+
+    if args.bert_model is None:
+        if args.model_type == 'bert':
+            transformer_name = 'bert-base-uncased'
+        elif args.model_type == 'roberta':
+            transformer_name = 'roberta-base'
+        else:
+            raise ValueError("Unknown model type " + args.model_type)
+    else:
+        transformer_name = args.bert_model
 
     if os.path.exists(save_name):
         raise FileExistsError(f"Save name {save_name} already exists. Training would override existing data. Aborting...")
@@ -147,7 +157,7 @@ def main(args=None):
         logging.info(f"{arg}: {getattr(args, arg)}")
     logging.info("------------------------------------------------------------")
     
-    trainer = TransformerBaselineTrainer(output_dim=output_dim, model_type=model_type, loss_func=loss_fn)
+    trainer = TransformerBaselineTrainer(output_dim=output_dim, transformer_name=transformer_name, loss_func=loss_fn)
 
     trainer.train([], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file)
 

@@ -13,6 +13,7 @@ UNKNOWN_TOKEN_IDX = -1   # custom index we apply to unknown tokens
 # and then the transformer baseline would have the transformer as another argument
 class ModelType(Enum):
     LSTM               = 1
-    BERT               = 2
-    ROBERTA            = 3
+    TRANSFORMER        = 2
+    BERT               = 3
+    ROBERTA            = 4
 
