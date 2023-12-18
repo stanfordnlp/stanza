@@ -13,6 +13,9 @@ import logging
 
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
+from stanza.utils.get_tqdm import get_tqdm
+
+tqdm = get_tqdm()
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -83,7 +86,7 @@ class TransformerBaselineTrainer:
 
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
-            for texts, position, label in zip(texts_batch, positions_batch, labels_batch):
+            for texts, position, label in tqdm(zip(texts_batch, positions_batch, labels_batch), total=len(texts_batch)):
                 if position < 0 or position > len(texts) - 1:  # validate position index
                     raise ValueError(f"Found position {position} in text: {texts}, which is not possible.") 
                 
