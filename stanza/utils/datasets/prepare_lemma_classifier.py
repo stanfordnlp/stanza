@@ -55,9 +55,24 @@ def process_fa_perdt(paths, short_name):
 
     process_treebank(paths, short_name, word, upos, allowed_lemmas)
 
+def process_hi_hdtb(paths, short_name):
+    word = "के"
+    upos = "ADP"
+    allowed_lemmas = "का|के"
+
+    process_treebank(paths, short_name, word, upos, allowed_lemmas)
+
+def process_ar_padt(paths, short_name):
+    word = "أن"
+    upos = "SCONJ"
+    allowed_lemmas = "أَن|أَنَّ"
+
+    process_treebank(paths, short_name, word, upos, allowed_lemmas)
 
 DATASET_MAPPING = {
+    "ar_padt":           process_ar_padt,
     "fa_perdt":          process_fa_perdt,
+    "hi_hdtb":           process_hi_hdtb,
     "ja_gsd":            process_ja_gsd,
 }
 
