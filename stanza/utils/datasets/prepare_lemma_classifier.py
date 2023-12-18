@@ -4,6 +4,7 @@ import sys
 from stanza.utils.datasets.common import find_treebank_dataset_file
 from stanza.utils.default_paths import get_default_paths
 from stanza.models.lemma_classifier import prepare_dataset
+from stanza.models.common.short_name_to_treebank import short_name_to_treebank
 
 SECTIONS = ("train", "dev", "test")
 
@@ -13,14 +14,8 @@ class UnknownDatasetError(ValueError):
         super().__init__(text)
         self.dataset = dataset
 
-def process_fa_perdt(paths, short_name):
-    word = "شد"
-    upos = "VERB"
-    allowed_lemmas = "کرد|شد"
-
-    # TODO: there's a function somewhere which maps "fa_perdt" to UD_Persian-PerDT
-    treebank = "UD_Persian-PerDT"
-
+def process_treebank(paths, short_name, word, upos, allowed_lemmas):
+    treebank = short_name_to_treebank(short_name)
     udbase_dir = paths["UDBASE"]
 
     # TODO: make this a path in default_paths
@@ -33,13 +28,37 @@ def process_fa_perdt(paths, short_name):
         args = ["--conll_path", filename,
                 "--target_word", word,
                 "--target_upos", upos,
-                "--output_path", output_filename,
-                "--allowed_lemmas", allowed_lemmas]
+                "--output_path", output_filename]
+        if allowed_lemmas is not None:
+            args.extend(["--allowed_lemmas", allowed_lemmas])
         prepare_dataset.main(args)
+
+def process_ja_gsd(paths, short_name):
+    # this one looked promising, but only has 10 total dev & test cases
+    # 行っ VERB Counter({'行う': 60, '行く': 38})
+    # could possibly do
+    # ない AUX Counter({'ない': 383, '無い': 99})
+    # なく AUX Counter({'無い': 53, 'ない': 42})
+    # currently this one has enough in the dev & test data
+    # and functions well
+    # だ AUX Counter({'だ': 237, 'た': 67})
+    word = "だ"
+    upos = "AUX"
+    allowed_lemmas = None
+
+    process_treebank(paths, short_name, word, upos, allowed_lemmas)
+
+def process_fa_perdt(paths, short_name):
+    word = "شد"
+    upos = "VERB"
+    allowed_lemmas = "کرد|شد"
+
+    process_treebank(paths, short_name, word, upos, allowed_lemmas)
 
 
 DATASET_MAPPING = {
     "fa_perdt":          process_fa_perdt,
+    "ja_gsd":            process_ja_gsd,
 }
 
 
