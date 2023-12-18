@@ -45,7 +45,10 @@ class LemmaClassifier(nn.Module):
 
         # Embedding layer with GloVe embeddings
         self.glove = get_glove(self.embedding_dim)
-        self.embedding_layer = nn.Embedding.from_pretrained(embeddings, padding_idx=padding_idx)
+        self.embedding_layer = nn.Embedding.from_pretrained(embeddings, padding_idx=padding_idx, freeze=False)
+
+        # Set embeddings to be trainable
+        self.embedding_layer.weight.requires_grad = True
 
         # Optionally, include charlm embeddings  
         self.use_charlm = kwargs.get("charlm")
