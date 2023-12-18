@@ -2,22 +2,17 @@
 This file contains code used to train a baseline transformer model to classify on a lemma of a particular token. 
 """
 
-from model import LemmaClassifierWithTransformer
 import torch.nn as nn 
 import torch 
 import torch.optim as optim
 from typing import List, Tuple, Any 
-from os import path
 import argparse
 import os
 import sys
 import logging
 
-parent_dir = os.path.dirname(__file__)
-above_dir = os.path.dirname(parent_dir)
-sys.path.append(above_dir)
-
-import utils
+from stanza.models.lemma_classifier import utils
+from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -73,7 +68,7 @@ class TransformerBaselineTrainer:
             logging.info(f"Using label decoder : {label_decoder}")
         
         assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
-        if path.exists(save_name):
+        if os.path.exists(save_name):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
         
         # Configure weighted loss, if necessary
@@ -109,21 +104,28 @@ class TransformerBaselineTrainer:
             logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
 
 
-        torch.save(self.model.state_dict(), save_name)
+        save_dir = os.path.split(save_name)[0]
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+        state_dict = {
+            "params": self.model.state_dict(),
+            "label_decoder": label_decoder,
+        }
+        torch.save(state_dict, save_name)
         logging.info(f"Saved model state dict to {save_name}")
 
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
-    parser.add_argument("--save_name", type=str, default=path.join(path.dirname(path.dirname(__file__)), "saved_models", "big_model_bert_weighted_loss.pt"), help="Path to model save file")
+    parser.add_argument("--save_name", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "saved_models", "big_model_bert_weighted_loss.pt"), help="Path to model save file")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
     parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_sets", "combined_train.txt"), help="Full path to training file")
     parser.add_argument("--model_type", type=str, default="roberta", help="Which transformer to use ('bert' or 'roberta')")
     parser.add_argument("--loss_fn", type=str, default="weighted_bce", help="Which loss function to train with (e.g. 'ce' or 'weighted_bce')")
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     output_dim = args.output_dim
     save_name = args.save_name

@@ -2,6 +2,7 @@ import os
 
 from stanza.models.lemma_classifier import train_model
 from stanza.models.lemma_classifier import evaluate_models
+from stanza.models.lemma_classifier.transformer_baseline import baseline_trainer
 
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_lemma_charlm_args, choose_lemma_charlm
@@ -27,8 +28,16 @@ def run_treebank(mode, paths, treebank, short_name,
         if "--train_file" not in extra_args:
             train_file = os.path.join("data", "lemma_classifier", "%s.train.lemma" % short_name)
             train_args += ['--train_file', train_file]
-        train_args = base_args + train_args + charlm_args + extra_args
-        train_model.main(train_args)
+        train_args = base_args + train_args + extra_args
+        if '--model_type' in train_args:
+            for idx, arg in enumerate(train_args):
+                if arg == '--model_type' and idx + 1 < len(train_args):
+                    model_type = train_args[idx + 1]
+        if model_type == 'lstm':
+            train_args = charlm_args + train_args
+            train_model.main(train_args)
+        else:
+            baseline_trainer.main(train_args)
 
     if mode == Mode.SCORE_DEV:
         eval_args = []
