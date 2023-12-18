@@ -17,8 +17,6 @@ from numpy import random
 from tqdm import tqdm
 import torch
 
-import stanza
-
 from stanza.models.lemma_classifier.constants import get_glove
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.constants import *
@@ -26,6 +24,25 @@ from stanza.models.lemma_classifier.model import LemmaClassifier
 from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+def get_weighted_f1(mcc_results: Mapping[int, Mapping[str, float]], confusion: Mapping[int, Mapping[int, int]]) -> float:
+    """
+    Computes the weighted F1 score across an evaluation set.
+
+    The weight of a class's F1 score is equal to the number of examples in evaluation. This makes classes that have more
+    examples in the evaluation more impactful to the weighted f1.
+    """
+    num_total_examples = 0
+    weighted_f1 = 0
+
+    for class_id in mcc_results:
+        class_f1 = mcc_results.get(class_id).get("f1")
+        num_class_examples = sum(confusion.get(class_id).values())
+        weighted_f1 += class_f1 * num_class_examples
+        num_total_examples += num_class_examples
+    
+    return weighted_f1 / num_total_examples
 
 
 def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: List[List[Any]], verbose=True):
@@ -81,8 +98,10 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
     if verbose:
         for lemma in multi_class_result:
             logging.info(f"Lemma '{lemma}' had precision {100 * multi_class_result[lemma]['precision']}, recall {100 * multi_class_result[lemma]['recall']} and F1 score of {100 * multi_class_result[lemma]['f1']}")
+    
+    weighted_f1 = get_weighted_f1(multi_class_result, confusion)
 
-    return multi_class_result, confusion   
+    return multi_class_result, confusion, weighted_f1   
 
 
 def model_predict(model: LemmaClassifier, text: List[int], position_idx: int, words: List[str]) -> int:
@@ -145,7 +164,6 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verb
     # run eval on each example from dataset
     for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file"):
         # tokenize raw text sentence using model
-        # TODO: See if John approves of this fix
         tokenized_sentence = [GLOVE.stoi[word.lower()] if word.lower() in GLOVE.stoi else UNKNOWN_TOKEN_IDX for word in sentence]  # handle unknown tokens by randomizing their embedding
 
         pred = model_predict(model, tokenized_sentence, pos_index, sentence)
@@ -154,12 +172,12 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verb
 
     logging.info("Finished evaluating on dataset. Computing scores...")
     accuracy = correct / len(label_batches)
-    mc_results, confusion = evaluate_sequences(gold_tags, [pred_tags], verbose=verbose)  
+    mc_results, confusion, weighted_f1 = evaluate_sequences(gold_tags, [pred_tags], verbose=verbose)  
     # add brackets around batches of gold and pred tags because each batch is an element within the sequences in this helper
     if verbose:
         logging.info(f"Accuracy: {accuracy} ({correct}/{len(label_batches)})")
     
-    return mc_results, confusion, accuracy
+    return mc_results, confusion, accuracy, weighted_f1
 
 
 def transformer_pred(model: LemmaClassifierWithTransformer, text: List[str], pos_idx: int):
@@ -203,7 +221,6 @@ def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, 
         3. Accuracy (float): the total accuracy (num correct / total examples) across the evaluation set.
     """
     # load model
-    # TODO: need to save the label_decoder in the model file for the transformer version
     model_state = torch.load(model_path)
     model.load_state_dict(model_state['params'])
     model.eval()  # set to eval mode
@@ -216,6 +233,7 @@ def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, 
 
     correct = 0
     gold_tags, pred_tags = [label_batches], []
+    
     # run eval on each example from dataset
     for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file"):
         pred = transformer_pred(model, sentence, pos_index)
@@ -224,12 +242,12 @@ def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, 
 
     logging.info("Finished evaluating on dataset. Computing scores...")
     accuracy = correct / len(label_batches)
-    mc_results, confusion = evaluate_sequences(gold_tags, [pred_tags], verbose=verbose)  
+    mc_results, confusion, weighted_f1 = evaluate_sequences(gold_tags, [pred_tags], verbose=verbose)  
     # add brackets around batches of gold and pred tags because each batch is an element within the sequences in this helper
     if verbose:
         logging.info(f"Accuracy: {accuracy} ({correct}/{len(label_batches)})")
     
-    return mc_results, confusion, accuracy
+    return mc_results, confusion, accuracy, weighted_f1
 
 
 def main(args=None):
@@ -303,19 +321,20 @@ def main(args=None):
 
     if model_type.lower() == "lstm":
         # for LSTM models
-        mcc_results, confusion, acc = evaluate_model(model, save_name, eval_path)
+        mcc_results, confusion, acc, weighted_f1 = evaluate_model(model, save_name, eval_path)
 
     elif model_type.lower() == "roberta" or model_type.lower() == "bert" or model_type.lower() == "transformer":
         # for transformer
-        mcc_results, confusion, acc = evaluate_transformer(model, save_name, eval_path)
+        mcc_results, confusion, acc, weighted_f1 = evaluate_transformer(model, save_name, eval_path)
 
     logging.info(f"MCC Results: {dict(mcc_results)}")
     logging.info("______________________________________________")
     logging.info(f"Confusion: {dict(confusion)}")
     logging.info("______________________________________________")
     logging.info(f"Accuracy: {acc}")
+    logging.info("______________________________________________")
+    logging.info(f"Weighted f1: {weighted_f1}")
 
-    
 
 if __name__ == "__main__":
     main()
