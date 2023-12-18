@@ -1,3 +1,5 @@
+from enum import Enum
+
 from torchtext.vocab import GloVe
 
 def get_glove(embedding_dim: int) -> GloVe:
@@ -6,3 +8,11 @@ def get_glove(embedding_dim: int) -> GloVe:
 
 UNKNOWN_TOKEN = "unk"  # token name for unknown tokens
 UNKNOWN_TOKEN_IDX = -1   # custom index we apply to unknown tokens
+
+# TODO: ModelType could just be LSTM and TRANSFORMER
+# and then the transformer baseline would have the transformer as another argument
+class ModelType(Enum):
+    LSTM               = 1
+    BERT               = 2
+    ROBERTA            = 3
+

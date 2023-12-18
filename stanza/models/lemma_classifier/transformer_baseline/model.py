@@ -31,7 +31,9 @@ class LemmaClassifierWithTransformer(nn.Module):
         elif model_type == "roberta":
             self.tokenizer = RobertaTokenizer.from_pretrained('roberta-base')
             self.transformer = RobertaModel.from_pretrained('roberta-base')
-        config = self.transformer.config    
+        else:
+            raise ValueError("Unhandled model type %s" % model_type)
+        config = self.transformer.config
 
         embedding_size = config.hidden_size
 
