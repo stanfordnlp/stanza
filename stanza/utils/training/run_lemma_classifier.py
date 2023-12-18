@@ -5,6 +5,8 @@ from stanza.models.lemma_classifier import evaluate_models
 from stanza.models.lemma_classifier.constants import ModelType
 from stanza.models.lemma_classifier.transformer_baseline import baseline_trainer
 
+from stanza.resources.default_packages import TRANSFORMERS
+
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_lemma_charlm_args, choose_lemma_charlm
 
@@ -27,6 +29,14 @@ def run_treebank(mode, paths, treebank, short_name,
     if '--save_name' not in extra_args:
         base_args = ['--save_name', build_model_filename(paths, short_name, command_args, extra_args)]
 
+    bert_args = []
+    if command_args.model_type is ModelType.TRANSFORMER:
+        if '--bert_model' not in extra_args:
+            if short_language in TRANSFORMERS:
+                bert_args = ['--bert_model', TRANSFORMERS.get(short_language)]
+            else:
+                raise ValueError("--bert_model not specified, so cannot figure out which transformer to use for language %s" % short_language)
+
     if mode == Mode.TRAIN:
         train_args = []
         if "--train_file" not in extra_args:
@@ -38,7 +48,7 @@ def run_treebank(mode, paths, treebank, short_name,
             train_model.main(train_args)
         else:
             model_type_args = ["--model_type", command_args.model_type.name.lower()]
-            train_args = model_type_args + train_args
+            train_args = bert_args + model_type_args + train_args
             baseline_trainer.main(train_args)
 
     if mode == Mode.SCORE_DEV:
@@ -47,7 +57,7 @@ def run_treebank(mode, paths, treebank, short_name,
             eval_file = os.path.join("data", "lemma_classifier", "%s.dev.lemma" % short_name)
             eval_args += ['--eval_file', eval_file]
         model_type_args = ["--model_type", command_args.model_type.name.lower()]
-        eval_args = model_type_args + base_args + eval_args + charlm_args + extra_args
+        eval_args = bert_args + model_type_args + base_args + eval_args + charlm_args + extra_args
         evaluate_models.main(eval_args)
 
     if mode == Mode.SCORE_TEST:
@@ -56,7 +66,7 @@ def run_treebank(mode, paths, treebank, short_name,
             eval_file = os.path.join("data", "lemma_classifier", "%s.test.lemma" % short_name)
             eval_args += ['--eval_file', eval_file]
         model_type_args = ["--model_type", command_args.model_type.name.lower()]
-        eval_args = model_type_args + base_args + eval_args + charlm_args + extra_args
+        eval_args = bert_args + model_type_args + base_args + eval_args + charlm_args + extra_args
         evaluate_models.main(eval_args)
 
 def main():

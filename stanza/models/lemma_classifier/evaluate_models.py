@@ -249,6 +249,7 @@ def main(args=None):
     parser.add_argument("--charlm_backward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
     parser.add_argument("--save_name", type=str, default=os.path.join(os.path.dirname(__file__), "saved_models", "lemma_classifier_model.pt"), help="Path to model save file")
     parser.add_argument("--model_type", type=str, default="roberta", help="Which transformer to use ('bert' or 'roberta' or 'lstm')")
+    parser.add_argument("--bert_model", type=str, default=None, help="Use a specific transformer instead of the default bert/roberta")
     parser.add_argument("--eval_file", type=str, help="path to evaluation file")
 
     args = parser.parse_args(args)
@@ -289,18 +290,22 @@ def main(args=None):
                                 )
     elif model_type.lower() == "roberta":
         # Evaluate Transformer (BERT or ROBERTA)
-        model = LemmaClassifierWithTransformer(output_dim=output_dim, model_type="roberta")
+        model = LemmaClassifierWithTransformer(output_dim=output_dim, transformer_name="roberta-base")
     elif model_type.lower() == "bert":
         # Evaluate Transformer (BERT or ROBERTA)
-        model = LemmaClassifierWithTransformer(output_dim=output_dim, model_type="bert")
-    
+        model = LemmaClassifierWithTransformer(output_dim=output_dim, transformer_name="bert-base-uncased")
+    elif model_type.lower() == "transformer":
+        model = LemmaClassifierWithTransformer(output_dim=output_dim, transformer_name=args.bert_model)
+    else:
+        raise ValueError("Unknown model type %s" % model_type)
+
     logging.info(f"Attempting evaluation of model from {save_name} on file {eval_path}")
 
     if model_type.lower() == "lstm":
         # for LSTM models
         mcc_results, confusion, acc = evaluate_model(model, save_name, eval_path)
 
-    elif model_type.lower() == "roberta" or model_type.lower() == "bert":
+    elif model_type.lower() == "roberta" or model_type.lower() == "bert" or model_type.lower() == "transformer":
         # for transformer
         mcc_results, confusion, acc = evaluate_transformer(model, save_name, eval_path)
 
