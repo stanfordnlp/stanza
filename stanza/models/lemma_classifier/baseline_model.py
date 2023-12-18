@@ -43,7 +43,7 @@ class BaselineModel:
             gold_tag_sequences.append(gold_tags)
             pred_tag_sequences.append(pred_tags)
         
-        multiclass_result, confusion_mtx = evaluate_sequences(gold_tag_sequences, pred_tag_sequences)
+        multiclass_result, confusion_mtx, weighted_f1 = evaluate_sequences(gold_tag_sequences, pred_tag_sequences)
         return multiclass_result, confusion_mtx
 
 
