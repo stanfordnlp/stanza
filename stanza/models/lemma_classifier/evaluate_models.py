@@ -130,7 +130,7 @@ def model_predict(model: LemmaClassifier, text: List[int], position_idx: int, wo
     return predicted_class
 
 
-def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verbose: bool = True) -> Tuple[Mapping, Mapping, float]:
+def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verbose: bool = True) -> Tuple[Mapping, Mapping, float, float]:
     """
     Helper function for model evaluation
 
@@ -202,7 +202,7 @@ def transformer_pred(model: LemmaClassifierWithTransformer, text: List[str], pos
     return predicted_class
 
 
-def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, eval_path: str, verbose: bool = True):
+def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, eval_path: str, verbose: bool = True) -> Tuple[Mapping, Mapping, float, float]:
     """
     Helper function for transformer-model evaluation
 
