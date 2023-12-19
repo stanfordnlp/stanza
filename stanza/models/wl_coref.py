@@ -44,7 +44,9 @@ import datetime
 import logging
 import random
 import sys
+import dataclasses
 import time
+
 
 import numpy as np  # type: ignore
 import torch        # type: ignore
@@ -105,6 +107,9 @@ if __name__ == "__main__":
                            help="If set, update the save directory for writing models")
     argparser.add_argument("--log_norms", action="store_true", default=None,
                            help="If set, log all of the trainable norms each epoch.  Very noisy!")
+    argparser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name', default=False)
+    argparser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+
     args = argparser.parse_args()
 
     if args.warm_start and args.weights is not None:
@@ -121,14 +126,22 @@ if __name__ == "__main__":
         config.save_dir = args.save_dir
     if args.log_norms is not None:
         config.log_norms = args.log_norms
-
+    # if wandb, generate wandb configuration 
     if args.mode == "train":
+        if args.wandb:
+            import wandb
+            wandb_name = args.wandb_name if args.wandb_name else f"wl_coref_{args.experiment}"
+            wandb.init(name=wandb_name, config=dataclasses.asdict(config), project="stanza")
+            wandb.run.define_metric('train_c_loss', summary='min')
+            wandb.run.define_metric('train_s_loss', summary='min')
+            wandb.run.define_metric('dev_score', summary='max')
+
         model = CorefModel(config=config)
         if args.weights is not None or args.warm_start:
             model.load_weights(path=args.weights, map_location="cpu",
                                noexception=args.warm_start)
         with output_running_time():
-            model.train()
+            model.train(args.wandb)
     else:
         config_update = {
             'log_norms': args.log_norms if args.log_norms is not None else False
