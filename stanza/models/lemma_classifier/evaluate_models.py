@@ -68,7 +68,7 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
     
     confusion = defaultdict(lambda: defaultdict(int))
     
-    for gold_tags, pred_tags in tqdm(zip(gold_tag_sequences, pred_tag_sequences), "Evaluating sequences"):
+    for gold_tags, pred_tags in tqdm(zip(gold_tag_sequences, pred_tag_sequences), "Evaluating sequences", total=len(gold_tag_sequences)):
 
         assert len(gold_tags) == len(pred_tags), f"Number of gold tags doesn't match number of predicted tags ({len(gold_tags)}, {len(pred_tags)})"
         for gold, pred in zip(gold_tags, pred_tags):
@@ -168,7 +168,7 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verb
     correct = 0
     gold_tags, pred_tags = [label_batches], []
     # run eval on each example from dataset
-    for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file"):
+    for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file", total=len(text_batches)):
         # convert words to embedding ID using the model's vocab_map
         # TODO: could push this whole thing into the model
         token_ids = [model.vocab_map.get(word.lower(), UNK_ID) for word in sentence]
@@ -242,7 +242,7 @@ def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, 
     gold_tags, pred_tags = [label_batches], []
     
     # run eval on each example from dataset
-    for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file"):
+    for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file", total=len(text_batches)):
         pred = transformer_pred(model, sentence, pos_index)
         correct += 1 if pred == label else 0 
         pred_tags += [pred]
