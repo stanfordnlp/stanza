@@ -80,7 +80,6 @@ class LemmaClassifier(nn.Module):
         Computes the forward pass of the neural net
 
         Args:
-            token_ids (torch.tensor): Tensor of the tokenized indices of the words in the input sentence, with unknown words having their index set to UNKNOWN_TOKEN_IDX
             pos_index (int): The position index of the target token for lemmatization classification in the sentence.
             words (List[str]): A list of the tokenized strings of the input sentence.
 
