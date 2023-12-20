@@ -59,7 +59,7 @@ class LemmaClassifierWithTransformer(nn.Module):
         input_ids_tensor = torch.tensor([input_ids])
         input_ids_tensor.to(self.device)  # Move data to device
 
-        logging.info(f"TRANSFORMER is on {next(self.transformer.parameters()).device()}")
+        logging.info(f"TRANSFORMER is on {next(self.transformer.parameters()).device}")
         logging.info(f"INPUT ID TENSORS is on {input_ids_tensor.device()}")
 
         # Forward pass through Transformer
