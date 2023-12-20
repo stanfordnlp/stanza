@@ -126,12 +126,12 @@ def model_predict(model: nn.Module, position_idx: int, words: List[str]) -> int:
     return predicted_class
 
 
-def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verbose: bool = True) -> Tuple[Mapping, Mapping, float, float]:
+def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: bool = True) -> Tuple[Mapping, Mapping, float, float]:
     """
     Helper function for model evaluation
 
     Args:
-        model (LemmaClassifier): An instance of the LemmaClassifier class that has architecture initialized which matches the model saved in `model_path`.
+        model (LemmaClassifier or LemmaClassifierWithTransformer): An instance of the LemmaClassifier class that has architecture initialized which matches the model saved in `model_path`.
         model_path (str): Path to the saved model weights that will be loaded into `model`.
         eval_path (str): Path to the saved evaluation dataset.
         verbose (bool, optional): True if `evaluate_sequences()` should print the F1, Precision, and Recall for each class. Defaults to True.
@@ -159,54 +159,6 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verb
     # run eval on each example from dataset
     for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file", total=len(text_batches)):
         # convert words to embedding ID using the model's vocab_map
-        pred = model_predict(model, pos_index, sentence)
-        correct += 1 if pred == label else 0 
-        pred_tags += [pred]
-
-    logging.info("Finished evaluating on dataset. Computing scores...")
-    accuracy = correct / len(label_batches)
-    mc_results, confusion, weighted_f1 = evaluate_sequences(gold_tags, [pred_tags], verbose=verbose)  
-    # add brackets around batches of gold and pred tags because each batch is an element within the sequences in this helper
-    if verbose:
-        logging.info(f"Accuracy: {accuracy} ({correct}/{len(label_batches)})")
-    
-    return mc_results, confusion, accuracy, weighted_f1
-
-
-def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, eval_path: str, verbose: bool = True) -> Tuple[Mapping, Mapping, float, float]:
-    """
-    Helper function for transformer-model evaluation
-
-    Args:
-        model (LemmaClassifierWithTransformer): An instance of the LemmaClassifierWithTransformer class that has architecture initialized which
-                                                 matches the model saved in `model_path`.
-        model_path (str): Path to the saved model weights that will be loaded into `model`.
-        eval_path (str): Path to the saved evaluation dataset.
-        verbose (bool, optional): True if `evaluate_sequences()` should print the F1, Precision, and Recall for each class. Defaults to True.
-
-    Returns:
-        1. Multi-class results (Mapping[int, Mapping[str, float]]): first map has keys as the classes (lemma indices) and value is 
-                                                                    another map with key of "f1", "precision", or "recall" with corresponding values.
-        2. Confusion Matrix (Mapping[int, Mapping[int, int]]): A confusion matrix with keys equal to the index of the gold tag, and a value of the 
-                                                               map with the key as the predicted tag and corresponding count of that (gold, pred) pair.
-        3. Accuracy (float): the total accuracy (num correct / total examples) across the evaluation set.
-    """
-    # load model
-    model_state = torch.load(model_path)
-    model.load_state_dict(model_state['params'])
-    model.eval()  # set to eval mode
-
-    # load in eval data 
-    label_decoder = model_state['label_decoder']
-    text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path, label_decoder=label_decoder)
-    
-    logging.info(f"Evaluating model from {model_path} on evaluation file {eval_path}")
-
-    correct = 0
-    gold_tags, pred_tags = [label_batches], []
-    
-    # run eval on each example from dataset
-    for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file", total=len(text_batches)):
         pred = model_predict(model, pos_index, sentence)
         correct += 1 if pred == label else 0 
         pred_tags += [pred]
@@ -303,13 +255,7 @@ def main(args=None):
 
     logging.info(f"Attempting evaluation of model from {save_name} on file {eval_path}")
 
-    if model_type.lower() == "lstm":
-        # for LSTM models
-        mcc_results, confusion, acc, weighted_f1 = evaluate_model(model, save_name, eval_path)
-
-    elif model_type.lower() == "roberta" or model_type.lower() == "bert" or model_type.lower() == "transformer":
-        # for transformer
-        mcc_results, confusion, acc, weighted_f1 = evaluate_transformer(model, save_name, eval_path)
+    mcc_results, confusion, acc, weighted_f1 = evaluate_model(model, save_name, eval_path)
 
     logging.info(f"MCC Results: {dict(mcc_results)}")
     logging.info("______________________________________________")
