@@ -113,6 +113,7 @@ class TransformerBaselineTrainer:
 
         # Put model on GPU (if possible)  
         device = default_device()
+        logging.info(f"USING DEVICE: {device}")
         self.model.to(device)
         self.model.device = device
         self.model.transformer.to(device)

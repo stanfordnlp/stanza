@@ -2,8 +2,12 @@ import torch
 import torch.nn as nn
 import os
 import sys
+import logging
+
 from transformers import AutoTokenizer, AutoModel
 from typing import List, Tuple, Any 
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 class LemmaClassifierWithTransformer(nn.Module):
@@ -47,6 +51,7 @@ class LemmaClassifierWithTransformer(nn.Module):
         Returns the logits of the MLP
         """
 
+        logging.info(f"USING DEVICE IN FORWARD PASS: {self.device}")
         # Get the transformer embeddings 
         input_ids = self.tokenizer.convert_tokens_to_ids(text)
 
