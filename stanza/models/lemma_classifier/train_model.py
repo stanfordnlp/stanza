@@ -10,8 +10,7 @@ import logging
 import argparse
 from os import path
 from os import remove
-from typing import List, Tuple, Any
-import sys
+from typing import List, Tuple, Any, Mapping
 
 from stanza.models.common.foundation_cache import load_pretrain
 from stanza.models.lemma_classifier import utils
@@ -89,9 +88,46 @@ class LemmaClassifierTrainer():
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=kwargs.get("lr", 0.001))  
 
-    def save_checkpoint(self, save_name, state_dict, label_decoder):
-        # TODO not implemented. helper for saving checkpoint before eval
-        pass 
+    def save_checkpoint(self, save_name: str, state_dict: Mapping, label_decoder: Mapping) -> Mapping:
+        """
+        Saves model checkpoint with a current state dict (params) and a label decoder on the dataset.
+        If the save path doesn't exist, it will create it. 
+        """
+        save_dir = os.path.split(save_name)[0]
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+        state_dict = {
+            "params": state_dict,
+            "label_decoder": label_decoder,
+        }
+        torch.save(state_dict, save_name)
+        return state_dict
+
+    def configure_weighted_loss(self, label_decoder: Mapping, counts: Mapping):
+        """
+        If applicable, this function will update the loss function of the LemmaClassifier model to become BCEWithLogitsLoss.
+        The weights are determined by the counts of the classes in the dataset. The weights are inversely proportional to the
+        frequency of the class in the set. E.g. classes with lower frequency will have higher weight.
+        """
+        weights = [0 for _ in label_decoder.keys()]  # each key in the label decoder is one class, we have one weight per class
+        total_samples = sum(counts.values())
+        for class_idx in counts:
+            weights[class_idx] = total_samples / (counts[class_idx] * len(counts))  # weight_i = total / (# examples in class i * num classes)
+            weights = torch.tensor(weights)
+        logging.info(f"Using weights {weights} for weighted loss.")
+        self.criterion = nn.BCEWithLogitsLoss(weight=weights)
+
+    def update_best_checkpoint(self, state_dict: Mapping, best_model: Mapping, best_f1: float, save_name: str, eval_path: str) -> Tuple[Mapping, float]:
+        """
+        Attempts to update the best available version of the model by evaluating the current model's state against the existing
+        best model on the dev set. The model with a better weighted F1 will be chosen.
+        """
+        _, _, _, f1 = evaluate_model(self.model, save_name, eval_path)
+        logging.info(f"Weighted f1 for model: {f1}")
+        if f1 > best_f1:
+            best_model = state_dict
+            logging.info(f"New best model: weighted f1 score of {f1}.")
+        return best_model, max(f1, best_f1)
 
     def train(self, texts_batch: List[List[str]], positions_batch: List[int], labels_batch: List[int], num_epochs: int, save_name: str, **kwargs) -> None:
 
@@ -122,15 +158,8 @@ class LemmaClassifierTrainer():
         if path.exists(save_name):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
         
-        # Configure weighted loss, if necessary
         if self.weighted_loss:
-            weights = [0 for _ in label_decoder.keys()]  # each key in the label decoder is one class, we have one weight per class
-            total_samples = sum(counts.values())
-            for class_idx in counts:
-                weights[class_idx] = total_samples / (counts[class_idx] * len(counts))  # weight_i = total / (# examples in class i * num classes)
-                weights = torch.tensor(weights)
-            logging.info(f"Using weights {weights} for weighted loss.")
-            self.criterion = nn.BCEWithLogitsLoss(weight=weights)
+            self.configure_weighted_loss(label_decoder, counts)
 
         best_model, best_f1 = None, 0  # Used for saving checkpoints of the model
         logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
@@ -155,31 +184,18 @@ class LemmaClassifierTrainer():
                 self.optimizer.step()
             
             # Evaluate model on dev set to see if it should be saved.
-            save_dir = os.path.split(save_name)[0]
-            if save_dir:
-                os.makedirs(save_dir, exist_ok=True)
-            state_dict = {
-                "params": self.model.state_dict(),
-                "label_decoder": label_decoder,
-            }
-            torch.save(state_dict, save_name)
+            state_dict = self.save_checkpoint(save_name, self.model.state_dict(), label_decoder)
             logging.info(f"Saved temp model state dict for epoch [{epoch + 1}/{num_epochs}] to {save_name}")
+            
             if kwargs.get("eval_file"):
-                _, _, _, f1 = evaluate_model(self.model, save_name, kwargs.get("eval_file"))
-                logging.info(f"Weighted f1 for model: {f1}")
-                if f1 > best_f1:
-                    best_model = state_dict
-                    logging.info(f"New best model: weighted f1 score of {f1}.")
+                best_model, best_f1 = self.update_best_checkpoint(state_dict, best_model, best_f1, save_name, kwargs.get("eval_file"))
             
             logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
             logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
 
         # Save the best model from training
-        save_dir = os.path.split(save_name)[0]
-        if save_dir:
-            os.makedirs(save_dir, exist_ok=True)
-        torch.save(best_model, save_name)
-        logging.info(f"Saved final model state dict to {save_name}.")
+        self.save_checkpoint(save_name, best_model.get("params"), best_model.get("label_decoder"))
+        logging.info(f"Saved final model state dict to {save_name} (weighted F1: {best_f1}).")
 
 def build_argparse():
     parser = argparse.ArgumentParser()
