@@ -80,3 +80,15 @@ def extract_unknown_token_indices(tokenized_indices: torch.tensor, unknown_token
     return [idx for idx, token_index in enumerate(tokenized_indices) if token_index == unknown_token_idx]
 
 
+def get_device():
+    """
+    Get the device to run computations on
+    """
+    if torch.cuda.is_available:
+        device = torch.device("cuda")
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+    
+    return device
