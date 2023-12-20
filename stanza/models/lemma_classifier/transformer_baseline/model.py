@@ -56,8 +56,7 @@ class LemmaClassifierWithTransformer(nn.Module):
         input_ids = self.tokenizer.convert_tokens_to_ids(text)
 
         # Convert tokens to IDs and put them into a tensor
-        input_ids_tensor = torch.tensor([input_ids])
-        input_ids_tensor.to(self.device)  # Move data to device
+        input_ids_tensor = torch.tensor([input_ids], device=self.device)  # move data to device as well
 
         logging.info(f"TRANSFORMER is on {next(self.transformer.parameters()).device}")
         logging.info(f"INPUT ID TENSORS is on {input_ids_tensor.device}")
