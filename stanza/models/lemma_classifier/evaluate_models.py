@@ -190,7 +190,7 @@ def transformer_pred(model: LemmaClassifierWithTransformer, text: List[str], pos
         raise TypeError(f"Text variable must contain tokenized version of sentence, but instead found type {type(text[0])}.")
     
     with torch.no_grad():
-        logits = model(text, pos_idx)
+        logits = model(pos_idx, text)
         predicted_class = torch.argmax(logits).item()
     return predicted_class
 

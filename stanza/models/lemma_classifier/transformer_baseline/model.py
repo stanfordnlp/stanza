@@ -38,7 +38,7 @@ class LemmaClassifierWithTransformer(nn.Module):
             nn.Linear(64, output_dim)
         )
     
-    def forward(self, text: List[str], pos_index: int):
+    def forward(self, pos_index: int, text: List[str]):
         """
 
         Args:

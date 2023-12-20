@@ -91,7 +91,7 @@ class TransformerBaselineTrainer:
                     raise ValueError(f"Found position {position} in text: {texts}, which is not possible.") 
                 
                 self.optimizer.zero_grad()
-                output = self.model(texts, position)
+                output = self.model(position, texts)
                 
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
