@@ -104,6 +104,10 @@ class LemmaClassifierTrainer():
         Kwargs:
             train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line.         
         """
+        
+        # Put model on GPU (if possible)
+        device = utils.get_device()
+        # self.model.to(device)  TODO fix this
 
         train_path = kwargs.get("train_path")
         if train_path:  # use file to train model
