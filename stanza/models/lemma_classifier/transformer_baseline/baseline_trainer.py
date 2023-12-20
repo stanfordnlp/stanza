@@ -152,6 +152,8 @@ class TransformerBaselineTrainer:
                     target = torch.tensor(target_vec, dtype=torch.float32)
                 else:  # CELoss accepts target as just raw label
                     target = torch.tensor(label, dtype=torch.long)
+                
+                target.to(device)
                 loss = self.criterion(output, target)
 
                 loss.backward()

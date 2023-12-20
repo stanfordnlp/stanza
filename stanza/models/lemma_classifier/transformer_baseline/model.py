@@ -62,6 +62,8 @@ class LemmaClassifierWithTransformer(nn.Module):
         last_hidden_state = outputs.last_hidden_state
         token_embeddings = last_hidden_state[0]
 
+        pos_index = torch.tensor(pos_index)
+        pos_index.to(self.device)
         # Get target embedding
         target_pos_embedding = token_embeddings[pos_index]
 
