@@ -116,14 +116,18 @@ class TransformerBaselineTrainer:
         self.model.to(device)
         self.model.device = device
 
+        self.criterion.to(device)
+
         if kwargs.get("train_path"):
             texts_batch, positions_batch, labels_batch, counts, label_decoder = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss)
             self.output_dim = len(label_decoder)
             logging.info(f"Using label decoder : {label_decoder}")
 
             # Move data to device
-            torch.tensor(labels_batch).to(device)
-            torch.tensor(positions_batch).to(device)
+            labels_batch = torch.tensor(labels_batch)
+            positions_batch = torch.tensor(positions_batch)
+            labels_batch.to(device)
+            positions_batch.to(device)
         
         assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
         if os.path.exists(save_name):
