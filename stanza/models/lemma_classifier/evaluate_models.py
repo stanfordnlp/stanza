@@ -107,9 +107,9 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
     return multi_class_result, confusion, weighted_f1   
 
 
-def model_predict(model: LemmaClassifier, position_idx: int, words: List[str]) -> int:
+def model_predict(model: nn.Module, position_idx: int, words: List[str]) -> int:
     """
-    A LemmaClassifier is used to predict on a single text example, given the position index of the target token.
+    A LemmaClassifier or LemmaClassifierWithTransformer is used to predict on a single text example, given the position index of the target token.
 
     Args:
         model (LemmaClassifier): A trained LemmaClassifier that is able to predict on a target token.
@@ -173,28 +173,6 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verb
     return mc_results, confusion, accuracy, weighted_f1
 
 
-def transformer_pred(model: LemmaClassifierWithTransformer, text: List[str], pos_idx: int):
-    """
-    A LemmaClassifierWithTransformer is used to predict on a single text example, given the position index of the target token.
-
-    Args:
-        model (LemmaClassifierWithTransformer): A trained LemmaClassifierWithTransformer that is able to predict on a target token.
-        text (List[str]): A sentence of words with each word as its own element.
-        position_idx (int): The (zero-indexed) position of the target token in `text`.
-    
-    Returns:
-        (int): The index of the predicted class in `model`'s output.
-    """
-    assert len(text) != 0, f"Text arg is empty. Please provide a proper input for model evaluation."
-    if not isinstance(text[0], str):
-        raise TypeError(f"Text variable must contain tokenized version of sentence, but instead found type {type(text[0])}.")
-    
-    with torch.no_grad():
-        logits = model(pos_idx, text)
-        predicted_class = torch.argmax(logits).item()
-    return predicted_class
-
-
 def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, eval_path: str, verbose: bool = True) -> Tuple[Mapping, Mapping, float, float]:
     """
     Helper function for transformer-model evaluation
@@ -229,7 +207,7 @@ def evaluate_transformer(model:LemmaClassifierWithTransformer, model_path: str, 
     
     # run eval on each example from dataset
     for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file", total=len(text_batches)):
-        pred = transformer_pred(model, sentence, pos_index)
+        pred = model_predict(model, pos_index, sentence)
         correct += 1 if pred == label else 0 
         pred_tags += [pred]
 
