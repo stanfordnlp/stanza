@@ -148,9 +148,6 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verb
     model.load_state_dict(model_state['params'])
     model.eval()  # set to eval mode
 
-    # TODO: maybe push the mapping inside the model
-    vocab_map = model.vocab_map
-
     # load in eval data 
     label_decoder = model_state['label_decoder']
     text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path, label_decoder=label_decoder)
