@@ -66,6 +66,10 @@ class TransformerBaselineTrainer:
             train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line. 
         """
 
+        # Put model on GPU (if possible)
+        device = utils.get_device()
+        # self.model.to(device)
+
         if kwargs.get("train_path"):
             texts_batch, positions_batch, labels_batch, counts, label_decoder = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss)
             logging.info(f"Using label decoder : {label_decoder}")
