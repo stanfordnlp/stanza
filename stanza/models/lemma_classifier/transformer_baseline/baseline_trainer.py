@@ -120,16 +120,17 @@ class TransformerBaselineTrainer:
 
         self.criterion.to(device)
 
+        logging.info(f"Model is on {self.model.device}. Transformer is on {self.model.transformer.device}")
+
         if kwargs.get("train_path"):
             texts_batch, positions_batch, labels_batch, counts, label_decoder = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss)
             self.output_dim = len(label_decoder)
             logging.info(f"Using label decoder : {label_decoder}")
 
             # Move data to device
-            labels_batch = torch.tensor(labels_batch)
-            positions_batch = torch.tensor(positions_batch)
-            labels_batch.to(device)
-            positions_batch.to(device)
+            labels_batch = torch.tensor(labels_batch, device=device)
+            positions_batch = torch.tensor(positions_batch, device=device)
+            logging.info(f"Labels batch is on {labels_batch.device}. Positions batch is on {positions_batch.device}")
         
         assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
         if os.path.exists(save_name):
@@ -147,15 +148,15 @@ class TransformerBaselineTrainer:
                 
                 self.optimizer.zero_grad()
                 output = self.model(position, texts)
+                logging.info(f"Outputs are on device : {output.device}")
                 
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
                     target_vec = [1, 0] if label == 0 else [0, 1]
-                    target = torch.tensor(target_vec, dtype=torch.float32)
+                    target = torch.tensor(target_vec, dtype=torch.float32, device=device)
                 else:  # CELoss accepts target as just raw label
-                    target = torch.tensor(label, dtype=torch.long)
+                    target = torch.tensor(label, dtype=torch.long, device=device)
                 
-                target.to(device)
                 loss = self.criterion(output, target)
 
                 loss.backward()
