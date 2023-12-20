@@ -21,8 +21,7 @@ class LemmaClassifierWithTransformer(nn.Module):
             model_type (str): What kind of transformer to use for embeddings ('bert' or 'roberta')
         """
         super(LemmaClassifierWithTransformer, self).__init__()
-
-        # Get the embedding through transformer 
+        self.device = None
 
         # Choose transformer
         self.tokenizer = AutoTokenizer.from_pretrained(transformer_name)
@@ -53,6 +52,7 @@ class LemmaClassifierWithTransformer(nn.Module):
 
         # Convert tokens to IDs and put them into a tensor
         input_ids_tensor = torch.tensor([input_ids])
+        input_ids_tensor.to(self.device)  # Move data to device
 
         # Forward pass through Transformer
         with torch.no_grad():
