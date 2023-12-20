@@ -11,11 +11,13 @@ import argparse
 from os import path
 from os import remove
 from typing import List, Tuple, Any
+import sys
 
 from stanza.models.common.foundation_cache import load_pretrain
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.model import LemmaClassifier
 from stanza.utils.get_tqdm import get_tqdm
+from stanza.models.lemma_classifier.evaluate_models import evaluate_model
 
 tqdm = get_tqdm()
 
@@ -43,6 +45,7 @@ class LemmaClassifierTrainer():
             backward_charlm_file (str): Path to the backward pass embeddings for the charlm
             lr (float): Learning rate, defaults to 0.001.
             loss_func (str): Which loss function to use (either 'ce' or 'weighted_bce') 
+            eval_file (str): File used as dev set to evaluate which model gets saved
 
         Raises:
             FileNotFoundError: If the forward charlm file is not present
@@ -122,6 +125,8 @@ class LemmaClassifierTrainer():
             logging.info(f"Using weights {weights} for weighted loss.")
             self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
+        best_model = None
+        best_f1 = 0
         logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
@@ -144,18 +149,32 @@ class LemmaClassifierTrainer():
                 loss.backward()
                 self.optimizer.step()
             
+            # Evaluate model on dev set to see if it should be saved.
+            save_dir = os.path.split(save_name)[0]
+            if save_dir:
+                os.makedirs(save_dir, exist_ok=True)
+            state_dict = {
+                "params": self.model.state_dict(),
+                "label_decoder": label_decoder,
+            }
+            torch.save(state_dict, save_name)
+            logging.info(f"Saved temp model state dict for epoch [{epoch + 1}/{num_epochs}] to {save_name}")
+            if kwargs.get("eval_file"):
+                _, _, _, f1 = evaluate_model(self.model, save_name, kwargs.get("eval_file"))
+                logging.info(f"Weighted f1 for model: {f1}")
+                if f1 > best_f1:
+                    best_model = state_dict
+                    logging.info(f"New best model: weighted f1 score of {f1}.")
+            
             logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
             logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
 
+        # Save the best model from training
         save_dir = os.path.split(save_name)[0]
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
-        state_dict = {
-            "params": self.model.state_dict(),
-            "label_decoder": label_decoder,
-        }
-        torch.save(state_dict, save_name)
-        logging.info(f"Saved model state dict to {save_name}")
+        torch.save(best_model, save_name)
+        logging.info(f"Saved final model state dict to {save_name}.")
 
 def build_argparse():
     parser = argparse.ArgumentParser()
@@ -163,7 +182,7 @@ def build_argparse():
     parser.add_argument("--embedding_dim", type=int, default=100, help="Number of dimensions in word embeddings (currently using GloVe)")
     parser.add_argument("--hidden_dim", type=int, default=256, help="Size of hidden layer")
     parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
-    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=os.path.join(os.path.dirname(__file__), "pretrain", "glove.pt"), help='Exact name of the pretrain file to read')
     parser.add_argument("--charlm", action='store_true', dest='use_charlm', default=False, help="Whether not to use the charlm embeddings")
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
     parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
@@ -173,6 +192,7 @@ def build_argparse():
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
     parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(__file__), "test_sets", "combined_train.txt"), help="Full path to training file")
     parser.add_argument("--weighted_loss", action='store_true', dest='weighted_loss', default=False, help="Whether to use weighted loss during training.")
+    parser.add_argument("--eval_file", type=str, default=os.path.join(os.path.dirname(__file__), "test_sets", "combined_dev.txt"), help="Path to dev file used to evaluate model for saves")
     return parser
 
 def main(args=None):
@@ -192,6 +212,7 @@ def main(args=None):
     num_epochs = args.num_epochs
     train_file = args.train_file
     weighted_loss = args.weighted_loss
+    eval_file = args.eval_file
 
     if os.path.exists(save_name):
         raise FileExistsError(f"Save name {save_name} already exists. Training would override existing data. Aborting...")
@@ -212,11 +233,11 @@ def main(args=None):
                                      forward_charlm_file=forward_charlm_file,
                                      backward_charlm_file=backward_charlm_file,
                                      lr=lr,
-                                     loss_func="weighted_bce" if weighted_loss else "ce"
+                                     loss_func="weighted_bce" if weighted_loss else "ce",
                                      )
 
     trainer.train(
-        [], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file
+        [], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file, eval_file=eval_file
     )
 
 if __name__ == "__main__":
