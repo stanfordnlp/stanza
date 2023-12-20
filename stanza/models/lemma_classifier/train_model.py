@@ -13,7 +13,6 @@ from os import remove
 from typing import List, Tuple, Any
 
 from stanza.models.common.foundation_cache import load_pretrain
-from stanza.models.common.vocab import UNK_ID
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.model import LemmaClassifier
 from stanza.utils.get_tqdm import get_tqdm
@@ -130,13 +129,9 @@ class LemmaClassifierTrainer():
                 if position < 0 or position > len(texts) - 1:  # validate position index
                     raise ValueError(f"Found position {position} in text: {texts}, which is not possible.")
                 
-                # Any token not in self.embeddings.stoi will be given the UNKNOWN_TOKEN_IDX, which is resolved to a true embedding in LemmaClassifier's forward() func
-                token_ids = [self.vocab_map.get(word.lower(), UNK_ID) for word in texts]
-                token_ids = torch.tensor(token_ids)
-                
                 self.optimizer.zero_grad()
 
-                output = self.model(token_ids, position, texts)
+                output = self.model(position, texts)
                 
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.

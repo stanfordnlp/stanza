@@ -21,7 +21,6 @@ import torch.nn as nn
 import stanza
 
 from stanza.models.common.foundation_cache import load_pretrain
-from stanza.models.common.vocab import UNK_ID
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.constants import *
 from stanza.models.lemma_classifier.model import LemmaClassifier
@@ -108,27 +107,20 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
     return multi_class_result, confusion, weighted_f1   
 
 
-def model_predict(model: LemmaClassifier, text: List[int], position_idx: int, words: List[str]) -> int:
+def model_predict(model: LemmaClassifier, position_idx: int, words: List[str]) -> int:
     """
     A LemmaClassifier is used to predict on a single text example, given the position index of the target token.
 
     Args:
         model (LemmaClassifier): A trained LemmaClassifier that is able to predict on a target token.
-        text (List[int]): A tokenized sentence with the proper embeddings corresponding to `model`.
         position_idx (int): The (zero-indexed) position of the target token in `text`.
         words (List[str]): A list of the tokenized strings of the input sentence.
     
     Returns:
         (int): The index of the predicted class in `model`'s output.
     """
-    assert len(text) != 0, f"Text arg is empty. Please provide a proper input for model evaluation."
-    if not isinstance(text[0], int):
-        raise TypeError(f"Text variable must contain tokenized version of sentence, but instead found type {type(text[0])}.")
-
-
-    text_tensor = torch.tensor(text)
     with torch.no_grad():
-        logits = model(text_tensor, position_idx, words)
+        logits = model(position_idx, words)
         predicted_class = torch.argmax(logits).item()
     
     return predicted_class
@@ -170,10 +162,7 @@ def evaluate_model(model: LemmaClassifier, model_path: str, eval_path: str, verb
     # run eval on each example from dataset
     for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file", total=len(text_batches)):
         # convert words to embedding ID using the model's vocab_map
-        # TODO: could push this whole thing into the model
-        token_ids = [model.vocab_map.get(word.lower(), UNK_ID) for word in sentence]
-
-        pred = model_predict(model, token_ids, pos_index, sentence)
+        pred = model_predict(model, pos_index, sentence)
         correct += 1 if pred == label else 0 
         pred_tags += [pred]
 

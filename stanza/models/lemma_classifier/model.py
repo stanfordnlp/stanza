@@ -4,6 +4,7 @@ import os
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from typing import List, Tuple
 
+from stanza.models.common.vocab import UNK_ID
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.constants import *
 
@@ -74,7 +75,7 @@ class LemmaClassifier(nn.Module):
             nn.Linear(64, output_dim)
         )
 
-    def forward(self, token_ids: torch.tensor, pos_index: int, words: List[str]):
+    def forward(self, pos_index: int, words: List[str]):
         """
         Computes the forward pass of the neural net
 
@@ -86,15 +87,16 @@ class LemmaClassifier(nn.Module):
         Returns:
             torch.tensor: Output logits of the neural network
         """
-        
+        token_ids = [self.vocab_map.get(word.lower(), UNK_ID) for word in words]
+        token_ids = torch.tensor(token_ids)
         embedded = self.embedding(token_ids)
-        
+
         if self.use_charlm:
             char_reps_forward = self.charmodel_forward.build_char_representation([words])  # takes [[str]]
             char_reps_backward = self.charmodel_backward.build_char_representation([words])
-        
+
             embedded = torch.cat((embedded, char_reps_forward[0], char_reps_backward[0]), 1)   # take [0] because we only use the first sentence
-        
+
         lstm_out, (hidden, _) = self.lstm(embedded)
 
         # Extract the hidden state at the index of the token to classify
