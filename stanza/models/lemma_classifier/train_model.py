@@ -27,7 +27,7 @@ class LemmaClassifierTrainer():
     Class to assist with training a LemmaClassifier
     """
 
-    def __init__(self, vocab_size: int, embedding_file: str, embedding_dim: int, hidden_dim: int, output_dim: int, use_charlm: bool, **kwargs):
+    def __init__(self, vocab_size: int, embedding_file: str, embedding_dim: int, hidden_dim: int, output_dim: int = 2, use_charlm: bool = False, **kwargs):
         """
         Initializes the LemmaClassifierTrainer class.
         
@@ -36,8 +36,8 @@ class LemmaClassifierTrainer():
             embedding_file (str): What word embeddings file to use.  Use a Stanza pretrain .pt
             embedding_dim (int): Size of embedding dimension to use on the aforementioned word embeddings
             hidden_dim (int): Size of hidden vectors in LSTM layers
-            output_dim (int): Size of output vector from MLP layer
-            use_charlm (bool): Whether to use charlm embeddings as well
+            output_dim (int, optional): Size of output vector from MLP layer. Defaults to 2.
+            use_charlm (bool, optional): Whether to use charlm embeddings as well. Defaults to False.
 
         Kwargs:
             forward_charlm_file (str): Path to the forward pass embeddings for the charlm 
@@ -151,6 +151,7 @@ class LemmaClassifierTrainer():
         train_path = kwargs.get("train_path")
         if train_path:  # use file to train model
             texts_batch, positions_batch, labels_batch, counts, label_decoder = utils.load_dataset(train_path, get_counts=self.weighted_loss)
+            self.output_dim = len(label_decoder)
             logging.info(f"Loaded dataset successfully from {train_path}")
             logging.info(f"Using label decoder: {label_decoder}")
 
