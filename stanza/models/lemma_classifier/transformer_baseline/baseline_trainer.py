@@ -115,6 +115,7 @@ class TransformerBaselineTrainer:
         device = default_device()
         self.model.to(device)
         self.model.device = device
+        self.model.transformer.to(device)
 
         self.criterion.to(device)
 
