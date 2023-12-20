@@ -79,7 +79,7 @@ class LemmaClassifierTrainer():
             self.criterion = nn.CrossEntropyLoss()
             self.weighted_loss = False
         elif loss_fn == "weighted_bce":
-            self.criteron = nn.BCEWithLogitsLoss()  
+            self.criterion = nn.BCEWithLogitsLoss()
             self.weighted_loss = True  # used to add weights during train time.
         else:
             raise ValueError("Must enter a valid loss function (e.g. 'ce' or 'weighted_bce')")
