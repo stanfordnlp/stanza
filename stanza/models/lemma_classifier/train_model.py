@@ -89,6 +89,10 @@ class LemmaClassifierTrainer():
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=kwargs.get("lr", 0.001))  
 
+    def save_checkpoint(self, save_name, state_dict, label_decoder):
+        # TODO not implemented. helper for saving checkpoint before eval
+        pass 
+
     def train(self, texts_batch: List[List[str]], positions_batch: List[int], labels_batch: List[int], num_epochs: int, save_name: str, **kwargs) -> None:
 
         """
@@ -105,9 +109,8 @@ class LemmaClassifierTrainer():
             train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line.         
         """
         
-        # Put model on GPU (if possible)
-        device = utils.get_device()
-        # self.model.to(device)  TODO fix this
+        device = utils.get_device()  # Put model on GPU (if possible)
+        # self.model.to(device)  TODO fix this for mac
 
         train_path = kwargs.get("train_path")
         if train_path:  # use file to train model
@@ -129,8 +132,7 @@ class LemmaClassifierTrainer():
             logging.info(f"Using weights {weights} for weighted loss.")
             self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
-        best_model = None
-        best_f1 = 0
+        best_model, best_f1 = None, 0  # Used for saving checkpoints of the model
         logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
@@ -139,7 +141,6 @@ class LemmaClassifierTrainer():
                     raise ValueError(f"Found position {position} in text: {texts}, which is not possible.")
                 
                 self.optimizer.zero_grad()
-
                 output = self.model(position, texts)
                 
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
