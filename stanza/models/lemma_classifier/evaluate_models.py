@@ -21,6 +21,7 @@ import torch.nn as nn
 import stanza
 
 from stanza.models.common.foundation_cache import load_pretrain
+from stanza.models.common.utils import default_device
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.constants import *
 from stanza.models.lemma_classifier.model import LemmaClassifier
@@ -144,13 +145,19 @@ def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: b
         3. Accuracy (float): the total accuracy (num correct / total examples) across the evaluation set.
     """
     # load model
+    device = default_device()
+    model.device = device 
+    
     model_state = torch.load(model_path)
     model.load_state_dict(model_state['params'])
+    model.to(device)
     model.eval()  # set to eval mode
 
     # load in eval data 
     label_decoder = model_state['label_decoder']
     text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path, label_decoder=label_decoder)
+    torch.tensor(label_batches).to(device)
+    torch.tensor(index_batches).to(device)
     
     logging.info(f"Evaluating model from {model_path} on evaluation file {eval_path}")
 
