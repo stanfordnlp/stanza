@@ -127,7 +127,7 @@ def model_predict(model: nn.Module, position_idx: int, words: List[str]) -> int:
     return predicted_class
 
 
-def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: bool = True) -> Tuple[Mapping, Mapping, float, float]:
+def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: bool = True, is_training = False) -> Tuple[Mapping, Mapping, float, float]:
     """
     Helper function for model evaluation
 
@@ -136,6 +136,7 @@ def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: b
         model_path (str): Path to the saved model weights that will be loaded into `model`.
         eval_path (str): Path to the saved evaluation dataset.
         verbose (bool, optional): True if `evaluate_sequences()` should print the F1, Precision, and Recall for each class. Defaults to True.
+        is_training (bool, optional): Whether the model is in training mode. If the model is training, we do not change it to eval mode.
 
     Returns:
         1. Multi-class results (Mapping[int, Mapping[str, float]]): first map has keys as the classes (lemma indices) and value is 
@@ -151,7 +152,9 @@ def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: b
     model_state = torch.load(model_path)
     model.load_state_dict(model_state['params'])
     model.to(device)
-    model.eval()  # set to eval mode
+
+    if not is_training:
+        model.eval()  # set to eval mode
 
     # load in eval data 
     label_decoder = model_state['label_decoder']

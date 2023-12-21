@@ -123,7 +123,7 @@ class LemmaClassifierTrainer():
         Attempts to update the best available version of the model by evaluating the current model's state against the existing
         best model on the dev set. The model with a better weighted F1 will be chosen.
         """
-        _, _, _, f1 = evaluate_model(self.model, save_name, eval_path)
+        _, _, _, f1 = evaluate_model(self.model, save_name, eval_path, is_training=True)
         logging.info(f"Weighted f1 for model: {f1}")
         if f1 > best_f1:
             best_model = state_dict
@@ -190,7 +190,6 @@ class LemmaClassifierTrainer():
                 else:  # CELoss accepts target as just raw label
                     target = torch.tensor(label, dtype=torch.long, device=device)
 
-                logging.info(f"Output on {output.device}, Target on {target.device}")
                 loss = self.criterion(output, target)
 
                 loss.backward()

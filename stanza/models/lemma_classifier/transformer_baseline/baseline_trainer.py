@@ -165,7 +165,7 @@ class TransformerBaselineTrainer:
             logging.info(f"Saved temp model state dict for epoch [{epoch + 1}/{num_epochs}] to {save_name}")
             
             if kwargs.get("eval_file"):
-                best_model, best_f1 = self.update_best_checkpoint(state_dict, best_model, best_f1, save_name, kwargs.get("eval_file"))
+                best_model, best_f1 = self.update_best_checkpoint(state_dict, best_model, best_f1, save_name, kwargs.get("eval_file"), is_training=True)
 
         # Save the best model from training
         self.save_checkpoint(save_name, best_model.get("params"), best_model.get("label_decoder"))
