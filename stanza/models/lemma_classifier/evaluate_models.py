@@ -72,7 +72,7 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
 
         assert len(gold_tags) == len(pred_tags), f"Number of gold tags doesn't match number of predicted tags ({len(gold_tags)}, {len(pred_tags)})"
         for gold, pred in zip(gold_tags, pred_tags):
-            confusion[gold][pred] += 1
+            confusion[gold.item()][pred] += 1
 
     multi_class_result = defaultdict(lambda: defaultdict(float))
     # compute precision, recall and f1 for each class and store inside of `multi_class_result`
@@ -172,9 +172,9 @@ def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: b
         logging.info(f"Pos Index: {pos_index}, {type(pos_index)}")
         logging.info(f"Label: {label}, {type(label)}")
         # convert words to embedding ID using the model's vocab_map
-        pred = model_predict(model, pos_index, sentence)
+        pred = model_predict(model, pos_index.item(), sentence)
         logging.info(f"Pred: {pred}, {type(pred)}")
-        correct += 1 if pred == label else 0 
+        correct += 1 if pred == label.item() else 0 
         pred_tags += [pred]
 
     logging.info("Finished evaluating on dataset. Computing scores...")
