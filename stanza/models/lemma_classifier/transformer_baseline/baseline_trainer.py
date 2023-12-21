@@ -157,7 +157,9 @@ class TransformerBaselineTrainer:
                 else:  # CELoss accepts target as just raw label
                     target = torch.tensor(label, dtype=torch.long, device=device)
                 
-                logging.info(f"Target is on {target.device}. Criterion is on {next(self.criterion.parameters()).device}")
+                logging.info(f"Target is on {target.device}.")
+                logging.info(f"Criterion: {self.criterion}")
+                logging.info(f"Criterion on {next(self.criterion.parameters()).device}")
 
                 loss = self.criterion(output, target)
 
