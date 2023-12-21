@@ -184,10 +184,11 @@ class LemmaClassifierTrainer():
                 
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
+                    # TODO: three classes?
                     target_vec = [1, 0] if label == 0 else [0, 1]
                     target = torch.tensor(target_vec, dtype=torch.float32, device=device)
                 else:  # CELoss accepts target as just raw label
-                    target = torch.tensor(label, dtype=torch.long, device=device)
+                    target = label
 
                 loss = self.criterion(output, target)
 

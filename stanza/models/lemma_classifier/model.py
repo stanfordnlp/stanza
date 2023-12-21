@@ -99,7 +99,6 @@ class LemmaClassifier(nn.Module):
         lstm_out, (hidden, _) = self.lstm(embedded)
 
         # Extract the hidden state at the index of the token to classify
-        pos_index = torch.tensor(pos_index, device=next(self.parameters()).device)
         lstm_out = lstm_out[pos_index]
 
         # MLP forward pass
