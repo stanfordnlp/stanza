@@ -120,7 +120,9 @@ class TransformerBaselineTrainer:
 
         self.criterion.to(next(self.model.parameters()).device)
         logging.info(f"Params for crit: {self.criterion.parameters()}")
-        logging.info(f"Criterion on {next(self.criterion.parameters()).device}")
+        params = next(self.criterion.parameters())
+        logging.info(f"Criterion on {params}")
+        logging.info(f"{params.device}")
 
         logging.info(f"Model is on {self.model.device}. Transformer is on {self.model.transformer.device}")
 
