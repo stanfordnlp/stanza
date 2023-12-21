@@ -119,7 +119,7 @@ class TransformerBaselineTrainer:
         self.model.transformer.to(device)
 
         logging.info(f"CRITERION: {self.criterion}")
-        self.criterion.to(next(self.model.parameters()).device)
+        self.criterion.to(next(self.model.transformer.parameters()).device)
 
         logging.info(f"Model is on {self.model.device}. Transformer is on {self.model.transformer.device}")
 
@@ -159,7 +159,8 @@ class TransformerBaselineTrainer:
                     target = torch.tensor(label, dtype=torch.long, device=device)
                 
                 logging.info(f"Target is on {target.device}.")
-                logging.info(f"Criterion: {self.criterion}; {self.criterion.parameters.device}")
+                logging.info(f"Criterion: {self.criterion}; {list(self.criterion.parameters())}")
+                logging.info(f"Criterion: {next(self.criterion.parameters()).device}")
                 loss = self.criterion(output, target)
 
                 loss.backward()
