@@ -147,7 +147,6 @@ def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: b
     """
     # load model
     device = default_device()
-    model.device = device 
 
     model_state = torch.load(model_path)
     model.load_state_dict(model_state['params'])
