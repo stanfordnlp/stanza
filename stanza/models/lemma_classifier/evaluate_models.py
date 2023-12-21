@@ -169,11 +169,8 @@ def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: b
     gold_tags, pred_tags = [label_batches], []
     # run eval on each example from dataset
     for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file", total=len(text_batches)):
-        logging.info(f"Pos Index: {pos_index}, {type(pos_index)}")
-        logging.info(f"Label: {label}, {type(label)}")
         # convert words to embedding ID using the model's vocab_map
         pred = model_predict(model, pos_index.item(), sentence)
-        logging.info(f"Pred: {pred}, {type(pred)}")
         correct += 1 if pred == label.item() else 0 
         pred_tags += [pred]
 
