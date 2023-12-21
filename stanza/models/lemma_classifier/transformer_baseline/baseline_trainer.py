@@ -118,7 +118,7 @@ class TransformerBaselineTrainer:
         self.model.device = device
         self.model.transformer.to(device)
 
-        self.criterion.to(device)
+        self.criterion.to(next(self.model.parameters()).device)
 
         logging.info(f"Model is on {self.model.device}. Transformer is on {self.model.transformer.device}")
 
