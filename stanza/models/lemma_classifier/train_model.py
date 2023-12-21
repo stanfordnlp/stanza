@@ -172,7 +172,7 @@ class LemmaClassifierTrainer():
         logging.info(f"Criterion on {self.model.device}")
         self.criterion = self.criterion.to(self.model.device)
 
-        best_model, best_f1 = None, 0  # Used for saving checkpoints of the model
+        best_model, best_f1 = None, float("-inf")  # Used for saving checkpoints of the model
         logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch

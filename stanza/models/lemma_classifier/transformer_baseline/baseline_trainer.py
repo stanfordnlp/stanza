@@ -137,7 +137,7 @@ class TransformerBaselineTrainer:
         selected_dev = next(self.model.transformer.parameters()).device
         self.criterion = self.criterion.to(selected_dev)
 
-        best_model, best_f1 = None, 0
+        best_model, best_f1 = None, float("-inf")
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
             for texts, position, label in tqdm(zip(texts_batch, positions_batch, labels_batch), total=len(texts_batch)):
