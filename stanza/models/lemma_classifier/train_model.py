@@ -167,6 +167,7 @@ class LemmaClassifierTrainer():
             self.configure_weighted_loss(label_decoder, counts)
 
         # Put the criterion on GPU too
+        logging.info(f"Criterion on {self.model.device}")
         self.criterion = self.criterion.to(self.model.device)
 
         best_model, best_f1 = None, 0  # Used for saving checkpoints of the model
@@ -186,6 +187,8 @@ class LemmaClassifierTrainer():
                     target = torch.tensor(target_vec, dtype=torch.float32, device=device)
                 else:  # CELoss accepts target as just raw label
                     target = torch.tensor(label, dtype=torch.long, device=device)
+
+                logging.info(f"Output on {output.device}, Target on {target.device}")
                 loss = self.criterion(output, target)
 
                 loss.backward()
