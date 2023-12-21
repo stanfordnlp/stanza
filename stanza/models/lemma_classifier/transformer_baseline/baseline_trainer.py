@@ -119,6 +119,7 @@ class TransformerBaselineTrainer:
         self.model.transformer.to(device)
 
         self.criterion.to(next(self.model.parameters()).device)
+        logging.info(f"Criterion on {next(self.criterion.parameters()).device}")
 
         logging.info(f"Model is on {self.model.device}. Transformer is on {self.model.transformer.device}")
 
@@ -159,8 +160,6 @@ class TransformerBaselineTrainer:
                 
                 logging.info(f"Target is on {target.device}.")
                 logging.info(f"Criterion: {self.criterion}")
-                logging.info(f"Criterion on {next(self.criterion.parameters()).device}")
-
                 loss = self.criterion(output, target)
 
                 loss.backward()
