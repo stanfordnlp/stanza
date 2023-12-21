@@ -66,8 +66,6 @@ class TransformerBaselineTrainer:
             weights = torch.tensor(weights)
         logging.info(f"Using weights {weights} for weighted loss.")
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
-        self.criterion.to(self.model.device)
-        logging.info(f"AFTER CONFIG: {list(self.criterion.parameters())}. {self.criterion.weight}")
 
     def update_best_checkpoint(self, state_dict: Mapping, best_model: Mapping, best_f1: float, save_name: str, eval_path: str) -> Tuple[Mapping, float]:
         """
@@ -139,12 +137,8 @@ class TransformerBaselineTrainer:
         if self.weighted_loss:
             self.configure_weighted_loss(label_decoder, counts)
 
-        logging.info(f"CRITERION: {self.criterion}")
         selected_dev = next(self.model.transformer.parameters()).device
-        logging.info(f"SELECTED DEVICE: {selected_dev}")
         self.criterion = self.criterion.to(selected_dev)
-        logging.info(f"Criterion: {self.criterion}; {list(self.criterion.parameters())}")
-        logging.info(f"Criterion: {next(self.criterion.parameters()).device}")
 
         best_model, best_f1 = None, 0
         for epoch in range(num_epochs):
@@ -165,8 +159,6 @@ class TransformerBaselineTrainer:
                     target = torch.tensor(label, dtype=torch.long, device=device)
                 
                 logging.info(f"Target is on {target.device}.")
-                logging.info(f"Criterion: {self.criterion}; {list(self.criterion.parameters())}")
-                logging.info(f"Criterion: {next(self.criterion.parameters()).device}")
                 loss = self.criterion(output, target)
 
                 loss.backward()
