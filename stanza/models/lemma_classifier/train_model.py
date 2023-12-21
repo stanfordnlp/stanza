@@ -146,7 +146,7 @@ class LemmaClassifierTrainer():
             train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line.         
         """
         
-        device = default_device # Put model on GPU (if possible)
+        device = default_device() # Put model on GPU (if possible)
         self.model.to(device)  
         self.model.device = device 
         logging.info(f"Device chosen: {device}. {self.model.device}")
