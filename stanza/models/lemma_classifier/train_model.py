@@ -148,7 +148,6 @@ class LemmaClassifierTrainer():
         device = utils.get_device()  # Put model on GPU (if possible)
         self.model.to(device)  
         self.model.device = device 
-        self.model.transformer.to(device)
 
 
         train_path = kwargs.get("train_path")
