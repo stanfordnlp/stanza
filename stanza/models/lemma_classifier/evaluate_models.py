@@ -147,7 +147,7 @@ def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: b
     # load model
     device = default_device()
     model.device = device 
-    
+
     model_state = torch.load(model_path)
     model.load_state_dict(model_state['params'])
     model.to(device)
@@ -156,8 +156,9 @@ def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: b
     # load in eval data 
     label_decoder = model_state['label_decoder']
     text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path, label_decoder=label_decoder)
-    torch.tensor(label_batches).to(device)
-    torch.tensor(index_batches).to(device)
+    
+    index_batches = torch.tensor(index_batches, device=device)
+    label_batches = torch.tensor(label_batches, device=device)
     
     logging.info(f"Evaluating model from {model_path} on evaluation file {eval_path}")
 
