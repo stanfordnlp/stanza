@@ -155,7 +155,7 @@ def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: b
     if not is_training:
         model.eval()  # set to eval mode
 
-    # load in eval data 
+    # load in eval data
     label_decoder = model_state['label_decoder']
     text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path, label_decoder=label_decoder)
     

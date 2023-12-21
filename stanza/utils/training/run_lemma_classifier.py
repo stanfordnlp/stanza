@@ -45,6 +45,9 @@ def run_treebank(mode, paths, treebank, short_name,
         if "--train_file" not in extra_args:
             train_file = os.path.join("data", "lemma_classifier", "%s.train.lemma" % short_name)
             train_args += ['--train_file', train_file]
+        if "--eval_file" not in extra_args:
+            eval_file = os.path.join("data", "lemma_classifier", "%s.dev.lemma" % short_name)
+            train_args += ['--eval_file', eval_file]
         train_args = base_args + train_args + extra_args
 
         if command_args.model_type == ModelType.LSTM:

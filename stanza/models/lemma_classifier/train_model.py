@@ -198,7 +198,7 @@ class LemmaClassifierTrainer():
             # Evaluate model on dev set to see if it should be saved.
             state_dict = self.save_checkpoint(save_name, self.model.state_dict(), label_decoder)
             logging.info(f"Saved temp model state dict for epoch [{epoch + 1}/{num_epochs}] to {save_name}")
-            
+
             if kwargs.get("eval_file"):
                 best_model, best_f1 = self.update_best_checkpoint(state_dict, best_model, best_f1, save_name, kwargs.get("eval_file"))
             
