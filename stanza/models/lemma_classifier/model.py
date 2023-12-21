@@ -87,7 +87,7 @@ class LemmaClassifier(nn.Module):
             torch.tensor: Output logits of the neural network
         """
         token_ids = [self.vocab_map.get(word.lower(), UNK_ID) for word in words]
-        token_ids = torch.tensor(token_ids)
+        token_ids = torch.tensor(token_ids, device=self.model.device)
         embedded = self.embedding(token_ids)
 
         if self.use_charlm:
@@ -99,6 +99,7 @@ class LemmaClassifier(nn.Module):
         lstm_out, (hidden, _) = self.lstm(embedded)
 
         # Extract the hidden state at the index of the token to classify
+        pos_index = torch.tensor(pos_index, device=self.device)
         lstm_out = lstm_out[pos_index]
 
         # MLP forward pass

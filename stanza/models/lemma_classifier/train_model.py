@@ -146,7 +146,10 @@ class LemmaClassifierTrainer():
         """
         
         device = utils.get_device()  # Put model on GPU (if possible)
-        # self.model.to(device)  TODO fix this for mac
+        self.model.to(device)  
+        self.model.device = device 
+        self.model.transformer.to(device)
+
 
         train_path = kwargs.get("train_path")
         if train_path:  # use file to train model
@@ -155,12 +158,18 @@ class LemmaClassifierTrainer():
             logging.info(f"Loaded dataset successfully from {train_path}")
             logging.info(f"Using label decoder: {label_decoder}")
 
+            positions_batch, labels_batch = torch.tensor(positions_batch, device=device), torch.tensor(labels_batch, device=device)
+
         assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
         if path.exists(save_name):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
         
         if self.weighted_loss:
             self.configure_weighted_loss(label_decoder, counts)
+
+        # Put the criterion on GPU too
+        selected_dev = next(self.model.transformer.parameters()).device
+        self.criterion = self.criterion.to(selected_dev)
 
         best_model, best_f1 = None, 0  # Used for saving checkpoints of the model
         logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))

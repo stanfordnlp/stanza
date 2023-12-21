@@ -50,7 +50,7 @@ class LemmaClassifierWithTransformer(nn.Module):
 
         Returns the logits of the MLP
         """
-        
+
         # Get the transformer embeddings 
         input_ids = self.tokenizer.convert_tokens_to_ids(text)
 
@@ -64,8 +64,7 @@ class LemmaClassifierWithTransformer(nn.Module):
         last_hidden_state = outputs.last_hidden_state
         token_embeddings = last_hidden_state[0]
 
-        pos_index = torch.tensor(pos_index)
-        pos_index.to(self.device)
+        pos_index = torch.tensor(pos_index, device=self.device)
         # Get target embedding
         target_pos_embedding = token_embeddings[pos_index]
 
