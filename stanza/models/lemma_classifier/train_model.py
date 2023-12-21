@@ -13,6 +13,7 @@ from os import remove
 from typing import List, Tuple, Any, Mapping
 
 from stanza.models.common.foundation_cache import load_pretrain
+from stanza.models.common.utils import default_device
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.model import LemmaClassifier
 from stanza.utils.get_tqdm import get_tqdm
@@ -145,7 +146,7 @@ class LemmaClassifierTrainer():
             train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line.         
         """
         
-        device = utils.get_device()  # Put model on GPU (if possible)
+        device = default_device # Put model on GPU (if possible)
         self.model.to(device)  
         self.model.device = device 
         logging.info(f"Device chosen: {device}. {self.model.device}")
