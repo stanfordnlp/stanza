@@ -50,17 +50,12 @@ class LemmaClassifierWithTransformer(nn.Module):
 
         Returns the logits of the MLP
         """
-
-        logging.info(f"USING DEVICE IN FORWARD PASS: {self.device}")
+        
         # Get the transformer embeddings 
         input_ids = self.tokenizer.convert_tokens_to_ids(text)
 
         # Convert tokens to IDs and put them into a tensor
         input_ids_tensor = torch.tensor([input_ids], device=self.device)  # move data to device as well
-
-        logging.info(f"TRANSFORMER is on {next(self.transformer.parameters()).device}")
-        logging.info(f"INPUT ID TENSORS is on {input_ids_tensor.device}")
-
         # Forward pass through Transformer
         with torch.no_grad():
             outputs = self.transformer(input_ids_tensor)
