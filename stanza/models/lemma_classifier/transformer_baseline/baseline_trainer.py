@@ -113,12 +113,10 @@ class TransformerBaselineTrainer:
 
         # Put model on GPU (if possible)  
         device = default_device()
-        logging.info(f"USING DEVICE: {device}")
         self.model.to(device)
         self.model.device = device
         self.model.transformer.to(device)
 
-        logging.info(f"Model is on {self.model.device}. Transformer is on {self.model.transformer.device}")
 
         if kwargs.get("train_path"):
             texts_batch, positions_batch, labels_batch, counts, label_decoder = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss)
@@ -128,7 +126,6 @@ class TransformerBaselineTrainer:
             # Move data to device
             labels_batch = torch.tensor(labels_batch, device=device)
             positions_batch = torch.tensor(positions_batch, device=device)
-            logging.info(f"Labels batch is on {labels_batch.device}. Positions batch is on {positions_batch.device}")
         
         assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
         if os.path.exists(save_name):
@@ -149,7 +146,6 @@ class TransformerBaselineTrainer:
                 
                 self.optimizer.zero_grad()
                 output = self.model(position, texts)
-                logging.info(f"Outputs are on device : {output.device}")
                 
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
@@ -158,7 +154,6 @@ class TransformerBaselineTrainer:
                 else:  # CELoss accepts target as just raw label
                     target = torch.tensor(label, dtype=torch.long, device=device)
                 
-                logging.info(f"Target is on {target.device}.")
                 loss = self.criterion(output, target)
 
                 loss.backward()
