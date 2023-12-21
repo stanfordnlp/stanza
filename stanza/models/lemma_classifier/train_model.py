@@ -148,8 +148,7 @@ class LemmaClassifierTrainer():
         
         device = default_device() # Put model on GPU (if possible)
         self.model.to(device)  
-        self.model.device = device 
-        logging.info(f"Device chosen: {device}. {self.model.device}")
+        logging.info(f"Device chosen: {device}. {next(self.model.parameters()).device}")
 
 
         train_path = kwargs.get("train_path")
@@ -169,8 +168,8 @@ class LemmaClassifierTrainer():
             self.configure_weighted_loss(label_decoder, counts)
 
         # Put the criterion on GPU too
-        logging.info(f"Criterion on {self.model.device}")
-        self.criterion = self.criterion.to(self.model.device)
+        logging.info(f"Criterion on {next(self.model.parameters()).device}")
+        self.criterion = self.criterion.to(next(self.model.parameters()).device)
 
         best_model, best_f1 = None, float("-inf")  # Used for saving checkpoints of the model
         logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))

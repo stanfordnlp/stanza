@@ -25,7 +25,6 @@ class LemmaClassifierWithTransformer(nn.Module):
             model_type (str): What kind of transformer to use for embeddings ('bert' or 'roberta')
         """
         super(LemmaClassifierWithTransformer, self).__init__()
-        self.device = None
 
         # Choose transformer
         self.tokenizer = AutoTokenizer.from_pretrained(transformer_name)
@@ -55,7 +54,7 @@ class LemmaClassifierWithTransformer(nn.Module):
         input_ids = self.tokenizer.convert_tokens_to_ids(text)
 
         # Convert tokens to IDs and put them into a tensor
-        input_ids_tensor = torch.tensor([input_ids], device=self.device)  # move data to device as well
+        input_ids_tensor = torch.tensor([input_ids], device=next(self.parameters()).device)  # move data to device as well
         # Forward pass through Transformer
         with torch.no_grad():
             outputs = self.transformer(input_ids_tensor)
@@ -64,7 +63,7 @@ class LemmaClassifierWithTransformer(nn.Module):
         last_hidden_state = outputs.last_hidden_state
         token_embeddings = last_hidden_state[0]
 
-        pos_index = torch.tensor(pos_index, device=self.device)
+        pos_index = torch.tensor(pos_index, device=next(self.parameters()).device)
         # Get target embedding
         target_pos_embedding = token_embeddings[pos_index]
 
