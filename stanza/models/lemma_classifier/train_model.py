@@ -167,8 +167,7 @@ class LemmaClassifierTrainer():
             self.configure_weighted_loss(label_decoder, counts)
 
         # Put the criterion on GPU too
-        selected_dev = next(self.model.transformer.parameters()).device
-        self.criterion = self.criterion.to(selected_dev)
+        self.criterion = self.criterion.to(self.model.device)
 
         best_model, best_f1 = None, 0  # Used for saving checkpoints of the model
         logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
