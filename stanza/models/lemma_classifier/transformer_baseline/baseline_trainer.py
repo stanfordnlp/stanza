@@ -118,13 +118,6 @@ class TransformerBaselineTrainer:
         self.model.device = device
         self.model.transformer.to(device)
 
-        logging.info(f"CRITERION: {self.criterion}")
-        selected_dev = next(self.model.transformer.parameters()).device
-        logging.info(f"SELECTED DEVICE: {selected_dev}")
-        self.criterion = self.criterion.to(selected_dev)
-        logging.info(f"Criterion: {self.criterion}; {list(self.criterion.parameters())}")
-        logging.info(f"Criterion: {next(self.criterion.parameters()).device}")
-
         logging.info(f"Model is on {self.model.device}. Transformer is on {self.model.transformer.device}")
 
         if kwargs.get("train_path"):
@@ -143,6 +136,13 @@ class TransformerBaselineTrainer:
         
         if self.weighted_loss:
             self.configure_weighted_loss(label_decoder, counts)
+
+        logging.info(f"CRITERION: {self.criterion}")
+        selected_dev = next(self.model.transformer.parameters()).device
+        logging.info(f"SELECTED DEVICE: {selected_dev}")
+        self.criterion = self.criterion.to(selected_dev)
+        logging.info(f"Criterion: {self.criterion}; {list(self.criterion.parameters())}")
+        logging.info(f"Criterion: {next(self.criterion.parameters()).device}")
 
         best_model, best_f1 = None, 0
         for epoch in range(num_epochs):
