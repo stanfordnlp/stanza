@@ -87,7 +87,7 @@ class LemmaClassifier(nn.Module):
             torch.tensor: Output logits of the neural network
         """
         token_ids = [self.vocab_map.get(word.lower(), UNK_ID) for word in words]
-        token_ids = torch.tensor(token_ids, device=self.model.device)
+        token_ids = torch.tensor(token_ids, device=self.device)
         embedded = self.embedding(token_ids)
 
         if self.use_charlm:
