@@ -66,6 +66,7 @@ class TransformerBaselineTrainer:
             weights = torch.tensor(weights)
         logging.info(f"Using weights {weights} for weighted loss.")
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
+        self.criterion.to(self.model.device)
         logging.info(f"AFTER CONFIG: {list(self.criterion.parameters())}. {self.criterion.weight}")
 
     def update_best_checkpoint(self, state_dict: Mapping, best_model: Mapping, best_f1: float, save_name: str, eval_path: str) -> Tuple[Mapping, float]:
