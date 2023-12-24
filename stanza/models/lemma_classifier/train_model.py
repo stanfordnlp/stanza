@@ -15,6 +15,7 @@ from typing import List, Tuple, Any, Mapping
 from stanza.models.common.foundation_cache import load_pretrain
 from stanza.models.common.utils import default_device
 from stanza.models.lemma_classifier import utils
+from stanza.models.lemma_classifier.constants import ModelType
 from stanza.models.lemma_classifier.model import LemmaClassifier
 from stanza.utils.get_tqdm import get_tqdm
 from stanza.models.lemma_classifier.evaluate_models import evaluate_model
@@ -100,6 +101,7 @@ class LemmaClassifierTrainer():
         state_dict = {
             "params": state_dict,
             "label_decoder": label_decoder,
+            "model_type": ModelType.LSTM,
         }
         torch.save(state_dict, save_name)
         return state_dict

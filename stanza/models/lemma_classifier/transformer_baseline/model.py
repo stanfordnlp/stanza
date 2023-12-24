@@ -27,6 +27,7 @@ class LemmaClassifierWithTransformer(nn.Module):
         super(LemmaClassifierWithTransformer, self).__init__()
 
         # Choose transformer
+        self.transformer_name = transformer_name
         self.tokenizer = AutoTokenizer.from_pretrained(transformer_name)
         self.transformer = AutoModel.from_pretrained(transformer_name)
         config = self.transformer.config

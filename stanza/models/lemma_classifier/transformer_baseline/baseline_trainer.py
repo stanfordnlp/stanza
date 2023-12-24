@@ -12,6 +12,7 @@ import sys
 import logging
 
 from stanza.models.lemma_classifier import utils
+from stanza.models.lemma_classifier.constants import ModelType
 from stanza.models.lemma_classifier.evaluate_models import evaluate_model
 from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 from stanza.utils.get_tqdm import get_tqdm
@@ -79,7 +80,7 @@ class TransformerBaselineTrainer:
             logging.info(f"New best model: weighted f1 score of {f1}.")
         return best_model, max(f1, best_f1)
     
-    def save_checkpoint(self, save_name: str, state_dict: Mapping, label_decoder: Mapping) -> Mapping:
+    def save_checkpoint(self, save_name: str, state_dict: Mapping, label_decoder: Mapping, model: nn.Module) -> Mapping:
         """
         Saves model checkpoint with a current state dict (params) and a label decoder on the dataset.
         If the save path doesn't exist, it will create it. 
@@ -90,6 +91,8 @@ class TransformerBaselineTrainer:
         state_dict = {
             "params": state_dict,
             "label_decoder": label_decoder,
+            "model_type": ModelType.TRANSFORMER,
+            "transformer": model.transformer_name,
         }
         torch.save(state_dict, save_name)
         return state_dict
@@ -160,14 +163,14 @@ class TransformerBaselineTrainer:
             
             logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
             # Evaluate model on dev set to see if it should be saved.
-            state_dict = self.save_checkpoint(save_name, self.model.state_dict(), label_decoder)
+            state_dict = self.save_checkpoint(save_name, self.model.state_dict(), label_decoder, self.model)
             logging.info(f"Saved temp model state dict for epoch [{epoch + 1}/{num_epochs}] to {save_name}")
             
             if kwargs.get("eval_file"):
-                best_model, best_f1 = self.update_best_checkpoint(state_dict, best_model, best_f1, save_name, kwargs.get("eval_file"), is_training=True)
+                best_model, best_f1 = self.update_best_checkpoint(state_dict, best_model, best_f1, save_name, kwargs.get("eval_file"))
 
         # Save the best model from training
-        self.save_checkpoint(save_name, best_model.get("params"), best_model.get("label_decoder"))
+        self.save_checkpoint(save_name, best_model.get("params"), best_model.get("label_decoder"), best_model)
         logging.info(f"Saved final model state dict to {save_name} (weighted F1: {best_f1}).")
 
 
