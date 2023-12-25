@@ -68,19 +68,7 @@ class TransformerBaselineTrainer:
         logging.info(f"Using weights {weights} for weighted loss.")
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
-    def update_best_checkpoint(self, state_dict: Mapping, best_model: Mapping, best_f1: float, save_name: str, eval_path: str) -> Tuple[Mapping, float]:
-        """
-        Attempts to update the best available version of the model by evaluating the current model's state against the existing
-        best model on the dev set. The model with a better weighted F1 will be chosen.
-        """
-        _, _, _, f1 = evaluate_model(self.model, save_name, eval_path)
-        logging.info(f"Weighted f1 for model: {f1}")
-        if f1 > best_f1:
-            best_model = state_dict
-            logging.info(f"New best model: weighted f1 score of {f1}.")
-        return best_model, max(f1, best_f1)
-    
-    def save_checkpoint(self, save_name: str, state_dict: Mapping, label_decoder: Mapping, model: nn.Module) -> Mapping:
+    def save_checkpoint(self, save_name: str, state_dict: Mapping, label_decoder: Mapping, args: Mapping) -> Mapping:
         """
         Saves model checkpoint with a current state dict (params) and a label decoder on the dataset.
         If the save path doesn't exist, it will create it. 
@@ -92,12 +80,12 @@ class TransformerBaselineTrainer:
             "params": state_dict,
             "label_decoder": label_decoder,
             "model_type": ModelType.TRANSFORMER,
-            "transformer": model.transformer_name,
+            "args": args,
         }
         torch.save(state_dict, save_name)
         return state_dict
 
-    def train(self, texts_batch: List[List[str]], positions_batch: List[int], labels_batch: List[int], num_epochs: int, save_name: str, **kwargs):
+    def train(self, num_epochs: int, save_name: str, args: Mapping, eval_file: str, **kwargs):
 
         """
         Trains a model on batches of texts, position indices of the target token, and labels (lemma annotation) for the target token.
@@ -162,16 +150,16 @@ class TransformerBaselineTrainer:
                 self.optimizer.step()
             
             logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
-            # Evaluate model on dev set to see if it should be saved.
-            state_dict = self.save_checkpoint(save_name, self.model.state_dict(), label_decoder, self.model)
-            logging.info(f"Saved temp model state dict for epoch [{epoch + 1}/{num_epochs}] to {save_name}")
-            
-            if kwargs.get("eval_file"):
-                best_model, best_f1 = self.update_best_checkpoint(state_dict, best_model, best_f1, save_name, kwargs.get("eval_file"))
-
-        # Save the best model from training
-        self.save_checkpoint(save_name, best_model.get("params"), best_model.get("label_decoder"), best_model)
-        logging.info(f"Saved final model state dict to {save_name} (weighted F1: {best_f1}).")
+            if eval_file:
+                # Evaluate model on dev set to see if it should be saved.
+                _, _, _, f1 = evaluate_model(self.model, label_decoder, eval_file, is_training=True)
+                logging.info(f"Weighted f1 for model: {f1}")
+                if f1 > best_f1:
+                    best_f1 = f1
+                    self.save_checkpoint(save_name, self.model.state_dict(), label_decoder, args)
+                    logging.info(f"New best model: weighted f1 score of {f1}.")
+            else:
+                self.save_checkpoint(save_name, self.model.state_dict(), label_decoder, args)
 
 
 def main(args=None):
@@ -197,16 +185,17 @@ def main(args=None):
     eval_file = args.eval_file
     lr = args.lr
 
+    args = vars(args)
 
-    if args.bert_model is None:
-        if args.model_type == 'bert':
-            transformer_name = 'bert-base-uncased'
-        elif args.model_type == 'roberta':
-            transformer_name = 'roberta-base'
-        else:
-            raise ValueError("Unknown model type " + args.model_type)
+    if args['model_type'] == 'bert':
+        args['bert_model'] = 'bert-base-uncased'
+    elif args['model_type'] == 'roberta':
+        args['bert_model'] = 'roberta-base'
+    elif args['model_type'] == 'transformer':
+        if args['bert_model'] is None:
+            raise ValueError("Need to specify a bert_model for model_type transformer!")
     else:
-        transformer_name = args.bert_model
+        raise ValueError("Unknown model type " + args['model_type'])
 
     if os.path.exists(save_name):
         raise FileExistsError(f"Save name {save_name} already exists. Training would override existing data. Aborting...")
@@ -214,13 +203,13 @@ def main(args=None):
         raise FileNotFoundError(f"Training file {train_file} not found. Try again with a valid path.")
 
     logging.info("Running training script with the following args:")
-    for arg in vars(args):
-        logging.info(f"{arg}: {getattr(args, arg)}")
+    for arg in args:
+        logging.info(f"{arg}: {args[arg]}")
     logging.info("------------------------------------------------------------")
     
-    trainer = TransformerBaselineTrainer(output_dim=output_dim, transformer_name=transformer_name, loss_func=loss_fn, lr=lr)
+    trainer = TransformerBaselineTrainer(output_dim=output_dim, transformer_name=args['bert_model'], loss_func=loss_fn, lr=lr)
 
-    trainer.train([], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file, eval_file=eval_file)
+    trainer.train(num_epochs=num_epochs, save_name=save_name, train_path=train_file, args=args, eval_file=eval_file)
 
 
 if __name__ == "__main__":

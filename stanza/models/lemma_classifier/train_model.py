@@ -29,7 +29,7 @@ class LemmaClassifierTrainer():
     Class to assist with training a LemmaClassifierLSTM
     """
 
-    def __init__(self, vocab_size: int, embedding_file: str, embedding_dim: int, hidden_dim: int, output_dim: int = 2, use_charlm: bool = False, **kwargs):
+    def __init__(self, vocab_size: int, embedding_file: str, embedding_dim: int, hidden_dim: int, output_dim: int = 2, use_charlm: bool = False, eval_file: str = None, **kwargs):
         """
         Initializes the LemmaClassifierTrainer class.
         
@@ -40,13 +40,13 @@ class LemmaClassifierTrainer():
             hidden_dim (int): Size of hidden vectors in LSTM layers
             output_dim (int, optional): Size of output vector from MLP layer. Defaults to 2.
             use_charlm (bool, optional): Whether to use charlm embeddings as well. Defaults to False.
+            eval_file (str): File used as dev set to evaluate which model gets saved
 
         Kwargs:
             forward_charlm_file (str): Path to the forward pass embeddings for the charlm 
             backward_charlm_file (str): Path to the backward pass embeddings for the charlm
             lr (float): Learning rate, defaults to 0.001.
             loss_func (str): Which loss function to use (either 'ce' or 'weighted_bce') 
-            eval_file (str): File used as dev set to evaluate which model gets saved
 
         Raises:
             FileNotFoundError: If the forward charlm file is not present
@@ -90,7 +90,7 @@ class LemmaClassifierTrainer():
 
         self.optimizer = optim.Adam(self.model.parameters(), lr=kwargs.get("lr", 0.001))  
 
-    def save_checkpoint(self, save_name: str, state_dict: Mapping, label_decoder: Mapping) -> Mapping:
+    def save_checkpoint(self, save_name: str, state_dict: Mapping, label_decoder: Mapping, args: Mapping) -> Mapping:
         """
         Saves model checkpoint with a current state dict (params) and a label decoder on the dataset.
         If the save path doesn't exist, it will create it. 
@@ -102,6 +102,7 @@ class LemmaClassifierTrainer():
             "params": state_dict,
             "label_decoder": label_decoder,
             "model_type": ModelType.LSTM,
+            "args": args,
         }
         torch.save(state_dict, save_name)
         return state_dict
@@ -120,19 +121,7 @@ class LemmaClassifierTrainer():
         logging.info(f"Using weights {weights} for weighted loss.")
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
-    def update_best_checkpoint(self, state_dict: Mapping, best_model: Mapping, best_f1: float, save_name: str, eval_path: str) -> Tuple[Mapping, float]:
-        """
-        Attempts to update the best available version of the model by evaluating the current model's state against the existing
-        best model on the dev set. The model with a better weighted F1 will be chosen.
-        """
-        _, _, _, f1 = evaluate_model(self.model, save_name, eval_path, is_training=True)
-        logging.info(f"Weighted f1 for model: {f1}")
-        if f1 > best_f1:
-            best_model = state_dict
-            logging.info(f"New best model: weighted f1 score of {f1}.")
-        return best_model, max(f1, best_f1)
-
-    def train(self, texts_batch: List[List[str]], positions_batch: List[int], labels_batch: List[int], num_epochs: int, save_name: str, **kwargs) -> None:
+    def train(self, num_epochs: int, save_name: str, args: Mapping, eval_file: str, **kwargs) -> None:
 
         """
         Trains a model on batches of texts, position indices of the target token, and labels (lemma annotation) for the target token.
@@ -170,7 +159,7 @@ class LemmaClassifierTrainer():
             self.configure_weighted_loss(label_decoder, counts)
 
         # Put the criterion on GPU too
-        logging.info(f"Criterion on {next(self.model.parameters()).device}")
+        logging.debug(f"Criterion on {next(self.model.parameters()).device}")
         self.criterion = self.criterion.to(next(self.model.parameters()).device)
 
         best_model, best_f1 = None, float("-inf")  # Used for saving checkpoints of the model
@@ -180,10 +169,10 @@ class LemmaClassifierTrainer():
             for texts, position, label in tqdm(zip(texts_batch, positions_batch, labels_batch), total=len(texts_batch)):
                 if position < 0 or position > len(texts) - 1:  # validate position index
                     raise ValueError(f"Found position {position} in text: {texts}, which is not possible.")
-                
+
                 self.optimizer.zero_grad()
                 output = self.model(position, texts)
-                
+
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
                     # TODO: three classes?
@@ -196,20 +185,19 @@ class LemmaClassifierTrainer():
 
                 loss.backward()
                 self.optimizer.step()
-            
-            # Evaluate model on dev set to see if it should be saved.
-            state_dict = self.save_checkpoint(save_name, self.model.state_dict(), label_decoder)
-            logging.info(f"Saved temp model state dict for epoch [{epoch + 1}/{num_epochs}] to {save_name}")
 
-            if kwargs.get("eval_file"):
-                best_model, best_f1 = self.update_best_checkpoint(state_dict, best_model, best_f1, save_name, kwargs.get("eval_file"))
-            
+            if eval_file:
+                _, _, _, f1 = evaluate_model(self.model, label_decoder, eval_file, is_training=True)
+                logging.info(f"Weighted f1 for model: {f1}")
+                if f1 > best_f1:
+                    best_f1 = f1
+                    self.save_checkpoint(save_name, self.model.state_dict(), label_decoder, args)
+                    logging.info(f"New best model: weighted f1 score of {f1}.")
+            else:
+                self.save_checkpoint(save_name, self.model.state_dict(), label_decoder, args)
+
             logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
-            logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
 
-        # Save the best model from training
-        self.save_checkpoint(save_name, best_model.get("params"), best_model.get("label_decoder"))
-        logging.info(f"Saved final model state dict to {save_name} (weighted F1: {best_f1}).")
 
 def build_argparse():
     parser = argparse.ArgumentParser()
@@ -249,14 +237,16 @@ def main(args=None):
     weighted_loss = args.weighted_loss
     eval_file = args.eval_file
 
+    args = vars(args)
+
     if os.path.exists(save_name):
         raise FileExistsError(f"Save name {save_name} already exists. Training would override existing data. Aborting...")
     if not os.path.exists(train_file):
         raise FileNotFoundError(f"Training file {train_file} not found. Try again with a valid path.")
 
     logging.info("Running training script with the following args:")
-    for arg in vars(args):
-        logging.info(f"{arg}: {getattr(args, arg)}")
+    for arg in args:
+        logging.info(f"{arg}: {args[arg]}")
     logging.info("------------------------------------------------------------")
 
     trainer = LemmaClassifierTrainer(vocab_size=vocab_size,
@@ -272,7 +262,7 @@ def main(args=None):
                                      )
 
     trainer.train(
-        [], [], [], num_epochs=num_epochs, save_name=save_name, train_path=train_file, eval_file=eval_file
+        num_epochs=num_epochs, save_name=save_name, args=args, train_path=train_file, eval_file=eval_file
     )
 
 if __name__ == "__main__":

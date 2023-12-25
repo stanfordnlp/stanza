@@ -20,10 +20,9 @@ import torch.nn as nn
 
 import stanza
 
-from stanza.models.common.foundation_cache import load_pretrain
 from stanza.models.common.utils import default_device
 from stanza.models.lemma_classifier import utils
-from stanza.models.lemma_classifier.constants import *
+from stanza.models.lemma_classifier.base_model import LemmaClassifier
 from stanza.models.lemma_classifier.model import LemmaClassifierLSTM
 from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 
@@ -127,7 +126,7 @@ def model_predict(model: nn.Module, position_idx: int, words: List[str]) -> int:
     return predicted_class
 
 
-def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: bool = True, is_training = False) -> Tuple[Mapping, Mapping, float, float]:
+def evaluate_model(model: nn.Module, label_decoder: Mapping, eval_path: str, verbose: bool = True, is_training: bool = False) -> Tuple[Mapping, Mapping, float, float]:
     """
     Helper function for model evaluation
 
@@ -147,22 +146,18 @@ def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: b
     """
     # load model
     device = default_device()
-
-    model_state = torch.load(model_path)
-    model.load_state_dict(model_state['params'])
     model.to(device)
 
     if not is_training:
         model.eval()  # set to eval mode
 
     # load in eval data
-    label_decoder = model_state['label_decoder']
     text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path, label_decoder=label_decoder)
     
     index_batches = torch.tensor(index_batches, device=device)
     label_batches = torch.tensor(label_batches, device=device)
     
-    logging.info(f"Evaluating model from {model_path} on evaluation file {eval_path}")
+    logging.info(f"Evaluating on evaluation file {eval_path}")
 
     correct = 0
     gold_tags, pred_tags = [label_batches], []
@@ -207,64 +202,15 @@ def main(args=None):
     args = parser.parse_args(args)
 
     logging.info("Running training script with the following args:")
-    for arg in vars(args):
-        logging.info(f"{arg}: {getattr(args, arg)}")
+    args = vars(args)
+    for arg in args:
+        logging.info(f"{arg}: {args[arg]}")
     logging.info("------------------------------------------------------------")
 
-    vocab_size = args.vocab_size
-    embedding_dim = args.embedding_dim
-    hidden_dim = args.hidden_dim
-    output_dim = args.output_dim
-    wordvec_pretrain_file = args.wordvec_pretrain_file
-    use_charlm = args.charlm
-    forward_charlm_file = args.charlm_forward_file
-    backward_charlm_file = args.charlm_backward_file
-    save_name = args.save_name 
-    model_type = args.model_type
-    eval_path = args.eval_file
+    logging.info(f"Attempting evaluation of model from {args['save_name']} on file {args['eval_file']}")
+    model, label_decoder = LemmaClassifier.load(args['save_name'], args)
 
-    if model_type.lower() == "lstm":
-        # TODO: refactor
-        pt = load_pretrain(wordvec_pretrain_file)
-        emb_matrix = pt.emb
-        embeddings = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix))
-        vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pt.vocab) }
-        vocab_size = emb_matrix.shape[0]
-        embedding_dim = emb_matrix.shape[1]
-
-        if use_charlm:
-            # Evaluate charlm
-            model = LemmaClassifierLSTM(vocab_size=vocab_size,
-                                        embedding_dim=embedding_dim,
-                                        hidden_dim=hidden_dim,
-                                        output_dim=output_dim,
-                                        vocab_map=vocab_map,
-                                        pt_embedding=embeddings,
-                                        charlm=True,
-                                        charlm_forward_file=forward_charlm_file,
-                                        charlm_backward_file=backward_charlm_file)
-        else:
-            # Evaluate standard model (bi-LSTM with GloVe embeddings, no charlm)
-            model = LemmaClassifierLSTM(vocab_size=vocab_size,
-                                        embedding_dim=embedding_dim,
-                                        hidden_dim=hidden_dim,
-                                        output_dim=output_dim,
-                                        vocab_map=vocab_map,
-                                        pt_embedding=embeddings)
-    elif model_type.lower() == "roberta":
-        # Evaluate Transformer (BERT or ROBERTA)
-        model = LemmaClassifierWithTransformer(output_dim=output_dim, transformer_name="roberta-base")
-    elif model_type.lower() == "bert":
-        # Evaluate Transformer (BERT or ROBERTA)
-        model = LemmaClassifierWithTransformer(output_dim=output_dim, transformer_name="bert-base-uncased")
-    elif model_type.lower() == "transformer":
-        model = LemmaClassifierWithTransformer(output_dim=output_dim, transformer_name=args.bert_model)
-    else:
-        raise ValueError("Unknown model type %s" % model_type)
-
-    logging.info(f"Attempting evaluation of model from {save_name} on file {eval_path}")
-
-    mcc_results, confusion, acc, weighted_f1 = evaluate_model(model, save_name, eval_path)
+    mcc_results, confusion, acc, weighted_f1 = evaluate_model(model, label_decoder, args['eval_file'])
 
     logging.info(f"MCC Results: {dict(mcc_results)}")
     logging.info("______________________________________________")
