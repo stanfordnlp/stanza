@@ -8,7 +8,7 @@ from stanza.models.common.vocab import UNK_ID
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.constants import *
 
-class LemmaClassifier(nn.Module):
+class LemmaClassifierLSTM(nn.Module):
     """
     Model architecture:
         Extracts word embeddings over the sentence, passes embeddings into a bi-LSTM to get a sentence encoding.
@@ -33,7 +33,7 @@ class LemmaClassifier(nn.Module):
         Raises:
             FileNotFoundError: if the forward or backward charlm file cannot be found.
         """
-        super(LemmaClassifier, self).__init__()
+        super(LemmaClassifierLSTM, self).__init__()
         self.input_size = 0
         self.unsaved_modules = []
 

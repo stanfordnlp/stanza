@@ -16,7 +16,7 @@ from stanza.models.common.foundation_cache import load_pretrain
 from stanza.models.common.utils import default_device
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.constants import ModelType
-from stanza.models.lemma_classifier.model import LemmaClassifier
+from stanza.models.lemma_classifier.model import LemmaClassifierLSTM
 from stanza.utils.get_tqdm import get_tqdm
 from stanza.models.lemma_classifier.evaluate_models import evaluate_model
 
@@ -26,7 +26,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 class LemmaClassifierTrainer():
     """
-    Class to assist with training a LemmaClassifier
+    Class to assist with training a LemmaClassifierLSTM
     """
 
     def __init__(self, vocab_size: int, embedding_file: str, embedding_dim: int, hidden_dim: int, output_dim: int = 2, use_charlm: bool = False, **kwargs):
@@ -74,8 +74,8 @@ class LemmaClassifierTrainer():
             raise FileNotFoundError(f"Could not find backward charlm file: {backward_charlm_file}")
 
         # TODO: embedding_dim and vocab_size are read off the embeddings file
-        self.model = LemmaClassifier(self.vocab_size, self.embedding_dim, hidden_dim, output_dim, self.vocab_map, self.embeddings, charlm=use_charlm,
-                                     charlm_forward_file=forward_charlm_file, charlm_backward_file=backward_charlm_file)
+        self.model = LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, hidden_dim, output_dim, self.vocab_map, self.embeddings, charlm=use_charlm,
+                                         charlm_forward_file=forward_charlm_file, charlm_backward_file=backward_charlm_file)
         
         # Find loss function
         loss_fn = kwargs.get("loss_func", "ce").lower() 
@@ -108,7 +108,7 @@ class LemmaClassifierTrainer():
 
     def configure_weighted_loss(self, label_decoder: Mapping, counts: Mapping):
         """
-        If applicable, this function will update the loss function of the LemmaClassifier model to become BCEWithLogitsLoss.
+        If applicable, this function will update the loss function of the LemmaClassifierLSTM model to become BCEWithLogitsLoss.
         The weights are determined by the counts of the classes in the dataset. The weights are inversely proportional to the
         frequency of the class in the set. E.g. classes with lower frequency will have higher weight.
         """

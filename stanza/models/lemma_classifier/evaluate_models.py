@@ -24,7 +24,7 @@ from stanza.models.common.foundation_cache import load_pretrain
 from stanza.models.common.utils import default_device
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.constants import *
-from stanza.models.lemma_classifier.model import LemmaClassifier
+from stanza.models.lemma_classifier.model import LemmaClassifierLSTM
 from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -110,7 +110,7 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
 
 def model_predict(model: nn.Module, position_idx: int, words: List[str]) -> int:
     """
-    A LemmaClassifier or LemmaClassifierWithTransformer is used to predict on a single text example, given the position index of the target token.
+    A LemmaClassifierLSTM or LemmaClassifierWithTransformer is used to predict on a single text example, given the position index of the target token.
 
     Args:
         model (LemmaClassifier): A trained LemmaClassifier that is able to predict on a target token.
@@ -132,7 +132,7 @@ def evaluate_model(model: nn.Module, model_path: str, eval_path: str, verbose: b
     Helper function for model evaluation
 
     Args:
-        model (LemmaClassifier or LemmaClassifierWithTransformer): An instance of the LemmaClassifier class that has architecture initialized which matches the model saved in `model_path`.
+        model (LemmaClassifierLSTM or LemmaClassifierWithTransformer): An instance of the LemmaClassifier class that has architecture initialized which matches the model saved in `model_path`.
         model_path (str): Path to the saved model weights that will be loaded into `model`.
         eval_path (str): Path to the saved evaluation dataset.
         verbose (bool, optional): True if `evaluate_sequences()` should print the F1, Precision, and Recall for each class. Defaults to True.
@@ -234,24 +234,23 @@ def main(args=None):
 
         if use_charlm:
             # Evaluate charlm
-            model = LemmaClassifier(vocab_size=vocab_size,
-                                    embedding_dim=embedding_dim,
-                                    hidden_dim=hidden_dim,
-                                    output_dim=output_dim,
-                                    vocab_map=vocab_map,
-                                    pt_embedding=embeddings,
-                                    charlm=True,
-                                    charlm_forward_file=forward_charlm_file,
-                                    charlm_backward_file=backward_charlm_file)
+            model = LemmaClassifierLSTM(vocab_size=vocab_size,
+                                        embedding_dim=embedding_dim,
+                                        hidden_dim=hidden_dim,
+                                        output_dim=output_dim,
+                                        vocab_map=vocab_map,
+                                        pt_embedding=embeddings,
+                                        charlm=True,
+                                        charlm_forward_file=forward_charlm_file,
+                                        charlm_backward_file=backward_charlm_file)
         else:
             # Evaluate standard model (bi-LSTM with GloVe embeddings, no charlm)
-            model = LemmaClassifier(vocab_size=vocab_size,
-                                    embedding_dim=embedding_dim,
-                                    hidden_dim=hidden_dim,
-                                    output_dim=output_dim,
-                                    vocab_map=vocab_map,
-                                    pt_embedding=embeddings,
-                                    )
+            model = LemmaClassifierLSTM(vocab_size=vocab_size,
+                                        embedding_dim=embedding_dim,
+                                        hidden_dim=hidden_dim,
+                                        output_dim=output_dim,
+                                        vocab_map=vocab_map,
+                                        pt_embedding=embeddings)
     elif model_type.lower() == "roberta":
         # Evaluate Transformer (BERT or ROBERTA)
         model = LemmaClassifierWithTransformer(output_dim=output_dim, transformer_name="roberta-base")
