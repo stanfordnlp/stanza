@@ -53,9 +53,10 @@ class LemmaClassifier(nn.Module):
                 model = LemmaClassifierLSTM(vocab_size=vocab_size,
                                             embedding_dim=embedding_dim,
                                             hidden_dim=saved_args['hidden_dim'],
-                                            output_dim=saved_args['output_dim'],
+                                            output_dim=len(checkpoint['label_decoder']),
                                             vocab_map=vocab_map,
                                             pt_embedding=embeddings,
+                                            label_decoder=checkpoint['label_decoder'],
                                             charlm=True,
                                             charlm_forward_file=saved_args['charlm_forward_file'],
                                             charlm_backward_file=saved_args['charlm_backward_file'])
@@ -64,17 +65,17 @@ class LemmaClassifier(nn.Module):
                 model = LemmaClassifierLSTM(vocab_size=vocab_size,
                                             embedding_dim=embedding_dim,
                                             hidden_dim=saved_args['hidden_dim'],
-                                            output_dim=saved_args['output_dim'],
+                                            output_dim=len(checkpoint['label_decoder']),
                                             vocab_map=vocab_map,
-                                            pt_embedding=embeddings)
+                                            pt_embedding=embeddings,
+                                            label_decoder=checkpoint['label_decoder'])
         elif model_type is ModelType.TRANSFORMER:
+            output_dim = len(checkpoint['label_decoder'])
             saved_args = checkpoint['args']
-            output_dim = saved_args['output_dim']
             bert_model = saved_args['bert_model']
-            model = LemmaClassifierWithTransformer(output_dim=output_dim, transformer_name=bert_model)
+            model = LemmaClassifierWithTransformer(output_dim=output_dim, transformer_name=bert_model, label_decoder=checkpoint['label_decoder'])
         else:
             raise ValueError("Unknown model type %s" % model_type)
 
         model.load_state_dict(checkpoint['params'])
-        # TODO: make the label_decoder part of the model itself
-        return model, checkpoint['label_decoder']
+        return model

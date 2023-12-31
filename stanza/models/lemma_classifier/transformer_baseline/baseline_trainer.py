@@ -30,19 +30,15 @@ class TransformerBaselineTrainer:
     To find the model spec, refer to `model.py` in this directory.
     """
 
-    def __init__(self, output_dim: int = 2, transformer_name: str = "roberta", loss_func: str = "ce", lr: int = 0.001):
+    def __init__(self, transformer_name: str = "roberta", loss_func: str = "ce", lr: int = 0.001):
         """
         Creates the Trainer object
 
         Args:
-            output_dim (int, optional): The dimension of the output layer from the MLP in the classifier model. Defaults to 2.
             transformer_name (str, optional): What kind of transformer to use for embeddings. Defaults to "roberta".
             loss_func (str, optional): Which loss function to use (either 'ce' or 'weighted_bce'). Defaults to "ce".
             lr (int, optional): learning rate for the optimizer. Defaults to 0.001.
         """
-        self.output_dim = output_dim 
-
-        self.model = LemmaClassifierWithTransformer(output_dim=self.output_dim, transformer_name=transformer_name)
         # Find loss function
         if loss_func == "ce":
             self.criterion = nn.CrossEntropyLoss()
@@ -52,7 +48,9 @@ class TransformerBaselineTrainer:
             self.weighted_loss = True  # used to add weights during train time.
         else:
             raise ValueError("Must enter a valid loss function (e.g. 'ce' or 'weighted_bce')")
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr) 
+
+        self.transformer_name = transformer_name
+        self.lr = lr
 
     def configure_weighted_loss(self, label_decoder: Mapping, counts: Mapping):
         """
@@ -68,7 +66,7 @@ class TransformerBaselineTrainer:
         logging.info(f"Using weights {weights} for weighted loss.")
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
-    def save_checkpoint(self, save_name: str, state_dict: Mapping, label_decoder: Mapping, args: Mapping) -> Mapping:
+    def save_checkpoint(self, save_name: str, model: LemmaClassifierWithTransformer, args: Mapping) -> Mapping:
         """
         Saves model checkpoint with a current state dict (params) and a label decoder on the dataset.
         If the save path doesn't exist, it will create it. 
@@ -77,8 +75,8 @@ class TransformerBaselineTrainer:
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
         state_dict = {
-            "params": state_dict,
-            "label_decoder": label_decoder,
+            "params": model.state_dict(),
+            "label_decoder": model.label_decoder,
             "model_type": ModelType.TRANSFORMER,
             "args": args,
         }
@@ -101,12 +99,8 @@ class TransformerBaselineTrainer:
             train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line. 
             eval_file (str): Path to the dev set file for evaluating model checkpoints each epoch.
         """
-
         # Put model on GPU (if possible)  
         device = default_device()
-        self.model.to(device)
-        self.model.transformer.to(device)
-
 
         if kwargs.get("train_path"):
             texts_batch, positions_batch, labels_batch, counts, label_decoder = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss)
@@ -118,6 +112,13 @@ class TransformerBaselineTrainer:
             positions_batch = torch.tensor(positions_batch, device=device)
         
         assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
+
+        self.model = LemmaClassifierWithTransformer(output_dim=self.output_dim, transformer_name=self.transformer_name, label_decoder=label_decoder)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+
+        self.model.to(device)
+        self.model.transformer.to(device)
+
         if os.path.exists(save_name):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
         
@@ -156,16 +157,15 @@ class TransformerBaselineTrainer:
                 logging.info(f"Weighted f1 for model: {f1}")
                 if f1 > best_f1:
                     best_f1 = f1
-                    self.save_checkpoint(save_name, self.model.state_dict(), label_decoder, args)
+                    self.save_checkpoint(save_name, self.model, args)
                     logging.info(f"New best model: weighted f1 score of {f1}.")
             else:
-                self.save_checkpoint(save_name, self.model.state_dict(), label_decoder, args)
+                self.save_checkpoint(save_name, self.model, args)
 
 
 def main(args=None):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
     parser.add_argument("--save_name", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "saved_models", "big_model_roberta_weighted_loss.pt"), help="Path to model save file")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
     parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_sets", "combined_train.txt"), help="Full path to training file")
@@ -177,7 +177,6 @@ def main(args=None):
 
     args = parser.parse_args(args)
 
-    output_dim = args.output_dim
     save_name = args.save_name
     num_epochs = args.num_epochs
     train_file = args.train_file
@@ -207,7 +206,7 @@ def main(args=None):
         logging.info(f"{arg}: {args[arg]}")
     logging.info("------------------------------------------------------------")
     
-    trainer = TransformerBaselineTrainer(output_dim=output_dim, transformer_name=args['bert_model'], loss_func=loss_fn, lr=lr)
+    trainer = TransformerBaselineTrainer(transformer_name=args['bert_model'], loss_func=loss_fn, lr=lr)
 
     trainer.train(num_epochs=num_epochs, save_name=save_name, train_path=train_file, args=args, eval_file=eval_file)
 

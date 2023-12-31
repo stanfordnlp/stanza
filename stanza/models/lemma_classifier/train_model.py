@@ -29,14 +29,13 @@ class LemmaClassifierTrainer():
     Class to assist with training a LemmaClassifierLSTM
     """
 
-    def __init__(self, embedding_file: str, hidden_dim: int, output_dim: int = 2, use_charlm: bool = False, forward_charlm_file: str = None, backward_charlm_file: str = None, lr: float = 0.001, loss_func: str = None, eval_file: str = None):
+    def __init__(self, embedding_file: str, hidden_dim: int, use_charlm: bool = False, forward_charlm_file: str = None, backward_charlm_file: str = None, lr: float = 0.001, loss_func: str = None, eval_file: str = None):
         """
         Initializes the LemmaClassifierTrainer class.
         
         Args:
             embedding_file (str): What word embeddings file to use.  Use a Stanza pretrain .pt
             hidden_dim (int): Size of hidden vectors in LSTM layers
-            output_dim (int, optional): Size of output vector from MLP layer. Defaults to 2.
             use_charlm (bool, optional): Whether to use charlm embeddings as well. Defaults to False.
             eval_file (str): File used as dev set to evaluate which model gets saved
 
@@ -51,7 +50,6 @@ class LemmaClassifierTrainer():
             FileNotFoundError: If the backward charlm file is not present
         """
         self.hidden_dim = hidden_dim
-        self.output_dim = output_dim
 
         # Load word embeddings
         pt = load_pretrain(embedding_file)
@@ -69,9 +67,12 @@ class LemmaClassifierTrainer():
         if use_charlm and backward_charlm_file is not None and not os.path.exists(backward_charlm_file):
             raise FileNotFoundError(f"Could not find backward charlm file: {backward_charlm_file}")
 
-        self.model = LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, hidden_dim, output_dim, self.vocab_map, self.embeddings, charlm=use_charlm,
-                                         charlm_forward_file=forward_charlm_file, charlm_backward_file=backward_charlm_file)
-        
+        # TODO: just pass around the args instead
+        self.use_charlm = use_charlm
+        self.forward_charlm_file = forward_charlm_file
+        self.backward_charlm_file = backward_charlm_file
+        self.lr = lr
+
         # Find loss function
         if loss_func == "ce":
             self.criterion = nn.CrossEntropyLoss()
@@ -84,9 +85,7 @@ class LemmaClassifierTrainer():
         else:
             raise ValueError("Must enter a valid loss function (e.g. 'ce' or 'weighted_bce')")
 
-        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
-
-    def save_checkpoint(self, save_name: str, state_dict: Mapping, label_decoder: Mapping, args: Mapping) -> Mapping:
+    def save_checkpoint(self, save_name: str, model: LemmaClassifierLSTM, args: Mapping) -> Mapping:
         """
         Saves model checkpoint with a current state dict (params) and a label decoder on the dataset.
         If the save path doesn't exist, it will create it. 
@@ -95,8 +94,8 @@ class LemmaClassifierTrainer():
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
         state_dict = {
-            "params": state_dict,
-            "label_decoder": label_decoder,
+            "params": model.state_dict(),
+            "label_decoder": model.label_decoder,
             "model_type": ModelType.LSTM,
             "args": args,
         }
@@ -134,18 +133,22 @@ class LemmaClassifierTrainer():
         """
         
         device = default_device() # Put model on GPU (if possible)
-        self.model.to(device)  
-        logging.info(f"Device chosen: {device}. {next(self.model.parameters()).device}")
-
 
         train_path = kwargs.get("train_path")
         if train_path:  # use file to train model
             texts_batch, positions_batch, labels_batch, counts, label_decoder = utils.load_dataset(train_path, get_counts=self.weighted_loss)
             self.output_dim = len(label_decoder)
             logging.info(f"Loaded dataset successfully from {train_path}")
-            logging.info(f"Using label decoder: {label_decoder}")
+            logging.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
 
             positions_batch, labels_batch = torch.tensor(positions_batch, device=device), torch.tensor(labels_batch, device=device)
+
+        self.model = LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, self.hidden_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder,
+                                         charlm=self.use_charlm, charlm_forward_file=self.forward_charlm_file, charlm_backward_file=self.backward_charlm_file)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+
+        self.model.to(device)
+        logging.info(f"Device chosen: {device}. {next(self.model.parameters()).device}")
 
         assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
         if path.exists(save_name):
@@ -187,10 +190,10 @@ class LemmaClassifierTrainer():
                 logging.info(f"Weighted f1 for model: {f1}")
                 if f1 > best_f1:
                     best_f1 = f1
-                    self.save_checkpoint(save_name, self.model.state_dict(), label_decoder, args)
+                    self.save_checkpoint(save_name, self.model, args)
                     logging.info(f"New best model: weighted f1 score of {f1}.")
             else:
-                self.save_checkpoint(save_name, self.model.state_dict(), label_decoder, args)
+                self.save_checkpoint(save_name, self.model, args)
 
             logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
 
@@ -198,7 +201,6 @@ class LemmaClassifierTrainer():
 def build_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument("--hidden_dim", type=int, default=256, help="Size of hidden layer")
-    parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
     parser.add_argument('--wordvec_pretrain_file', type=str, default=os.path.join(os.path.dirname(__file__), "pretrain", "glove.pt"), help='Exact name of the pretrain file to read')
     parser.add_argument("--charlm", action='store_true', dest='use_charlm', default=False, help="Whether not to use the charlm embeddings")
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
@@ -217,7 +219,6 @@ def main(args=None):
     args = parser.parse_args(args)
 
     hidden_dim = args.hidden_dim
-    output_dim = args.output_dim
     wordvec_pretrain_file = args.wordvec_pretrain_file
     use_charlm = args.use_charlm
     forward_charlm_file = args.charlm_forward_file
@@ -243,7 +244,6 @@ def main(args=None):
 
     trainer = LemmaClassifierTrainer(embedding_file=wordvec_pretrain_file,
                                      hidden_dim=hidden_dim,
-                                     output_dim=output_dim,
                                      use_charlm=use_charlm,
                                      forward_charlm_file=forward_charlm_file,
                                      backward_charlm_file=backward_charlm_file,

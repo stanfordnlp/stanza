@@ -15,7 +15,7 @@ class LemmaClassifierLSTM(nn.Module):
         From the LSTM output, we get the embedding fo the specific token that we classify on. That embedding 
         is fed into an MLP for classification.
     """
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, vocab_map, pt_embedding, padding_idx = 0, **kwargs):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, vocab_map, pt_embedding, label_decoder, **kwargs):
         """
         Args:
             vocab_size (int): Size of the vocab being used (if custom vocab)
@@ -23,7 +23,6 @@ class LemmaClassifierLSTM(nn.Module):
             embedding_dim (int): Size of embedding dimension to use on the aforementioned word embeddings
             hidden_dim (int): Size of hidden vectors in LSTM layers
             output_dim (int): Size of output vector from MLP layer
-            padding_idx (int, optional): Padding index for the embedding layerr. Defaults to 0.
 
         Kwargs:
             charlm (bool): Whether or not to use the charlm embeddings
@@ -46,6 +45,9 @@ class LemmaClassifierLSTM(nn.Module):
 
         self.embedding = pt_embedding
         self.vocab_map = vocab_map
+
+        # TODO: pass this up to the parent class
+        self.label_decoder = label_decoder
 
         # Optionally, include charlm embeddings  
         self.use_charlm = kwargs.get("charlm")

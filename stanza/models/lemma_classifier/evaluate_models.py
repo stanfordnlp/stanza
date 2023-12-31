@@ -126,7 +126,7 @@ def model_predict(model: nn.Module, position_idx: int, words: List[str]) -> int:
     return predicted_class
 
 
-def evaluate_model(model: nn.Module, label_decoder: Mapping, eval_path: str, verbose: bool = True, is_training: bool = False) -> Tuple[Mapping, Mapping, float, float]:
+def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_training: bool = False) -> Tuple[Mapping, Mapping, float, float]:
     """
     Helper function for model evaluation
 
@@ -152,7 +152,7 @@ def evaluate_model(model: nn.Module, label_decoder: Mapping, eval_path: str, ver
         model.eval()  # set to eval mode
 
     # load in eval data
-    text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path, label_decoder=label_decoder)
+    text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path, label_decoder=model.label_decoder)
     
     index_batches = torch.tensor(index_batches, device=device)
     label_batches = torch.tensor(label_batches, device=device)
@@ -188,7 +188,6 @@ def main(args=None):
     parser.add_argument("--vocab_size", type=int, default=10000, help="Number of tokens in vocab")
     parser.add_argument("--embedding_dim", type=int, default=100, help="Number of dimensions in word embeddings (currently using GloVe)")
     parser.add_argument("--hidden_dim", type=int, default=256, help="Size of hidden layer")
-    parser.add_argument("--output_dim", type=int, default=2, help="Size of output layer (number of classes)")
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument("--charlm", action='store_true', default=False, help="Whether not to use the charlm embeddings")
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
@@ -208,9 +207,9 @@ def main(args=None):
     logging.info("------------------------------------------------------------")
 
     logging.info(f"Attempting evaluation of model from {args['save_name']} on file {args['eval_file']}")
-    model, label_decoder = LemmaClassifier.load(args['save_name'], args)
+    model = LemmaClassifier.load(args['save_name'], args)
 
-    mcc_results, confusion, acc, weighted_f1 = evaluate_model(model, label_decoder, args['eval_file'])
+    mcc_results, confusion, acc, weighted_f1 = evaluate_model(model, args['eval_file'])
 
     logging.info(f"MCC Results: {dict(mcc_results)}")
     logging.info("______________________________________________")

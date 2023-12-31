@@ -5,14 +5,14 @@ import sys
 import logging
 
 from transformers import AutoTokenizer, AutoModel
-from typing import List, Tuple, Any 
+from typing import Mapping, List, Tuple, Any
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 class LemmaClassifierWithTransformer(nn.Module):
 
-    def __init__(self, output_dim: int, transformer_name: str):
+    def __init__(self, output_dim: int, transformer_name: str, label_decoder: Mapping):
         """
         Model architecture:
 
@@ -40,7 +40,8 @@ class LemmaClassifierWithTransformer(nn.Module):
             nn.ReLU(),
             nn.Linear(64, output_dim)
         )
-    
+        self.label_decoder = label_decoder
+
     def forward(self, pos_index: int, text: List[str]):
         """
 
