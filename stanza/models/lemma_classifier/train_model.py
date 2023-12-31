@@ -85,23 +85,6 @@ class LemmaClassifierTrainer():
         else:
             raise ValueError("Must enter a valid loss function (e.g. 'ce' or 'weighted_bce')")
 
-    def save_checkpoint(self, save_name: str, model: LemmaClassifierLSTM, args: Mapping) -> Mapping:
-        """
-        Saves model checkpoint with a current state dict (params) and a label decoder on the dataset.
-        If the save path doesn't exist, it will create it. 
-        """
-        save_dir = os.path.split(save_name)[0]
-        if save_dir:
-            os.makedirs(save_dir, exist_ok=True)
-        state_dict = {
-            "params": model.state_dict(),
-            "label_decoder": model.label_decoder,
-            "model_type": ModelType.LSTM,
-            "args": args,
-        }
-        torch.save(state_dict, save_name)
-        return state_dict
-
     def configure_weighted_loss(self, label_decoder: Mapping, counts: Mapping):
         """
         If applicable, this function will update the loss function of the LemmaClassifierLSTM model to become BCEWithLogitsLoss.
@@ -186,14 +169,14 @@ class LemmaClassifierTrainer():
                 self.optimizer.step()
 
             if eval_file:
-                _, _, _, f1 = evaluate_model(self.model, label_decoder, eval_file, is_training=True)
+                _, _, _, f1 = evaluate_model(self.model, eval_file, is_training=True)
                 logging.info(f"Weighted f1 for model: {f1}")
                 if f1 > best_f1:
                     best_f1 = f1
-                    self.save_checkpoint(save_name, self.model, args)
+                    self.model.save(save_name, args)
                     logging.info(f"New best model: weighted f1 score of {f1}.")
             else:
-                self.save_checkpoint(save_name, self.model, args)
+                self.model.save(save_name, args)
 
             logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
 

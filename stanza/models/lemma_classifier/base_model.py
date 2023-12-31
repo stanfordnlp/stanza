@@ -6,19 +6,45 @@ Versions include LSTM and Transformer varieties
 
 import logging
 
+from abc import ABC, abstractmethod
+
+import os
+
 import torch
 import torch.nn as nn
 
 from stanza.models.common.foundation_cache import load_pretrain
 from stanza.models.lemma_classifier.constants import ModelType
-from stanza.models.lemma_classifier.model import LemmaClassifierLSTM
-from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 
 logger = logging.getLogger('stanza.lemmaclassifier')
 
-class LemmaClassifier(nn.Module):
-    def __init__(self):
-        super(LemmaClassifier, self).__init__()
+class LemmaClassifier(ABC, nn.Module):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def save(self, save_name, args):
+        """
+        Save the model to the given path, possibly with some args
+
+        TODO: keep all the relevant args in the model
+        """
+        save_dir = os.path.split(save_name)[0]
+        if save_dir:
+            os.makedirs(save_dir, exist_ok=True)
+        state_dict = {
+            "params": self.state_dict(),
+            "label_decoder": self.label_decoder,
+            "model_type": self.model_type(),
+            "args": args,
+        }
+        torch.save(state_dict, save_name)
+        return state_dict
+
+    @abstractmethod
+    def model_type(self):
+        """
+        return a ModelType
+        """
 
     @staticmethod
     def load(filename, args=None):
@@ -32,6 +58,13 @@ class LemmaClassifier(nn.Module):
 
         model_type = checkpoint['model_type']
         if model_type is ModelType.LSTM:
+            # TODO: if anyone can suggest a way to avoid this circular import
+            # (or better yet, avoid the load method knowing about subclasses)
+            # please do so
+            # maybe the subclassing is not necessary and we just put
+            # save & load in the trainer
+            from stanza.models.lemma_classifier.model import LemmaClassifierLSTM
+
             saved_args = checkpoint['args']
             # other model args are part of the model and cannot be changed for evaluation or pipeline
             # the file paths might be relevant, though
@@ -70,6 +103,8 @@ class LemmaClassifier(nn.Module):
                                             pt_embedding=embeddings,
                                             label_decoder=checkpoint['label_decoder'])
         elif model_type is ModelType.TRANSFORMER:
+            from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
+
             output_dim = len(checkpoint['label_decoder'])
             saved_args = checkpoint['args']
             bert_model = saved_args['bert_model']

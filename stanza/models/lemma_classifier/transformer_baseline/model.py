@@ -7,11 +7,13 @@ import logging
 from transformers import AutoTokenizer, AutoModel
 from typing import Mapping, List, Tuple, Any
 
+from stanza.models.lemma_classifier.base_model import LemmaClassifier
+from stanza.models.lemma_classifier.constants import ModelType
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
-class LemmaClassifierWithTransformer(nn.Module):
-
+class LemmaClassifierWithTransformer(LemmaClassifier):
     def __init__(self, output_dim: int, transformer_name: str, label_decoder: Mapping):
         """
         Model architecture:
@@ -72,3 +74,6 @@ class LemmaClassifierWithTransformer(nn.Module):
         # pass to the MLP
         output = self.mlp(target_pos_embedding)
         return output
+
+    def model_type(self):
+        return ModelType.TRANSFORMER

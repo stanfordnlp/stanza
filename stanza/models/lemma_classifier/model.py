@@ -6,9 +6,10 @@ from typing import List, Tuple
 
 from stanza.models.common.vocab import UNK_ID
 from stanza.models.lemma_classifier import utils
-from stanza.models.lemma_classifier.constants import *
+from stanza.models.lemma_classifier.base_model import LemmaClassifier
+from stanza.models.lemma_classifier.constants import ModelType
 
-class LemmaClassifierLSTM(nn.Module):
+class LemmaClassifierLSTM(LemmaClassifier):
     """
     Model architecture:
         Extracts word embeddings over the sentence, passes embeddings into a bi-LSTM to get a sentence encoding.
@@ -106,3 +107,6 @@ class LemmaClassifierLSTM(nn.Module):
         # MLP forward pass
         output = self.mlp(lstm_out)
         return output
+
+    def model_type(self):
+        return ModelType.LSTM

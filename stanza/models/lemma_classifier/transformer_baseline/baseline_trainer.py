@@ -66,23 +66,6 @@ class TransformerBaselineTrainer:
         logging.info(f"Using weights {weights} for weighted loss.")
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
-    def save_checkpoint(self, save_name: str, model: LemmaClassifierWithTransformer, args: Mapping) -> Mapping:
-        """
-        Saves model checkpoint with a current state dict (params) and a label decoder on the dataset.
-        If the save path doesn't exist, it will create it. 
-        """
-        save_dir = os.path.split(save_name)[0]
-        if save_dir:
-            os.makedirs(save_dir, exist_ok=True)
-        state_dict = {
-            "params": model.state_dict(),
-            "label_decoder": model.label_decoder,
-            "model_type": ModelType.TRANSFORMER,
-            "args": args,
-        }
-        torch.save(state_dict, save_name)
-        return state_dict
-
     def train(self, num_epochs: int, save_name: str, args: Mapping, eval_file: str, **kwargs):
 
         """
@@ -153,14 +136,14 @@ class TransformerBaselineTrainer:
             logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
             if eval_file:
                 # Evaluate model on dev set to see if it should be saved.
-                _, _, _, f1 = evaluate_model(self.model, label_decoder, eval_file, is_training=True)
+                _, _, _, f1 = evaluate_model(self.model, eval_file, is_training=True)
                 logging.info(f"Weighted f1 for model: {f1}")
                 if f1 > best_f1:
                     best_f1 = f1
-                    self.save_checkpoint(save_name, self.model, args)
+                    self.model.save(save_name, args)
                     logging.info(f"New best model: weighted f1 score of {f1}.")
             else:
-                self.save_checkpoint(save_name, self.model, args)
+                self.model.save(save_name, args)
 
 
 def main(args=None):
