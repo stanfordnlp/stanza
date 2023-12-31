@@ -95,7 +95,7 @@ class LemmaClassifierTrainer():
         total_samples = sum(counts.values())
         for class_idx in counts:
             weights[class_idx] = total_samples / (counts[class_idx] * len(counts))  # weight_i = total / (# examples in class i * num classes)
-            weights = torch.tensor(weights)
+        weights = torch.tensor(weights)
         logging.info(f"Using weights {weights} for weighted loss.")
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
