@@ -104,6 +104,14 @@ class CorefProcessor(UDProcessor):
                 continue
             span_cluster = sorted(span_cluster)
 
+            for span in span_cluster:
+                # check there are no sentence crossings before
+                # manipulating the spans, since we will expect it to
+                # be this way for multiple usages of the spans
+                sent_id = sent_ids[span[0]]
+                if sent_ids[span[1]] != sent_id:
+                    raise ValueError("The coref model predicted a span that crossed two sentences!  Please send this example to us on our github")
+
             # treat the longest span as the representative
             # break ties using the first one
             max_len = 0
@@ -116,8 +124,6 @@ class CorefProcessor(UDProcessor):
             mentions = []
             for span in span_cluster:
                 sent_id = sent_ids[span[0]]
-                if sent_ids[span[1]] != sent_id:
-                    raise ValueError("The coref model predicted a span that crossed two sentences!  Please send this example to us on our github")
                 start_word = word_pos[span[0]]
                 end_word = word_pos[span[1]]
                 mentions.append(CorefMention(sent_id, start_word, end_word))
