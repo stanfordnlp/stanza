@@ -12,7 +12,7 @@ def load_doc_from_conll_file(path: str):
     return stanza.utils.conll.CoNLL.conll2doc(path)
 
 
-def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool = False, label_decoder: dict = None) -> Tuple[List[List[str]], List[torch.tensor[int]], List[torch.tensor[int]], Mapping[int, int], Mapping[str, int]]:
+def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool = False, label_decoder: dict = None) -> Tuple[List[List[str]], List[torch.Tensor[int]], List[torch.Tensor[int]], Mapping[int, int], Mapping[str, int]]:
 
     """
     Loads a data file into data batches for tokenized text sentences, token indices, and true labels for each sentence.
