@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import os
+from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from typing import List, Tuple
 
@@ -78,34 +79,50 @@ class LemmaClassifierLSTM(LemmaClassifier):
             nn.Linear(64, output_dim)
         )
 
-    def forward(self, pos_index: int, words: List[str]):
+    def forward(self, pos_indices: List[int], sentences: List[List[str]]):
         """
         Computes the forward pass of the neural net
 
         Args:
-            pos_index (int): The position index of the target token for lemmatization classification in the sentence.
-            words (List[str]): A list of the tokenized strings of the input sentence.
+            pos_indices (List[int]): A list of the position index of the target token for lemmatization classification in each sentence.
+            sentences (List[List[str]]): A list of the token-split sentences of the input data.
 
         Returns:
-            torch.tensor: Output logits of the neural network
+            torch.tensor: Output logits of the neural network, where the shape is  (n, output_size) where n is the number of sentences.
         """
-        token_ids = [self.vocab_map.get(word.lower(), UNK_ID) for word in words]
-        token_ids = torch.tensor(token_ids, device=next(self.parameters()).device)
-        embedded = self.embedding(token_ids)
+        token_ids = []
+        for words in sentences:
+            sentence_token_ids = [self.vocab_map.get(word.lower(), UNK_ID) for word in words]
+            sentence_token_ids = torch.tensor(sentence_token_ids, device=next(self.parameters()).device)
+            token_ids.append(sentence_token_ids)
+        
+        embedded = self.embedding(torch.tensor(token_ids))
 
         if self.use_charlm:
-            char_reps_forward = self.charmodel_forward.build_char_representation([words])  # takes [[str]]
-            char_reps_backward = self.charmodel_backward.build_char_representation([words])
+            char_reps_forward = self.charmodel_forward.build_char_representation(sentences)  # takes [[str]]
+            char_reps_backward = self.charmodel_backward.build_char_representation(sentences)
 
-            embedded = torch.cat((embedded, char_reps_forward[0], char_reps_backward[0]), 1)   # take [0] because we only use the first sentence
+            embedded = torch.cat((embedded, char_reps_forward, char_reps_backward), 1)  
 
-        lstm_out, (hidden, _) = self.lstm(embedded)
+        print(f"Embedding shape: {embedded.shape}. Should be size (batch_size, T, input_size)")   # Should be size (batch_size, T, input_size)
+        padded_sequences = pad_sequence(embedded, batch_first=True)
+        lengths = torch.tensor([len(seq) for seq in embedded])
+
+        packed_sequences = pack_padded_sequence(padded_sequences, lengths, batch_first=True)
+
+        print(f"Packed Sequences shape: {packed_sequences.shape}. Should be size (batch_size, input_size)")  # should be size (batch_size, input_size)
+            
+        lstm_out, (hidden, _) = self.lstm(packed_sequences)
 
         # Extract the hidden state at the index of the token to classify
-        lstm_out = lstm_out[pos_index]
+        unpacked_lstm_outputs, _ = pad_packed_sequence(lstm_out, batch_first=True)
+        lstm_out = unpacked_lstm_outputs[torch.arange(unpacked_lstm_outputs.size(0)), pos_indices]
+
+        print(f"LSTM OUT Shape: {lstm_out.shape}. Should be size (batch_size, input_size)")  # Should be size (batch_size, input_size)
 
         # MLP forward pass
         output = self.mlp(lstm_out)
+        print(f"Output shape: {output.shape}. Should be size (batch_size, output_size)")   # should be size (batch_size, output_size)
         return output
 
     def model_type(self):

@@ -11,3 +11,4 @@ class ModelType(Enum):
     BERT               = 3
     ROBERTA            = 4
 
+DEFAULT_BATCH_SIZE = 16

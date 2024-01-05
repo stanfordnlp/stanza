@@ -15,7 +15,7 @@ from typing import List, Tuple, Any, Mapping
 from stanza.models.common.foundation_cache import load_pretrain
 from stanza.models.common.utils import default_device
 from stanza.models.lemma_classifier import utils
-from stanza.models.lemma_classifier.constants import ModelType
+from stanza.models.lemma_classifier.constants import ModelType, DEFAULT_BATCH_SIZE
 from stanza.models.lemma_classifier.model import LemmaClassifierLSTM
 from stanza.utils.get_tqdm import get_tqdm
 from stanza.models.lemma_classifier.evaluate_models import evaluate_model
@@ -119,12 +119,13 @@ class LemmaClassifierTrainer():
 
         train_path = kwargs.get("train_path")
         if train_path:  # use file to train model
-            texts_batch, positions_batch, labels_batch, counts, label_decoder = utils.load_dataset(train_path, get_counts=self.weighted_loss)
+            text_batches, idx_batches, label_batches, counts, label_decoder = utils.load_dataset(train_path, get_counts=self.weighted_loss)  # TODO configure batch sizes
             self.output_dim = len(label_decoder)
             logging.info(f"Loaded dataset successfully from {train_path}")
             logging.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
 
-            positions_batch, labels_batch = torch.tensor(positions_batch, device=device), torch.tensor(labels_batch, device=device)
+            idx_batches, label_batches = torch.tensor(idx_batches, device=device), torch.tensor(label_batches, device=device)  
+            logging.info(f"idx batches size: {idx_batches.shape}. label_batches shape {label_batches.shape}")
 
         self.model = LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, self.hidden_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder,
                                          charlm=self.use_charlm, charlm_forward_file=self.forward_charlm_file, charlm_backward_file=self.backward_charlm_file)
@@ -133,7 +134,7 @@ class LemmaClassifierTrainer():
         self.model.to(device)
         logging.info(f"Device chosen: {device}. {next(self.model.parameters()).device}")
 
-        assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
+        assert len(text_batches) == len(idx_batches) == len(label_batches), f"Input batch sizes did not match ({len(text_batches)}, {len(idx_batches)}, {len(label_batches)})."
         if path.exists(save_name):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
         
@@ -148,22 +149,23 @@ class LemmaClassifierTrainer():
         logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
-            for texts, position, label in tqdm(zip(texts_batch, positions_batch, labels_batch), total=len(texts_batch)):
-                if position < 0 or position > len(texts) - 1:  # validate position index
-                    raise ValueError(f"Found position {position} in text: {texts}, which is not possible.")
+            for texts, positions, labels in tqdm(zip(text_batches, idx_batches, label_batches), total=len(text_batches)):  
 
                 self.optimizer.zero_grad()
-                output = self.model(position, texts)
+                output = self.model(positions, texts)
 
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
                     # TODO: three classes?
-                    target_vec = [1, 0] if label == 0 else [0, 1]
-                    target = torch.tensor(target_vec, dtype=torch.float32, device=device)
-                else:  # CELoss accepts target as just raw label
-                    target = label
+                    targets = torch.tensor([torch.tensor([1, 0] if label == 0 else [0, 1]) for label in labels], dtype=torch.float32, device=device)
+                    # should be shape size (batch_size, 2)
 
-                loss = self.criterion(output, target)
+                else:  # CELoss accepts target as just raw label
+                    targets = labels
+
+                logging.info(f"targets shape {targets.shape}. Should be shape (batch_size, ) or (batch_size, output_dim)")  # should be shape (batch_size, ) or (batch_size, 2)
+
+                loss = self.criterion(output, targets)
 
                 loss.backward()
                 self.optimizer.step()

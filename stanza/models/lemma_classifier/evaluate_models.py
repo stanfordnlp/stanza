@@ -107,21 +107,23 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
     return multi_class_result, confusion, weighted_f1   
 
 
-def model_predict(model: nn.Module, position_idx: int, words: List[str]) -> int:
+def model_predict(model: nn.Module, position_indices: torch.tensor[int], sentences: List[List[str]]) -> torch.tensor[int]:
     """
     A LemmaClassifierLSTM or LemmaClassifierWithTransformer is used to predict on a single text example, given the position index of the target token.
 
     Args:
         model (LemmaClassifier): A trained LemmaClassifier that is able to predict on a target token.
-        position_idx (int): The (zero-indexed) position of the target token in `text`.
-        words (List[str]): A list of the tokenized strings of the input sentence.
+        position_indices (Tensor[int]): A tensor of the (zero-indexed) position of the target token in `text` for each example in the batch.
+        sentences (List[List[str]]): A list of lists of the tokenized strings of the input sentences.
     
     Returns:
         (int): The index of the predicted class in `model`'s output.
     """
     with torch.no_grad():
-        logits = model(position_idx, words)
-        predicted_class = torch.argmax(logits).item()
+        logits = model(position_indices, sentences)  # should be size (batch_size, output_size)
+        logging.info(f"Logits shape: {logits.shape}  (should be size (batch_size, output_size))")
+        predicted_class = torch.argmax(logits, dim=1)  # should be size (batch_size, 1)
+        logging.info(f"Predicted class shape: {predicted_class.shape}, (should be size (batch_size, 1))")
     
     return predicted_class
 
@@ -159,18 +161,25 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
     
     logging.info(f"Evaluating on evaluation file {eval_path}")
 
-    correct = 0
-    gold_tags, pred_tags = [label_batches], []
+    correct, total = 0, 0
+    gold_tags, pred_tags = label_batches, []
+    
     # run eval on each example from dataset
-    for sentence, pos_index, label in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file", total=len(text_batches)):
-        # convert words to embedding ID using the model's vocab_map
-        pred = model_predict(model, pos_index.item(), sentence)
-        correct += 1 if pred == label.item() else 0 
-        pred_tags += [pred]
+    for sentences, pos_indices, labels in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file", total=len(text_batches)):
+        pred = model_predict(model, pos_indices, sentences)  # Pred should be size (batch_size, )
+        correct_preds = pred == labels
+        logging.info(f"Correct preds shape: {correct_preds.shape}  (should be size (batch_size, 1))")
+        correct += torch.sum(correct_preds)
+        total += len(correct_preds)
+        pred_tags += pred.tolist()  
 
     logging.info("Finished evaluating on dataset. Computing scores...")
-    accuracy = correct / len(label_batches)
-    mc_results, confusion, weighted_f1 = evaluate_sequences(gold_tags, [pred_tags], verbose=verbose)  
+    accuracy = correct / total
+
+    logging.info(f"Gold Tags: {gold_tags}")
+    logging.info(f"Pred Tags: {pred_tags}")
+
+    mc_results, confusion, weighted_f1 = evaluate_sequences(gold_tags, pred_tags, verbose=verbose) 
     # add brackets around batches of gold and pred tags because each batch is an element within the sequences in this helper
     if verbose:
         logging.info(f"Accuracy: {accuracy} ({correct}/{len(label_batches)})")
