@@ -95,22 +95,23 @@ class LemmaClassifierLSTM(LemmaClassifier):
             sentence_token_ids = [self.vocab_map.get(word.lower(), UNK_ID) for word in words]
             sentence_token_ids = torch.tensor(sentence_token_ids, device=next(self.parameters()).device)
             token_ids.append(sentence_token_ids)
-        
-        embedded = self.embedding(torch.tensor(token_ids))
+
+        token_ids = pad_sequence(token_ids, batch_first=True)
+        embedded = self.embedding(token_ids)
 
         if self.use_charlm:
             char_reps_forward = self.charmodel_forward.build_char_representation(sentences)  # takes [[str]]
             char_reps_backward = self.charmodel_backward.build_char_representation(sentences)
 
-            embedded = torch.cat((embedded, char_reps_forward, char_reps_backward), 1)  
+            char_reps_forward = pad_sequence(char_reps_forward, batch_first=True)
+            char_reps_backward = pad_sequence(char_reps_backward, batch_first=True)
+            
+            embedded = torch.cat((embedded, char_reps_forward, char_reps_backward), 2)  
 
-        print(f"Embedding shape: {embedded.shape}. Should be size (batch_size, T, input_size)")   # Should be size (batch_size, T, input_size)
         padded_sequences = pad_sequence(embedded, batch_first=True)
         lengths = torch.tensor([len(seq) for seq in embedded])
 
         packed_sequences = pack_padded_sequence(padded_sequences, lengths, batch_first=True)
-
-        print(f"Packed Sequences shape: {packed_sequences.shape}. Should be size (batch_size, input_size)")  # should be size (batch_size, input_size)
             
         lstm_out, (hidden, _) = self.lstm(packed_sequences)
 
@@ -118,11 +119,8 @@ class LemmaClassifierLSTM(LemmaClassifier):
         unpacked_lstm_outputs, _ = pad_packed_sequence(lstm_out, batch_first=True)
         lstm_out = unpacked_lstm_outputs[torch.arange(unpacked_lstm_outputs.size(0)), pos_indices]
 
-        print(f"LSTM OUT Shape: {lstm_out.shape}. Should be size (batch_size, input_size)")  # Should be size (batch_size, input_size)
-
         # MLP forward pass
         output = self.mlp(lstm_out)
-        print(f"Output shape: {output.shape}. Should be size (batch_size, output_size)")   # should be size (batch_size, output_size)
         return output
 
     def model_type(self):

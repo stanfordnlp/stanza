@@ -124,8 +124,9 @@ class LemmaClassifierTrainer():
             logging.info(f"Loaded dataset successfully from {train_path}")
             logging.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
 
-            idx_batches, label_batches = torch.tensor(idx_batches, device=device), torch.tensor(label_batches, device=device)  
-            logging.info(f"idx batches size: {idx_batches.shape}. label_batches shape {label_batches.shape}")
+            text_batches, idx_batches, label_batches = text_batches[:-1], idx_batches[:-1], label_batches[:-1]  # TODO come up with a fix for this
+            
+            idx_batches, label_batches = torch.stack(idx_batches).to(device), torch.stack(label_batches).to(device)  
 
         self.model = LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, self.hidden_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder,
                                          charlm=self.use_charlm, charlm_forward_file=self.forward_charlm_file, charlm_backward_file=self.backward_charlm_file)
@@ -157,13 +158,11 @@ class LemmaClassifierTrainer():
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
                     # TODO: three classes?
-                    targets = torch.tensor([torch.tensor([1, 0] if label == 0 else [0, 1]) for label in labels], dtype=torch.float32, device=device)
+                    targets = torch.stack([torch.tensor([1, 0]) if label == 0 else torch.tensor([0, 1]) for label in labels]).to(dtype=torch.float32).to(device)
                     # should be shape size (batch_size, 2)
 
                 else:  # CELoss accepts target as just raw label
                     targets = labels
-
-                logging.info(f"targets shape {targets.shape}. Should be shape (batch_size, ) or (batch_size, output_dim)")  # should be shape (batch_size, ) or (batch_size, 2)
 
                 loss = self.criterion(output, targets)
 
