@@ -94,8 +94,8 @@ class TransformerBaselineTrainer:
             text_batches, position_batches, label_batches = text_batches[:-1], position_batches[:-1], label_batches[:-1]
 
             # Move data to device
-            labels_batch = torch.stack(labels_batch).to(device)
-            positions_batch = torch.stack(positions_batch).to(device)
+            label_batches = torch.stack(label_batches).to(device)
+            position_batches = torch.stack(position_batches).to(device)
         
         assert len(text_batches) == len(position_batches) == len(label_batches), f"Input batch sizes did not match ({len(text_batches)}, {len(position_batches)}, {len(label_batches)})."
 

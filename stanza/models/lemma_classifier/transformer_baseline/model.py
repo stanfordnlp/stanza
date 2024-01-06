@@ -30,7 +30,7 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
 
         # Choose transformer
         self.transformer_name = transformer_name
-        self.tokenizer = AutoTokenizer.from_pretrained(transformer_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(transformer_name, use_fast=True, add_prefix_space=True)
         self.transformer = AutoModel.from_pretrained(transformer_name)
         config = self.transformer.config
 
@@ -55,21 +55,17 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
         """
 
         # Get the transformer embedding IDs for each token in each sentence
-        input_ids = [torch.tesnsor(self.tokenizer.convert_tokens_to_ids(sent)) for sent in sentences]
-        lengths = [len(sent) for sent in input_ids]
-        input_ids = pad_sequence(input_ids, batch_first=True)
-
-
-        packed_input = pack_padded_sequence(input_ids, lengths, batch_first=True)
+        device = next(self.transformer.parameters()).device
+        tokenized_inputs = self.tokenizer(sentences, padding=True, truncation=True, return_tensors="pt", is_split_into_words=True)
+        tokenized_inputs = {key: val.to(device) for key, val in tokenized_inputs.items()}
+        
         # Forward pass through Transformer
-        outputs = self.transformer(input_ids=packed_input)
+        outputs = self.transformer(**tokenized_inputs)
         
         # Get embeddings for all tokens
         last_hidden_state = outputs.last_hidden_state
 
-        unpacked_outputs = pad_packed_sequence(last_hidden_state, batch_first=True)
-        embeddings = unpacked_outputs[torch.arange(unpacked_outputs.size(0)), idx_positions]
-
+        embeddings = last_hidden_state[torch.arange(last_hidden_state.size(0)), idx_positions]
         # pass to the MLP
         output = self.mlp(embeddings)
         return output
