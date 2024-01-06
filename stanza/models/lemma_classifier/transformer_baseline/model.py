@@ -60,7 +60,8 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
         tokenized_inputs = {key: val.to(device) for key, val in tokenized_inputs.items()}
         
         # Forward pass through Transformer
-        outputs = self.transformer(**tokenized_inputs)
+        with torch.no_grad():
+            outputs = self.transformer(**tokenized_inputs)
         
         # Get embeddings for all tokens
         last_hidden_state = outputs.last_hidden_state
