@@ -86,15 +86,18 @@ class TransformerBaselineTrainer:
         device = default_device()
 
         if kwargs.get("train_path"):
-            texts_batch, positions_batch, labels_batch, counts, label_decoder = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss)
+            text_batches, position_batches, label_batches, counts, label_decoder = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss)
             self.output_dim = len(label_decoder)
             logging.info(f"Using label decoder : {label_decoder}")
 
+            # TODO: fix this to make it not disregard last batch, and instead pad it or some other idea
+            text_batches, position_batches, label_batches = text_batches[:-1], position_batches[:-1], label_batches[:-1]
+
             # Move data to device
-            labels_batch = torch.tensor(labels_batch, device=device)
-            positions_batch = torch.tensor(positions_batch, device=device)
+            labels_batch = torch.stack(labels_batch).to(device)
+            positions_batch = torch.stack(positions_batch).to(device)
         
-        assert len(texts_batch) == len(positions_batch) == len(labels_batch), f"Input batch sizes did not match ({len(texts_batch)}, {len(positions_batch)}, {len(labels_batch)})."
+        assert len(text_batches) == len(position_batches) == len(label_batches), f"Input batch sizes did not match ({len(text_batches)}, {len(position_batches)}, {len(label_batches)})."
 
         self.model = LemmaClassifierWithTransformer(output_dim=self.output_dim, transformer_name=self.transformer_name, label_decoder=label_decoder)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
@@ -114,21 +117,18 @@ class TransformerBaselineTrainer:
         best_model, best_f1 = None, float("-inf")
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
-            for texts, position, label in tqdm(zip(texts_batch, positions_batch, labels_batch), total=len(texts_batch)):
-                if position < 0 or position > len(texts) - 1:  # validate position index
-                    raise ValueError(f"Found position {position} in text: {texts}, which is not possible.") 
-                
+            for sentences, positions, labels in tqdm(zip(text_batches, position_batches, label_batches), total=len(text_batches)):
+
                 self.optimizer.zero_grad()
-                output = self.model(position, texts)
+                outputs = self.model(positions, sentences)
                 
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
-                    target_vec = [1, 0] if label == 0 else [0, 1]
-                    target = torch.tensor(target_vec, dtype=torch.float32, device=device)
+                    targets = torch.stack([torch.tensor([1, 0]) if label == 0 else torch.tensor([0, 1]) for label in labels]).to(dtype=torch.float32).to(device)
                 else:  # CELoss accepts target as just raw label
-                    target = torch.tensor(label, dtype=torch.long, device=device)
+                    targets = labels
                 
-                loss = self.criterion(output, target)
+                loss = self.criterion(outputs, targets)
 
                 loss.backward()
                 self.optimizer.step()

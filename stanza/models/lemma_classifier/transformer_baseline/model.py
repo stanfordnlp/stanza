@@ -6,7 +6,7 @@ import logging
 
 from transformers import AutoTokenizer, AutoModel
 from typing import Mapping, List, Tuple, Any
-
+from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pad_sequence
 from stanza.models.lemma_classifier.base_model import LemmaClassifier
 from stanza.models.lemma_classifier.constants import ModelType
 
@@ -44,7 +44,7 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
         )
         self.label_decoder = label_decoder
 
-    def forward(self, pos_index: int, text: List[str]):
+    def forward(self, idx_positions: List[int], sentences: List[List[str]]):
         """
 
         Args:
@@ -54,25 +54,24 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
         Returns the logits of the MLP
         """
 
-        # Get the transformer embeddings 
-        input_ids = self.tokenizer.convert_tokens_to_ids(text)
+        # Get the transformer embedding IDs for each token in each sentence
+        input_ids = [torch.tesnsor(self.tokenizer.convert_tokens_to_ids(sent)) for sent in sentences]
+        lengths = [len(sent) for sent in input_ids]
+        input_ids = pad_sequence(input_ids, batch_first=True)
 
-        # Convert tokens to IDs and put them into a tensor
-        input_ids_tensor = torch.tensor([input_ids], device=next(self.parameters()).device)  # move data to device as well
+
+        packed_input = pack_padded_sequence(input_ids, lengths, batch_first=True)
         # Forward pass through Transformer
-        with torch.no_grad():
-            outputs = self.transformer(input_ids_tensor)
+        outputs = self.transformer(input_ids=packed_input)
         
         # Get embeddings for all tokens
         last_hidden_state = outputs.last_hidden_state
-        token_embeddings = last_hidden_state[0]
 
-        pos_index = torch.tensor(pos_index, device=next(self.parameters()).device)
-        # Get target embedding
-        target_pos_embedding = token_embeddings[pos_index]
+        unpacked_outputs = pad_packed_sequence(last_hidden_state, batch_first=True)
+        embeddings = unpacked_outputs[torch.arange(unpacked_outputs.size(0)), idx_positions]
 
         # pass to the MLP
-        output = self.mlp(target_pos_embedding)
+        output = self.mlp(embeddings)
         return output
 
     def model_type(self):
