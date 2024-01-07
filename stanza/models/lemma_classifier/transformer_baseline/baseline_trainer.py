@@ -66,6 +66,25 @@ class TransformerBaselineTrainer:
         logging.info(f"Using weights {weights} for weighted loss.")
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
+    def set_layer_learning_rates(self, transformer_lr: float, mlp_lr: float) -> torch.optim:
+        """
+        Sets learning rates for each layer of the model. 
+        Currently, the model has the transformer layer and the MLP layer, so these are tweakable.
+
+        Returns (torch.optim): An Adam optimizer with the learning rates adjusted per layer.
+        """
+        transformer_params, mlp_params = [], []
+        for name, param in self.model.named_parameters():
+            if 'transformer' in name:
+                transformer_params.append(param)
+            elif 'mlp' in name:
+                mlp_params.append(param)
+        optimizer = optim.Adam([
+            {"params": transformer_params, "lr": transformer_lr},
+            {"params": mlp_params, "lr": mlp_lr}
+        ])
+        return optimizer
+
     def train(self, num_epochs: int, save_name: str, args: Mapping, eval_file: str, **kwargs):
 
         """
@@ -90,17 +109,17 @@ class TransformerBaselineTrainer:
             self.output_dim = len(label_decoder)
             logging.info(f"Using label decoder : {label_decoder}")
 
-            # TODO: fix this to make it not disregard last batch, and instead pad it or some other idea
-            text_batches, position_batches, label_batches = text_batches[:-1], position_batches[:-1], label_batches[:-1]
+            # # TODO: fix this to make it not disregard last batch, and instead pad it or some other idea
+            # text_batches, position_batches, label_batches = text_batches[:-1], position_batches[:-1], label_batches[:-1]
 
-            # Move data to device
-            label_batches = torch.stack(label_batches).to(device)
-            position_batches = torch.stack(position_batches).to(device)
+            # # Move data to device
+            # label_batches = torch.stack(label_batches).to(device)
+            # position_batches = torch.stack(position_batches).to(device)
         
         assert len(text_batches) == len(position_batches) == len(label_batches), f"Input batch sizes did not match ({len(text_batches)}, {len(position_batches)}, {len(label_batches)})."
 
         self.model = LemmaClassifierWithTransformer(output_dim=self.output_dim, transformer_name=self.transformer_name, label_decoder=label_decoder)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+        self.optimizer = self.set_layer_learning_rates(transformer_lr=self.lr/2, mlp_lr=self.lr)  # Adam optimizer
 
         self.model.to(device)
         self.model.transformer.to(device)
@@ -118,7 +137,8 @@ class TransformerBaselineTrainer:
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
             for sentences, positions, labels in tqdm(zip(text_batches, position_batches, label_batches), total=len(text_batches)):
-
+                assert len(sentences) == len(positions) == len(labels), f"Input sentences, positions, and labels are of unequal length ({len(sentences), len(positions), len(labels)})"
+                
                 self.optimizer.zero_grad()
                 outputs = self.model(positions, sentences)
                 
