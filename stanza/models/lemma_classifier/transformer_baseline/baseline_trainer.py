@@ -108,18 +108,12 @@ class TransformerBaselineTrainer:
             text_batches, position_batches, label_batches, counts, label_decoder = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss)
             self.output_dim = len(label_decoder)
             logging.info(f"Using label decoder : {label_decoder}")
-
-            # # TODO: fix this to make it not disregard last batch, and instead pad it or some other idea
-            # text_batches, position_batches, label_batches = text_batches[:-1], position_batches[:-1], label_batches[:-1]
-
-            # # Move data to device
-            # label_batches = torch.stack(label_batches).to(device)
-            # position_batches = torch.stack(position_batches).to(device)
         
         assert len(text_batches) == len(position_batches) == len(label_batches), f"Input batch sizes did not match ({len(text_batches)}, {len(position_batches)}, {len(label_batches)})."
 
         self.model = LemmaClassifierWithTransformer(output_dim=self.output_dim, transformer_name=self.transformer_name, label_decoder=label_decoder)
-        self.optimizer = self.set_layer_learning_rates(transformer_lr=self.lr/2, mlp_lr=self.lr)  # Adam optimizer
+        # self.optimizer = self.set_layer_learning_rates(transformer_lr=self.lr/2, mlp_lr=self.lr)  # Adam optimizer
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.model.to(device)
         self.model.transformer.to(device)

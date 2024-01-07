@@ -124,10 +124,6 @@ class LemmaClassifierTrainer():
             logging.info(f"Loaded dataset successfully from {train_path}")
             logging.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
 
-            text_batches, idx_batches, label_batches = text_batches[:-1], idx_batches[:-1], label_batches[:-1]  # TODO come up with a fix for this
-            
-            idx_batches, label_batches = torch.stack(idx_batches).to(device), torch.stack(label_batches).to(device)  
-
         self.model = LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, self.hidden_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder,
                                          charlm=self.use_charlm, charlm_forward_file=self.forward_charlm_file, charlm_backward_file=self.backward_charlm_file)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
