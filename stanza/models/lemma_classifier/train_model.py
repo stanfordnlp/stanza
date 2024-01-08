@@ -119,7 +119,7 @@ class LemmaClassifierTrainer():
 
         train_path = kwargs.get("train_path")
         if train_path:  # use file to train model
-            text_batches, idx_batches, label_batches, counts, label_decoder = utils.load_dataset(train_path, get_counts=self.weighted_loss)  # TODO configure batch sizes
+            text_batches, idx_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(train_path, get_counts=self.weighted_loss)  # TODO configure batch sizes
             self.output_dim = len(label_decoder)
             logging.info(f"Loaded dataset successfully from {train_path}")
             logging.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")

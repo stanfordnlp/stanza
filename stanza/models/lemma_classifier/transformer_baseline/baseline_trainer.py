@@ -105,7 +105,7 @@ class TransformerBaselineTrainer:
         device = default_device()
 
         if kwargs.get("train_path"):
-            text_batches, position_batches, label_batches, counts, label_decoder = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss)
+            text_batches, position_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss)
             self.output_dim = len(label_decoder)
             logging.info(f"Using label decoder : {label_decoder}")
         

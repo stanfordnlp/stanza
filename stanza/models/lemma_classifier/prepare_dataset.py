@@ -22,10 +22,10 @@ def load_doc_from_conll_file(path: str):
 
 class DataProcessor():
 
-    def __init__(self, target_word: str, target_upos: List[str], allowed_lemmas: str):
+    def __init__(self, target_word: str, target_upos: List[str], allowed_lemmas: List[str]):
         self.target_word = target_word
         self.target_upos = target_upos
-        self.allowed_lemmas = re.compile(allowed_lemmas)
+        self.allowed_lemmas = [re.compile(lem) for lem in allowed_lemmas]
     
     def find_all_occurrences(self, sentence) -> List[int]:
         """
@@ -56,9 +56,10 @@ class DataProcessor():
                     tokens = [token.text for token in sentence.words]
                     indexes = self.find_all_occurrences(sentence)
                     for idx in indexes:
-                        if self.allowed_lemmas.fullmatch(sentence.words[idx].lemma):
-                            # for each example found, we write the tokens along with the target word index and lemma
-                            output_f.write(f'{" ".join(tokens)} {idx} {sentence.words[idx].lemma}\n')
+                        if any([lem.fullmatch(sentence.words[idx].lemma) for lem in self.allowed_lemmas]):
+                            # for each example found, we write the tokens along with the target word index, upos tag, and lemma
+                            upos_tag = sentence.words[idx].upos
+                            output_f.write(f'{" ".join(tokens)} {idx} {upos_tag} {sentence.words[idx].lemma}\n')
 
     def read_processed_data(self, file_name: str) -> List[dict]:
         """
@@ -67,18 +68,23 @@ class DataProcessor():
 
         "words" is a list that contains the tokens of the sentence
         "index" is an integer representing which token in "words" the lemma annotation corresponds to
+        "upos" is a string that corresponds to the target token's UPOS tag
         "lemma" is a string that is the lemma of the target word in the sentence.
 
         """
         output = []
         with open(file_name, "r", encoding="utf-8") as f:
             for line in f.readlines():
+                if not line:
+                    continue
+
                 obj = {}
                 split = line.split()
-                words, index, lemma = split[:-2], int(split[-2]), split[-1]
+                words, index, upos_tag, lemma = split[:-3], int(split[-3]), split[-2], split[-1]
                 
                 obj["words"] = words
                 obj["index"] = index
+                obj["upos"] = upos_tag
                 obj["lemma"] = lemma
             
                 output.append(obj)
@@ -93,7 +99,7 @@ def main(args=None):
     parser.add_argument("--target_word", type=str, default="'s", help="Token to classify on, e.g. 's.")
     parser.add_argument("--target_upos", type=str, default="AUX", help="upos on target token")
     parser.add_argument("--output_path", type=str, default="test_output.txt", help="Path for output file")
-    parser.add_argument("--allowed_lemmas", type=str, default=".*", help="A regex for allowed lemmas.  If not set, all lemmas are allowed")
+    parser.add_argument("--allowed_lemmas", type=str, nargs="+", default=".*", help="A regex for allowed lemmas.  If not set, all lemmas are allowed")
 
     args = parser.parse_args(args)
 
@@ -103,7 +109,11 @@ def main(args=None):
     output_path = args.output_path
     allowed_lemmas = args.allowed_lemmas
 
-    doc = utils.load_doc_from_conll_file(conll_path)
+    args = vars(args)
+    for arg in args:
+        print(f"{arg}: {args[arg]}")
+
+    doc = load_doc_from_conll_file(conll_path)
     processor = DataProcessor(target_word=target_word, target_upos=[target_upos], allowed_lemmas=allowed_lemmas)
     
     def keep_sentence(sentence):
@@ -113,8 +123,6 @@ def main(args=None):
         return False
 
     processor.process_document(doc, keep_sentence, output_path)
-
-    # print(processor.read_processed_data(output_path))  # print out examples
 
 if __name__ == "__main__":
     main()

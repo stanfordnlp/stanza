@@ -21,9 +21,10 @@ def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool
         1. List[List[List[str]]]: Batches of sentences, where each token is a separate entry in each sentence
         2. List[torch.tensor[int]]: A batch of indexes for the target token corresponding to its sentence
         3. List[torch.tensor[int]]: A batch of labels for the target token's lemma
-        4 (Optional): A mapping of label ID to counts in the dataset.
-        5. Mapping[str, int]: A map between the labels and their indexes
-
+        4. List[torch.tensor[int]]: A batch of UPOS IDs for the target token
+        5 (Optional): A mapping of label ID to counts in the dataset.
+        6. Mapping[str, int]: A map between the labels and their indexes
+        7. Mapping[str, int]: A map between the UPOS tags and their corresponding IDs found in the UPOS batches
     """
 
     if data_path is None or not os.path.exists(data_path):
@@ -38,23 +39,27 @@ def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool
         label_decoder = dict(label_decoder)
 
     with open(data_path, "r+", encoding="utf-8") as f:
-        sentences, indices, labels, counts = [], [], [], Counter()
-        for line in f.readlines():
-            line_contents = line.split()
-            if not line_contents:
-                continue
+        sentences, indices, labels, upos_ids, counts, upos_to_id = [], [], [], [], Counter(), defaultdict(str)
+        data_processor = prepare_dataset.DataProcessor("", [], "")
+        sentences_data = data_processor.read_processed_data(data_path)
+
+        for idx, sentence in enumerate(sentences_data):
+            # TODO Could replace this with sentence.values(), but need to know if Stanza requires Python 3.7 or later for backward compatability reasons
+            words, target_idx, target_upos, label = sentence.get("words"), sentence.get("index"), sentence.get("upos"), sentence.get("lemma")   
+            if None in [words, target_idx, target_upos, label]:
+                raise ValueError(f"Expected data to be complete but found a null value in sentence {idx}: {sentence}")
             
-            sentence = line_contents[: -2]
-            index, label = line_contents[-2:]
-
-            index = int(index)
-
             label_id = label_decoder.get(label, None)
             if label_id is None:
-                label_decoder[label] = len(label_decoder)
+                label_decoder[label] = len(label_decoder)  # create a new ID for the unknown label
 
-            sentences.append(sentence)
-            indices.append(index)
+            upos_id = upos_to_id.get(target_upos, None)
+            if upos_id is None:
+                upos_to_id[target_upos] = len(upos_to_id)  # create a new ID for the unknown upos tag
+
+            sentences.append(words)
+            indices.append(target_idx)
+            upos_ids.append(upos_to_id[target_upos])
             labels.append(label_decoder[label])
 
             if get_counts:
@@ -62,9 +67,10 @@ def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool
 
     sentence_batches = [sentences[i: i + batch_size] for i in range(0, len(sentences), batch_size)]
     indices_batches = [torch.tensor(indices[i: i + batch_size]) for i in range(0, len(indices), batch_size)]
-    labels_batches = [torch.tensor(labels[i: i + batch_size]) for i in range(0, len(indices), batch_size)]
-    
-    return sentence_batches, indices_batches, labels_batches, counts, label_decoder
+    upos_batches = [torch.tensor(upos_ids[i: i + batch_size]) for i in range(0, len(upos_ids), batch_size)]
+    labels_batches = [torch.tensor(labels[i: i + batch_size]) for i in range(0, len(labels), batch_size)]
+    # TODO consider making the return object a JSON or a custom object for cleaner access instead of a big tuple of stuff
+    return sentence_batches, indices_batches, upos_batches, labels_batches, counts, label_decoder, upos_to_id
 
 
 def extract_unknown_token_indices(tokenized_indices: torch.tensor, unknown_token_idx: int) -> List[int]:
@@ -93,3 +99,13 @@ def get_device():
         device = torch.device("cpu")
     
     return device
+
+
+def main():
+    default_test_path = os.path.join(os.path.dirname(__file__), "test_sets", "with_upos_processed_ewt_dev.txt")   # get the GUM stuff
+    sentence_batches, indices_batches, upos_batches, _, counts, _, _ = load_dataset(default_test_path, get_counts=True)
+    print(upos_batches)
+    print(counts)
+
+if __name__ == "__main__":
+    main()

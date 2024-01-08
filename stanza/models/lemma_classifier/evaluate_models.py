@@ -152,7 +152,7 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
         model.eval()  # set to eval mode
 
     # load in eval data
-    text_batches, index_batches, label_batches, _, label_decoder = utils.load_dataset(eval_path, label_decoder=model.label_decoder)
+    text_batches, index_batches, upos_batches, label_batches, _, label_decoder, upos_to_id = utils.load_dataset(eval_path, label_decoder=model.label_decoder)
     
     logging.info(f"Evaluating on evaluation file {eval_path}")
 
