@@ -13,6 +13,13 @@ Furthermore, it will store tuples of the Stanza document object, the position in
 """
 
 
+def load_doc_from_conll_file(path: str):
+    """"
+    loads in a Stanza document object from a path to a CoNLL file containing annotated sentences.
+    """
+    return stanza.utils.conll.CoNLL.conll2doc(path)
+
+
 class DataProcessor():
 
     def __init__(self, target_word: str, target_upos: List[str], allowed_lemmas: str):

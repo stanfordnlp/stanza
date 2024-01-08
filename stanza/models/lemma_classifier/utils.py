@@ -1,19 +1,14 @@
 import stanza
 import torch
 import os
+import prepare_dataset
+
 from stanza.models.lemma_classifier.constants import DEFAULT_BATCH_SIZE
 from typing import List, Tuple, Any, Mapping
-from collections import Counter
-
-def load_doc_from_conll_file(path: str):
-    """"
-    loads in a Stanza document object from a path to a CoNLL file containing annotated sentences.
-    """
-    return stanza.utils.conll.CoNLL.conll2doc(path)
+from collections import Counter, defaultdict    
 
 
 def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool = False, label_decoder: dict = None) -> Tuple[List[List[str]], List[torch.Tensor], List[torch.Tensor], Mapping[int, int], Mapping[str, int]]:
-
     """
     Loads a data file into data batches for tokenized text sentences, token indices, and true labels for each sentence.
 
