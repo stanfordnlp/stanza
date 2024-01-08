@@ -21,7 +21,7 @@ def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool
         1. List[List[List[str]]]: Batches of sentences, where each token is a separate entry in each sentence
         2. List[torch.tensor[int]]: A batch of indexes for the target token corresponding to its sentence
         3. List[torch.tensor[int]]: A batch of labels for the target token's lemma
-        4. List[torch.tensor[int]]: A batch of UPOS IDs for the target token
+        4. List[List[int]]: A batch of UPOS IDs for the target token (this is a List of Lists, not a tensor. It should be padded later.)
         5 (Optional): A mapping of label ID to counts in the dataset.
         6. Mapping[str, int]: A map between the labels and their indexes
         7. Mapping[str, int]: A map between the UPOS tags and their corresponding IDs found in the UPOS batches
@@ -45,21 +45,24 @@ def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool
 
         for idx, sentence in enumerate(sentences_data):
             # TODO Could replace this with sentence.values(), but need to know if Stanza requires Python 3.7 or later for backward compatability reasons
-            words, target_idx, target_upos, label = sentence.get("words"), sentence.get("index"), sentence.get("upos"), sentence.get("lemma")   
-            if None in [words, target_idx, target_upos, label]:
+            words, target_idx, upos_tags, label = sentence.get("words"), sentence.get("index"), sentence.get("upos_tags"), sentence.get("lemma")   
+            if None in [words, target_idx, upos_tags, label]:
                 raise ValueError(f"Expected data to be complete but found a null value in sentence {idx}: {sentence}")
             
             label_id = label_decoder.get(label, None)
             if label_id is None:
                 label_decoder[label] = len(label_decoder)  # create a new ID for the unknown label
 
-            upos_id = upos_to_id.get(target_upos, None)
-            if upos_id is None:
-                upos_to_id[target_upos] = len(upos_to_id)  # create a new ID for the unknown upos tag
+            converted_upos_tags = []  # convert upos tags to upos IDs
+            for upos_tag in upos_tags:
+                upos_id = upos_to_id.get(upos_tag, None)
+                if upos_id is None: 
+                    upos_to_id[upos_tag] = len(upos_to_id)  # create a new ID for the unknown UPOS tag
+                converted_upos_tags.append(upos_to_id[upos_tag])
 
             sentences.append(words)
             indices.append(target_idx)
-            upos_ids.append(upos_to_id[target_upos])
+            upos_ids.append(converted_upos_tags)
             labels.append(label_decoder[label])
 
             if get_counts:
@@ -67,7 +70,7 @@ def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool
 
     sentence_batches = [sentences[i: i + batch_size] for i in range(0, len(sentences), batch_size)]
     indices_batches = [torch.tensor(indices[i: i + batch_size]) for i in range(0, len(indices), batch_size)]
-    upos_batches = [torch.tensor(upos_ids[i: i + batch_size]) for i in range(0, len(upos_ids), batch_size)]
+    upos_batches = [upos_ids[i: i + batch_size] for i in range(0, len(upos_ids), batch_size)]
     labels_batches = [torch.tensor(labels[i: i + batch_size]) for i in range(0, len(labels), batch_size)]
     # TODO consider making the return object a JSON or a custom object for cleaner access instead of a big tuple of stuff
     return sentence_batches, indices_batches, upos_batches, labels_batches, counts, label_decoder, upos_to_id
@@ -102,7 +105,7 @@ def get_device():
 
 
 def main():
-    default_test_path = os.path.join(os.path.dirname(__file__), "test_sets", "with_upos_processed_ewt_dev.txt")   # get the GUM stuff
+    default_test_path = os.path.join(os.path.dirname(__file__), "test_sets", "processed_ud_en", "combined_dev.txt")   # get the GUM stuff
     sentence_batches, indices_batches, upos_batches, _, counts, _, _ = load_dataset(default_test_path, get_counts=True)
     print(upos_batches)
     print(counts)
