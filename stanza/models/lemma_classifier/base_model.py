@@ -76,7 +76,7 @@ class LemmaClassifier(ABC, nn.Module):
             # TODO: refactor loading the pretrain (also done in the trainer)
             pt = load_pretrain(args['wordvec_pretrain_file'])
             emb_matrix = pt.emb
-            embeddings = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix))
+            word_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix))
             vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pt.vocab) }
             vocab_size = emb_matrix.shape[0]
             embedding_dim = emb_matrix.shape[1]
@@ -88,7 +88,7 @@ class LemmaClassifier(ABC, nn.Module):
                                             hidden_dim=saved_args['hidden_dim'],
                                             output_dim=len(checkpoint['label_decoder']),
                                             vocab_map=vocab_map,
-                                            pt_embedding=embeddings,
+                                            pt_embedding=word_embeddings,
                                             label_decoder=checkpoint['label_decoder'],
                                             charlm=True,
                                             charlm_forward_file=saved_args['charlm_forward_file'],
@@ -100,7 +100,7 @@ class LemmaClassifier(ABC, nn.Module):
                                             hidden_dim=saved_args['hidden_dim'],
                                             output_dim=len(checkpoint['label_decoder']),
                                             vocab_map=vocab_map,
-                                            pt_embedding=embeddings,
+                                            pt_embedding=word_embeddings,
                                             label_decoder=checkpoint['label_decoder'])
         elif model_type is ModelType.TRANSFORMER:
             from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
