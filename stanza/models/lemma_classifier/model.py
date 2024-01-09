@@ -32,12 +32,14 @@ class LemmaClassifierLSTM(LemmaClassifier):
             charlm_backward_file (str): The path to the forward pass model for the character language model.
             upos_to_id (Mapping[str, int]): A dictionary mapping UPOS tag strings to their respective IDs
             upos_emb_dim (int): The size of the UPOS tag embeddings 
+            num_heads (int): The number of heads to use for attention. If there are more than 0 heads, attention will be used instead of the LSTM.
         
         Raises:
             FileNotFoundError: if the forward or backward charlm file cannot be found.
         """
         super(LemmaClassifierLSTM, self).__init__()
         self.input_size = 0
+        self.num_heads = kwargs.get('num_heads', 0)
         self.unsaved_modules = []
 
         def add_unsaved_module(name, module):
@@ -75,13 +77,19 @@ class LemmaClassifierLSTM(LemmaClassifier):
                                         embedding_dim=self.upos_emb_dim, 
                                          padding_idx=0)  
             self.input_size += self.upos_emb_dim
-            
-        self.lstm = nn.LSTM(
+        
+        # Determine if attn or LSTM should be used
+        if self.num_heads > 0:
+            self.multihead_attn = nn.MultiheadAttention(embed_dim=self.input_size, num_heads=self.num_heads)
+            logging.info(f"Using attention mechanism with embed dim {self.input_size} and {self.num_heads} attention heads.")
+        else:
+            self.lstm = nn.LSTM(
             self.input_size, 
             hidden_dim, 
             batch_first=True, 
             bidirectional=True
                         )
+            logging.info(f"Using LSTM mechanism.")
 
         self.mlp = nn.Sequential(
             nn.Linear(hidden_dim * 2, 64),
@@ -126,18 +134,23 @@ class LemmaClassifierLSTM(LemmaClassifier):
             embedded = torch.cat((embedded, char_reps_forward, char_reps_backward), 2)  
 
         padded_sequences = pad_sequence(embedded, batch_first=True)
-        lengths = torch.tensor([len(seq) for seq in embedded])
+        lengths = torch.tensor([len(seq) for seq in embedded])        
+        
+        if self.num_heads > 0:
+            mask = torch.arange(padded_sequences.size(1))[None, :] < torch.tensor(lengths)[:, None]
+            attn_output, attn_weights = self.multihead_attn(padded_sequences, padded_sequences, padded_sequences, mask=mask)
+            # Extract the hidden state at the index of the token to classify
+            token_reps = attn_output[torch.arange(attn_output.size(0)), pos_indices]
 
-        packed_sequences = pack_padded_sequence(padded_sequences, lengths, batch_first=True)
-            
-        lstm_out, (hidden, _) = self.lstm(packed_sequences)
-
-        # Extract the hidden state at the index of the token to classify
-        unpacked_lstm_outputs, _ = pad_packed_sequence(lstm_out, batch_first=True)
-        lstm_out = unpacked_lstm_outputs[torch.arange(unpacked_lstm_outputs.size(0)), pos_indices]
+        else:
+            packed_sequences = pack_padded_sequence(padded_sequences, lengths, batch_first=True)
+            lstm_out, (hidden, _) = self.lstm(packed_sequences)
+            # Extract the hidden state at the index of the token to classify
+            unpacked_lstm_outputs, _ = pad_packed_sequence(lstm_out, batch_first=True)
+            token_reps = unpacked_lstm_outputs[torch.arange(unpacked_lstm_outputs.size(0)), pos_indices]
 
         # MLP forward pass
-        output = self.mlp(lstm_out)
+        output = self.mlp(token_reps)
         return output
 
     def model_type(self):

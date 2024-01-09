@@ -29,7 +29,7 @@ class LemmaClassifierTrainer():
     Class to assist with training a LemmaClassifierLSTM
     """
 
-    def __init__(self, embedding_file: str, hidden_dim: int, use_charlm: bool = False, forward_charlm_file: str = None, backward_charlm_file: str = None, upos_emb_dim: int = 20, lr: float = 0.001, loss_func: str = None, eval_file: str = None):
+    def __init__(self, embedding_file: str, hidden_dim: int, use_charlm: bool = False, forward_charlm_file: str = None, backward_charlm_file: str = None, upos_emb_dim: int = 20, num_heads: int = 0, lr: float = 0.001, loss_func: str = None, eval_file: str = None):
         """
         Initializes the LemmaClassifierTrainer class.
         
@@ -40,6 +40,8 @@ class LemmaClassifierTrainer():
             eval_file (str): File used as dev set to evaluate which model gets saved
             forward_charlm_file (str): Path to the forward pass embeddings for the charlm 
             backward_charlm_file (str): Path to the backward pass embeddings for the charlm
+            upos_emb_dim (int): The dimension size of UPOS tag embeddings
+            num_heads (int): The number of attention heads to use.
             lr (float): Learning rate, defaults to 0.001.
             loss_func (str): Which loss function to use (either 'ce' or 'weighted_bce') 
 
@@ -70,6 +72,7 @@ class LemmaClassifierTrainer():
         self.use_charlm = use_charlm
         self.forward_charlm_file = forward_charlm_file
         self.backward_charlm_file = backward_charlm_file
+        self.num_heads = num_heads
         self.lr = lr
 
         # Find loss function
@@ -127,7 +130,7 @@ class LemmaClassifierTrainer():
 
         self.model = LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, self.hidden_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder,
                                          charlm=self.use_charlm, charlm_forward_file=self.forward_charlm_file, charlm_backward_file=self.backward_charlm_file,
-                                         upos_emb_dim=self.upos_emb_dim, upos_to_id=upos_to_id)
+                                         upos_emb_dim=self.upos_emb_dim, num_heads=self.num_heads, upos_to_id=upos_to_id)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.model.to(device)
@@ -189,6 +192,8 @@ def build_argparse():
     parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
     parser.add_argument("--charlm_backward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
     parser.add_argument("--upos_emb_dim", type=int, default=20, help="Dimension size for UPOS tag embeddings.")
+    parser.add_argument("--use_attn", action='store_true', dest='attn', default=False, help='Whether to use multihead attention instead of LSTM.')
+    parser.add_argument("--num_heads", type=int, default=0, help="Number of heads to use for multihead attention.")
     parser.add_argument("--save_name", type=str, default=path.join(path.dirname(__file__), "saved_models", "lemma_classifier_model_weighted_loss_charlm_new.pt"), help="Path to model save file")
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
@@ -208,6 +213,8 @@ def main(args=None):
     forward_charlm_file = args.charlm_forward_file
     backward_charlm_file = args.charlm_backward_file
     upos_emb_dim = args.upos_emb_dim
+    use_attention = args.attn 
+    num_heads = args.num_heads
     save_name = args.save_name 
     lr = args.lr
     batch_size = args.batch_size
@@ -234,6 +241,7 @@ def main(args=None):
                                      forward_charlm_file=forward_charlm_file,
                                      backward_charlm_file=backward_charlm_file,
                                      upos_emb_dim=upos_emb_dim,
+                                     num_heads=num_heads if use_attention else 0,
                                      lr=lr,
                                      loss_func="weighted_bce" if weighted_loss else "ce",
                                      )
