@@ -1,11 +1,12 @@
+from collections import Counter, defaultdict
+import os
+from typing import List, Tuple, Any, Mapping
+
 import stanza
 import torch
-import os
-import prepare_dataset
 
 from stanza.models.lemma_classifier.constants import DEFAULT_BATCH_SIZE
-from typing import List, Tuple, Any, Mapping
-from collections import Counter, defaultdict    
+import stanza.models.lemma_classifier.prepare_dataset as prepare_dataset
 
 
 def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool = False, label_decoder: dict = None) -> Tuple[List[List[str]], List[torch.Tensor], List[torch.Tensor], Mapping[int, int], Mapping[str, int]]:
