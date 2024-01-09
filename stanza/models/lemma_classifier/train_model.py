@@ -197,10 +197,10 @@ def build_argparse():
     parser.add_argument("--save_name", type=str, default=path.join(path.dirname(__file__), "saved_models", "lemma_classifier_model_weighted_loss_charlm_new.pt"), help="Path to model save file")
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
-    parser.add_argument("--batch_size", type=int, default=16, help="Number of examples to include in each batch")
-    parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(__file__), "test_sets", "combined_train.txt"), help="Full path to training file")
+    parser.add_argument("--batch_size", type=int, default=16, help="Number of examples to include in each batch"
+    parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(__file__), "data", "processed_ud_en", "combined_train.txt"), help="Full path to training file")
     parser.add_argument("--weighted_loss", action='store_true', dest='weighted_loss', default=False, help="Whether to use weighted loss during training.")
-    parser.add_argument("--eval_file", type=str, default=os.path.join(os.path.dirname(__file__), "test_sets", "combined_dev.txt"), help="Path to dev file used to evaluate model for saves")
+    parser.add_argument("--eval_file", type=str, default=os.path.join(os.path.dirname(__file__), "data", "processed_ud_en", "combined_dev.txt"), help="Path to dev file used to evaluate model for saves")
     return parser
 
 def main(args=None):
