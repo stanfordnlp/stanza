@@ -17,7 +17,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
         From the LSTM output, we get the embedding fo the specific token that we classify on. That embedding 
         is fed into an MLP for classification.
     """
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, vocab_map, pt_embedding, label_decoder, **kwargs):
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, vocab_map, pt_embedding, label_decoder, **kwargs):  
         """
         Args:
             vocab_size (int): Size of the vocab being used (if custom vocab)
@@ -30,6 +30,8 @@ class LemmaClassifierLSTM(LemmaClassifier):
             charlm (bool): Whether or not to use the charlm embeddings
             charlm_forward_file (str): The path to the forward pass model for the character language model
             charlm_backward_file (str): The path to the forward pass model for the character language model.
+            upos_to_id (Mapping[str, int]): A dictionary mapping UPOS tag strings to their respective IDs
+            upos_emb_dim (int): The size of the UPOS tag embeddings 
         
         Raises:
             FileNotFoundError: if the forward or backward charlm file cannot be found.
@@ -66,6 +68,15 @@ class LemmaClassifierLSTM(LemmaClassifier):
             
             self.input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
         
+        # TODO add POS embeddings, take upos_to_id map, and embedding dim
+        self.upos_emb_dim = kwargs.get("upos_emb_dim", 0)
+        self.upos_to_id = kwargs.get("upos_to_id", None)
+        if self.upos_emb_dim > 0 and self.upos_to_id is not None:
+            self.upos_emb = nn.Embedding(num_embeddings=len(self.upos_to_id), 
+                                        embedding_dim=self.upos_emb_dim, 
+                                        padding_idx=-1)  
+            self.input_size += self.upos_emb_dim * 2
+
         self.lstm = nn.LSTM(
             self.input_size, 
             hidden_dim, 
@@ -79,26 +90,37 @@ class LemmaClassifierLSTM(LemmaClassifier):
             nn.Linear(64, output_dim)
         )
 
-    def forward(self, pos_indices: List[int], sentences: List[List[str]]):
+    def forward(self, pos_indices: List[int], sentences: List[List[str]], upos_tags: List[List[int]]):  
         """
         Computes the forward pass of the neural net
 
         Args:
             pos_indices (List[int]): A list of the position index of the target token for lemmatization classification in each sentence.
             sentences (List[List[str]]): A list of the token-split sentences of the input data.
+            upos_tags (List[List[int]]): A list of the upos tags for each token in every sentence.
 
         Returns:
             torch.tensor: Output logits of the neural network, where the shape is  (n, output_size) where n is the number of sentences.
         """
+        device = next(self.parameters()).device
         token_ids = []
         for words in sentences:
             sentence_token_ids = [self.vocab_map.get(word.lower(), UNK_ID) for word in words]
-            sentence_token_ids = torch.tensor(sentence_token_ids, device=next(self.parameters()).device)
+            sentence_token_ids = torch.tensor(sentence_token_ids, device=device)
             token_ids.append(sentence_token_ids)
 
         token_ids = pad_sequence(token_ids, batch_first=True)
         embedded = self.embedding(token_ids)
 
+        if self.upos_emb_dim > 0:
+            upos_tags = [torch.tensor(sentence_tags) for sentence_tags in upos_tags]  # convert internal lists to tensors
+            upos_tags = pad_sequence(upos_tags, batch_first=True, padding_value=-1).to(device)   # padding val -1 because there is already index value 0
+            print(f"UPOS tag embeddings: shape is {upos_tags.shape}  (should be (batch_size, T, self.upos_emb_dim))")
+            # upos_tags is now a tensor and should have shape (batch_size, T, self.upos_emb_dim)
+            pos_emb = self.upos_emb(upos_tags)
+            embedded = torch.cat((embedded, pos_emb), 2)
+            print(f"Embbeded shape after using POS tags: {embedded.shape}")
+            
         if self.use_charlm:
             char_reps_forward = self.charmodel_forward.build_char_representation(sentences)  # takes [[str]]
             char_reps_backward = self.charmodel_backward.build_char_representation(sentences)

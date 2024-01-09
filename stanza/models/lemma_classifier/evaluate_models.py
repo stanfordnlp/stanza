@@ -21,6 +21,7 @@ import torch.nn as nn
 import stanza
 
 from stanza.models.common.utils import default_device
+from stanza.models.lemma_classifier.constants import ModelType
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.base_model import LemmaClassifier
 from stanza.models.lemma_classifier.model import LemmaClassifierLSTM
@@ -107,7 +108,7 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
     return multi_class_result, confusion, weighted_f1   
 
 
-def model_predict(model: nn.Module, position_indices: torch.Tensor, sentences: List[List[str]]) -> torch.Tensor:
+def model_predict(model: nn.Module, position_indices: torch.Tensor, sentences: List[List[str]], upos_tags: List[List[int]]=[]) -> torch.Tensor:
     """
     A LemmaClassifierLSTM or LemmaClassifierWithTransformer is used to predict on a single text example, given the position index of the target token.
 
@@ -120,7 +121,10 @@ def model_predict(model: nn.Module, position_indices: torch.Tensor, sentences: L
         (int): The index of the predicted class in `model`'s output.
     """
     with torch.no_grad():
-        logits = model(position_indices, sentences)  # should be size (batch_size, output_size)
+        if model.model_type is ModelType.LSTM:
+            logits = model(position_indices, sentences, upos_tags)
+        else:
+            logits = model(position_indices, sentences)  # should be size (batch_size, output_size)
         predicted_class = torch.argmax(logits, dim=1)  # should be size (batch_size, 1)
     
     return predicted_class
@@ -160,7 +164,7 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
     gold_tags, pred_tags = label_batches, []
     
     # run eval on each example from dataset
-    for sentences, pos_indices, labels in tqdm(zip(text_batches, index_batches, label_batches), "Evaluating examples from data file", total=len(text_batches)):
+    for sentences, pos_indices, upos_tags, labels in tqdm(zip(text_batches, index_batches, upos_tags, label_batches), "Evaluating examples from data file", total=len(text_batches)):
         pred = model_predict(model, pos_indices, sentences)  # Pred should be size (batch_size, )
         correct_preds = pred == labels
         correct += torch.sum(correct_preds)

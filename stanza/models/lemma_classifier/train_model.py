@@ -29,7 +29,7 @@ class LemmaClassifierTrainer():
     Class to assist with training a LemmaClassifierLSTM
     """
 
-    def __init__(self, embedding_file: str, hidden_dim: int, use_charlm: bool = False, forward_charlm_file: str = None, backward_charlm_file: str = None, lr: float = 0.001, loss_func: str = None, eval_file: str = None):
+    def __init__(self, embedding_file: str, hidden_dim: int, use_charlm: bool = False, forward_charlm_file: str = None, backward_charlm_file: str = None, upos_emb_dim: int = 20, lr: float = 0.001, loss_func: str = None, eval_file: str = None):
         """
         Initializes the LemmaClassifierTrainer class.
         
@@ -38,8 +38,6 @@ class LemmaClassifierTrainer():
             hidden_dim (int): Size of hidden vectors in LSTM layers
             use_charlm (bool, optional): Whether to use charlm embeddings as well. Defaults to False.
             eval_file (str): File used as dev set to evaluate which model gets saved
-
-        Kwargs:
             forward_charlm_file (str): Path to the forward pass embeddings for the charlm 
             backward_charlm_file (str): Path to the backward pass embeddings for the charlm
             lr (float): Learning rate, defaults to 0.001.
@@ -50,6 +48,7 @@ class LemmaClassifierTrainer():
             FileNotFoundError: If the backward charlm file is not present
         """
         self.hidden_dim = hidden_dim
+        self.upos_emb_dim = upos_emb_dim
 
         # Load word embeddings
         pt = load_pretrain(embedding_file)
@@ -118,6 +117,7 @@ class LemmaClassifierTrainer():
         device = default_device() # Put model on GPU (if possible)
 
         train_path = kwargs.get("train_path")
+        upos_to_id = {}
         if train_path:  # use file to train model
             text_batches, idx_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(train_path, get_counts=self.weighted_loss)  # TODO configure batch sizes
             self.output_dim = len(label_decoder)
@@ -125,7 +125,8 @@ class LemmaClassifierTrainer():
             logging.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
 
         self.model = LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, self.hidden_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder,
-                                         charlm=self.use_charlm, charlm_forward_file=self.forward_charlm_file, charlm_backward_file=self.backward_charlm_file)
+                                         charlm=self.use_charlm, charlm_forward_file=self.forward_charlm_file, charlm_backward_file=self.backward_charlm_file,
+                                         upos_emb_dim=self.upos_emb_dim, upos_to_id=upos_to_id)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.model.to(device)
@@ -146,10 +147,10 @@ class LemmaClassifierTrainer():
         logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
-            for texts, positions, labels in tqdm(zip(text_batches, idx_batches, label_batches), total=len(text_batches)):  
+            for texts, positions, upos_tags, labels in tqdm(zip(text_batches, idx_batches, upos_batches, label_batches), total=len(text_batches)):  
 
                 self.optimizer.zero_grad()
-                output = self.model(positions, texts)
+                output = self.model(positions, texts, upos_tags)
 
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
