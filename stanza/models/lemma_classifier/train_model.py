@@ -187,6 +187,7 @@ def build_argparse():
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
     parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
     parser.add_argument("--charlm_backward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
+    parser.add_argument("--upos_emb_dim", type=int, default=20, help="Dimension size for UPOS tag embeddings.")
     parser.add_argument("--save_name", type=str, default=path.join(path.dirname(__file__), "saved_models", "lemma_classifier_model_weighted_loss_charlm_new.pt"), help="Path to model save file")
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
@@ -204,6 +205,7 @@ def main(args=None):
     use_charlm = args.use_charlm
     forward_charlm_file = args.charlm_forward_file
     backward_charlm_file = args.charlm_backward_file
+    upos_emb_dim = args.upos_emb_dim
     save_name = args.save_name 
     lr = args.lr
     num_epochs = args.num_epochs
@@ -228,6 +230,7 @@ def main(args=None):
                                      use_charlm=use_charlm,
                                      forward_charlm_file=forward_charlm_file,
                                      backward_charlm_file=backward_charlm_file,
+                                     upos_emb_dim=upos_emb_dim,
                                      lr=lr,
                                      loss_func="weighted_bce" if weighted_loss else "ce",
                                      )
