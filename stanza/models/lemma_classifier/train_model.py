@@ -111,7 +111,8 @@ class LemmaClassifierTrainer():
             save_name (str): Path to file where trained model should be saved. 
 
         Kwargs:
-            train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line.         
+            train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line.      
+            batch_size (int): Number of examples to include in each batch.   
         """
         
         device = default_device() # Put model on GPU (if possible)
@@ -119,7 +120,7 @@ class LemmaClassifierTrainer():
         train_path = kwargs.get("train_path")
         upos_to_id = {}
         if train_path:  # use file to train model
-            text_batches, idx_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(train_path, get_counts=self.weighted_loss)  # TODO configure batch sizes
+            text_batches, idx_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(train_path, get_counts=self.weighted_loss, batch_size=kwargs.get("batch_size", DEFAULT_BATCH_SIZE)) 
             self.output_dim = len(label_decoder)
             logging.info(f"Loaded dataset successfully from {train_path}")
             logging.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
@@ -191,6 +192,7 @@ def build_argparse():
     parser.add_argument("--save_name", type=str, default=path.join(path.dirname(__file__), "saved_models", "lemma_classifier_model_weighted_loss_charlm_new.pt"), help="Path to model save file")
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
+    parser.add_argument("--batch_size", type=int, default=16, help="Number of examples to include in each batch")
     parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(__file__), "test_sets", "combined_train.txt"), help="Full path to training file")
     parser.add_argument("--weighted_loss", action='store_true', dest='weighted_loss', default=False, help="Whether to use weighted loss during training.")
     parser.add_argument("--eval_file", type=str, default=os.path.join(os.path.dirname(__file__), "test_sets", "combined_dev.txt"), help="Path to dev file used to evaluate model for saves")
@@ -208,6 +210,7 @@ def main(args=None):
     upos_emb_dim = args.upos_emb_dim
     save_name = args.save_name 
     lr = args.lr
+    batch_size = args.batch_size
     num_epochs = args.num_epochs
     train_file = args.train_file
     weighted_loss = args.weighted_loss
@@ -236,7 +239,7 @@ def main(args=None):
                                      )
 
     trainer.train(
-        num_epochs=num_epochs, save_name=save_name, args=args, train_path=train_file, eval_file=eval_file
+        num_epochs=num_epochs, save_name=save_name, args=args, eval_file=eval_file, train_path=train_file, batch_size=batch_size
     )
 
 if __name__ == "__main__":
