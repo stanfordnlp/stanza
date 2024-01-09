@@ -68,7 +68,6 @@ class LemmaClassifierLSTM(LemmaClassifier):
             
             self.input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
         
-        # TODO add POS embeddings, take upos_to_id map, and embedding dim
         self.upos_emb_dim = kwargs.get("upos_emb_dim", 0)
         self.upos_to_id = kwargs.get("upos_to_id", None)
         if self.upos_emb_dim > 0 and self.upos_to_id is not None:
