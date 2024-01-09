@@ -121,7 +121,7 @@ def model_predict(model: nn.Module, position_indices: torch.Tensor, sentences: L
         (int): The index of the predicted class in `model`'s output.
     """
     with torch.no_grad():
-        if model.model_type is ModelType.LSTM:
+        if model.model_type() == ModelType.LSTM:
             logits = model(position_indices, sentences, upos_tags)
         else:
             logits = model(position_indices, sentences)  # should be size (batch_size, output_size)
@@ -164,9 +164,9 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
     gold_tags, pred_tags = label_batches, []
     
     # run eval on each example from dataset
-    for sentences, pos_indices, upos_tags, labels in tqdm(zip(text_batches, index_batches, upos_tags, label_batches), "Evaluating examples from data file", total=len(text_batches)):
-        pred = model_predict(model, pos_indices, sentences)  # Pred should be size (batch_size, )
-        correct_preds = pred == labels
+    for sentences, pos_indices, upos_tags, labels in tqdm(zip(text_batches, index_batches, upos_batches, label_batches), "Evaluating examples from data file", total=len(text_batches)):
+        pred = model_predict(model, pos_indices, sentences, upos_tags)  # Pred should be size (batch_size, )
+        correct_preds = pred == labels.to(device)
         correct += torch.sum(correct_preds)
         total += len(correct_preds)
         pred_tags += [pred.tolist()]  
@@ -178,6 +178,7 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
     # add brackets around batches of gold and pred tags because each batch is an element within the sequences in this helper
     if verbose:
         logging.info(f"Accuracy: {accuracy} ({correct}/{total})")
+        logging.info(f"Label decoder: {label_decoder}")
     
     return mc_results, confusion, accuracy, weighted_f1
 
