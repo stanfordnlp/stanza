@@ -159,7 +159,7 @@ class LemmaClassifierTrainer():
                     # should be shape size (batch_size, 2)
 
                 else:  # CELoss accepts target as just raw label
-                    targets = labels
+                    targets = labels.to(device)
 
                 loss = self.criterion(output, targets)
 
