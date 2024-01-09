@@ -74,9 +74,9 @@ class LemmaClassifierLSTM(LemmaClassifier):
         if self.upos_emb_dim > 0 and self.upos_to_id is not None:
             self.upos_emb = nn.Embedding(num_embeddings=len(self.upos_to_id), 
                                         embedding_dim=self.upos_emb_dim, 
-                                        padding_idx=-1)  
-            self.input_size += self.upos_emb_dim * 2
-
+                                         padding_idx=0)  
+            self.input_size += self.upos_emb_dim
+            
         self.lstm = nn.LSTM(
             self.input_size, 
             hidden_dim, 
@@ -111,15 +111,11 @@ class LemmaClassifierLSTM(LemmaClassifier):
 
         token_ids = pad_sequence(token_ids, batch_first=True)
         embedded = self.embedding(token_ids)
-
         if self.upos_emb_dim > 0:
             upos_tags = [torch.tensor(sentence_tags) for sentence_tags in upos_tags]  # convert internal lists to tensors
-            upos_tags = pad_sequence(upos_tags, batch_first=True, padding_value=-1).to(device)   # padding val -1 because there is already index value 0
-            print(f"UPOS tag embeddings: shape is {upos_tags.shape}  (should be (batch_size, T, self.upos_emb_dim))")
-            # upos_tags is now a tensor and should have shape (batch_size, T, self.upos_emb_dim)
+            upos_tags = pad_sequence(upos_tags, batch_first=True, padding_value=0).to(device)   
             pos_emb = self.upos_emb(upos_tags)
-            embedded = torch.cat((embedded, pos_emb), 2)
-            print(f"Embbeded shape after using POS tags: {embedded.shape}")
+            embedded = torch.cat((embedded, pos_emb), 2).to(device)
             
         if self.use_charlm:
             char_reps_forward = self.charmodel_forward.build_char_representation(sentences)  # takes [[str]]
