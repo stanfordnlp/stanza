@@ -14,15 +14,16 @@ class UnknownDatasetError(ValueError):
         super().__init__(text)
         self.dataset = dataset
 
-def process_treebank(paths, short_name, word, upos, allowed_lemmas):
+def process_treebank(paths, short_name, word, upos, allowed_lemmas, sections=SECTIONS):
     treebank = short_name_to_treebank(short_name)
     udbase_dir = paths["UDBASE"]
 
-    # TODO: make this a path in default_paths
-    output_dir = os.path.join("data", "lemma_classifier")
+    output_dir = paths["LEMMA_CLASSIFIER_DATA_DIR"]
     os.makedirs(output_dir, exist_ok=True)
 
-    for section in SECTIONS:
+    output_filenames = []
+
+    for section in sections:
         filename = find_treebank_dataset_file(treebank, udbase_dir, section, "conllu", fail=True)
         output_filename = os.path.join(output_dir, "%s.%s.lemma" % (short_name, section))
         args = ["--conll_path", filename,
@@ -32,6 +33,9 @@ def process_treebank(paths, short_name, word, upos, allowed_lemmas):
         if allowed_lemmas is not None:
             args.extend(["--allowed_lemmas", allowed_lemmas])
         prepare_dataset.main(args)
+        output_filenames.append(output_filename)
+
+    return output_filenames
 
 def process_ja_gsd(paths, short_name):
     # this one looked promising, but only has 10 total dev & test cases
