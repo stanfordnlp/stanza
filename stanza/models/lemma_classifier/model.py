@@ -141,8 +141,9 @@ class LemmaClassifierLSTM(LemmaClassifier):
         lengths = torch.tensor([len(seq) for seq in embedded])        
         
         if self.num_heads > 0:
-            mask = torch.arange(padded_sequences.size(1))[None, :] < torch.tensor(lengths)[:, None]
-            attn_output, attn_weights = self.multihead_attn(padded_sequences, padded_sequences, padded_sequences, mask=mask)
+            target_seq_length, src_seq_length = padded_sequences.size(1), padded_sequences.size(1)
+            attn_mask = torch.triu(torch.ones(target_seq_length, src_seq_length, dtype=torch.bool), diagonal=1)
+            attn_output, attn_weights = self.multihead_attn(padded_sequences, padded_sequences, padded_sequences, attn_mask=attn_mask)
             # Extract the hidden state at the index of the token to classify
             token_reps = attn_output[torch.arange(attn_output.size(0)), pos_indices]
 
