@@ -7,7 +7,7 @@ The BaselineModel class can be updated to any arbitrary token and predicton lemm
 import stanza
 import os
 from evaluate_models import evaluate_sequences
-from prepare_dataset import load_doc_from_conll_file
+from stanza.models.lemma_classifier.prepare_dataset import load_doc_from_conll_file
 
 class BaselineModel:
 
