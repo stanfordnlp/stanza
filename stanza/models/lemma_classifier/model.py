@@ -81,10 +81,11 @@ class LemmaClassifierLSTM(LemmaClassifier):
                                         embedding_dim=self.upos_emb_dim, 
                                          padding_idx=0)  
             self.input_size += self.upos_emb_dim
-        
+
+        device = next(self.parameters()).device
         # Determine if attn or LSTM should be used
         if self.num_heads > 0:
-            self.multihead_attn = nn.MultiheadAttention(embed_dim=self.input_size, num_heads=self.num_heads)
+            self.multihead_attn = nn.MultiheadAttention(embed_dim=self.input_size, num_heads=self.num_heads, batch_first=True).to(device)
             logging.info(f"Using attention mechanism with embed dim {self.input_size} and {self.num_heads} attention heads.")
         else:
             self.lstm = nn.LSTM(
@@ -95,8 +96,9 @@ class LemmaClassifierLSTM(LemmaClassifier):
                         )
             logging.info(f"Using LSTM mechanism.")
 
+        mlp_input_size = hidden_dim * 2 if self.num_heads == 0 else self.input_size
         self.mlp = nn.Sequential(
-            nn.Linear(hidden_dim * 2, 64),
+            nn.Linear(mlp_input_size, 64),
             nn.ReLU(),
             nn.Linear(64, output_dim)
         )
@@ -114,6 +116,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
             torch.tensor: Output logits of the neural network, where the shape is  (n, output_size) where n is the number of sentences.
         """
         device = next(self.parameters()).device
+        batch_size = len(sentences)
         token_ids = []
         for words in sentences:
             sentence_token_ids = [self.vocab_map.get(word.lower(), UNK_ID) for word in words]
@@ -142,7 +145,11 @@ class LemmaClassifierLSTM(LemmaClassifier):
         
         if self.num_heads > 0:
             target_seq_length, src_seq_length = padded_sequences.size(1), padded_sequences.size(1)
-            attn_mask = torch.triu(torch.ones(target_seq_length, src_seq_length, dtype=torch.bool), diagonal=1)
+            attn_mask = torch.triu(torch.ones(batch_size * self.num_heads, target_seq_length, src_seq_length, dtype=torch.bool), diagonal=1)
+
+            attn_mask = attn_mask.view(batch_size, self.num_heads, target_seq_length, src_seq_length)
+            attn_mask = attn_mask.repeat(1, 1, 1, 1).view(batch_size * self.num_heads, target_seq_length, src_seq_length).to(device)
+            
             attn_output, attn_weights = self.multihead_attn(padded_sequences, padded_sequences, padded_sequences, attn_mask=attn_mask)
             # Extract the hidden state at the index of the token to classify
             token_reps = attn_output[torch.arange(attn_output.size(0)), pos_indices]
