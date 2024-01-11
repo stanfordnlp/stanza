@@ -76,6 +76,23 @@ class CoNLL:
         return doc_dict, doc_empty
 
     @staticmethod
+    def convert_dict(doc_dict):
+        """ Convert the dictionary format input data to the CoNLL-U format output data.
+
+        This is the reverse function of `convert_conll`, but does not include sentence level annotations or comments.
+
+        Can call this on a Document using `CoNLL.convert_dict(doc.to_dict())`
+
+        Input: dictionary format data, which is a list of list of dictionaries for each token in each sentence in the data.
+        Output: CoNLL-U format data as a list of list of list for each token in each sentence in the data.
+        """
+        doc = Document(doc_dict)
+        text = "{:c}".format(doc)
+        sentences = text.split("\n\n")
+        doc_conll = [[x.split("\t") for x in sentence.split("\n")] for sentence in sentences]
+        return doc_conll
+
+    @staticmethod
     def convert_conll_token(token_conll):
         """ Convert the CoNLL-U format input token to the dictionary format output token.
         Input: a list of all CoNLL-U fields for the token.
