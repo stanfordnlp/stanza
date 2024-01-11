@@ -206,7 +206,7 @@ def main(args=None):
     trainer = TransformerBaselineTrainer(transformer_name=args['bert_model'], loss_func=loss_fn, lr=lr)
 
     trainer.train(num_epochs=num_epochs, save_name=save_name, train_path=train_file, args=args, eval_file=eval_file)
-
+    return trainer
 
 if __name__ == "__main__":
     main()

@@ -250,6 +250,8 @@ def main(args=None):
         num_epochs=num_epochs, save_name=save_name, args=args, eval_file=eval_file, train_path=train_file, batch_size=batch_size
     )
 
+    return trainer
+
 if __name__ == "__main__":
     main()
 
