@@ -45,7 +45,7 @@ def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool
         sentences, indices, labels, upos_ids, counts, upos_to_id = [], [], [], [], Counter(), defaultdict(str)
         for i, line in enumerate(f.readlines()):
             split = line.split(" ")
-            num_tokens = split[-1]
+            num_tokens = int(split[-1])
             sentence = split[: num_tokens]
             upos_tags = split[num_tokens: num_tokens * 2]
             tgt_idx = int(split[-3])
