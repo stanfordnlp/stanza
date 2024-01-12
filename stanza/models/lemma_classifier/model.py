@@ -85,6 +85,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
         device = next(self.parameters()).device
         # Determine if attn or LSTM should be used
         if self.num_heads > 0:
+            self.input_size = utils.round_up_to_multiple(self.input_size, self.num_heads)
             self.multihead_attn = nn.MultiheadAttention(embed_dim=self.input_size, num_heads=self.num_heads, batch_first=True).to(device)
             logging.info(f"Using attention mechanism with embed dim {self.input_size} and {self.num_heads} attention heads.")
         else:

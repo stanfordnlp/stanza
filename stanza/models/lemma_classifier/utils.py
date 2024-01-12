@@ -105,6 +105,22 @@ def get_device():
     return device
 
 
+def round_up_to_multiple(number, multiple):
+    if multiple == 0:
+        return "Error: The second number (multiple) cannot be zero."
+
+    # Calculate the remainder when dividing the number by the multiple
+    remainder = number % multiple
+
+    # If remainder is non-zero, round up to the next multiple
+    if remainder != 0:
+        rounded_number = number + (multiple - remainder)
+    else:
+        rounded_number = number  # No rounding needed
+
+    return rounded_number
+
+
 def main():
     default_test_path = os.path.join(os.path.dirname(__file__), "test_sets", "processed_ud_en", "combined_dev.txt")   # get the GUM stuff
     sentence_batches, indices_batches, upos_batches, _, counts, _, upos_to_id = load_dataset(default_test_path, get_counts=True)
