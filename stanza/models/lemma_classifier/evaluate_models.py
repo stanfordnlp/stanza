@@ -50,7 +50,7 @@ def get_weighted_f1(mcc_results: Mapping[int, Mapping[str, float]], confusion: M
     return weighted_f1 / num_total_examples
 
 
-def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: List[List[Any]], verbose=True):
+def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: List[List[Any]], label_decoder: Mapping, verbose=True):
     """
     Evaluates a model's predicted tags against a set of gold tags. Computes precision, recall, and f1 for all classes.
 
@@ -68,12 +68,13 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
     f"Length of gold tag sequences is {len(gold_tag_sequences)}, while length of predicted tag sequence is {len(pred_tag_sequences)}"        
     
     confusion = defaultdict(lambda: defaultdict(int))
-    
+
+    reverse_label_decoder = {y: x for x, y in label_decoder.items()}
     for gold_tags, pred_tags in tqdm(zip(gold_tag_sequences, pred_tag_sequences), "Evaluating sequences", total=len(gold_tag_sequences)):
 
         assert len(gold_tags) == len(pred_tags), f"Number of gold tags doesn't match number of predicted tags ({len(gold_tags)}, {len(pred_tags)})"
         for gold, pred in zip(gold_tags, pred_tags):
-            confusion[gold.item()][pred] += 1
+            confusion[reverse_label_decoder[gold.item()]][reverse_label_decoder[pred]] += 1
 
     multi_class_result = defaultdict(lambda: defaultdict(float))
     # compute precision, recall and f1 for each class and store inside of `multi_class_result`
@@ -175,7 +176,7 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
     logging.info("Finished evaluating on dataset. Computing scores...")
     accuracy = correct / total
 
-    mc_results, confusion, weighted_f1 = evaluate_sequences(gold_tags, pred_tags, verbose=verbose) 
+    mc_results, confusion, weighted_f1 = evaluate_sequences(gold_tags, pred_tags, label_decoder, verbose=verbose)
     # add brackets around batches of gold and pred tags because each batch is an element within the sequences in this helper
     if verbose:
         logging.info(f"Accuracy: {accuracy} ({correct}/{total})")
