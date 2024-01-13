@@ -104,6 +104,17 @@ class LemmaClassifierLSTM(LemmaClassifier):
             nn.Linear(64, output_dim)
         )
 
+    def get_save_dict(self, args):
+        # TODO: include UPOS
+        # TODO: *don't* save the charlm
+        save_dict = {
+            "params": self.state_dict(),
+            "label_decoder": self.label_decoder,
+            "model_type": self.model_type(),
+            "args": args,
+        }
+        return save_dict
+
     def forward(self, pos_indices: List[int], sentences: List[List[str]], upos_tags: List[List[int]]):  
         """
         Computes the forward pass of the neural net

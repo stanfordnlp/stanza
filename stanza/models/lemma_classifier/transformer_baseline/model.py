@@ -45,6 +45,16 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
         )
         self.label_decoder = label_decoder
 
+    def get_save_dict(self, args):
+        # TODO: *don't* save the transformer
+        save_dict = {
+            "params": self.state_dict(),
+            "label_decoder": self.label_decoder,
+            "model_type": self.model_type(),
+            "args": args,
+        }
+        return save_dict
+
     def forward(self, idx_positions: List[int], sentences: List[List[str]]):
         """
 

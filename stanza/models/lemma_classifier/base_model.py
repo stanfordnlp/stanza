@@ -31,14 +31,9 @@ class LemmaClassifier(ABC, nn.Module):
         save_dir = os.path.split(save_name)[0]
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
-        state_dict = {
-            "params": self.state_dict(),
-            "label_decoder": self.label_decoder,
-            "model_type": self.model_type(),
-            "args": args,
-        }
-        torch.save(state_dict, save_name)
-        return state_dict
+        save_dict = self.get_save_dict(args)
+        torch.save(save_dict, save_name)
+        return save_dict
 
     @abstractmethod
     def model_type(self):
