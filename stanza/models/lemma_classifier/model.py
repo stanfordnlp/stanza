@@ -78,7 +78,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
         self.upos_to_id = kwargs.get("upos_to_id", None)
         if self.upos_emb_dim > 0 and self.upos_to_id is not None:
             self.upos_emb = nn.Embedding(num_embeddings=len(self.upos_to_id), 
-                                        embedding_dim=self.upos_emb_dim, 
+                                         embedding_dim=self.upos_emb_dim,
                                          padding_idx=0)  
             self.input_size += self.upos_emb_dim
 
@@ -105,13 +105,13 @@ class LemmaClassifierLSTM(LemmaClassifier):
         )
 
     def get_save_dict(self, args):
-        # TODO: include UPOS
         # TODO: *don't* save the charlm
         save_dict = {
             "params": self.state_dict(),
             "label_decoder": self.label_decoder,
             "model_type": self.model_type(),
             "args": args,
+            "upos_to_id": self.upos_to_id,
         }
         return save_dict
 
