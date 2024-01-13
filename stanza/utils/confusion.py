@@ -46,7 +46,7 @@ def format_confusion(confusion, labels=None, hide_zeroes=False, hide_blank=False
         else:
             had_O = False
 
-        if not all(len(x) > 2 and x[0] in ('B', 'I', 'E', 'S') and x[1] in ('-', '_') for x in labels):
+        if not all(isinstance(x, str) and len(x) > 2 and x[0] in ('B', 'I', 'E', 'S') and x[1] in ('-', '_') for x in labels):
             labels = sorted(labels)
         else:
             # sort first by the body of the lable, then by BEIS
@@ -85,7 +85,7 @@ def format_confusion(confusion, labels=None, hide_zeroes=False, hide_blank=False
         gold_labels = labels
         pred_labels = labels
 
-    columnwidth = max([len(x) for x in pred_labels] + [5])  # 5 is value length
+    columnwidth = max([len(str(x)) for x in pred_labels] + [5])  # 5 is value length
     empty_cell = " " * columnwidth
 
     # If the numbers are all ints, no need to include the .0 at the end of each entry
@@ -124,12 +124,12 @@ def format_confusion(confusion, labels=None, hide_zeroes=False, hide_blank=False
         fst_empty_cell = " " * (len(empty_cell) - len(fst_empty_cell)) + fst_empty_cell
     header = "    " + fst_empty_cell + " "
     for label in pred_labels:
-        header = header + "%{0}s ".format(columnwidth) % label
+        header = header + "%{0}s ".format(columnwidth) % str(label)
     text = [header.rstrip()]
 
     # Print rows
     for i, label1 in enumerate(gold_labels):
-        row = "    %{0}s ".format(columnwidth) % label1
+        row = "    %{0}s ".format(columnwidth) % str(label1)
         for j, label2 in enumerate(pred_labels):
             confusion_cell = confusion.get(label1, {}).get(label2, 0)
             cell = format_cell(confusion_cell)
