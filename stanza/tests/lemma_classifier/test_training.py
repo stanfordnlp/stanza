@@ -6,6 +6,7 @@ import pytest
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 from stanza.models.lemma_classifier import train_model
+from stanza.models.lemma_classifier.base_model import LemmaClassifier
 from stanza.models.lemma_classifier.evaluate_models import evaluate_model
 from stanza.models.lemma_classifier.transformer_baseline import baseline_trainer
 
@@ -28,6 +29,8 @@ def test_train_lstm(tmp_path, pretrain_file):
                   '--train_file', train_file,
                   '--eval_file', eval_file]
     trainer = train_model.main(train_args)
+
+    model = LemmaClassifier.load(save_name, None)
     evaluate_model(trainer.model, eval_file)
 
 def test_train_transformer(tmp_path, pretrain_file):

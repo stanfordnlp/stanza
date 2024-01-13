@@ -65,11 +65,11 @@ class LemmaClassifier(ABC, nn.Module):
             # the file paths might be relevant, though
             keep_args = ['wordvec_pretrain_file', 'charlm_forward_file', 'charlm_backward_file']
             for arg in keep_args:
-                if args.get(arg, None) is not None:
+                if args is not None and args.get(arg, None) is not None:
                     saved_args[arg] = args[arg]
 
             # TODO: refactor loading the pretrain (also done in the trainer)
-            pt = load_pretrain(args['wordvec_pretrain_file'])
+            pt = load_pretrain(saved_args['wordvec_pretrain_file'])
             emb_matrix = pt.emb
             word_embeddings = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix))
             vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pt.vocab) }
@@ -98,7 +98,9 @@ class LemmaClassifier(ABC, nn.Module):
                                             output_dim=len(checkpoint['label_decoder']),
                                             vocab_map=vocab_map,
                                             pt_embedding=word_embeddings,
-                                            label_decoder=checkpoint['label_decoder'])
+                                            label_decoder=checkpoint['label_decoder'],
+                                            upos_emb_dim=saved_args['upos_emb_dim'],
+                                            upos_to_id=checkpoint['upos_to_id'])
         elif model_type is ModelType.TRANSFORMER:
             from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 
