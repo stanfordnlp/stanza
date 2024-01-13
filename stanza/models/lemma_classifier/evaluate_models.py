@@ -26,6 +26,7 @@ from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.base_model import LemmaClassifier
 from stanza.models.lemma_classifier.model import LemmaClassifierLSTM
 from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
+from stanza.utils.confusion import format_confusion
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -218,7 +219,7 @@ def main(args=None):
 
     logging.info(f"MCC Results: {dict(mcc_results)}")
     logging.info("______________________________________________")
-    logging.info(f"Confusion: {dict(confusion)}")
+    logging.info(f"Confusion:\n%s", format_confusion(confusion))
     logging.info("______________________________________________")
     logging.info(f"Accuracy: {acc}")
     logging.info("______________________________________________")
