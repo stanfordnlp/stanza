@@ -1,4 +1,5 @@
 from collections import Counter, defaultdict
+import logging
 import os
 from typing import List, Tuple, Any, Mapping
 
@@ -39,7 +40,7 @@ def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool
         # but we can still use those labels in a confusion matrix
         label_decoder = dict(label_decoder)
 
-    print(label_decoder, f"Should be strings to ints") 
+    logging.debug("Final label decoder: %s  Should be strings to ints", label_decoder)
 
     with open(data_path, "r+", encoding="utf-8") as f:
         sentences, indices, labels, upos_ids, counts, upos_to_id = [], [], [], [], Counter(), defaultdict(str)
