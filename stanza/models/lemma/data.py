@@ -117,6 +117,13 @@ class DataLoader:
     def load_doc(self, doc):
         data = doc.get([TEXT, UPOS, LEMMA])
         data = self.resolve_none(data)
+        if self.args.get('caseless', False):
+            data = self.lowercase_data(data)
+        return data
+
+    def lowercase_data(self, data):
+        for token in data:
+            token[0] = token[0].lower()
         return data
 
     def resolve_none(self, data):

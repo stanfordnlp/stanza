@@ -45,6 +45,9 @@ class Trainer(object):
             # dict-based components
             self.word_dict = dict()
             self.composite_dict = dict()
+
+        self.caseless = self.args.get('caseless', False)
+
         if not self.args['dict_only']:
             self.model = self.model.to(device)
             if self.args.get('edit', False):
@@ -164,6 +167,8 @@ class Trainer(object):
         lemmas = []
         for p in pairs:
             w, pos = p
+            if self.caseless:
+                w = w.lower()
             if (w,pos) in self.composite_dict:
                 lemmas += [self.composite_dict[(w,pos)]]
             elif w in self.word_dict:
@@ -178,6 +183,8 @@ class Trainer(object):
         skip = []
         for p in pairs:
             w, pos = p
+            if self.caseless:
+                w = w.lower()
             if (w,pos) in self.composite_dict:
                 skip.append(True)
             elif w in self.word_dict:
@@ -192,6 +199,8 @@ class Trainer(object):
         assert len(pairs) == len(other_preds)
         for p, pred in zip(pairs, other_preds):
             w, pos = p
+            if self.caseless:
+                w = w.lower()
             if (w,pos) in self.composite_dict:
                 lemma = self.composite_dict[(w,pos)]
             elif w in self.word_dict:
