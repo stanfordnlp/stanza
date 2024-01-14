@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import sys
+import unicodedata
 
 from stanza.models.common.short_name_to_treebank import canonical_treebank_name
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
@@ -52,6 +53,16 @@ def convert_conllu_to_txt(tokenizer_dir, short_name, shards=("train", "dev", "te
             raise FileNotFoundError("Cannot convert %s as the file cannot be found" % output_conllu)
         # use an external script to produce the txt files
         subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {output_conllu} > {output_txt}", shell=True)
+
+def strip_accents(word):
+    """
+    Remove diacritics from words such as in the UD GRC datasets
+    """
+    converted = ''.join(c for c in unicodedata.normalize('NFD', word)
+                        if unicodedata.category(c) not in ('Mn'))
+    if len(converted) == 0:
+        return word
+    return converted
 
 def mwt_name(base_dir, short_name, dataset):
     return os.path.join(base_dir, f"{short_name}-ud-{dataset}-mwt.json")
@@ -178,6 +189,8 @@ def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=Fa
     """
     if treebank.startswith("UD_Korean") and treebank.endswith("_seg"):
         treebank = treebank[:-4]
+    if treebank.startswith("UD_Ancient_Greek-") and (treebank.endswith("-Diacritics") or treebank.endswith("-diacritics")):
+        treebank = treebank[:-11]
     filename = os.path.join(udbase_dir, treebank, f"*-ud-{dataset}.{extension}")
     files = glob.glob(filename)
     if len(files) == 0:
