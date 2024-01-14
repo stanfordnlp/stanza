@@ -104,3 +104,33 @@ def test_store_results():
     assert stuff == stuff2
 
     assert az not in lemmatizer.word_dict
+
+def test_caseless_lemmatizer():
+    """
+    Test that setting the lemmatizer as caseless at Pipeline time lowercases the text
+    """
+    nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, download_method=None)
+    # the capital letter here should throw off the lemmatizer & it won't remove the plural
+    # although weirdly the current English model *does* lowercase the A
+    doc = nlp("Jennifer has nice Antennae")
+    assert doc.sentences[0].words[-1].lemma == 'antennae'
+
+    nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, download_method=None, lemma_caseless=True)
+    # with the model set to lowercasing, the word will be treated as if it were 'antennae'
+    doc = nlp("Jennifer has nice Antennae")
+    assert doc.sentences[0].words[-1].lemma == 'antenna'
+
+def test_latin_caseless_lemmatizer():
+    """
+    Test the Latin caseless lemmatizer
+    """
+    nlp = stanza.Pipeline('la', package='ittb', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, download_method=None)
+    lemmatizer = nlp.processors['lemma']
+    assert lemmatizer.config['caseless']
+
+    doc = nlp("Quod Erat Demonstrandum")
+    expected_lemmas = "qui sum demonstro".split()
+    assert len(doc.sentences) == 1
+    assert len(doc.sentences[0].words) == 3
+    for word, expected in zip(doc.sentences[0].words, expected_lemmas):
+        assert word.lemma == expected
