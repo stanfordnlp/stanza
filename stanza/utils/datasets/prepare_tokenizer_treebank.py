@@ -701,7 +701,22 @@ def augment_punct(sents):
 
     return new_sents
 
+def remove_accents_from_words(sents):
+    new_sents = []
+    for sent in sents:
+        new_sent = []
+        for line in sent:
+            if line.startswith("#"):
+                new_sent.append(line)
+            else:
+                pieces = line.split("\t")
+                pieces[1] = common.strip_accents(pieces[1])
+                new_sent.append("\t".join(pieces))
+        new_sents.append(new_sent)
+    return new_sents
 
+def augment_accents(sents):
+    return sents + remove_accents_from_words(sents)
 
 def write_augmented_dataset(input_conllu, output_conllu, augment_function):
     # set the seed for each data file so that the results are the same
@@ -1307,6 +1322,8 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         write_augmented_dataset(input_conllu, output_conllu, augment_arabic_padt)
     elif short_name.startswith("ko_") and short_name.endswith("_seg"):
         remove_spaces(input_conllu, output_conllu)
+    elif short_name.startswith("grc_") and short_name.endswith("-diacritics"):
+        write_augmented_dataset(input_conllu, output_conllu, augment_accents)
     elif dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_punct)
     else:
