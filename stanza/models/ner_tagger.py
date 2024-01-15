@@ -303,6 +303,8 @@ def train(args):
         wandb.init(name=wandb_name, config=args)
         wandb.run.define_metric('train_loss', summary='min')
         wandb.run.define_metric('dev_score', summary='max')
+        # track gradients!
+        wandb.watch(trainer.model, log_freq=4, log="gradients")
 
     # start training
     train_loss = 0
