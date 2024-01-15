@@ -100,6 +100,11 @@ class LemmaClassifierTrainer():
         logging.info(f"Using weights {weights} for weighted loss.")
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
+    def build_model(self, label_decoder, upos_to_id):
+        return LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, self.hidden_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder,
+                                   charlm=self.use_charlm, charlm_forward_file=self.forward_charlm_file, charlm_backward_file=self.backward_charlm_file,
+                                   upos_emb_dim=self.upos_emb_dim, num_heads=self.num_heads, upos_to_id=upos_to_id)
+
     def train(self, num_epochs: int, save_name: str, args: Mapping, eval_file: str, train_file: str) -> None:
         """
         Trains a model on batches of texts, position indices of the target token, and labels (lemma annotation) for the target token.
@@ -123,9 +128,7 @@ class LemmaClassifierTrainer():
 
         assert len(text_batches) == len(position_batches) == len(label_batches), f"Input batch sizes did not match ({len(text_batches)}, {len(position_batches)}, {len(label_batches)})."
 
-        self.model = LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, self.hidden_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder,
-                                         charlm=self.use_charlm, charlm_forward_file=self.forward_charlm_file, charlm_backward_file=self.backward_charlm_file,
-                                         upos_emb_dim=self.upos_emb_dim, num_heads=self.num_heads, upos_to_id=upos_to_id)
+        self.model = self.build_model(label_decoder, upos_to_id)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.model.to(device)

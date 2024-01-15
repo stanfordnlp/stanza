@@ -85,6 +85,9 @@ class TransformerBaselineTrainer:
         ])
         return optimizer
 
+    def build_model(self, label_decoder, upos_to_id):
+        return LemmaClassifierWithTransformer(output_dim=self.output_dim, transformer_name=self.transformer_name, label_decoder=label_decoder)
+
     def train(self, num_epochs: int, save_name: str, args: Mapping, eval_file: str, train_file: str) -> None:
         """
         Trains a model on batches of texts, position indices of the target token, and labels (lemma annotation) for the target token.
@@ -108,7 +111,7 @@ class TransformerBaselineTrainer:
         
         assert len(text_batches) == len(position_batches) == len(label_batches), f"Input batch sizes did not match ({len(text_batches)}, {len(position_batches)}, {len(label_batches)})."
 
-        self.model = LemmaClassifierWithTransformer(output_dim=self.output_dim, transformer_name=self.transformer_name, label_decoder=label_decoder)
+        self.model = self.build_model(label_decoder, upos_to_id)
         # self.optimizer = self.set_layer_learning_rates(transformer_lr=self.lr/2, mlp_lr=self.lr)  # Adam optimizer
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
