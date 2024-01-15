@@ -28,6 +28,7 @@ from stanza.utils.conll import CoNLL
 from stanza.models.common.doc import *
 from stanza.models import _training_logging
 
+from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
 from stanza.utils.confusion import confusion_to_weighted_f1, format_confusion
 
 logger = logging.getLogger('stanza')
@@ -78,14 +79,19 @@ def build_argparse():
 
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
+    parser.add_argument('--bert_hidden_layers', type=int, default=None, help="How many layers of hidden state to use from the transformer")
     parser.add_argument('--bert_finetune', default=False, action='store_true', help='Finetune the bert (or other transformer)')
+    parser.add_argument('--gradient_checkpointing', default=False, action='store_true', help='Checkpoint intermediate gradients between layers to save memory at the cost of training steps')
     parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
     parser.add_argument('--bert_learning_rate', default=1.0, type=float, help='Scale the learning rate for transformer finetuning by this much')
+    parser.add_argument('--second_optim', type=str, default=None, help='once first optimizer converged, tune the model again. with: sgd, adagrad, adam or adamax.')
+    parser.add_argument('--second_bert_learning_rate', default=0, type=float, help='Secondary stage transformer finetuning learning rate scale')
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='sgd', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=0.1, help='Learning rate.')
     parser.add_argument('--min_lr', type=float, default=1e-4, help='Minimum learning rate to stop training.')
+    parser.add_argument('--second_lr', type=float, default=5e-3, help='Secondary learning rate')
     parser.add_argument('--momentum', type=float, default=0, help='Momentum for SGD.')
     parser.add_argument('--lr_decay', type=float, default=0.5, help="LR decay rate.")
     parser.add_argument('--patience', type=int, default=3, help="Patience for LR decay.")
@@ -96,6 +102,7 @@ def build_argparse():
     parser.add_argument('--ignore_tag_scores', type=str, default=None, help="Which tags to ignore, if any, when scoring dev & test sets")
 
     parser.add_argument('--max_steps', type=int, default=200000)
+    parser.add_argument('--max_steps_no_improve', type=int, default=2500, help='if the model doesn\'t improve after this many steps, give up or switch to new optimizer.')
     parser.add_argument('--eval_interval', type=int, default=500)
     parser.add_argument('--batch_size', type=int, default=32)
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
@@ -113,7 +120,9 @@ def build_argparse():
 
 def parse_args(args=None):
     parser = build_argparse()
+    add_peft_args(parser)
     args = parser.parse_args(args=args)
+    resolve_peft_args(args, logger)
 
     if args.wandb_name:
         args.wandb = True
@@ -307,7 +316,9 @@ def train(args):
         wandb.watch(trainer.model, log_freq=4, log="gradients")
 
     # start training
+    last_best_step = 0
     train_loss = 0
+    is_second_optim = False
     while True:
         should_stop = False
         for i, batch in enumerate(train_batch):
@@ -340,6 +351,7 @@ def train(args):
                 # save best model
                 if len(dev_score_history) == 0 or dev_score > max(dev_score_history):
                     trainer.save(model_file)
+                    last_best_step = global_step
                     logger.info("New best model saved.")
                     best_dev_preds = dev_preds
 
@@ -352,9 +364,21 @@ def train(args):
             
             # check stopping
             current_lr = trainer.optimizer.param_groups[0]['lr']
-            if global_step >= args['max_steps'] or current_lr <= args['min_lr']:
-                should_stop = True
-                break
+            if (global_step - last_best_step) >= args['max_steps_no_improve'] or global_step >= args['max_steps'] or current_lr <= args['min_lr']:
+                if (global_step - last_best_step) >= args['max_steps_no_improve']:
+                    logger.info("{} steps without improvement...".format((global_step - last_best_step)))
+                if not is_second_optim and args['second_optim'] is not None:
+                    logger.info("Switching to second optimizer: {}".format(args['second_optim']))
+                    logger.info('Reloading best model to continue from current local optimum')
+                    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, device=args['device'],
+                                      train_classifier_only=args['train_classifier_only'], model_file=model_file, second_optim=True)
+                    is_second_optim = True
+                    last_best_step = global_step
+                    current_lr = trainer.optimizer.param_groups[0]['lr']
+                else:
+                    logger.info("stopping...")
+                    should_stop = True
+                    break
 
         if should_stop:
             break

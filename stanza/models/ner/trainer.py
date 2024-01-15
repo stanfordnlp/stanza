@@ -15,6 +15,9 @@ from stanza.models.ner.model import NERTagger
 from stanza.models.ner.vocab import MultiVocab
 from stanza.models.common.crf import viterbi_decode
 
+from peft import get_peft_model_state_dict, set_peft_model_state_dict
+from stanza.models.common.peft_config import build_peft_wrapper
+
 logger = logging.getLogger('stanza')
 
 def unpack_batch(batch, device):
@@ -61,7 +64,7 @@ def fix_singleton_tags(tags):
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, device=None,
-                 train_classifier_only=False, foundation_cache=None):
+                 train_classifier_only=False, foundation_cache=None, second_optim=False):
         if model_file is not None:
             # load everything from file
             self.load(model_file, pretrain, args, foundation_cache)
@@ -71,6 +74,29 @@ class Trainer(BaseTrainer):
             self.args = args
             self.vocab = vocab
             self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, foundation_cache=foundation_cache)
+
+                
+            # PEFT the model, if needed
+            if self.args["use_peft"] and self.args["bert_model"]:
+                # fine tune the bert
+                self.args["bert_finetune"] = True
+                # peft the lovely model
+                self.model.bert_model = build_peft_wrapper(self.model.bert_model,
+                                                           self.args, logger)
+                # because we will save this seperately ourselves within the trainer as PEFT
+                # weight loading is a tad different
+                self.model.unsaved_modules += ["bert_model"]
+                self.model.train()
+                self.model.bert_model.train()
+
+
+            # IMPORTANT: gradient checkpointing BREAKS peft if applied before
+            # 1. Apply PEFT FIRST (looksie! it's above this line)
+            # 2. Run gradient checkpointing
+            # https://github.com/huggingface/peft/issues/742
+            if self.args.get("gradient_checkpointing", False) and self.args.get("bert_finetune", False):
+                self.model.bert_model.gradient_checkpointing_enable()
+
 
         # if this wasn't set anywhere, we use a default of the 0th tagset
         # we don't set this as a default in the options so that
@@ -85,7 +111,10 @@ class Trainer(BaseTrainer):
                 if pname.split('.')[0] not in exclude:
                     p.requires_grad = False
         self.model = self.model.to(device)
-        self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'], momentum=self.args['momentum'], bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
+        if not second_optim:
+            self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'], momentum=self.args['momentum'], bert_learning_rate=self.args.get('bert_learning_rate', 0.0), is_peft=bool(self.args.get("use_peft")))
+        else:
+            self.optimizer = utils.get_optimizer(self.args['second_optim'], self.model, self.args['second_lr'], momentum=self.args['momentum'], bert_learning_rate=self.args.get('second_bert_learning_rate', 0.0), is_peft=bool(self.args.get("use_peft")))
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
@@ -158,6 +187,9 @@ class Trainer(BaseTrainer):
                 'vocab': self.vocab.state_dict(),
                 'config': self.args
                 }
+
+        if self.args["use_peft"]:
+            params["bert_lora"] = get_peft_model_state_dict(self.model.bert_model)
         try:
             torch.save(params, filename, _use_new_zipfile_serialization=False)
             logger.info("Model saved to {}".format(filename))
@@ -179,6 +211,10 @@ class Trainer(BaseTrainer):
         for keep_arg in ('predict_tagset', 'train_scheme', 'scheme'):
             if self.args.get(keep_arg, None) is None:
                 self.args[keep_arg] = checkpoint['config'].get(keep_arg, None)
+
+        lora_weights = checkpoint.get('bert_lora')
+        if lora_weights:
+            self.args["use_peft"] = True
 
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
 
@@ -209,6 +245,13 @@ class Trainer(BaseTrainer):
         if 'delta' not in self.model.vocab and 'word_emb.weight' in checkpoint['model'].keys() and 'word_emb' in self.model.unsaved_modules:
             logger.debug("Removing word_emb from unsaved_modules so that resaving %s will keep the saved embedding", filename)
             self.model.unsaved_modules.remove('word_emb')
+
+        # load lora weights, which is special
+        if lora_weights:
+            self.model.bert_model = build_peft_wrapper(self.model.bert_model,
+                                                       self.args, logger)
+            self.model.unsaved_modules += ["bert_model"]
+            set_peft_model_state_dict(self.model.bert_model, lora_weights)
 
     def get_known_tags(self):
         """
