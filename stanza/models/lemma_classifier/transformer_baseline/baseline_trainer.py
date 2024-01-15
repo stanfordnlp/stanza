@@ -1,5 +1,5 @@
 """
-This file contains code used to train a baseline transformer model to classify on a lemma of a particular token. 
+This file contains code used to train a baseline transformer model to classify on a lemma of a particular token.
 """
 
 import torch.nn as nn 
@@ -12,7 +12,7 @@ import sys
 import logging
 
 from stanza.models.lemma_classifier import utils
-from stanza.models.lemma_classifier.constants import ModelType
+from stanza.models.lemma_classifier.constants import ModelType, DEFAULT_BATCH_SIZE
 from stanza.models.lemma_classifier.evaluate_models import evaluate_model
 from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 from stanza.utils.get_tqdm import get_tqdm
@@ -85,27 +85,23 @@ class TransformerBaselineTrainer:
         ])
         return optimizer
 
-    def train(self, num_epochs: int, save_name: str, args: Mapping, eval_file: str, **kwargs):
-
+    def train(self, num_epochs: int, save_name: str, args: Mapping, eval_file: str, **kwargs) -> None:
         """
         Trains a model on batches of texts, position indices of the target token, and labels (lemma annotation) for the target token.
 
         Args:
-            texts_batch (List[List[str]]): Batches of tokenized texts, one per sentence. Expected to contain at least one instance of the target token.
-            positions_batch (List[int]): Batches of position indices (zero-indexed) for the target token, one per input sentence. 
-            labels_batch (List[int]): Batches of labels for the target token, one per input sentence. 
             num_epochs (int): Number of training epochs
             save_name (str): Path to file where trained model should be saved. 
+            eval_file (str): Path to the dev set file for evaluating model checkpoints each epoch.
         
         Kwargs:
             train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line. 
-            eval_file (str): Path to the dev set file for evaluating model checkpoints each epoch.
         """
         # Put model on GPU (if possible)  
         device = default_device()
 
         if kwargs.get("train_path"):
-            text_batches, position_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss)
+            text_batches, position_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss, batch_size=args.get("batch_size", DEFAULT_BATCH_SIZE))
             self.output_dim = len(label_decoder)
             logging.info(f"Using label decoder : {label_decoder}")
         
@@ -169,6 +165,7 @@ def main(args=None):
     parser.add_argument("--model_type", type=str, default="roberta", help="Which transformer to use ('bert' or 'roberta')")
     parser.add_argument("--bert_model", type=str, default=None, help="Use a specific transformer instead of the default bert/roberta")
     parser.add_argument("--loss_fn", type=str, default="weighted_bce", help="Which loss function to train with (e.g. 'ce' or 'weighted_bce')")
+    parser.add_argument("--batch_size", type=int, default=DEFAULT_BATCH_SIZE, help="Number of examples to include in each batch")
     parser.add_argument("--eval_file", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_sets", "combined_dev.txt"), help="Path to dev file used to evaluate model for saves")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate for the optimizer.")
 
