@@ -72,6 +72,15 @@ class NERTagger(nn.Module):
         # FIXME: possibly pos and depparse are all losing a finetuned transformer if loaded & saved
         # (the force_bert_saved option here handles that)
         if self.args.get('bert_model', None):
+            if args.get('bert_hidden_layers', False):
+                # The average will be offset by 1/N so that the default zeros
+                # repressents an average of the N layers
+                self.bert_layer_mix = nn.Linear(args['bert_hidden_layers'], 1, bias=False)
+                nn.init.zeros_(self.bert_layer_mix.weight)
+            else:
+                # an average of layers 2, 3, 4 will be used
+                # (for historic reasons)
+                self.bert_layer_mix = None
             # first we load the transformer model and possibly turn off its requires_grad parameters ...
             if self.args.get('bert_finetune', False):
                 bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
@@ -198,7 +207,12 @@ class NERTagger(nn.Module):
         if self.bert_model is not None:
             device = next(self.parameters()).device
             processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, device, keep_endpoints=False,
+                                                     num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
                                                      detach=not self.args.get('bert_finetune', False))
+            if self.bert_layer_mix is not None:
+                # use a linear layer to weighted average the embedding dynamically
+                processed_bert = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in processed_bert]
+
             processed_bert = pad_sequence(processed_bert, batch_first=True)
             inputs += [pack(processed_bert)]
 
