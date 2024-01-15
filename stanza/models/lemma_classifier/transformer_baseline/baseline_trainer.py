@@ -85,7 +85,7 @@ class TransformerBaselineTrainer:
         ])
         return optimizer
 
-    def train(self, num_epochs: int, save_name: str, args: Mapping, eval_file: str, **kwargs) -> None:
+    def train(self, num_epochs: int, save_name: str, args: Mapping, eval_file: str, train_file: str) -> None:
         """
         Trains a model on batches of texts, position indices of the target token, and labels (lemma annotation) for the target token.
 
@@ -93,17 +93,18 @@ class TransformerBaselineTrainer:
             num_epochs (int): Number of training epochs
             save_name (str): Path to file where trained model should be saved. 
             eval_file (str): Path to the dev set file for evaluating model checkpoints each epoch.
-        
-        Kwargs:
-            train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line. 
+            train_file (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line.
         """
         # Put model on GPU (if possible)  
         device = default_device()
 
-        if kwargs.get("train_path"):
-            text_batches, position_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(kwargs.get("train_path"), get_counts=self.weighted_loss, batch_size=args.get("batch_size", DEFAULT_BATCH_SIZE))
-            self.output_dim = len(label_decoder)
-            logging.info(f"Using label decoder : {label_decoder}")
+        if not train_file:
+            raise ValueError("Cannot train model - no train_file supplied!")
+
+        text_batches, position_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(train_file, get_counts=self.weighted_loss, batch_size=args.get("batch_size", DEFAULT_BATCH_SIZE))
+        self.output_dim = len(label_decoder)
+        logging.info(f"Loaded dataset successfully from {train_file}")
+        logging.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
         
         assert len(text_batches) == len(position_batches) == len(label_batches), f"Input batch sizes did not match ({len(text_batches)}, {len(position_batches)}, {len(label_batches)})."
 
@@ -112,7 +113,9 @@ class TransformerBaselineTrainer:
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.model.to(device)
+        # TODO: this should be captured by the model.to(device) statement
         self.model.transformer.to(device)
+        logging.info(f"Training model on device: {device}. {next(self.model.parameters()).device}")
 
         if os.path.exists(save_name):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
@@ -120,8 +123,9 @@ class TransformerBaselineTrainer:
         if self.weighted_loss:
             self.configure_weighted_loss(label_decoder, counts)
 
-        selected_dev = next(self.model.transformer.parameters()).device
-        self.criterion = self.criterion.to(selected_dev)
+        # Put the criterion on GPU too
+        logging.debug(f"Criterion on {next(self.model.parameters()).device}")
+        self.criterion = self.criterion.to(next(self.model.parameters()).device)
 
         best_model, best_f1 = None, float("-inf")
         for epoch in range(num_epochs):
@@ -134,7 +138,9 @@ class TransformerBaselineTrainer:
                 
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
+                    # TODO: three classes?
                     targets = torch.stack([torch.tensor([1, 0]) if label == 0 else torch.tensor([0, 1]) for label in labels]).to(dtype=torch.float32).to(device)
+                    # should be shape size (batch_size, 2)
                 else:  # CELoss accepts target as just raw label
                     targets = labels.to(device)
                 
@@ -202,7 +208,7 @@ def main(args=None):
     
     trainer = TransformerBaselineTrainer(transformer_name=args['bert_model'], loss_func=loss_fn, lr=lr)
 
-    trainer.train(num_epochs=num_epochs, save_name=save_name, train_path=train_file, args=args, eval_file=eval_file)
+    trainer.train(num_epochs=num_epochs, save_name=save_name, train_file=train_file, args=args, eval_file=eval_file)
     return trainer
 
 if __name__ == "__main__":

@@ -8,8 +8,7 @@ import torch.optim as optim
 import os 
 import logging
 import argparse
-from os import path
-from os import remove
+import os
 from typing import List, Tuple, Any, Mapping
 
 from stanza.models.common.foundation_cache import load_pretrain
@@ -101,7 +100,7 @@ class LemmaClassifierTrainer():
         logging.info(f"Using weights {weights} for weighted loss.")
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
-    def train(self, num_epochs: int, save_name: str, args: Mapping, eval_file: str, **kwargs) -> None:
+    def train(self, num_epochs: int, save_name: str, args: Mapping, eval_file: str, train_file: str) -> None:
         """
         Trains a model on batches of texts, position indices of the target token, and labels (lemma annotation) for the target token.
 
@@ -109,20 +108,20 @@ class LemmaClassifierTrainer():
             num_epochs (int): Number of training epochs
             save_name (str): Path to file where trained model should be saved. 
             eval_file (str): Path to the dev set file for evaluating model checkpoints each epoch.
-
-        Kwargs:
-            train_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line.      
+            train_file (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line.
         """
         # Put model on GPU (if possible)
         device = default_device()
 
-        train_path = kwargs.get("train_path")
-        upos_to_id = {}
-        if train_path:  # use file to train model
-            text_batches, position_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(train_path, get_counts=self.weighted_loss, batch_size=args.get("batch_size", DEFAULT_BATCH_SIZE))
-            self.output_dim = len(label_decoder)
-            logging.info(f"Loaded dataset successfully from {train_path}")
-            logging.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
+        if not train_file:
+            raise ValueError("Cannot train model - no train_file supplied!")
+
+        text_batches, position_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(train_file, get_counts=self.weighted_loss, batch_size=args.get("batch_size", DEFAULT_BATCH_SIZE))
+        self.output_dim = len(label_decoder)
+        logging.info(f"Loaded dataset successfully from {train_file}")
+        logging.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
+
+        assert len(text_batches) == len(position_batches) == len(label_batches), f"Input batch sizes did not match ({len(text_batches)}, {len(position_batches)}, {len(label_batches)})."
 
         self.model = LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, self.hidden_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder,
                                          charlm=self.use_charlm, charlm_forward_file=self.forward_charlm_file, charlm_backward_file=self.backward_charlm_file,
@@ -130,10 +129,9 @@ class LemmaClassifierTrainer():
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.model.to(device)
-        logging.info(f"Device chosen: {device}. {next(self.model.parameters()).device}")
+        logging.info(f"Training model on device: {device}. {next(self.model.parameters()).device}")
 
-        assert len(text_batches) == len(position_batches) == len(label_batches), f"Input batch sizes did not match ({len(text_batches)}, {len(position_batches)}, {len(label_batches)})."
-        if path.exists(save_name):
+        if os.path.exists(save_name):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
         
         if self.weighted_loss:
@@ -144,29 +142,29 @@ class LemmaClassifierTrainer():
         self.criterion = self.criterion.to(next(self.model.parameters()).device)
 
         best_model, best_f1 = None, float("-inf")  # Used for saving checkpoints of the model
-        logging.info("Embedding norm: %s", torch.linalg.norm(self.model.embedding.weight))
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
             for texts, positions, upos_tags, labels in tqdm(zip(text_batches, position_batches, upos_batches, label_batches), total=len(text_batches)):  
 
                 self.optimizer.zero_grad()
-                output = self.model(positions, texts, upos_tags)
+                outputs = self.model(positions, texts, upos_tags)
 
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
                     # TODO: three classes?
                     targets = torch.stack([torch.tensor([1, 0]) if label == 0 else torch.tensor([0, 1]) for label in labels]).to(dtype=torch.float32).to(device)
                     # should be shape size (batch_size, 2)
-
                 else:  # CELoss accepts target as just raw label
                     targets = labels.to(device)
 
-                loss = self.criterion(output, targets)
+                loss = self.criterion(outputs, targets)
 
                 loss.backward()
                 self.optimizer.step()
 
+            logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
             if eval_file:
+                # Evaluate model on dev set to see if it should be saved.
                 _, _, _, f1 = evaluate_model(self.model, eval_file, is_training=True)
                 logging.info(f"Weighted f1 for model: {f1}")
                 if f1 > best_f1:
@@ -175,8 +173,6 @@ class LemmaClassifierTrainer():
                     logging.info(f"New best model: weighted f1 score of {f1}.")
             else:
                 self.model.save(save_name, args)
-
-            logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
 
 
 def build_argparse():
@@ -190,7 +186,7 @@ def build_argparse():
     parser.add_argument("--upos_emb_dim", type=int, default=20, help="Dimension size for UPOS tag embeddings.")
     parser.add_argument("--use_attn", action='store_true', dest='attn', default=False, help='Whether to use multihead attention instead of LSTM.')
     parser.add_argument("--num_heads", type=int, default=0, help="Number of heads to use for multihead attention.")
-    parser.add_argument("--save_name", type=str, default=path.join(path.dirname(__file__), "saved_models", "lemma_classifier_model_weighted_loss_charlm_new.pt"), help="Path to model save file")
+    parser.add_argument("--save_name", type=str, default=os.path.join(os.path.dirname(__file__), "saved_models", "lemma_classifier_model_weighted_loss_charlm_new.pt"), help="Path to model save file")
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=DEFAULT_BATCH_SIZE, help="Number of examples to include in each batch")
@@ -242,7 +238,7 @@ def main(args=None):
                                      )
 
     trainer.train(
-        num_epochs=num_epochs, save_name=save_name, args=args, eval_file=eval_file, train_path=train_file
+        num_epochs=num_epochs, save_name=save_name, args=args, eval_file=eval_file, train_file=train_file
     )
 
     return trainer
