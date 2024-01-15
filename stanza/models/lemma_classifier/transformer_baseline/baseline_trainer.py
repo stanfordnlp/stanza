@@ -113,8 +113,6 @@ class TransformerBaselineTrainer:
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.model.to(device)
-        # TODO: this should be captured by the model.to(device) statement
-        self.model.transformer.to(device)
         logging.info(f"Training model on device: {device}. {next(self.model.parameters()).device}")
 
         if os.path.exists(save_name):
