@@ -55,14 +55,17 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
         }
         return save_dict
 
-    def forward(self, idx_positions: List[int], sentences: List[List[str]]):
+    def forward(self, idx_positions: List[int], sentences: List[List[str]], upos_tags: List[List[int]]):
         """
+        Computes the forward pass of the transformer baselines
 
         Args:
-            text (List[str]): A single sentence with each token as an entry in the list.
-            pos_index (int): The index of the token to classify on.
+            idx_positions (List[int]): A list of the position index of the target token for lemmatization classification in each sentence.
+            sentences (List[List[str]]): A list of the token-split sentences of the input data.
+            upos_tags (List[List[int]]): A list of the upos tags for each token in every sentence - not used in this model, here for compatibility
 
-        Returns the logits of the MLP
+        Returns:
+            torch.tensor: Output logits of the neural network, where the shape is  (n, output_size) where n is the number of sentences.
         """
         device = next(self.transformer.parameters()).device
         bert_embeddings = extract_bert_embeddings(self.transformer_name, self.tokenizer, self.transformer, sentences, device,

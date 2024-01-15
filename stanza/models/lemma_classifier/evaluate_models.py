@@ -21,7 +21,6 @@ import torch.nn as nn
 import stanza
 
 from stanza.models.common.utils import default_device
-from stanza.models.lemma_classifier.constants import ModelType
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.base_model import LemmaClassifier
 from stanza.models.lemma_classifier.model import LemmaClassifierLSTM
@@ -123,10 +122,7 @@ def model_predict(model: nn.Module, position_indices: torch.Tensor, sentences: L
         (int): The index of the predicted class in `model`'s output.
     """
     with torch.no_grad():
-        if model.model_type() == ModelType.LSTM:
-            logits = model(position_indices, sentences, upos_tags)
-        else:
-            logits = model(position_indices, sentences)  # should be size (batch_size, output_size)
+        logits = model(position_indices, sentences, upos_tags)  # should be size (batch_size, output_size)
         predicted_class = torch.argmax(logits, dim=1)  # should be size (batch_size, 1)
     
     return predicted_class

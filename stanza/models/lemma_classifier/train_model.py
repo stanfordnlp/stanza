@@ -144,10 +144,11 @@ class LemmaClassifierTrainer():
         best_model, best_f1 = None, float("-inf")  # Used for saving checkpoints of the model
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
-            for texts, positions, upos_tags, labels in tqdm(zip(text_batches, position_batches, upos_batches, label_batches), total=len(text_batches)):  
+            for sentences, positions, upos_tags, labels in tqdm(zip(text_batches, position_batches, upos_batches, label_batches), total=len(text_batches)):
+                assert len(sentences) == len(positions) == len(labels), f"Input sentences, positions, and labels are of unequal length ({len(sentences), len(positions), len(labels)})"
 
                 self.optimizer.zero_grad()
-                outputs = self.model(positions, texts, upos_tags)
+                outputs = self.model(positions, sentences, upos_tags)
 
                 # Compute loss, which is different if using CE or BCEWithLogitsLoss
                 if self.weighted_loss:  # BCEWithLogitsLoss requires a vector for target where probability is 1 on the true label class, and 0 on others.
