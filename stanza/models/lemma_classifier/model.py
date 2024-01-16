@@ -20,7 +20,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
         From the LSTM output, we get the embedding fo the specific token that we classify on. That embedding 
         is fed into an MLP for classification.
     """
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, vocab_map, pt_embedding, label_decoder, **kwargs):  
+    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, vocab_map, pt_embedding, label_decoder, use_charlm=False, charlm_forward_file=None, charlm_backward_file=None, **kwargs):
         """
         Args:
             vocab_size (int): Size of the vocab being used (if custom vocab)
@@ -28,11 +28,11 @@ class LemmaClassifierLSTM(LemmaClassifier):
             embedding_dim (int): Size of embedding dimension to use on the aforementioned word embeddings
             hidden_dim (int): Size of hidden vectors in LSTM layers
             output_dim (int): Size of output vector from MLP layer
-
-        Kwargs:
-            charlm (bool): Whether or not to use the charlm embeddings
+            use_charlm (bool): Whether or not to use the charlm embeddings
             charlm_forward_file (str): The path to the forward pass model for the character language model
             charlm_backward_file (str): The path to the forward pass model for the character language model.
+
+        Kwargs:
             upos_to_id (Mapping[str, int]): A dictionary mapping UPOS tag strings to their respective IDs
             upos_emb_dim (int): The size of the UPOS tag embeddings 
             num_heads (int): The number of heads to use for attention. If there are more than 0 heads, attention will be used instead of the LSTM.
@@ -59,18 +59,16 @@ class LemmaClassifierLSTM(LemmaClassifier):
         self.label_decoder = label_decoder
 
         # Optionally, include charlm embeddings  
-        self.use_charlm = kwargs.get("charlm")
+        self.use_charlm = use_charlm
 
         if self.use_charlm:
-            charlm_forward_file = kwargs.get("charlm_forward_file")
-            charlm_backward_file = kwargs.get("charlm_backward_file")
             if charlm_forward_file is None or not os.path.exists(charlm_forward_file):
-                raise FileNotFoundError(f'Could not find forward character model: {kwargs.get("charlm_forward_file", "FILE_NOT_PROVIDED")}')
+                raise FileNotFoundError(f'Could not find forward character model: {charlm_forward_file}')
             if charlm_backward_file is None or not os.path.exists(charlm_backward_file):
-                raise FileNotFoundError(f'Could not find backward character model: {kwargs.get("charlm_backward_file", "FILE_NOT_PROVIDED")}')
+                raise FileNotFoundError(f'Could not find backward character model: {charlm_backward_file}')
             add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(charlm_forward_file, finetune=False))
             add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(charlm_backward_file, finetune=False))
-            
+
             self.input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
         
         self.upos_emb_dim = kwargs.get("upos_emb_dim", 0)

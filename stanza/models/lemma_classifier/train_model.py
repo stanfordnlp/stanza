@@ -21,7 +21,7 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
     Class to assist with training a LemmaClassifierLSTM
     """
 
-    def __init__(self, embedding_file: str, hidden_dim: int, use_charlm: bool = False, forward_charlm_file: str = None, backward_charlm_file: str = None, upos_emb_dim: int = 20, num_heads: int = 0, lr: float = 0.001, loss_func: str = None, eval_file: str = None):
+    def __init__(self, embedding_file: str, hidden_dim: int, use_charlm: bool = False, charlm_forward_file: str = None, charlm_backward_file: str = None, upos_emb_dim: int = 20, num_heads: int = 0, lr: float = 0.001, loss_func: str = None, eval_file: str = None):
         """
         Initializes the LemmaClassifierTrainer class.
         
@@ -30,8 +30,8 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
             hidden_dim (int): Size of hidden vectors in LSTM layers
             use_charlm (bool, optional): Whether to use charlm embeddings as well. Defaults to False.
             eval_file (str): File used as dev set to evaluate which model gets saved
-            forward_charlm_file (str): Path to the forward pass embeddings for the charlm 
-            backward_charlm_file (str): Path to the backward pass embeddings for the charlm
+            charlm_forward_file (str): Path to the forward pass embeddings for the charlm 
+            charlm_backward_file (str): Path to the backward pass embeddings for the charlm
             upos_emb_dim (int): The dimension size of UPOS tag embeddings
             num_heads (int): The number of attention heads to use.
             lr (float): Learning rate, defaults to 0.001.
@@ -57,15 +57,15 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
         self.embedding_dim = emb_matrix.shape[1]
 
         # Load CharLM embeddings
-        if use_charlm and forward_charlm_file is not None and not os.path.exists(forward_charlm_file):
-            raise FileNotFoundError(f"Could not find forward charlm file: {forward_charlm_file}")
-        if use_charlm and backward_charlm_file is not None and not os.path.exists(backward_charlm_file):
-            raise FileNotFoundError(f"Could not find backward charlm file: {backward_charlm_file}")
+        if use_charlm and charlm_forward_file is not None and not os.path.exists(charlm_forward_file):
+            raise FileNotFoundError(f"Could not find forward charlm file: {charlm_forward_file}")
+        if use_charlm and charlm_backward_file is not None and not os.path.exists(charlm_backward_file):
+            raise FileNotFoundError(f"Could not find backward charlm file: {charlm_backward_file}")
 
         # TODO: just pass around the args instead
         self.use_charlm = use_charlm
-        self.forward_charlm_file = forward_charlm_file
-        self.backward_charlm_file = backward_charlm_file
+        self.charlm_forward_file = charlm_forward_file
+        self.charlm_backward_file = charlm_backward_file
         self.num_heads = num_heads
         self.lr = lr
 
@@ -83,7 +83,7 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
 
     def build_model(self, label_decoder, upos_to_id):
         return LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, self.hidden_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder,
-                                   charlm=self.use_charlm, charlm_forward_file=self.forward_charlm_file, charlm_backward_file=self.backward_charlm_file,
+                                   use_charlm=self.use_charlm, charlm_forward_file=self.charlm_forward_file, charlm_backward_file=self.charlm_backward_file,
                                    upos_emb_dim=self.upos_emb_dim, num_heads=self.num_heads, upos_to_id=upos_to_id)
 
 def build_argparse():
@@ -113,8 +113,8 @@ def main(args=None):
     hidden_dim = args.hidden_dim
     wordvec_pretrain_file = args.wordvec_pretrain_file
     use_charlm = args.use_charlm
-    forward_charlm_file = args.charlm_forward_file
-    backward_charlm_file = args.charlm_backward_file
+    charlm_forward_file = args.charlm_forward_file
+    charlm_backward_file = args.charlm_backward_file
     upos_emb_dim = args.upos_emb_dim
     use_attention = args.attn 
     num_heads = args.num_heads
@@ -140,8 +140,8 @@ def main(args=None):
     trainer = LemmaClassifierTrainer(embedding_file=wordvec_pretrain_file,
                                      hidden_dim=hidden_dim,
                                      use_charlm=use_charlm,
-                                     forward_charlm_file=forward_charlm_file,
-                                     backward_charlm_file=backward_charlm_file,
+                                     charlm_forward_file=charlm_forward_file,
+                                     charlm_backward_file=charlm_backward_file,
                                      upos_emb_dim=upos_emb_dim,
                                      num_heads=num_heads if use_attention else 0,
                                      lr=lr,

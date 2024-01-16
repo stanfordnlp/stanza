@@ -76,33 +76,23 @@ class LemmaClassifier(ABC, nn.Module):
             vocab_size = emb_matrix.shape[0]
             embedding_dim = emb_matrix.shape[1]
 
-            if saved_args['use_charlm']:
-                # Evaluate charlm
-                model = LemmaClassifierLSTM(vocab_size=vocab_size,
-                                            embedding_dim=embedding_dim,
-                                            hidden_dim=saved_args['hidden_dim'],
-                                            output_dim=len(checkpoint['label_decoder']),
-                                            vocab_map=vocab_map,
-                                            pt_embedding=word_embeddings,
-                                            label_decoder=checkpoint['label_decoder'],
-                                            upos_emb_dim=saved_args['upos_emb_dim'],
-                                            upos_to_id=checkpoint['upos_to_id'],
-                                            num_heads=saved_args['num_heads'],
-                                            charlm=True,
-                                            charlm_forward_file=saved_args['charlm_forward_file'],
-                                            charlm_backward_file=saved_args['charlm_backward_file'])
-            else:
-                # Evaluate standard model (bi-LSTM with GloVe embeddings, no charlm)
-                model = LemmaClassifierLSTM(vocab_size=vocab_size,
-                                            embedding_dim=embedding_dim,
-                                            hidden_dim=saved_args['hidden_dim'],
-                                            output_dim=len(checkpoint['label_decoder']),
-                                            vocab_map=vocab_map,
-                                            pt_embedding=word_embeddings,
-                                            label_decoder=checkpoint['label_decoder'],
-                                            upos_emb_dim=saved_args['upos_emb_dim'],
-                                            upos_to_id=checkpoint['upos_to_id'],
-                                            num_heads=saved_args['num_heads'])
+            use_charlm = saved_args['use_charlm']
+            charlm_forward_file = saved_args.get('charlm_forward_file', None)
+            charlm_backward_file = saved_args.get('charlm_backward_file', None)
+
+            model = LemmaClassifierLSTM(vocab_size=vocab_size,
+                                        embedding_dim=embedding_dim,
+                                        hidden_dim=saved_args['hidden_dim'],
+                                        output_dim=len(checkpoint['label_decoder']),
+                                        vocab_map=vocab_map,
+                                        pt_embedding=word_embeddings,
+                                        label_decoder=checkpoint['label_decoder'],
+                                        upos_emb_dim=saved_args['upos_emb_dim'],
+                                        upos_to_id=checkpoint['upos_to_id'],
+                                        num_heads=saved_args['num_heads'],
+                                        use_charlm=use_charlm,
+                                        charlm_forward_file=charlm_forward_file,
+                                        charlm_backward_file=charlm_backward_file)
         elif model_type is ModelType.TRANSFORMER:
             from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 
