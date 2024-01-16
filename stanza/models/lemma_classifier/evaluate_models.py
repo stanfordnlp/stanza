@@ -27,7 +27,7 @@ from stanza.models.lemma_classifier.model import LemmaClassifierLSTM
 from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 from stanza.utils.confusion import format_confusion
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('stanza.lemmaclassifier')
 
 
 def get_weighted_f1(mcc_results: Mapping[int, Mapping[str, float]], confusion: Mapping[int, Mapping[int, int]]) -> float:
@@ -99,7 +99,7 @@ def evaluate_sequences(gold_tag_sequences: List[Any], pred_tag_sequences: List[A
     
     if verbose:
         for lemma in multi_class_result:
-            logging.info(f"Lemma '{lemma}' had precision {100 * multi_class_result[lemma]['precision']}, recall {100 * multi_class_result[lemma]['recall']} and F1 score of {100 * multi_class_result[lemma]['f1']}")
+            logger.info(f"Lemma '{lemma}' had precision {100 * multi_class_result[lemma]['precision']}, recall {100 * multi_class_result[lemma]['recall']} and F1 score of {100 * multi_class_result[lemma]['f1']}")
     
     weighted_f1 = get_weighted_f1(multi_class_result, confusion)
 
@@ -153,7 +153,7 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
     # load in eval data
     dataset = utils.Dataset(eval_path, label_decoder=model.label_decoder, shuffle=False)
     
-    logging.info(f"Evaluating on evaluation file {eval_path}")
+    logger.info(f"Evaluating on evaluation file {eval_path}")
 
     correct, total = 0, 0
     gold_tags, pred_tags = dataset.labels, []
@@ -166,14 +166,14 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
         total += len(correct_preds)
         pred_tags += pred.tolist()
 
-    logging.info("Finished evaluating on dataset. Computing scores...")
+    logger.info("Finished evaluating on dataset. Computing scores...")
     accuracy = correct / total
 
     mc_results, confusion, weighted_f1 = evaluate_sequences(gold_tags, pred_tags, dataset.label_decoder, verbose=verbose)
     # add brackets around batches of gold and pred tags because each batch is an element within the sequences in this helper
     if verbose:
-        logging.info(f"Accuracy: {accuracy} ({correct}/{total})")
-        logging.info(f"Label decoder: {dataset.label_decoder}")
+        logger.info(f"Accuracy: {accuracy} ({correct}/{total})")
+        logger.info(f"Label decoder: {dataset.label_decoder}")
     
     return mc_results, confusion, accuracy, weighted_f1
 
@@ -200,25 +200,26 @@ def main(args=None):
 
     args = parser.parse_args(args)
 
-    logging.info("Running training script with the following args:")
+    logger.info("Running training script with the following args:")
     args = vars(args)
     for arg in args:
-        logging.info(f"{arg}: {args[arg]}")
-    logging.info("------------------------------------------------------------")
+        logger.info(f"{arg}: {args[arg]}")
+    logger.info("------------------------------------------------------------")
 
-    logging.info(f"Attempting evaluation of model from {args['save_name']} on file {args['eval_file']}")
+    logger.info(f"Attempting evaluation of model from {args['save_name']} on file {args['eval_file']}")
     model = LemmaClassifier.load(args['save_name'], args)
 
     mcc_results, confusion, acc, weighted_f1 = evaluate_model(model, args['eval_file'])
 
-    logging.info(f"MCC Results: {dict(mcc_results)}")
-    logging.info("______________________________________________")
-    logging.info(f"Confusion:\n%s", format_confusion(confusion))
-    logging.info("______________________________________________")
-    logging.info(f"Accuracy: {acc}")
-    logging.info("______________________________________________")
-    logging.info(f"Weighted f1: {weighted_f1}")
+    logger.info(f"MCC Results: {dict(mcc_results)}")
+    logger.info("______________________________________________")
+    logger.info(f"Confusion:\n%s", format_confusion(confusion))
+    logger.info("______________________________________________")
+    logger.info(f"Accuracy: {acc}")
+    logger.info("______________________________________________")
+    logger.info(f"Weighted f1: {weighted_f1}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     main()

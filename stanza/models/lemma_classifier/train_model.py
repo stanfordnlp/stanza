@@ -14,7 +14,7 @@ from stanza.models.lemma_classifier.base_trainer import BaseLemmaClassifierTrain
 from stanza.models.lemma_classifier.constants import DEFAULT_BATCH_SIZE
 from stanza.models.lemma_classifier.model import LemmaClassifierLSTM
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger('stanza.lemmaclassifier')
 
 class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
     """
@@ -73,11 +73,11 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
         if loss_func == "ce":
             self.criterion = nn.CrossEntropyLoss()
             self.weighted_loss = False
-            logging.debug("Using CE loss")
+            logger.debug("Using CE loss")
         elif loss_func == "weighted_bce":
             self.criterion = nn.BCEWithLogitsLoss()
             self.weighted_loss = True  # used to add weights during train time.
-            logging.debug("Using Weighted BCE loss")
+            logger.debug("Using Weighted BCE loss")
         else:
             raise ValueError("Must enter a valid loss function (e.g. 'ce' or 'weighted_bce')")
 
@@ -132,10 +132,10 @@ def main(args=None):
     if not os.path.exists(train_file):
         raise FileNotFoundError(f"Training file {train_file} not found. Try again with a valid path.")
 
-    logging.info("Running training script with the following args:")
+    logger.info("Running training script with the following args:")
     for arg in args:
-        logging.info(f"{arg}: {args[arg]}")
-    logging.info("------------------------------------------------------------")
+        logger.info(f"{arg}: {args[arg]}")
+    logger.info("------------------------------------------------------------")
 
     trainer = LemmaClassifierTrainer(embedding_file=wordvec_pretrain_file,
                                      hidden_dim=hidden_dim,
@@ -155,5 +155,6 @@ def main(args=None):
     return trainer
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     main()
 

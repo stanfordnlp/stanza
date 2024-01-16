@@ -10,6 +10,8 @@ import torch
 from stanza.models.lemma_classifier.constants import DEFAULT_BATCH_SIZE
 import stanza.models.lemma_classifier.prepare_dataset as prepare_dataset
 
+logger = logging.getLogger('stanza.lemmaclassifier')
+
 class Dataset:
     def __init__(self, data_path: str, batch_size: int =DEFAULT_BATCH_SIZE, get_counts: bool = False, label_decoder: dict = None, shuffle: bool = True):
         """
@@ -41,7 +43,7 @@ class Dataset:
             # but we can still use those labels in a confusion matrix
             label_decoder = dict(label_decoder)
 
-        logging.debug("Final label decoder: %s  Should be strings to ints", label_decoder)
+        logger.debug("Final label decoder: %s  Should be strings to ints", label_decoder)
 
         with open(data_path, "r+", encoding="utf-8") as f:
             sentences, indices, labels, upos_ids, counts, upos_to_id = [], [], [], [], Counter(), defaultdict(str)

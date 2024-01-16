@@ -15,6 +15,7 @@ from stanza.models.lemma_classifier.evaluate_models import evaluate_model
 from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
+logger = logging.getLogger('stanza.lemmaclassifier')
 
 class BaseLemmaClassifierTrainer(ABC):
     def configure_weighted_loss(self, label_decoder: Mapping, counts: Mapping):
@@ -28,7 +29,7 @@ class BaseLemmaClassifierTrainer(ABC):
         for class_idx in counts:
             weights[class_idx] = total_samples / (counts[class_idx] * len(counts))  # weight_i = total / (# examples in class i * num classes)
         weights = torch.tensor(weights)
-        logging.info(f"Using weights {weights} for weighted loss.")
+        logger.info(f"Using weights {weights} for weighted loss.")
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
     @abstractmethod
@@ -57,14 +58,14 @@ class BaseLemmaClassifierTrainer(ABC):
         label_decoder = dataset.label_decoder
         upos_to_id = dataset.upos_to_id
         self.output_dim = len(label_decoder)
-        logging.info(f"Loaded dataset successfully from {train_file}")
-        logging.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
+        logger.info(f"Loaded dataset successfully from {train_file}")
+        logger.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
 
         self.model = self.build_model(label_decoder, upos_to_id)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.model.to(device)
-        logging.info(f"Training model on device: {device}. {next(self.model.parameters()).device}")
+        logger.info(f"Training model on device: {device}. {next(self.model.parameters()).device}")
 
         if os.path.exists(save_name):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
@@ -73,7 +74,7 @@ class BaseLemmaClassifierTrainer(ABC):
             self.configure_weighted_loss(label_decoder, dataset.counts)
 
         # Put the criterion on GPU too
-        logging.debug(f"Criterion on {next(self.model.parameters()).device}")
+        logger.debug(f"Criterion on {next(self.model.parameters()).device}")
         self.criterion = self.criterion.to(next(self.model.parameters()).device)
 
         best_model, best_f1 = None, float("-inf")  # Used for saving checkpoints of the model
@@ -98,15 +99,15 @@ class BaseLemmaClassifierTrainer(ABC):
                 loss.backward()
                 self.optimizer.step()
 
-            logging.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
+            logger.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
             if eval_file:
                 # Evaluate model on dev set to see if it should be saved.
                 _, _, _, f1 = evaluate_model(self.model, eval_file, is_training=True)
-                logging.info(f"Weighted f1 for model: {f1}")
+                logger.info(f"Weighted f1 for model: {f1}")
                 if f1 > best_f1:
                     best_f1 = f1
                     self.model.save(save_name, args)
-                    logging.info(f"New best model: weighted f1 score of {f1}.")
+                    logger.info(f"New best model: weighted f1 score of {f1}.")
             else:
                 self.model.save(save_name, args)
 

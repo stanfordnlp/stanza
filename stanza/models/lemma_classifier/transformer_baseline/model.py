@@ -11,8 +11,7 @@ from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.lemma_classifier.base_model import LemmaClassifier
 from stanza.models.lemma_classifier.constants import ModelType
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
+logger = logging.getLogger('stanza.lemmaclassifier')
 
 class LemmaClassifierWithTransformer(LemmaClassifier):
     def __init__(self, output_dim: int, transformer_name: str, label_decoder: Mapping):

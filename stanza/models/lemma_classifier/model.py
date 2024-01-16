@@ -11,8 +11,7 @@ from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.base_model import LemmaClassifier
 from stanza.models.lemma_classifier.constants import ModelType
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
+logger = logging.getLogger('stanza.lemmaclassifier')
 
 class LemmaClassifierLSTM(LemmaClassifier):
     """
@@ -87,7 +86,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
         if self.num_heads > 0:
             self.input_size = utils.round_up_to_multiple(self.input_size, self.num_heads)
             self.multihead_attn = nn.MultiheadAttention(embed_dim=self.input_size, num_heads=self.num_heads, batch_first=True).to(device)
-            logging.info(f"Using attention mechanism with embed dim {self.input_size} and {self.num_heads} attention heads.")
+            logger.info(f"Using attention mechanism with embed dim {self.input_size} and {self.num_heads} attention heads.")
         else:
             self.lstm = nn.LSTM(
             self.input_size, 
@@ -95,7 +94,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
             batch_first=True, 
             bidirectional=True
                         )
-            logging.info(f"Using LSTM mechanism.")
+            logger.info(f"Using LSTM mechanism.")
 
         mlp_input_size = hidden_dim * 2 if self.num_heads == 0 else self.input_size
         self.mlp = nn.Sequential(

@@ -16,8 +16,7 @@ from stanza.models.lemma_classifier.constants import DEFAULT_BATCH_SIZE
 from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 from stanza.models.common.utils import default_device
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
+logger = logging.getLogger('stanza.lemmaclassifier')
 
 class TransformerBaselineTrainer(BaseLemmaClassifierTrainer):
     """
@@ -114,10 +113,10 @@ def main(args=None):
     if not os.path.exists(train_file):
         raise FileNotFoundError(f"Training file {train_file} not found. Try again with a valid path.")
 
-    logging.info("Running training script with the following args:")
+    logger.info("Running training script with the following args:")
     for arg in args:
-        logging.info(f"{arg}: {args[arg]}")
-    logging.info("------------------------------------------------------------")
+        logger.info(f"{arg}: {args[arg]}")
+    logger.info("------------------------------------------------------------")
     
     trainer = TransformerBaselineTrainer(transformer_name=args['bert_model'], loss_func=loss_fn, lr=lr)
 
@@ -125,4 +124,5 @@ def main(args=None):
     return trainer
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     main()
