@@ -53,12 +53,12 @@ class BaseLemmaClassifierTrainer(ABC):
         if not train_file:
             raise ValueError("Cannot train model - no train_file supplied!")
 
-        text_batches, position_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(train_file, get_counts=self.weighted_loss, batch_size=args.get("batch_size", DEFAULT_BATCH_SIZE))
+        dataset = utils.Dataset(train_file, get_counts=self.weighted_loss, batch_size=args.get("batch_size", DEFAULT_BATCH_SIZE))
+        label_decoder = dataset.label_decoder
+        upos_to_id = dataset.upos_to_id
         self.output_dim = len(label_decoder)
         logging.info(f"Loaded dataset successfully from {train_file}")
         logging.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
-
-        assert len(text_batches) == len(position_batches) == len(label_batches), f"Input batch sizes did not match ({len(text_batches)}, {len(position_batches)}, {len(label_batches)})."
 
         self.model = self.build_model(label_decoder, upos_to_id)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
@@ -70,7 +70,7 @@ class BaseLemmaClassifierTrainer(ABC):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
 
         if self.weighted_loss:
-            self.configure_weighted_loss(label_decoder, counts)
+            self.configure_weighted_loss(label_decoder, dataset.counts)
 
         # Put the criterion on GPU too
         logging.debug(f"Criterion on {next(self.model.parameters()).device}")
@@ -79,7 +79,7 @@ class BaseLemmaClassifierTrainer(ABC):
         best_model, best_f1 = None, float("-inf")  # Used for saving checkpoints of the model
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
-            for sentences, positions, upos_tags, labels in tqdm(zip(text_batches, position_batches, upos_batches, label_batches), total=len(text_batches)):
+            for sentences, positions, upos_tags, labels in tqdm(dataset):
                 assert len(sentences) == len(positions) == len(labels), f"Input sentences, positions, and labels are of unequal length ({len(sentences), len(positions), len(labels)})"
 
                 self.optimizer.zero_grad()

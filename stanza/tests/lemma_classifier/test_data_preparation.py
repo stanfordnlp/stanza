@@ -220,26 +220,37 @@ def test_convert_one_sentence(tmp_path):
     converted_files = prepare_lemma_classifier.process_treebank(paths, "en_ewt", "'s", "AUX", "be|have", ["train"])
     assert len(converted_files) == 1
 
-    text_batches, idx_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(converted_files[0], get_counts=True, batch_size=10)
-    assert text_batches == [[['Here', "'s", 'a', 'Miami', 'Herald', 'interview']]]
-    assert label_decoder == {'be': 0}
-    id_to_upos = {y: x for x, y in upos_to_id.items()}
-    upos = [id_to_upos[x] for x in upos_batches[0][0]]
-    assert upos == ['ADV', 'AUX', 'DET', 'PROPN', 'PROPN', 'NOUN']
+    dataset = utils.Dataset(converted_files[0], get_counts=True, batch_size=10, shuffle=False)
+
+    assert len(dataset) == 1
+    assert dataset.label_decoder == {'be': 0}
+    id_to_upos = {y: x for x, y in dataset.upos_to_id.items()}
+
+    for text_batches, _, upos_batches, _ in dataset:
+        assert text_batches == [['Here', "'s", 'a', 'Miami', 'Herald', 'interview']]
+        upos = [id_to_upos[x] for x in upos_batches[0]]
+        assert upos == ['ADV', 'AUX', 'DET', 'PROPN', 'PROPN', 'NOUN']
 
 def test_convert_dataset(tmp_path):
     converted_files = convert_english_dataset(tmp_path)
 
-    text_batches, idx_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(converted_files[0], get_counts=True, batch_size=10)
+    dataset = utils.Dataset(converted_files[0], get_counts=True, batch_size=10, shuffle=False)
 
-    assert len(text_batches[0]) == 9
+    assert len(dataset) == 1
+    label_decoder = dataset.label_decoder
     assert len(label_decoder) == 2
     assert "be" in label_decoder
     assert "have" in label_decoder
+    for text_batches, _, _, _ in dataset:
+        assert len(text_batches) == 9
 
-    text_batches, idx_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(converted_files[1], get_counts=True, batch_size=10)
-    assert len(text_batches[0]) == 2
+    dataset = utils.Dataset(converted_files[1], get_counts=True, batch_size=10, shuffle=False)
+    assert len(dataset) == 1
+    for text_batches, _, _, _ in dataset:
+        assert len(text_batches) == 2
 
-    text_batches, idx_batches, upos_batches, label_batches, counts, label_decoder, upos_to_id = utils.load_dataset(converted_files[2], get_counts=True, batch_size=10)
-    assert len(text_batches[0]) == 2
+    dataset = utils.Dataset(converted_files[2], get_counts=True, batch_size=10, shuffle=False)
+    assert len(dataset) == 1
+    for text_batches, _, _, _ in dataset:
+        assert len(text_batches) == 2
 

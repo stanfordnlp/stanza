@@ -1,6 +1,7 @@
 from collections import Counter, defaultdict
 import logging
 import os
+import random
 from typing import List, Tuple, Any, Mapping
 
 import stanza
@@ -9,77 +10,102 @@ import torch
 from stanza.models.lemma_classifier.constants import DEFAULT_BATCH_SIZE
 import stanza.models.lemma_classifier.prepare_dataset as prepare_dataset
 
+class Dataset:
+    def __init__(self, data_path: str, batch_size: int =DEFAULT_BATCH_SIZE, get_counts: bool = False, label_decoder: dict = None, shuffle: bool = True):
+        """
+        Loads a data file into data batches for tokenized text sentences, token indices, and true labels for each sentence.
 
-def load_dataset(data_path: str, batch_size=DEFAULT_BATCH_SIZE, get_counts: bool = False, label_decoder: dict = None) -> Tuple[List[List[str]], List[torch.Tensor], List[torch.Tensor], Mapping[int, int], Mapping[str, int]]:
-    """
-    Loads a data file into data batches for tokenized text sentences, token indices, and true labels for each sentence.
+        Args:
+            data_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line.
+            batch_size (int): Size of each batch of examples
+            get_counts (optional, bool): Whether there should be a map of the label index to counts
 
-    Args:
-        data_path (str): Path to data file, containing tokenized text sentences, token index and true label for token lemma on each line. 
-        batch_size (int): Size of each batch of examples
-        get_counts (optional, bool): Whether there should be a map of the label index to counts
+        Returns:
+            1. List[List[List[str]]]: Batches of sentences, where each token is a separate entry in each sentence
+            2. List[torch.tensor[int]]: A batch of indexes for the target token corresponding to its sentence
+            3. List[torch.tensor[int]]: A batch of labels for the target token's lemma
+            4. List[List[int]]: A batch of UPOS IDs for the target token (this is a List of Lists, not a tensor. It should be padded later.)
+            5 (Optional): A mapping of label ID to counts in the dataset.
+            6. Mapping[str, int]: A map between the labels and their indexes
+            7. Mapping[str, int]: A map between the UPOS tags and their corresponding IDs found in the UPOS batches
+        """
 
-    Returns:
-        1. List[List[List[str]]]: Batches of sentences, where each token is a separate entry in each sentence
-        2. List[torch.tensor[int]]: A batch of indexes for the target token corresponding to its sentence
-        3. List[torch.tensor[int]]: A batch of labels for the target token's lemma
-        4. List[List[int]]: A batch of UPOS IDs for the target token (this is a List of Lists, not a tensor. It should be padded later.)
-        5 (Optional): A mapping of label ID to counts in the dataset.
-        6. Mapping[str, int]: A map between the labels and their indexes
-        7. Mapping[str, int]: A map between the UPOS tags and their corresponding IDs found in the UPOS batches
-    """
+        if data_path is None or not os.path.exists(data_path):
+            raise FileNotFoundError(f"Data file {data_path} could not be found.")
 
-    if data_path is None or not os.path.exists(data_path):
-        raise FileNotFoundError(f"Data file {data_path} could not be found.")
+        if label_decoder is None:
+            label_decoder = {}
+        else:
+            # if labels in the test set aren't in the original model,
+            # the model will never predict those labels,
+            # but we can still use those labels in a confusion matrix
+            label_decoder = dict(label_decoder)
 
-    if label_decoder is None:
-        label_decoder = {}
-    else:
-        # if labels in the test set aren't in the original model,
-        # the model will never predict those labels,
-        # but we can still use those labels in a confusion matrix
-        label_decoder = dict(label_decoder)
+        logging.debug("Final label decoder: %s  Should be strings to ints", label_decoder)
 
-    logging.debug("Final label decoder: %s  Should be strings to ints", label_decoder)
+        with open(data_path, "r+", encoding="utf-8") as f:
+            sentences, indices, labels, upos_ids, counts, upos_to_id = [], [], [], [], Counter(), defaultdict(str)
 
-    with open(data_path, "r+", encoding="utf-8") as f:
-        sentences, indices, labels, upos_ids, counts, upos_to_id = [], [], [], [], Counter(), defaultdict(str)
+            data_processor = prepare_dataset.DataProcessor("", [], "")
+            sentences_data = data_processor.read_processed_data(data_path)
 
-        data_processor = prepare_dataset.DataProcessor("", [], "")
-        sentences_data = data_processor.read_processed_data(data_path)
+            for idx, sentence in enumerate(sentences_data):
+                # TODO Could replace this with sentence.values(), but need to know if Stanza requires Python 3.7 or later for backward compatability reasons
+                words, target_idx, upos_tags, label = sentence.get("words"), sentence.get("index"), sentence.get("upos_tags"), sentence.get("lemma")
+                if None in [words, target_idx, upos_tags, label]:
+                    raise ValueError(f"Expected data to be complete but found a null value in sentence {idx}: {sentence}")
 
-        for idx, sentence in enumerate(sentences_data):
-            # TODO Could replace this with sentence.values(), but need to know if Stanza requires Python 3.7 or later for backward compatability reasons
-            words, target_idx, upos_tags, label = sentence.get("words"), sentence.get("index"), sentence.get("upos_tags"), sentence.get("lemma")   
-            if None in [words, target_idx, upos_tags, label]:
-                raise ValueError(f"Expected data to be complete but found a null value in sentence {idx}: {sentence}")
-            
-            label_id = label_decoder.get(label, None)
-            if label_id is None:
-                label_decoder[label] = len(label_decoder)  # create a new ID for the unknown label
+                label_id = label_decoder.get(label, None)
+                if label_id is None:
+                    label_decoder[label] = len(label_decoder)  # create a new ID for the unknown label
 
-            converted_upos_tags = []  # convert upos tags to upos IDs
-            for upos_tag in upos_tags:
-                upos_id = upos_to_id.get(upos_tag, None)
-                if upos_id is None: 
-                    upos_to_id[upos_tag] = len(upos_to_id)  # create a new ID for the unknown UPOS tag
-                converted_upos_tags.append(upos_to_id[upos_tag])
+                converted_upos_tags = []  # convert upos tags to upos IDs
+                for upos_tag in upos_tags:
+                    upos_id = upos_to_id.get(upos_tag, None)
+                    if upos_id is None:
+                        upos_to_id[upos_tag] = len(upos_to_id)  # create a new ID for the unknown UPOS tag
+                    converted_upos_tags.append(upos_to_id[upos_tag])
 
-            sentences.append(words)
-            indices.append(target_idx)
-            upos_ids.append(converted_upos_tags)
-            labels.append(label_decoder[label])
+                sentences.append(words)
+                indices.append(target_idx)
+                upos_ids.append(converted_upos_tags)
+                labels.append(label_decoder[label])
 
-            if get_counts:
-                counts[label_decoder[label]] += 1
+                if get_counts:
+                    counts[label_decoder[label]] += 1
 
-    sentence_batches = [sentences[i: i + batch_size] for i in range(0, len(sentences), batch_size)]
-    indices_batches = [torch.tensor(indices[i: i + batch_size]) for i in range(0, len(indices), batch_size)]
-    upos_batches = [upos_ids[i: i + batch_size] for i in range(0, len(upos_ids), batch_size)]
-    labels_batches = [torch.tensor(labels[i: i + batch_size]) for i in range(0, len(labels), batch_size)]
-    # TODO consider making the return object a JSON or a custom object for cleaner access instead of a big tuple of stuff
-    return sentence_batches, indices_batches, upos_batches, labels_batches, counts, label_decoder, upos_to_id
+        self.sentences = sentences
+        self.indices = indices
+        self.upos_ids = upos_ids
+        self.labels = labels
 
+        self.counts = counts
+        self.label_decoder = label_decoder
+        self.upos_to_id = upos_to_id
+
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+
+    def __len__(self):
+        """
+        Number of batches, rounded up to nearest batch
+        """
+        return len(self.sentences) // self.batch_size + (len(self.sentences) % self.batch_size > 0)
+
+    def __iter__(self):
+        num_sentences = len(self.sentences)
+        indices = list(range(num_sentences))
+        if self.shuffle:
+            random.shuffle(indices)
+        for i in range(self.__len__()):
+            batch_start = self.batch_size * i
+            batch_end = min(batch_start + self.batch_size, num_sentences)
+
+            batch_sentences = [self.sentences[x] for x in indices[batch_start:batch_end]]
+            batch_indices =   torch.tensor([self.indices[x] for x in indices[batch_start:batch_end]])
+            batch_upos_ids =  [self.upos_ids[x] for x in indices[batch_start:batch_end]]
+            batch_labels =    torch.tensor([self.labels[x] for x in indices[batch_start:batch_end]])
+            yield batch_sentences, batch_indices, batch_upos_ids, batch_labels
 
 def extract_unknown_token_indices(tokenized_indices: torch.tensor, unknown_token_idx: int) -> List[int]:
     """

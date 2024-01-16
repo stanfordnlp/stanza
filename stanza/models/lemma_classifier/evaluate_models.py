@@ -49,7 +49,7 @@ def get_weighted_f1(mcc_results: Mapping[int, Mapping[str, float]], confusion: M
     return weighted_f1 / num_total_examples
 
 
-def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: List[List[Any]], label_decoder: Mapping, verbose=True):
+def evaluate_sequences(gold_tag_sequences: List[Any], pred_tag_sequences: List[Any], label_decoder: Mapping, verbose=True):
     """
     Evaluates a model's predicted tags against a set of gold tags. Computes precision, recall, and f1 for all classes.
 
@@ -69,11 +69,8 @@ def evaluate_sequences(gold_tag_sequences: List[List[Any]], pred_tag_sequences: 
     confusion = defaultdict(lambda: defaultdict(int))
 
     reverse_label_decoder = {y: x for x, y in label_decoder.items()}
-    for gold_tags, pred_tags in tqdm(zip(gold_tag_sequences, pred_tag_sequences), "Evaluating sequences", total=len(gold_tag_sequences)):
-
-        assert len(gold_tags) == len(pred_tags), f"Number of gold tags doesn't match number of predicted tags ({len(gold_tags)}, {len(pred_tags)})"
-        for gold, pred in zip(gold_tags, pred_tags):
-            confusion[reverse_label_decoder[gold.item()]][reverse_label_decoder[pred]] += 1
+    for gold, pred in zip(gold_tag_sequences, pred_tag_sequences):
+        confusion[reverse_label_decoder[gold]][reverse_label_decoder[pred]] += 1
 
     multi_class_result = defaultdict(lambda: defaultdict(float))
     # compute precision, recall and f1 for each class and store inside of `multi_class_result`
@@ -154,29 +151,29 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
         model.eval()  # set to eval mode
 
     # load in eval data
-    text_batches, index_batches, upos_batches, label_batches, _, label_decoder, upos_to_id = utils.load_dataset(eval_path, label_decoder=model.label_decoder)
+    dataset = utils.Dataset(eval_path, label_decoder=model.label_decoder, shuffle=False)
     
     logging.info(f"Evaluating on evaluation file {eval_path}")
 
     correct, total = 0, 0
-    gold_tags, pred_tags = label_batches, []
-    
+    gold_tags, pred_tags = dataset.labels, []
+
     # run eval on each example from dataset
-    for sentences, pos_indices, upos_tags, labels in tqdm(zip(text_batches, index_batches, upos_batches, label_batches), "Evaluating examples from data file", total=len(text_batches)):
+    for sentences, pos_indices, upos_tags, labels in tqdm(dataset, "Evaluating examples from data file"):
         pred = model_predict(model, pos_indices, sentences, upos_tags)  # Pred should be size (batch_size, )
         correct_preds = pred == labels.to(device)
         correct += torch.sum(correct_preds)
         total += len(correct_preds)
-        pred_tags += [pred.tolist()]  
+        pred_tags += pred.tolist()
 
     logging.info("Finished evaluating on dataset. Computing scores...")
     accuracy = correct / total
 
-    mc_results, confusion, weighted_f1 = evaluate_sequences(gold_tags, pred_tags, label_decoder, verbose=verbose)
+    mc_results, confusion, weighted_f1 = evaluate_sequences(gold_tags, pred_tags, dataset.label_decoder, verbose=verbose)
     # add brackets around batches of gold and pred tags because each batch is an element within the sequences in this helper
     if verbose:
         logging.info(f"Accuracy: {accuracy} ({correct}/{total})")
-        logging.info(f"Label decoder: {label_decoder}")
+        logging.info(f"Label decoder: {dataset.label_decoder}")
     
     return mc_results, confusion, accuracy, weighted_f1
 
