@@ -34,7 +34,7 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
         # Choose transformer
         self.transformer_name = transformer_name
         self.tokenizer = AutoTokenizer.from_pretrained(transformer_name, use_fast=True, add_prefix_space=True)
-        self.transformer = AutoModel.from_pretrained(transformer_name)
+        self.add_unsaved_module("transformer", AutoModel.from_pretrained(transformer_name))
         config = self.transformer.config
 
         embedding_size = config.hidden_size
@@ -48,13 +48,15 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
         self.label_decoder = label_decoder
 
     def get_save_dict(self):
-        # TODO: *don't* save the transformer
         save_dict = {
             "params": self.state_dict(),
             "label_decoder": self.label_decoder,
             "model_type": self.model_type(),
             "args": self.model_args,
         }
+        skipped = [k for k in save_dict["params"].keys() if self.is_unsaved_module(k)]
+        for k in skipped:
+            del save_dict["params"][k]
         return save_dict
 
     def forward(self, idx_positions: List[int], sentences: List[List[str]], upos_tags: List[List[int]]):

@@ -22,6 +22,15 @@ class LemmaClassifier(ABC, nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.unsaved_modules = []
+
+    def add_unsaved_module(self, name, module):
+        self.unsaved_modules += [name]
+        setattr(self, name, module)
+
+    def is_unsaved_module(self, name):
+        return name.split('.')[0] in self.unsaved_modules
+
     def save(self, save_name):
         """
         Save the model to the given path, possibly with some args
@@ -101,5 +110,6 @@ class LemmaClassifier(ABC, nn.Module):
         else:
             raise ValueError("Unknown model type %s" % model_type)
 
-        model.load_state_dict(checkpoint['params'])
+        # strict=False to accommodate missing parameters from the transformer or charlm
+        model.load_state_dict(checkpoint['params'], strict=False)
         return model

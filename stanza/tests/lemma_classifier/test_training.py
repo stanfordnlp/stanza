@@ -30,8 +30,9 @@ def test_train_lstm(tmp_path, pretrain_file):
                   '--eval_file', eval_file]
     trainer = train_model.main(train_args)
 
-    model = LemmaClassifier.load(save_name, None)
     evaluate_model(trainer.model, eval_file)
+    # test that loading the model works
+    model = LemmaClassifier.load(save_name, None)
 
 def test_train_transformer(tmp_path, pretrain_file):
     converted_files = convert_english_dataset(tmp_path)
@@ -45,4 +46,8 @@ def test_train_transformer(tmp_path, pretrain_file):
                   '--train_file', train_file,
                   '--eval_file', eval_file]
     trainer = baseline_trainer.main(train_args)
+
     evaluate_model(trainer.model, eval_file)
+
+    # test that loading the model works
+    model = LemmaClassifier.load(save_name, None)

@@ -45,11 +45,6 @@ class LemmaClassifierLSTM(LemmaClassifier):
         self.hidden_dim = model_args['hidden_dim']
         self.input_size = 0
         self.num_heads = self.model_args['num_heads']
-        self.unsaved_modules = []
-
-        def add_unsaved_module(name, module):
-            self.unsaved_modules += [name]
-            setattr(self, name, module)
     
         self.embedding_dim = embedding_dim
         self.input_size += embedding_dim
@@ -68,8 +63,8 @@ class LemmaClassifierLSTM(LemmaClassifier):
                 raise FileNotFoundError(f'Could not find forward character model: {charlm_forward_file}')
             if charlm_backward_file is None or not os.path.exists(charlm_backward_file):
                 raise FileNotFoundError(f'Could not find backward character model: {charlm_backward_file}')
-            add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(charlm_forward_file, finetune=False))
-            add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(charlm_backward_file, finetune=False))
+            self.add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(charlm_forward_file, finetune=False))
+            self.add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(charlm_backward_file, finetune=False))
 
             self.input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
         
@@ -110,6 +105,9 @@ class LemmaClassifierLSTM(LemmaClassifier):
             "args": self.model_args,
             "upos_to_id": self.upos_to_id,
         }
+        skipped = [k for k in save_dict["params"].keys() if self.is_unsaved_module(k)]
+        for k in skipped:
+            del save_dict["params"][k]
         return save_dict
 
     def forward(self, pos_indices: List[int], sentences: List[List[str]], upos_tags: List[List[int]]):  
