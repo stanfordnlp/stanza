@@ -34,8 +34,6 @@ class LemmaClassifier(ABC, nn.Module):
     def save(self, save_name):
         """
         Save the model to the given path, possibly with some args
-
-        TODO: keep all the relevant args in the model
         """
         save_dir = os.path.split(save_name)[0]
         if save_dir:
