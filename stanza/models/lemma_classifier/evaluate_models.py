@@ -14,7 +14,6 @@ from typing import Any, List, Tuple, Mapping
 from collections import defaultdict
 from numpy import random
 
-from tqdm import tqdm
 import torch
 import torch.nn as nn
 
@@ -26,6 +25,9 @@ from stanza.models.lemma_classifier.base_model import LemmaClassifier
 from stanza.models.lemma_classifier.model import LemmaClassifierLSTM
 from stanza.models.lemma_classifier.transformer_baseline.model import LemmaClassifierWithTransformer
 from stanza.utils.confusion import format_confusion
+from stanza.utils.get_tqdm import get_tqdm
+
+tqdm = get_tqdm()
 
 logger = logging.getLogger('stanza.lemmaclassifier')
 
