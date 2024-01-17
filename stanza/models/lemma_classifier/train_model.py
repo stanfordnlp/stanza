@@ -46,13 +46,7 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
 
         # Load word embeddings
         pt = load_pretrain(embedding_file)
-        emb_matrix = pt.emb
-        # TODO: could refactor only the trained embeddings, then turn freezing back on, then don't save the full PT with the model
-        self.embeddings = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=False)
-        self.embeddings.weight.requires_grad = True
-        self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pt.vocab) }
-        self.vocab_size = emb_matrix.shape[0]
-        self.embedding_dim = emb_matrix.shape[1]
+        self.pt_embedding = pt
 
         # Load CharLM embeddings
         if use_charlm and charlm_forward_file is not None and not os.path.exists(charlm_forward_file):
@@ -79,7 +73,7 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
             raise ValueError("Must enter a valid loss function (e.g. 'ce' or 'weighted_bce')")
 
     def build_model(self, label_decoder, upos_to_id):
-        return LemmaClassifierLSTM(self.model_args, self.vocab_size, self.embedding_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder, upos_to_id,
+        return LemmaClassifierLSTM(self.model_args, self.output_dim, self.pt_embedding, label_decoder, upos_to_id,
                                    use_charlm=self.use_charlm, charlm_forward_file=self.charlm_forward_file, charlm_backward_file=self.charlm_backward_file)
 
 def build_argparse():

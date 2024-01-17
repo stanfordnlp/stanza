@@ -20,7 +20,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
         From the LSTM output, we get the embedding fo the specific token that we classify on. That embedding 
         is fed into an MLP for classification.
     """
-    def __init__(self, model_args, vocab_size, embedding_dim, output_dim, vocab_map, pt_embedding, label_decoder, upos_to_id, use_charlm=False, charlm_forward_file=None, charlm_backward_file=None):
+    def __init__(self, model_args, output_dim, pt_embedding, label_decoder, upos_to_id, use_charlm=False, charlm_forward_file=None, charlm_backward_file=None):
         """
         Args:
             vocab_size (int): Size of the vocab being used (if custom vocab)
@@ -46,11 +46,15 @@ class LemmaClassifierLSTM(LemmaClassifier):
         self.input_size = 0
         self.num_heads = self.model_args['num_heads']
     
-        self.embedding_dim = embedding_dim
-        self.input_size += embedding_dim
+        emb_matrix = pt_embedding.emb
+        # TODO: finetune embeddings based on the words passed in
+        self.embeddings = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=False)
+        self.embeddings.weight.requires_grad = True
+        self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pt_embedding.vocab) }
+        self.vocab_size = emb_matrix.shape[0]
+        self.embedding_dim = emb_matrix.shape[1]
 
-        self.embedding = pt_embedding
-        self.vocab_map = vocab_map
+        self.input_size += self.embedding_dim
 
         # TODO: pass this up to the parent class
         self.label_decoder = label_decoder
@@ -131,7 +135,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
             token_ids.append(sentence_token_ids)
 
         token_ids = pad_sequence(token_ids, batch_first=True)
-        embedded = self.embedding(token_ids)
+        embedded = self.embeddings(token_ids)
         if self.upos_emb_dim > 0:
             upos_tags = [torch.tensor(sentence_tags) for sentence_tags in upos_tags]  # convert internal lists to tensors
             upos_tags = pad_sequence(upos_tags, batch_first=True, padding_value=0).to(device)   
