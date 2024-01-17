@@ -22,7 +22,7 @@ class LemmaClassifier(ABC, nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def save(self, save_name, args):
+    def save(self, save_name):
         """
         Save the model to the given path, possibly with some args
 
@@ -31,7 +31,7 @@ class LemmaClassifier(ABC, nn.Module):
         save_dir = os.path.split(save_name)[0]
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
-        save_dict = self.get_save_dict(args)
+        save_dict = self.get_save_dict()
         torch.save(save_dict, save_name)
         return save_dict
 

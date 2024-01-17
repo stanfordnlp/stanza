@@ -106,8 +106,8 @@ class BaseLemmaClassifierTrainer(ABC):
                 logger.info(f"Weighted f1 for model: {f1}")
                 if f1 > best_f1:
                     best_f1 = f1
-                    self.model.save(save_name, args)
+                    self.model.save(save_name)
                     logger.info(f"New best model: weighted f1 score of {f1}.")
             else:
-                self.model.save(save_name, args)
+                self.model.save(save_name)
 

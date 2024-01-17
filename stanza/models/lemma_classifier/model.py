@@ -101,13 +101,13 @@ class LemmaClassifierLSTM(LemmaClassifier):
             nn.Linear(64, output_dim)
         )
 
-    def get_save_dict(self, args):
+    def get_save_dict(self):
         # TODO: *don't* save the charlm
         save_dict = {
             "params": self.state_dict(),
             "label_decoder": self.label_decoder,
             "model_type": self.model_type(),
-            "args": args,
+            "args": self.model_args,
             "upos_to_id": self.upos_to_id,
         }
         return save_dict
