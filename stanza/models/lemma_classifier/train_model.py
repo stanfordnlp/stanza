@@ -21,15 +21,14 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
     Class to assist with training a LemmaClassifierLSTM
     """
 
-    def __init__(self, embedding_file: str, hidden_dim: int, use_charlm: bool = False, charlm_forward_file: str = None, charlm_backward_file: str = None, upos_emb_dim: int = 20, num_heads: int = 0, lr: float = 0.001, loss_func: str = None, eval_file: str = None):
+    def __init__(self, model_args: dict, embedding_file: str, use_charlm: bool = False, charlm_forward_file: str = None, charlm_backward_file: str = None, lr: float = 0.001, loss_func: str = None):
         """
         Initializes the LemmaClassifierTrainer class.
         
         Args:
+            model_args (dict): Various model shape parameters
             embedding_file (str): What word embeddings file to use.  Use a Stanza pretrain .pt
-            hidden_dim (int): Size of hidden vectors in LSTM layers
             use_charlm (bool, optional): Whether to use charlm embeddings as well. Defaults to False.
-            eval_file (str): File used as dev set to evaluate which model gets saved
             charlm_forward_file (str): Path to the forward pass embeddings for the charlm 
             charlm_backward_file (str): Path to the backward pass embeddings for the charlm
             upos_emb_dim (int): The dimension size of UPOS tag embeddings
@@ -43,8 +42,7 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
         """
         super().__init__()
 
-        self.hidden_dim = hidden_dim
-        self.upos_emb_dim = upos_emb_dim
+        self.model_args = model_args
 
         # Load word embeddings
         pt = load_pretrain(embedding_file)
@@ -66,7 +64,6 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
         self.use_charlm = use_charlm
         self.charlm_forward_file = charlm_forward_file
         self.charlm_backward_file = charlm_backward_file
-        self.num_heads = num_heads
         self.lr = lr
 
         # Find loss function
@@ -82,9 +79,8 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
             raise ValueError("Must enter a valid loss function (e.g. 'ce' or 'weighted_bce')")
 
     def build_model(self, label_decoder, upos_to_id):
-        return LemmaClassifierLSTM(self.vocab_size, self.embedding_dim, self.hidden_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder,
-                                   use_charlm=self.use_charlm, charlm_forward_file=self.charlm_forward_file, charlm_backward_file=self.charlm_backward_file,
-                                   upos_emb_dim=self.upos_emb_dim, num_heads=self.num_heads, upos_to_id=upos_to_id)
+        return LemmaClassifierLSTM(self.model_args, self.vocab_size, self.embedding_dim, self.output_dim, self.vocab_map, self.embeddings, label_decoder, upos_to_id,
+                                   use_charlm=self.use_charlm, charlm_forward_file=self.charlm_forward_file, charlm_backward_file=self.charlm_backward_file)
 
 def build_argparse():
     parser = argparse.ArgumentParser()
@@ -110,7 +106,6 @@ def main(args=None):
     parser = build_argparse()
     args = parser.parse_args(args)
 
-    hidden_dim = args.hidden_dim
     wordvec_pretrain_file = args.wordvec_pretrain_file
     use_charlm = args.use_charlm
     charlm_forward_file = args.charlm_forward_file
@@ -137,13 +132,11 @@ def main(args=None):
         logger.info(f"{arg}: {args[arg]}")
     logger.info("------------------------------------------------------------")
 
-    trainer = LemmaClassifierTrainer(embedding_file=wordvec_pretrain_file,
-                                     hidden_dim=hidden_dim,
+    trainer = LemmaClassifierTrainer(model_args=args,
+                                     embedding_file=wordvec_pretrain_file,
                                      use_charlm=use_charlm,
                                      charlm_forward_file=charlm_forward_file,
                                      charlm_backward_file=charlm_backward_file,
-                                     upos_emb_dim=upos_emb_dim,
-                                     num_heads=num_heads if use_attention else 0,
                                      lr=lr,
                                      loss_func="weighted_bce" if weighted_loss else "ce",
                                      )

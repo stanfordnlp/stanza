@@ -14,7 +14,7 @@ from stanza.models.lemma_classifier.constants import ModelType
 logger = logging.getLogger('stanza.lemmaclassifier')
 
 class LemmaClassifierWithTransformer(LemmaClassifier):
-    def __init__(self, output_dim: int, transformer_name: str, label_decoder: Mapping):
+    def __init__(self, model_args: dict, output_dim: int, transformer_name: str, label_decoder: Mapping):
         """
         Model architecture:
 
@@ -23,10 +23,13 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
             as input to an MLP classifier that has 2 linear layers, and a prediction head.
 
         Args:
+            model_args (dict): args for the model
             output_dim (int): Dimension of the output from the MLP 
-            model_type (str): What kind of transformer to use for embeddings ('bert' or 'roberta')
+            transformer_name (str): name of the HF transformer to use
+            label_decoder (dict): a map of the labels available to the model
         """
         super(LemmaClassifierWithTransformer, self).__init__()
+        self.model_args = model_args
 
         # Choose transformer
         self.transformer_name = transformer_name

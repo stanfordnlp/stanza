@@ -20,13 +20,12 @@ class LemmaClassifierLSTM(LemmaClassifier):
         From the LSTM output, we get the embedding fo the specific token that we classify on. That embedding 
         is fed into an MLP for classification.
     """
-    def __init__(self, vocab_size, embedding_dim, hidden_dim, output_dim, vocab_map, pt_embedding, label_decoder, use_charlm=False, charlm_forward_file=None, charlm_backward_file=None, **kwargs):
+    def __init__(self, model_args, vocab_size, embedding_dim, output_dim, vocab_map, pt_embedding, label_decoder, upos_to_id, use_charlm=False, charlm_forward_file=None, charlm_backward_file=None):
         """
         Args:
             vocab_size (int): Size of the vocab being used (if custom vocab)
             embeddings (word vectors for embedding): What word embeddings to use (currently only supports GloVe) TODO add more!
             embedding_dim (int): Size of embedding dimension to use on the aforementioned word embeddings
-            hidden_dim (int): Size of hidden vectors in LSTM layers
             output_dim (int): Size of output vector from MLP layer
             use_charlm (bool): Whether or not to use the charlm embeddings
             charlm_forward_file (str): The path to the forward pass model for the character language model
@@ -41,8 +40,11 @@ class LemmaClassifierLSTM(LemmaClassifier):
             FileNotFoundError: if the forward or backward charlm file cannot be found.
         """
         super(LemmaClassifierLSTM, self).__init__()
+        self.model_args = model_args
+
+        self.hidden_dim = model_args['hidden_dim']
         self.input_size = 0
-        self.num_heads = kwargs.get('num_heads', 0)
+        self.num_heads = self.model_args['num_heads']
         self.unsaved_modules = []
 
         def add_unsaved_module(name, module):
@@ -71,8 +73,8 @@ class LemmaClassifierLSTM(LemmaClassifier):
 
             self.input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
         
-        self.upos_emb_dim = kwargs.get("upos_emb_dim", 0)
-        self.upos_to_id = kwargs.get("upos_to_id", None)
+        self.upos_emb_dim = self.model_args["upos_emb_dim"]
+        self.upos_to_id = upos_to_id
         if self.upos_emb_dim > 0 and self.upos_to_id is not None:
             self.upos_emb = nn.Embedding(num_embeddings=len(self.upos_to_id), 
                                          embedding_dim=self.upos_emb_dim,
@@ -86,15 +88,13 @@ class LemmaClassifierLSTM(LemmaClassifier):
             self.multihead_attn = nn.MultiheadAttention(embed_dim=self.input_size, num_heads=self.num_heads, batch_first=True).to(device)
             logger.info(f"Using attention mechanism with embed dim {self.input_size} and {self.num_heads} attention heads.")
         else:
-            self.lstm = nn.LSTM(
-            self.input_size, 
-            hidden_dim, 
-            batch_first=True, 
-            bidirectional=True
-                        )
+            self.lstm = nn.LSTM(self.input_size,
+                                self.hidden_dim,
+                                batch_first=True,
+                                bidirectional=True)
             logger.info(f"Using LSTM mechanism.")
 
-        mlp_input_size = hidden_dim * 2 if self.num_heads == 0 else self.input_size
+        mlp_input_size = self.hidden_dim * 2 if self.num_heads == 0 else self.input_size
         self.mlp = nn.Sequential(
             nn.Linear(mlp_input_size, 64),
             nn.ReLU(),

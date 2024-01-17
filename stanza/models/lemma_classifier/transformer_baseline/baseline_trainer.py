@@ -24,7 +24,7 @@ class TransformerBaselineTrainer(BaseLemmaClassifierTrainer):
     To find the model spec, refer to `model.py` in this directory.
     """
 
-    def __init__(self, transformer_name: str = "roberta", loss_func: str = "ce", lr: int = 0.001):
+    def __init__(self, model_args: dict, transformer_name: str = "roberta", loss_func: str = "ce", lr: int = 0.001):
         """
         Creates the Trainer object
 
@@ -34,6 +34,8 @@ class TransformerBaselineTrainer(BaseLemmaClassifierTrainer):
             lr (int, optional): learning rate for the optimizer. Defaults to 0.001.
         """
         super().__init__()
+
+        self.model_args = model_args
 
         # Find loss function
         if loss_func == "ce":
@@ -71,7 +73,7 @@ class TransformerBaselineTrainer(BaseLemmaClassifierTrainer):
         return optimizer
 
     def build_model(self, label_decoder, upos_to_id):
-        return LemmaClassifierWithTransformer(output_dim=self.output_dim, transformer_name=self.transformer_name, label_decoder=label_decoder)
+        return LemmaClassifierWithTransformer(model_args=self.model_args, output_dim=self.output_dim, transformer_name=self.transformer_name, label_decoder=label_decoder)
 
 
 def main(args=None):
@@ -118,7 +120,7 @@ def main(args=None):
         logger.info(f"{arg}: {args[arg]}")
     logger.info("------------------------------------------------------------")
     
-    trainer = TransformerBaselineTrainer(transformer_name=args['bert_model'], loss_func=loss_fn, lr=lr)
+    trainer = TransformerBaselineTrainer(model_args=args, transformer_name=args['bert_model'], loss_func=loss_fn, lr=lr)
 
     trainer.train(num_epochs=num_epochs, save_name=save_name, train_file=train_file, args=args, eval_file=eval_file)
     return trainer
