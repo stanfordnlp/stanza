@@ -1,14 +1,14 @@
-import os 
-import sys 
+import os
+import sys
 
 parentdir = os.path.dirname(__file__)
 parentdir = os.path.dirname(parentdir)
 parentdir = os.path.dirname(parentdir)
 sys.path.append(parentdir)
 
-import logging 
+import logging
 import argparse
-import os 
+import os
 
 from typing import Any, List, Tuple, Mapping
 from collections import defaultdict
@@ -47,7 +47,7 @@ def get_weighted_f1(mcc_results: Mapping[int, Mapping[str, float]], confusion: M
         num_class_examples = sum(confusion.get(class_id).values())
         weighted_f1 += class_f1 * num_class_examples
         num_total_examples += num_class_examples
-    
+
     return weighted_f1 / num_total_examples
 
 
@@ -66,8 +66,8 @@ def evaluate_sequences(gold_tag_sequences: List[Any], pred_tag_sequences: List[A
            e.g. confusion[0][1] = 6 would mean that for gold tag 0, the model predicted tag 1 a total of 6 times.
     """
     assert len(gold_tag_sequences) == len(pred_tag_sequences), \
-    f"Length of gold tag sequences is {len(gold_tag_sequences)}, while length of predicted tag sequence is {len(pred_tag_sequences)}"        
-    
+    f"Length of gold tag sequences is {len(gold_tag_sequences)}, while length of predicted tag sequence is {len(pred_tag_sequences)}"
+
     confusion = defaultdict(lambda: defaultdict(int))
 
     reverse_label_decoder = {y: x for x, y in label_decoder.items()}
@@ -81,8 +81,8 @@ def evaluate_sequences(gold_tag_sequences: List[Any], pred_tag_sequences: List[A
         try:
             prec = confusion.get(gold_tag, {}).get(gold_tag, 0) / sum([confusion.get(k, {}).get(gold_tag, 0) for k in confusion.keys()])
         except ZeroDivisionError:
-            prec = 0.0 
-        
+            prec = 0.0
+
         try:
             recall = confusion.get(gold_tag, {}).get(gold_tag, 0) / sum(confusion.get(gold_tag, {}).values())
         except ZeroDivisionError:
@@ -91,21 +91,21 @@ def evaluate_sequences(gold_tag_sequences: List[Any], pred_tag_sequences: List[A
         try:
             f1 = 2 * (prec * recall) / (prec + recall)
         except ZeroDivisionError:
-            f1 = 0.0 
+            f1 = 0.0
 
         multi_class_result[gold_tag] = {
             "precision": prec,
             "recall": recall,
             "f1": f1
         }
-    
+
     if verbose:
         for lemma in multi_class_result:
             logger.info(f"Lemma '{lemma}' had precision {100 * multi_class_result[lemma]['precision']}, recall {100 * multi_class_result[lemma]['recall']} and F1 score of {100 * multi_class_result[lemma]['f1']}")
-    
+
     weighted_f1 = get_weighted_f1(multi_class_result, confusion)
 
-    return multi_class_result, confusion, weighted_f1   
+    return multi_class_result, confusion, weighted_f1
 
 
 def model_predict(model: nn.Module, position_indices: torch.Tensor, sentences: List[List[str]], upos_tags: List[List[int]]=[]) -> torch.Tensor:
@@ -116,14 +116,14 @@ def model_predict(model: nn.Module, position_indices: torch.Tensor, sentences: L
         model (LemmaClassifier): A trained LemmaClassifier that is able to predict on a target token.
         position_indices (Tensor[int]): A tensor of the (zero-indexed) position of the target token in `text` for each example in the batch.
         sentences (List[List[str]]): A list of lists of the tokenized strings of the input sentences.
-    
+
     Returns:
         (int): The index of the predicted class in `model`'s output.
     """
     with torch.no_grad():
         logits = model(position_indices, sentences, upos_tags)  # should be size (batch_size, output_size)
         predicted_class = torch.argmax(logits, dim=1)  # should be size (batch_size, 1)
-    
+
     return predicted_class
 
 
@@ -139,9 +139,9 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
         is_training (bool, optional): Whether the model is in training mode. If the model is training, we do not change it to eval mode.
 
     Returns:
-        1. Multi-class results (Mapping[int, Mapping[str, float]]): first map has keys as the classes (lemma indices) and value is 
+        1. Multi-class results (Mapping[int, Mapping[str, float]]): first map has keys as the classes (lemma indices) and value is
                                                                     another map with key of "f1", "precision", or "recall" with corresponding values.
-        2. Confusion Matrix (Mapping[int, Mapping[int, int]]): A confusion matrix with keys equal to the index of the gold tag, and a value of the 
+        2. Confusion Matrix (Mapping[int, Mapping[int, int]]): A confusion matrix with keys equal to the index of the gold tag, and a value of the
                                                                map with the key as the predicted tag and corresponding count of that (gold, pred) pair.
         3. Accuracy (float): the total accuracy (num correct / total examples) across the evaluation set.
     """
@@ -154,7 +154,7 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
 
     # load in eval data
     dataset = utils.Dataset(eval_path, label_decoder=model.label_decoder, shuffle=False)
-    
+
     logger.info(f"Evaluating on evaluation file {eval_path}")
 
     correct, total = 0, 0
@@ -176,11 +176,11 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
     if verbose:
         logger.info(f"Accuracy: {accuracy} ({correct}/{total})")
         logger.info(f"Label decoder: {dataset.label_decoder}")
-    
+
     return mc_results, confusion, accuracy, weighted_f1
 
 
-def main(args=None):
+def main(args=None, predefined_args=None):
 
     # TODO: can unify this script with train_lstm_model.py?
     # TODO: can save the model type in the model .pt, then
@@ -200,7 +200,7 @@ def main(args=None):
     parser.add_argument("--bert_model", type=str, default=None, help="Use a specific transformer instead of the default bert/roberta")
     parser.add_argument("--eval_file", type=str, help="path to evaluation file")
 
-    args = parser.parse_args(args)
+    args = parser.parse_args(args) if not predefined_args else predefined_args
 
     logger.info("Running training script with the following args:")
     args = vars(args)
@@ -220,6 +220,8 @@ def main(args=None):
     logger.info(f"Accuracy: {acc}")
     logger.info("______________________________________________")
     logger.info(f"Weighted f1: {weighted_f1}")
+
+    return mcc_results, confusion, acc, weighted_f1
 
 
 if __name__ == "__main__":
