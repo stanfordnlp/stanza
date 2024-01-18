@@ -77,9 +77,6 @@ class BaseLemmaClassifierTrainer(ABC):
         logger.debug(f"Criterion on {next(self.model.parameters()).device}")
         self.criterion = self.criterion.to(next(self.model.parameters()).device)
 
-        print(torch.linalg.norm(self.model.embeddings.weight))
-        print(torch.linalg.norm(self.model.delta_embedding.weight))
-
         best_model, best_f1 = None, float("-inf")  # Used for saving checkpoints of the model
         for epoch in range(num_epochs):
             # go over entire dataset with each epoch
@@ -101,9 +98,6 @@ class BaseLemmaClassifierTrainer(ABC):
 
                 loss.backward()
                 self.optimizer.step()
-
-            print(torch.linalg.norm(self.model.embeddings.weight))
-            print(torch.linalg.norm(self.model.delta_embedding.weight))
 
             logger.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
             if eval_file:
