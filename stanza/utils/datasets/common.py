@@ -76,6 +76,11 @@ def prepare_tokenizer_treebank_labels(tokenizer_dir, short_name):
             raise
 
 def read_sentences_from_conllu(filename):
+    """
+    Reads a conllu file as a list of list of strings
+
+    Finding a blank line separates the lists
+    """
     sents = []
     cache = []
     with open(filename, encoding="utf-8") as infile:
