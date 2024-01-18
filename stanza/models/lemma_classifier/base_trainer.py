@@ -33,7 +33,7 @@ class BaseLemmaClassifierTrainer(ABC):
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
     @abstractmethod
-    def build_model(self, label_decoder, upos_to_id):
+    def build_model(self, label_decoder, upos_to_id, known_words):
         """
         Build a model using pieces of the dataset to determine some of the model shape
         """
@@ -61,7 +61,7 @@ class BaseLemmaClassifierTrainer(ABC):
         logger.info(f"Loaded dataset successfully from {train_file}")
         logger.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
 
-        self.model = self.build_model(label_decoder, upos_to_id)
+        self.model = self.build_model(label_decoder, upos_to_id, dataset.known_words)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.model.to(device)
@@ -76,6 +76,9 @@ class BaseLemmaClassifierTrainer(ABC):
         # Put the criterion on GPU too
         logger.debug(f"Criterion on {next(self.model.parameters()).device}")
         self.criterion = self.criterion.to(next(self.model.parameters()).device)
+
+        print(torch.linalg.norm(self.model.embeddings.weight))
+        print(torch.linalg.norm(self.model.delta_embedding.weight))
 
         best_model, best_f1 = None, float("-inf")  # Used for saving checkpoints of the model
         for epoch in range(num_epochs):
@@ -98,6 +101,9 @@ class BaseLemmaClassifierTrainer(ABC):
 
                 loss.backward()
                 self.optimizer.step()
+
+            print(torch.linalg.norm(self.model.embeddings.weight))
+            print(torch.linalg.norm(self.model.delta_embedding.weight))
 
             logger.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
             if eval_file:

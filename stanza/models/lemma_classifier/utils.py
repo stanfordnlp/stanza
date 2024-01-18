@@ -45,6 +45,8 @@ class Dataset:
 
         logger.debug("Final label decoder: %s  Should be strings to ints", label_decoder)
 
+        known_words = set()
+
         with open(data_path, "r+", encoding="utf-8") as f:
             sentences, indices, labels, upos_ids, counts, upos_to_id = [], [], [], [], Counter(), defaultdict(str)
 
@@ -76,6 +78,8 @@ class Dataset:
                 if get_counts:
                     counts[label_decoder[label]] += 1
 
+                known_words.update(words)
+
         self.sentences = sentences
         self.indices = indices
         self.upos_ids = upos_ids
@@ -87,6 +91,8 @@ class Dataset:
 
         self.batch_size = batch_size
         self.shuffle = shuffle
+
+        self.known_words = [x.lower() for x in sorted(known_words)]
 
     def __len__(self):
         """

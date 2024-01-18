@@ -87,6 +87,7 @@ class LemmaClassifier(ABC, nn.Module):
                                         pt_embedding=pt,
                                         label_decoder=checkpoint['label_decoder'],
                                         upos_to_id=checkpoint['upos_to_id'],
+                                        known_words=checkpoint['known_words'],
                                         use_charlm=use_charlm,
                                         charlm_forward_file=charlm_forward_file,
                                         charlm_backward_file=charlm_backward_file)

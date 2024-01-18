@@ -20,13 +20,15 @@ class LemmaClassifierLSTM(LemmaClassifier):
         From the LSTM output, we get the embedding fo the specific token that we classify on. That embedding 
         is fed into an MLP for classification.
     """
-    def __init__(self, model_args, output_dim, pt_embedding, label_decoder, upos_to_id, use_charlm=False, charlm_forward_file=None, charlm_backward_file=None):
+    def __init__(self, model_args, output_dim, pt_embedding, label_decoder, upos_to_id, known_words,
+                 use_charlm=False, charlm_forward_file=None, charlm_backward_file=None):
         """
         Args:
             vocab_size (int): Size of the vocab being used (if custom vocab)
             embeddings (word vectors for embedding): What word embeddings to use (currently only supports GloVe) TODO add more!
             embedding_dim (int): Size of embedding dimension to use on the aforementioned word embeddings
             output_dim (int): Size of output vector from MLP layer
+            known_words (list(str)): Words which are in the training data
             use_charlm (bool): Whether or not to use the charlm embeddings
             charlm_forward_file (str): The path to the forward pass model for the character language model
             charlm_backward_file (str): The path to the forward pass model for the character language model.
@@ -47,12 +49,17 @@ class LemmaClassifierLSTM(LemmaClassifier):
         self.num_heads = self.model_args['num_heads']
     
         emb_matrix = pt_embedding.emb
-        # TODO: finetune embeddings based on the words passed in
-        self.embeddings = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=False)
-        self.embeddings.weight.requires_grad = True
+        self.add_unsaved_module("embeddings", nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
         self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pt_embedding.vocab) }
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]
+
+        self.known_words = known_words
+        self.known_word_map = {word: idx for idx, word in enumerate(known_words)}
+        self.delta_embedding = nn.Embedding(num_embeddings=len(known_words)+1,
+                                            embedding_dim=self.embedding_dim,
+                                            padding_idx=0)
+        nn.init.normal_(self.delta_embedding.weight, std=0.01)
 
         self.input_size += self.embedding_dim
 
@@ -75,6 +82,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
         self.upos_emb_dim = self.model_args["upos_emb_dim"]
         self.upos_to_id = upos_to_id
         if self.upos_emb_dim > 0 and self.upos_to_id is not None:
+            # TODO: should leave space for unknown POS?
             self.upos_emb = nn.Embedding(num_embeddings=len(self.upos_to_id), 
                                          embedding_dim=self.upos_emb_dim,
                                          padding_idx=0)  
@@ -108,6 +116,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
             "model_type": self.model_type(),
             "args": self.model_args,
             "upos_to_id": self.upos_to_id,
+            "known_words": self.known_words,
         }
         skipped = [k for k in save_dict["params"].keys() if self.is_unsaved_module(k)]
         for k in skipped:
@@ -129,13 +138,19 @@ class LemmaClassifierLSTM(LemmaClassifier):
         device = next(self.parameters()).device
         batch_size = len(sentences)
         token_ids = []
+        delta_token_ids = []
         for words in sentences:
             sentence_token_ids = [self.vocab_map.get(word.lower(), UNK_ID) for word in words]
             sentence_token_ids = torch.tensor(sentence_token_ids, device=device)
             token_ids.append(sentence_token_ids)
 
+            sentence_delta_token_ids = [self.known_word_map.get(word.lower(), 0) for word in words]
+            sentence_delta_token_ids = torch.tensor(sentence_delta_token_ids, device=device)
+            delta_token_ids.append(sentence_delta_token_ids)
+
         token_ids = pad_sequence(token_ids, batch_first=True)
-        embedded = self.embeddings(token_ids)
+        delta_token_ids = pad_sequence(delta_token_ids, batch_first=True)
+        embedded = self.embeddings(token_ids) + self.delta_embedding(delta_token_ids)
         if self.upos_emb_dim > 0:
             upos_tags = [torch.tensor(sentence_tags) for sentence_tags in upos_tags]  # convert internal lists to tensors
             upos_tags = pad_sequence(upos_tags, batch_first=True, padding_value=0).to(device)   
