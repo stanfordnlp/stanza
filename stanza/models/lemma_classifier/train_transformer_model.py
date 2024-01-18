@@ -76,7 +76,7 @@ class TransformerBaselineTrainer(BaseLemmaClassifierTrainer):
         return LemmaClassifierWithTransformer(model_args=self.model_args, output_dim=self.output_dim, transformer_name=self.transformer_name, label_decoder=label_decoder)
 
 
-def main(args=None):
+def main(args=None, predefined_args=None):
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--save_name", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "saved_models", "big_model_roberta_weighted_loss.pt"), help="Path to model save file")
@@ -89,7 +89,7 @@ def main(args=None):
     parser.add_argument("--eval_file", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_sets", "combined_dev.txt"), help="Path to dev file used to evaluate model for saves")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate for the optimizer.")
 
-    args = parser.parse_args(args)
+    args = parser.parse_args(args) if predefined_args is None else predefined_args
 
     save_name = args.save_name
     num_epochs = args.num_epochs

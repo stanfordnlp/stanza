@@ -96,9 +96,9 @@ def build_argparse():
     parser.add_argument("--eval_file", type=str, default=os.path.join(os.path.dirname(__file__), "data", "processed_ud_en", "combined_dev.txt"), help="Path to dev file used to evaluate model for saves")
     return parser
 
-def main(args=None):
+def main(args=None, predefined_args=None):
     parser = build_argparse()
-    args = parser.parse_args(args)
+    args = parser.parse_args(args) if predefined_args is None else predefined_args
 
     wordvec_pretrain_file = args.wordvec_pretrain_file
     use_charlm = args.use_charlm
