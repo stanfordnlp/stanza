@@ -35,6 +35,7 @@ from stanza.models.constituency.in_order_oracle import InOrderOracle
 from stanza.models.constituency.lstm_model import LSTMModel, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
+from stanza.models.constituency.top_down_oracle import TopDownOracle
 from stanza.models.constituency.utils import retag_tags, retag_trees, build_optimizer, build_scheduler
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
 from stanza.server.parser_eval import EvaluateParser, ParseResult
@@ -818,6 +819,8 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     oracle = None
     if args['transition_scheme'] is TransitionScheme.IN_ORDER:
         oracle = InOrderOracle(model.root_labels, args['oracle_level'])
+    elif args['transition_scheme'] is TransitionScheme.TOP_DOWN:
+        oracle = TopDownOracle(model.root_labels, args['oracle_level'])
 
     leftover_training_data = []
     leftover_silver_data = []

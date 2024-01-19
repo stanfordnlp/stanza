@@ -1,3 +1,21 @@
+from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent
+
+def advance_past_constituents(gold_sequence, cur_index):
+    """
+    Advance cur_index through gold_sequence until we have seen 1 more Close than Open
+
+    The index returned is the index of the Close which occurred after all the stuff
+    """
+    count = 0
+    while cur_index < len(gold_sequence):
+        if isinstance(gold_sequence[cur_index], OpenConstituent):
+            count = count + 1
+        elif isinstance(gold_sequence[cur_index], CloseConstituent):
+            count = count - 1
+            if count == -1: return cur_index
+        cur_index = cur_index + 1
+    return None
+
 class DynamicOracle():
     def __init__(self, root_labels, oracle_level, repair_types):
         self.root_labels = root_labels
