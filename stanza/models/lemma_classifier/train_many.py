@@ -53,6 +53,7 @@ def train_n_models(num_models: int, base_path: str, args):
             if not args.weighted_loss:
                 args.weighted_loss = True 
                 new_save_name = os.path.join(base_path, f"lstm_model_wloss_{i}.pt")
+                args.save_name = new_save_name
                 train_lstm_main(predefined_args=args)
 
     if args.change_param == "base_charlm":
@@ -128,7 +129,7 @@ def main():
     parser.add_argument("--multi_train_type", type=str, default="lstm", help="Whether you are attempting to multi-train an LSTM or transformer")
     parser.add_argument("--multi_train_count", type=int, default=5, help="Number of each model to build")
     parser.add_argument("--base_path", type=str, default=None, help="Path to start generating model type for.")
-    parser.add_argument("--change_param", type="str", default=None, help="Which hyperparameter to change when training")
+    parser.add_argument("--change_param", type=str, default=None, help="Which hyperparameter to change when training")
 
 
     args = parser.parse_args()

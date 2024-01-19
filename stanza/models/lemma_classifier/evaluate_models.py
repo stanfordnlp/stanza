@@ -180,7 +180,7 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
     return mc_results, confusion, accuracy, weighted_f1
 
 
-def main(args=None):
+def main(args=None, predefined_args=None):
 
     # TODO: can unify this script with train_model.py?
     # TODO: can save the model type in the model .pt, then
@@ -200,7 +200,7 @@ def main(args=None):
     parser.add_argument("--bert_model", type=str, default=None, help="Use a specific transformer instead of the default bert/roberta")
     parser.add_argument("--eval_file", type=str, help="path to evaluation file")
 
-    args = parser.parse_args(args)
+    args = parser.parse_args(args) if not predefined_args else predefined_args
 
     logger.info("Running training script with the following args:")
     args = vars(args)
@@ -220,6 +220,8 @@ def main(args=None):
     logger.info(f"Accuracy: {acc}")
     logger.info("______________________________________________")
     logger.info(f"Weighted f1: {weighted_f1}")
+
+    return mcc_results, confusion, acc, weighted_f1
 
 
 if __name__ == "__main__":
