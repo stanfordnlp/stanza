@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import os
 import logging
+import math 
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from typing import List, Tuple
@@ -151,6 +152,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
         token_ids = pad_sequence(token_ids, batch_first=True)
         delta_token_ids = pad_sequence(delta_token_ids, batch_first=True)
         embedded = self.embeddings(token_ids) + self.delta_embedding(delta_token_ids)
+
         if self.upos_emb_dim > 0:
             upos_tags = [torch.tensor(sentence_tags) for sentence_tags in upos_tags]  # convert internal lists to tensors
             upos_tags = pad_sequence(upos_tags, batch_first=True, padding_value=0).to(device)   
@@ -165,6 +167,25 @@ class LemmaClassifierLSTM(LemmaClassifier):
             char_reps_backward = pad_sequence(char_reps_backward, batch_first=True)
             
             embedded = torch.cat((embedded, char_reps_forward, char_reps_backward), 2)  
+        
+        if self.num_heads > 0:
+
+            def positional_encoding(seq_len, d_model, device):
+                encoding = torch.zeros(seq_len, d_model, device=device)
+                position = torch.arange(0, seq_len, dtype=torch.float, device=device).unsqueeze(1)
+                div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)).to(device)
+
+                encoding[:, 0::2] = torch.sin(position * div_term)
+                encoding[:, 1::2] = torch.cos(position * div_term)
+
+                # Add a new dimension to fit the batch size
+                encoding = encoding.unsqueeze(0)
+                return encoding
+            
+            seq_len, d_model = embedded.shape[1], embedded.shape[2]
+            pos_enc = positional_encoding(seq_len, d_model, device=device)
+
+            embedded += pos_enc.expand_as(embedded)
 
         padded_sequences = pad_sequence(embedded, batch_first=True)
         lengths = torch.tensor([len(seq) for seq in embedded])        
