@@ -53,7 +53,7 @@ tlogger = logging.getLogger('stanza.classifiers.trainer')
 
 class CNNClassifier(BaseClassifier):
     def __init__(self, pretrain, extra_vocab, labels,
-                 charmodel_forward, charmodel_backward, elmo_model, bert_model, bert_tokenizer,
+                 charmodel_forward, charmodel_backward, elmo_model, bert_model, bert_tokenizer, force_bert_saved,
                  args):
         """
         pretrain is a pretrained word embedding.  should have .emb and .vocab
@@ -71,6 +71,10 @@ class CNNClassifier(BaseClassifier):
         """
         super(CNNClassifier, self).__init__()
         self.labels = labels
+        # existing models don't have the bert_finetune argument
+        bert_finetune = getattr(args, "bert_finetune", False)
+        force_bert_saved = force_bert_saved or bert_finetune
+        logger.debug("bert_finetune %s / force_bert_saved %s", bert_finetune, force_bert_saved)
         # we build a separate config out of the args so that we can easily save it in torch
         self.config = SimpleNamespace(filter_channels = args.filter_channels,
                                       filter_sizes = args.filter_sizes,
@@ -86,6 +90,8 @@ class CNNClassifier(BaseClassifier):
                                       use_elmo = args.use_elmo,
                                       elmo_projection = args.elmo_projection,
                                       bert_model = args.bert_model,
+                                      bert_finetune = bert_finetune,
+                                      force_bert_saved = force_bert_saved,
                                       bilstm = args.bilstm,
                                       bilstm_hidden_dim = args.bilstm_hidden_dim,
                                       maxpool_width = args.maxpool_width,
@@ -112,7 +118,10 @@ class CNNClassifier(BaseClassifier):
             if charmodel_backward.is_forward_lm:
                 raise ValueError("Got a forward charlm as a backward charlm!")
 
-        self.add_unsaved_module('bert_model', bert_model)
+        if force_bert_saved:
+            self.bert_model = bert_model
+        else:
+            self.add_unsaved_module('bert_model', bert_model)
         self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
 
         # The Pretrain has PAD and UNK already (indices 0 and 1), but we
@@ -249,6 +258,10 @@ class CNNClassifier(BaseClassifier):
         self.unsaved_modules += [name]
         setattr(self, name, module)
 
+        if module is not None and name in ('bert_model', 'forward_charlm', 'backward_charlm'):
+            for _, parameter in module.named_parameters():
+                parameter.requires_grad = False
+
     def is_unsaved_module(self, name):
         return name.split('.')[0] in self.unsaved_modules
 
@@ -263,7 +276,7 @@ class CNNClassifier(BaseClassifier):
     def log_norms(self):
         lines = ["NORMS FOR MODEL PARAMTERS"]
         for name, param in self.named_parameters():
-            if param.requires_grad and name.split(".")[0] not in ('bert_model', 'forward_charlm', 'backward_charlm'):
+            if param.requires_grad and name.split(".")[0] not in ('forward_charlm', 'backward_charlm'):
                 lines.append("%s %.6g" % (name, torch.norm(param).item()))
         logger.info("\n".join(lines))
 
@@ -279,7 +292,7 @@ class CNNClassifier(BaseClassifier):
         return char_inputs
 
     def extract_bert_embeddings(self, inputs, max_phrase_len, begin_paddings, device):
-        bert_embeddings = extract_bert_embeddings(self.config.bert_model, self.bert_tokenizer, self.bert_model, inputs, device, keep_endpoints=False)
+        bert_embeddings = extract_bert_embeddings(self.config.bert_model, self.bert_tokenizer, self.bert_model, inputs, device, keep_endpoints=False, detach=not self.config.bert_finetune)
         bert_inputs = torch.zeros((len(inputs), max_phrase_len, bert_embeddings[0].shape[-1]), device=device)
         for idx, rep in enumerate(bert_embeddings):
             start = begin_paddings[idx]

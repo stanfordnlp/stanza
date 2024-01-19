@@ -96,7 +96,12 @@ class Trainer:
             charmodel_backward = load_charlm(args.charlm_backward_file, foundation_cache)
 
             bert_model = model_params['config'].bert_model
-            bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
+            # TODO: can get rid of the getattr after rebuilding all models
+            force_bert_saved = getattr(model_params['config'], 'force_bert_saved', False)
+            if force_bert_saved:
+                bert_model, bert_tokenizer = load_bert(bert_model)
+            else:
+                bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
             model = cnn_classifier.CNNClassifier(pretrain=pretrain,
                                                  extra_vocab=model_params['extra_vocab'],
                                                  labels=model_params['labels'],
@@ -105,6 +110,7 @@ class Trainer:
                                                  elmo_model=elmo_model,
                                                  bert_model=bert_model,
                                                  bert_tokenizer=bert_tokenizer,
+                                                 force_bert_saved=force_bert_saved,
                                                  args=model_params['config'])
         elif model_type == ModelType.CONSTITUENCY:
             pretrain_args = {
@@ -181,6 +187,7 @@ class Trainer:
             bert_model, bert_tokenizer = load_bert(args.bert_model)
 
             extra_vocab = data.dataset_vocab(train_set)
+            force_bert_saved = args.bert_finetune
             model = cnn_classifier.CNNClassifier(pretrain=pretrain,
                                                  extra_vocab=extra_vocab,
                                                  labels=labels,
@@ -189,6 +196,7 @@ class Trainer:
                                                  elmo_model=elmo_model,
                                                  bert_model=bert_model,
                                                  bert_tokenizer=bert_tokenizer,
+                                                 force_bert_saved=force_bert_saved,
                                                  args=args)
             model = model.to(args.device)
         elif args.model_type == ModelType.CONSTITUENCY:
@@ -226,16 +234,28 @@ class Trainer:
 
     @staticmethod
     def build_optimizer(model, args):
+        base_parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name) and not name.startswith("bert_model.")]
+        parameters = [
+            {'param_group_name': 'base', 'params': base_parameters},
+        ]
+        if args.bert_finetune:
+            bert_parameters = [param for name, param in model.named_parameters()
+                               if not model.is_unsaved_module(name) and name.startswith("bert_model.")]
+            if len(bert_parameters) > 0:
+                bert_learning_rate = args.learning_rate * args.bert_learning_rate
+                parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': bert_learning_rate, 'weight_decay': args.weight_decay * args.bert_weight_decay})
+                logger.info("Finetuning %d bert parameters with learning rate %f", len(bert_parameters), bert_learning_rate)
+
         if args.optim.lower() == 'sgd':
-            optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
+            optimizer = optim.SGD(parameters, lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
         elif args.optim.lower() == 'adadelta':
-            optimizer = optim.Adadelta(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
+            optimizer = optim.Adadelta(parameters, lr=args.learning_rate, weight_decay=args.weight_decay)
         elif args.optim.lower() == 'madgrad':
             try:
                 import madgrad
             except ModuleNotFoundError as e:
                 raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-            optimizer = madgrad.MADGRAD(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, momentum=args.momentum)
+            optimizer = madgrad.MADGRAD(parameters, lr=args.learning_rate, weight_decay=args.weight_decay, momentum=args.momentum)
         else:
             raise ValueError("Unknown optimizer: %s" % args.optim)
         return optimizer

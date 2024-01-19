@@ -38,6 +38,9 @@ class ConstituencyClassifier(BaseClassifier):
         self.fc_layers = build_output_layers(self.tree_embedding.output_size, self.config.fc_shapes, self.config.num_classes)
         self.dropout = nn.Dropout(self.config.dropout)
 
+    def is_unsaved_module(self, name):
+        return False
+
     def log_configuration(self):
         tlogger.info("Backprop into parser: %s", self.config.constituency_backprop)
         tlogger.info("Batch norm: %s", self.config.constituency_batch_norm)

@@ -228,6 +228,9 @@ def build_argparse():
 
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
+    parser.add_argument('--bert_finetune', default=False, action='store_true', help="Finetune the Bert model")
+    parser.add_argument('--bert_learning_rate', default=0.01, type=float, help='Scale the learning rate for transformer finetuning by this much')
+    parser.add_argument('--bert_weight_decay', default=0.0001, type=float, help='Scale the weight decay for transformer finetuning by this much')
 
     parser.add_argument('--bilstm', dest='bilstm', action='store_true', default=True, help="Use a bilstm after the inputs, before the convs.  Using bilstm is about as accurate and significantly faster (because of dim reduction) than going straight to the filters")
     parser.add_argument('--no_bilstm', dest='bilstm', action='store_false', help="Don't use a bilstm after the inputs, before the convs.")
@@ -535,6 +538,8 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
                         trainer.save(model_file, save_optimizer=False)
                         logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d   Batch %d" % (accuracy, macro_f1, trainer.epochs_trained+1, batch_num+1))
                     model.train()
+                    if args.log_norms:
+                        trainer.model.log_norms()
                 epoch_loss += running_loss
                 running_loss = 0.0
         # Add any leftover loss to the epoch_loss
