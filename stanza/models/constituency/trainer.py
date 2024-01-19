@@ -970,7 +970,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
     merged into train_model_one_epoch and then iterate_training
     """
     # now we add the state to the trees in the batch
-    # the state is build as a bulk operation
+    # the state is built as a bulk operation
     initial_states = model.initial_state_from_preterminals([x.preterminals for x in training_batch], [x.tree for x in training_batch])
     initial_states = [state._replace(gold_sequence=sequence)
                       for (tree, sequence, _), state in zip(training_batch, initial_states)]
