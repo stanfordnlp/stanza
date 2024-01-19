@@ -23,12 +23,12 @@ def evaluate_n_models(path_to_models_dir, args):
     for model_path in paths:
         full_path = os.path.join(path_to_models_dir, model_path)
         args.save_name = full_path
-        mcc_results, confusion, acc, weighted_f1 = evaluate_main(args)
+        mcc_results, confusion, acc, weighted_f1 = evaluate_main(predefined_args=args)
         
         for lemma in mcc_results:
 
-            lemma_f1 = total_results.get(lemma, None).get("f1") * 100
-            total_results[lemma] += 100 * lemma_f1
+            lemma_f1 = mcc_results.get(lemma, None).get("f1") * 100
+            total_results[lemma] += lemma_f1
 
         total_results["accuracy"] += acc
         total_results["weighted_f1"] += weighted_f1
@@ -38,7 +38,7 @@ def evaluate_n_models(path_to_models_dir, args):
     total_results["accuracy"] /= num_models 
     total_results["weighted_f1"] /= num_models
 
-    logging.info(f"Models in {path_to_models_dir} had average weighted f1 of {total_results['weighted_f1']}.\nLemma 'be' had f1: {total_results['be']}\nLemma 'have' had f1: {total_results['have']}.\nAccuracy: {total_results['accuracy']}.\n ({num_models} models evaluated).")
+    logger.info(f"Models in {path_to_models_dir} had average weighted f1 of {100 * total_results['weighted_f1']}.\nLemma 'be' had f1: {total_results['be']}\nLemma 'have' had f1: {total_results['have']}.\nAccuracy: {100 * total_results['accuracy']}.\n ({num_models} models evaluated).")
     return total_results
 
 
@@ -60,7 +60,7 @@ def main():
     # Args specific to several model eval
     parser.add_argument("--base_path", type=str, default=None, help="path to dir for eval")
     
-    args = parser.parse_args(args)
+    args = parser.parse_args()
     evaluate_n_models(args.base_path, args)
 
 
