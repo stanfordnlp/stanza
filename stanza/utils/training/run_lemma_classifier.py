@@ -58,7 +58,7 @@ def run_treebank(mode, paths, treebank, short_name,
             train_args = bert_args + model_type_args + train_args
             baseline_trainer.main(train_args)
 
-    if mode == Mode.SCORE_DEV:
+    if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
         eval_args = []
         if "--eval_file" not in extra_args:
             eval_file = os.path.join("data", "lemma_classifier", "%s.dev.lemma" % short_name)
@@ -67,7 +67,7 @@ def run_treebank(mode, paths, treebank, short_name,
         eval_args = bert_args + model_type_args + base_args + eval_args + embedding_args + extra_args
         evaluate_models.main(eval_args)
 
-    if mode == Mode.SCORE_TEST:
+    if mode == Mode.SCORE_TEST or mode == Mode.TRAIN:
         eval_args = []
         if "--eval_file" not in extra_args:
             eval_file = os.path.join("data", "lemma_classifier", "%s.test.lemma" % short_name)
