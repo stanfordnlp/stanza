@@ -128,7 +128,6 @@ class CorefProcessor(UDProcessor):
                 # very UD specific test for most number of proper nouns in a mention
                 # will do nothing if POS is not active (they will all be None)
                 num_propn = sum(word.pos == 'PROPN' for word in sentence.words[start_word:end_word])
-                print(span, num_propn)
 
                 if ((span[1] - span[0] > max_len) or
                     span[1] - span[0] == max_len and num_propn > max_propn):
