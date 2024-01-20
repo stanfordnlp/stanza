@@ -109,7 +109,7 @@ class CorefProcessor(UDProcessor):
                 # manipulating the spans, since we will expect it to
                 # be this way for multiple usages of the spans
                 sent_id = sent_ids[span[0]]
-                if sent_ids[span[1]] != sent_id:
+                if sent_ids[span[1]-1] != sent_id:
                     raise ValueError("The coref model predicted a span that crossed two sentences!  Please send this example to us on our github")
 
             # treat the longest span as the representative
