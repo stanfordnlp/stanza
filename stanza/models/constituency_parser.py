@@ -687,6 +687,7 @@ def build_model_filename(args):
     maybe_finetune = "finetuned" if args['bert_finetune'] or args['stage1_bert_finetune'] else ""
     transformer_finetune_begin = "%d" % args['bert_finetune_begin_epoch'] if args['bert_finetune_begin_epoch'] is not None else ""
     model_save_file = args['save_name'].format(shorthand=args['shorthand'],
+                                               oracle_level=args['oracle_level'],
                                                embedding=embedding,
                                                finetune=maybe_finetune,
                                                transformer_finetune_begin=transformer_finetune_begin,
