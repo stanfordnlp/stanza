@@ -5,12 +5,14 @@ import pytest
 import numpy as np
 import torch
 
+import stanza
 import stanza.models.classifier as classifier
 import stanza.models.classifiers.data as data
 from stanza.models.classifiers.trainer import Trainer
 from stanza.models.common import pretrain
 from stanza.models.common import utils
 
+from stanza.tests import TEST_MODELS_DIR
 from stanza.tests.classifiers.test_data import train_file, dev_file, test_file, DATASET, SENTENCES
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
@@ -172,3 +174,31 @@ class TestClassifier:
         # after finetuning the bert model, make sure that the save file DOES contain parts of the transformer
         assert saved_model['params']['config'].force_bert_saved
         assert any(x.startswith("bert_model") for x in saved_model['params']['model'].keys())
+
+    def test_finetune_peft(self, tmp_path, fake_embeddings, train_file, dev_file):
+        """
+        Test on a tiny Bert with PEFT finetuning
+        """
+        bert_model = "hf-internal-testing/tiny-bert"
+
+        trainer, save_filename = self.run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20", "--bert_model", bert_model, "--bert_finetune", "--use_peft"])
+        assert os.path.exists(save_filename)
+        saved_model = torch.load(save_filename, lambda storage, loc: storage)
+        # after finetuning the bert model, make sure that the save file DOES contain parts of the transformer, but only in peft form
+        assert saved_model['params']['config'].bert_model == bert_model
+        assert saved_model['params']['config'].force_bert_saved
+        assert saved_model['params']['config'].use_peft
+
+        assert not saved_model['params']['config'].has_charlm_forward
+        assert not saved_model['params']['config'].has_charlm_backward
+
+        assert len(saved_model['params']['bert_lora']) > 0
+        assert any(x.find(".pooler.") >= 0 for x in saved_model['params']['bert_lora'])
+        assert any(x.find(".encoder.") >= 0 for x in saved_model['params']['bert_lora'])
+        assert not any(x.startswith("bert_model") for x in saved_model['params']['model'].keys())
+
+        # The Pipeline should load and run a PEFT trained model,
+        # although obviously we don't expect the results to do
+        # anything correct
+        pipeline = stanza.Pipeline("en", download_method=None, model_dir=TEST_MODELS_DIR, processors="tokenize,sentiment", sentiment_model_path=save_filename, sentiment_pretrain_path=str(fake_embeddings))
+        doc = pipeline("This is a test")
