@@ -15,6 +15,7 @@ import stanza.models.classifiers.constituency_classifier as constituency_classif
 from stanza.models.classifiers.utils import ModelType
 from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain
 from stanza.models.common.pretrain import Pretrain
+from stanza.models.common.utils import get_optimizer
 from stanza.models.constituency.tree_embedding import TreeEmbedding
 
 logger = logging.getLogger('stanza')
@@ -234,28 +235,4 @@ class Trainer:
 
     @staticmethod
     def build_optimizer(model, args):
-        base_parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name) and not name.startswith("bert_model.")]
-        parameters = [
-            {'param_group_name': 'base', 'params': base_parameters},
-        ]
-        if args.bert_finetune:
-            bert_parameters = [param for name, param in model.named_parameters()
-                               if not model.is_unsaved_module(name) and name.startswith("bert_model.")]
-            if len(bert_parameters) > 0:
-                bert_learning_rate = args.learning_rate * args.bert_learning_rate
-                parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': bert_learning_rate, 'weight_decay': args.weight_decay * args.bert_weight_decay})
-                logger.info("Finetuning %d bert parameters with learning rate %f", len(bert_parameters), bert_learning_rate)
-
-        if args.optim.lower() == 'sgd':
-            optimizer = optim.SGD(parameters, lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
-        elif args.optim.lower() == 'adadelta':
-            optimizer = optim.Adadelta(parameters, lr=args.learning_rate, weight_decay=args.weight_decay)
-        elif args.optim.lower() == 'madgrad':
-            try:
-                import madgrad
-            except ModuleNotFoundError as e:
-                raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-            optimizer = madgrad.MADGRAD(parameters, lr=args.learning_rate, weight_decay=args.weight_decay, momentum=args.momentum)
-        else:
-            raise ValueError("Unknown optimizer: %s" % args.optim)
-        return optimizer
+        return get_optimizer(args.optim.lower(), model, args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay, bert_learning_rate=args.bert_learning_rate, bert_weight_decay=args.weight_decay * args.bert_weight_decay)
