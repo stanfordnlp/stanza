@@ -229,6 +229,7 @@ def build_argparse():
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
     parser.add_argument('--bert_finetune', default=False, action='store_true', help="Finetune the Bert model")
+    parser.add_argument('--use_peft', default=False, action='store_true', help="Finetune Bert using peft")
     parser.add_argument('--bert_learning_rate', default=0.01, type=float, help='Scale the learning rate for transformer finetuning by this much')
     parser.add_argument('--bert_weight_decay', default=0.0001, type=float, help='Scale the weight decay for transformer finetuning by this much')
 
@@ -305,6 +306,9 @@ def parse_args(args=None):
         args.momentum = DEFAULT_MOMENTUM.get(args.optim, None)
     if args.learning_rate is None:
         args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim, None)
+    if args.use_peft and not args.bert_finetune:
+        logger.info("--use_peft set.  setting --bert_finetune as well")
+        args.bert_finetune = True
 
     return args
 

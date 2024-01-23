@@ -110,8 +110,13 @@ class Trainer:
 
             bert_model = model_params['config'].bert_model
             # TODO: can get rid of the getattr after rebuilding all models
+            use_peft = getattr(model_params['config'], 'use_peft', False)
             force_bert_saved = getattr(model_params['config'], 'force_bert_saved', False)
-            if force_bert_saved:
+            if use_peft or force_bert_saved:
+                # if loading a peft model, we first load the base transformer
+                # the CNNClassifier code wraps the transformer in peft
+                # after creating the CNNClassifier with the peft wrapper,
+                # we *then* load the weights
                 bert_model, bert_tokenizer = load_bert(bert_model)
             else:
                 bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
@@ -126,6 +131,8 @@ class Trainer:
                                                  force_bert_saved=force_bert_saved,
                                                  args=model_params['config'])
         elif model_type == ModelType.CONSTITUENCY:
+            # the constituency version doesn't have a peft feature yet
+            use_peft = False
             pretrain_args = {
                 'wordvec_pretrain_file': args.wordvec_pretrain_file,
                 'charlm_forward_file': args.charlm_forward_file,
@@ -138,6 +145,15 @@ class Trainer:
         else:
             raise ValueError("Unknown model type {}".format(model_type))
         model.load_state_dict(model_params['model'], strict=False)
+        if use_peft:
+            # hide import so that the peft dependency is optional
+            from peft import set_peft_model_state_dict
+            # we do the peft loading after the rest of the model
+            # loading - there seems to be something in the
+            # load_state_dict which clobbers the peft scores
+            # otherwise.  probably we should be filtering those from
+            # the model files to keep the size smaller
+            set_peft_model_state_dict(model.bert_model, model_params['bert_lora'])
         model = model.to(args.device)
 
         logger.debug("-- MODEL CONFIG --")
@@ -247,4 +263,4 @@ class Trainer:
 
     @staticmethod
     def build_optimizer(model, args):
-        return get_optimizer(args.optim.lower(), model, args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay, bert_learning_rate=args.bert_learning_rate, bert_weight_decay=args.weight_decay * args.bert_weight_decay)
+        return get_optimizer(args.optim.lower(), model, args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay, bert_learning_rate=args.bert_learning_rate, bert_weight_decay=args.weight_decay * args.bert_weight_decay, is_peft=args.use_peft)

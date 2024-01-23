@@ -71,8 +71,9 @@ class CNNClassifier(BaseClassifier):
         """
         super(CNNClassifier, self).__init__()
         self.labels = labels
-        # existing models don't have the bert_finetune argument
+        # existing models don't have the bert_finetune or use_peft arguments
         bert_finetune = getattr(args, "bert_finetune", False)
+        use_peft = getattr(args, "use_peft", False)
         force_bert_saved = force_bert_saved or bert_finetune
         logger.debug("bert_finetune %s / force_bert_saved %s", bert_finetune, force_bert_saved)
 
@@ -95,6 +96,7 @@ class CNNClassifier(BaseClassifier):
                                       bert_model = args.bert_model,
                                       bert_finetune = bert_finetune,
                                       force_bert_saved = force_bert_saved,
+                                      use_peft = use_peft,
                                       bilstm = args.bilstm,
                                       bilstm_hidden_dim = args.bilstm_hidden_dim,
                                       maxpool_width = args.maxpool_width,
@@ -121,7 +123,25 @@ class CNNClassifier(BaseClassifier):
             if charmodel_backward.is_forward_lm:
                 raise ValueError("Got a forward charlm as a backward charlm!")
 
-        if force_bert_saved:
+        if self.config.use_peft:
+            # Hide import so that the peft dependency is optional
+            from peft import LoraConfig, get_peft_model
+            logger.info("Creating lora adapter with rank %d", 64)
+            # TODO: add various options for these values
+            # TODO: perhaps keep track of good values for lora_targets and lora_fully_tune for different transformers
+            peft_config = LoraConfig(inference_mode=False,
+                                     r=64, #self.config.lora_rank,
+                                     target_modules=["query", "value", "output.dense", "intermediate.dense"], # self.config.lora_targets,
+                                     lora_alpha=128, #self.config.lora_alpha,
+                                     lora_dropout=0.1, #self.config.lora_dropout,
+                                     modules_to_save=["pooler"], # self.config.lora_fully_tune,
+                                     bias="none")
+
+            bert_model = get_peft_model(bert_model, peft_config)
+            # we use a peft-specific pathway for saving peft weights
+            self.add_unsaved_module('bert_model', bert_model)
+            self.bert_model.train()
+        elif force_bert_saved:
             self.bert_model = bert_model
         else:
             self.add_unsaved_module('bert_model', bert_model)
@@ -261,7 +281,10 @@ class CNNClassifier(BaseClassifier):
         self.unsaved_modules += [name]
         setattr(self, name, module)
 
-        if module is not None and name in ('bert_model', 'forward_charlm', 'backward_charlm'):
+        if module is not None and (name in ('forward_charlm', 'backward_charlm') or
+                                   (name == 'bert_model' and not self.config.use_peft)):
+            # if we are using peft, we should not save the transformer directly
+            # instead, the peft parameters only will be saved later
             for _, parameter in module.named_parameters():
                 parameter.requires_grad = False
 
@@ -492,6 +515,10 @@ class CNNClassifier(BaseClassifier):
             'labels':       self.labels,
             'extra_vocab':  self.extra_vocab,
         }
+        if self.config.use_peft:
+            # Hide import so that peft dependency is optional
+            from peft import get_peft_model_state_dict
+            params["bert_lora"] = get_peft_model_state_dict(self.bert_model)
         return params
 
     def preprocess_data(self, sentences):
