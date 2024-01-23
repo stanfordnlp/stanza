@@ -208,7 +208,7 @@ def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, wei
             parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': lr * bert_learning_rate})
     else:
         # because PEFT handles what to hand to an optimizer, we don't want to touch that
-        trainable_params = [v for n, v in model.bert_model.parameters() if v.requires_grad]
+        trainable_params = [v for n, v in model.bert_model.named_parameters() if v.requires_grad]
         parameters.append({'param_group_name': 'bert', 'params': trainable_params, 'lr': lr * bert_learning_rate})
 
     extra_args = {}
