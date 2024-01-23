@@ -211,8 +211,7 @@ def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, wei
                 parameters[-1]['weight_decay'] = bert_weight_decay
     else:
         # because PEFT handles what to hand to an optimizer, we don't want to touch that
-        trainable_params = [v for n, v in model.bert_model.named_parameters() if v.requires_grad]
-        parameters.append({'param_group_name': 'bert', 'params': trainable_params, 'lr': lr * bert_learning_rate})
+        parameters.append({'param_group_name': 'bert', 'params': model.bert_model.parameters(), 'lr': lr * bert_learning_rate})
         if bert_weight_decay is not None:
             parameters[-1]['weight_decay'] = bert_weight_decay
 
@@ -241,9 +240,7 @@ def get_split_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=
             bert_parameters = [{'param_group_name': 'bert', 'params': trainable_parameters, 'lr': lr * bert_learning_rate}]
     else:
         # because PEFT handles what to hand to an optimizer, we don't want to touch that
-        trainable_params = [v for n, v in model.bert_model.named_parameters() if v.requires_grad]
-        if len(trainable_parameters) > 0:
-            bert_parameters = [{'param_group_name': 'bert', 'params': trainable_params, 'lr': lr * bert_learning_rate}]
+        bert_parameters = [{'param_group_name': 'bert', 'params': model.bert_model.parameters(), 'lr': lr * bert_learning_rate}]
 
     extra_args = {}
     if weight_decay is not None:
