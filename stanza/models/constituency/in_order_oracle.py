@@ -474,5 +474,5 @@ class RepairType(Enum):
     UNKNOWN                = None
 
 class InOrderOracle(DynamicOracle):
-    def __init__(self, root_labels, oracle_level):
-        super().__init__(root_labels, oracle_level, RepairType)
+    def __init__(self, root_labels, oracle_level, additional_oracle_levels):
+        super().__init__(root_labels, oracle_level, RepairType, additional_oracle_levels)

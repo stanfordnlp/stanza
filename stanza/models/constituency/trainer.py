@@ -818,9 +818,9 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
     oracle = None
     if args['transition_scheme'] is TransitionScheme.IN_ORDER:
-        oracle = InOrderOracle(model.root_labels, args['oracle_level'])
+        oracle = InOrderOracle(model.root_labels, args['oracle_level'], args['additional_oracle_levels'])
     elif args['transition_scheme'] is TransitionScheme.TOP_DOWN:
-        oracle = TopDownOracle(model.root_labels, args['oracle_level'])
+        oracle = TopDownOracle(model.root_labels, args['oracle_level'], args['additional_oracle_levels'])
 
     leftover_training_data = []
     leftover_silver_data = []

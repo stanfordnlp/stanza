@@ -183,6 +183,117 @@ def fix_shift_open_immediate_close(gold_transition, pred_transition, gold_sequen
 
     return gold_sequence[:gold_index] + [pred_transition, gold_transition, CloseConstituent()] + gold_sequence[gold_index+1:]
 
+def fix_shift_open_ambiguous_unary(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    """
+    We were supposed to Shift, but instead we Opened
+
+    The biggest problem with this type of error is that the Close of
+    the Open is ambiguous.  We could put it immediately before the
+    next Close, immediately after the Shift, or anywhere in between.
+
+    In this fix, we are testing what happens if we treat this Open as a Unary transition.
+    """
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    if not isinstance(gold_transition, Shift):
+        return None
+
+    assert len(gold_sequence) > gold_index + 1
+    if isinstance(gold_sequence[gold_index+1], CloseConstituent):
+        # this is the unambiguous case, which should already be handled
+        return None
+
+    return gold_sequence[:gold_index] + [pred_transition, gold_transition, CloseConstituent()] + gold_sequence[gold_index+1:]
+
+def fix_shift_open_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    """
+    We were supposed to Shift, but instead we Opened
+
+    The biggest problem with this type of error is that the Close of
+    the Open is ambiguous.  We could put it immediately before the
+    next Close, immediately after the Shift, or anywhere in between.
+
+    In this fix, we put the corresponding Close for this Open at the end of the enclosing bracket.
+    """
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    if not isinstance(gold_transition, Shift):
+        return None
+
+    assert len(gold_sequence) > gold_index + 1
+    if isinstance(gold_sequence[gold_index+1], CloseConstituent):
+        # this is the unambiguous case, which should already be handled
+        return None
+
+    outer_close_index = advance_past_constituents(gold_sequence, gold_index)
+
+    return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:outer_close_index] + [CloseConstituent()] + gold_sequence[outer_close_index:]
+
+def fix_close_shift_ambiguous_immediate(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    """
+    Instead of a Close, we predicted a Shift.  This time, we immediately close no matter what comes after the next Shift.
+
+    An alternate strategy would be to Close at the closing of the outer constituent.
+    """
+    if not isinstance(pred_transition, Shift):
+        return None
+
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+
+    num_closes = 0
+    while isinstance(gold_sequence[gold_index + num_closes], CloseConstituent):
+        num_closes += 1
+
+    if not isinstance(gold_sequence[gold_index + num_closes], Shift):
+        # TODO: we should be able to handle this case too (an Open)
+        # however, it will be rare once the parser gets going and it
+        # would cause a lot of errors, anyway
+        return None
+
+    if isinstance(gold_sequence[gold_index + num_closes + 1], CloseConstituent):
+        # this one should just have been satisfied in the non-ambiguous version
+        return None
+
+    updated_sequence = gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:gold_index+num_closes] + gold_sequence[gold_index+num_closes+1:]
+    return updated_sequence
+
+
+def fix_close_shift_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    """
+    Instead of a Close, we predicted a Shift.  This time, we close at the end of the outer bracket no matter what comes after the next Shift.
+
+    An alternate strategy would be to Close as soon as possible after the Shift.
+    """
+    if not isinstance(pred_transition, Shift):
+        return None
+
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+
+    num_closes = 0
+    while isinstance(gold_sequence[gold_index + num_closes], CloseConstituent):
+        num_closes += 1
+
+    if not isinstance(gold_sequence[gold_index + num_closes], Shift):
+        # TODO: we should be able to handle this case too (an Open)
+        # however, it will be rare once the parser gets going and it
+        # would cause a lot of errors, anyway
+        return None
+
+    if isinstance(gold_sequence[gold_index + num_closes + 1], CloseConstituent):
+        # this one should just have been satisfied in the non-ambiguous version
+        return None
+
+    # outer_close_index is now where the constituent which the broken constituent(s) reside inside gets closed
+    outer_close_index = advance_past_constituents(gold_sequence, gold_index + num_closes)
+
+    updated_sequence = gold_sequence[:gold_index] + gold_sequence[gold_index+num_closes:outer_close_index] + gold_sequence[gold_index:gold_index+num_closes] + gold_sequence[outer_close_index:]
+    return updated_sequence
+
+
 def fix_close_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, count_opens=False):
     """
     We were supposed to Close, but instead did a Shift
@@ -223,6 +334,8 @@ def fix_close_shift(gold_transition, pred_transition, gold_sequence, gold_index,
             num_opens += 1
 
     if not isinstance(gold_sequence[gold_index + num_closes + num_opens], Shift):
+        if count_opens:
+            raise AssertionError("Should have found a Shift after a sequence of Opens or a Close with no Open.  Started counting at %d in sequence %s" % (gold_index, gold_sequence))
         return None
 
     if not isinstance(gold_sequence[gold_index + num_closes + num_opens + 1], CloseConstituent):
@@ -240,7 +353,7 @@ def fix_close_shift(gold_transition, pred_transition, gold_sequence, gold_index,
 def fix_close_shift_with_opens(*args, **kwargs):
     return fix_close_shift(*args, **kwargs, count_opens=True)
 
-def fix_close_open_one_con(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_open_correct_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, check_close=True):
     """
     We were supposed to Close, but instead did an Open
 
@@ -253,6 +366,12 @@ def fix_close_open_one_con(gold_transition, pred_transition, gold_sequence, gold
     "ate (NP spaghetti) (PP with a fork)" ->
     "ate (NP spaghetti (PP with a fork))"
     (delicious)
+
+    There is also an option to not check for the Close after the first
+    constituent, in which case any number of constituents could have
+    been predicted.  This represents a solution of the ambiguous form
+    of the Close/Open transition where the Close could occur in
+    multiple places later in the sequence.
     """
     if not isinstance(pred_transition, OpenConstituent):
         return None
@@ -264,13 +383,78 @@ def fix_close_open_one_con(gold_transition, pred_transition, gold_sequence, gold
         return None
 
     close_index = find_constituent_end(gold_sequence, gold_index+1)
-    if not isinstance(gold_sequence[close_index+1], CloseConstituent):
+    if check_close and not isinstance(gold_sequence[close_index+1], CloseConstituent):
         return None
 
     # at this point, we know we can put the Close at the end of the
     # Open which was accidentally added
-    updated_sequence = gold_sequence[:gold_index] + gold_sequence[gold_index+1:close_index+2] + [gold_transition] + gold_sequence[close_index+2:]
+    updated_sequence = gold_sequence[:gold_index] + gold_sequence[gold_index+1:close_index+1] + [gold_transition] + gold_sequence[close_index+1:]
     return updated_sequence
+
+def fix_close_open_correct_open_ambiguous_immediate(*args, **kwargs):
+    return fix_close_open_correct_open(*args, **kwargs, check_close=False)
+
+def fix_close_open_correct_open_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, check_close=True):
+    """
+    We were supposed to Close, but instead did an Open in an ambiguous context.  Here we resolve it later in the tree
+    """
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+
+    if gold_sequence[gold_index+1] != pred_transition:
+        return None
+
+    # this will be the index of the Close for the surrounding constituent
+    close_index = advance_past_constituents(gold_sequence, gold_index+1)
+    updated_sequence = gold_sequence[:gold_index] + gold_sequence[gold_index+1:close_index] + [gold_transition] + gold_sequence[close_index:]
+    return updated_sequence
+
+def fix_open_open_ambiguous_unary(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    """
+    If there is an Open/Open error which is not covered by the unambiguous single recall error, we try fixing it as a Unary
+    """
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    if not isinstance(gold_transition, OpenConstituent):
+        return None
+
+    if pred_transition == gold_transition:
+        return None
+    if gold_sequence[gold_index+1] == pred_transition:
+        # This case is covered by the nested open repair
+        return None
+
+    close_index = find_constituent_end(gold_sequence, gold_index)
+    updated_sequence = gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:close_index] + [CloseConstituent()] + gold_sequence[close_index:]
+    return updated_sequence
+
+def fix_open_open_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    """
+    If there is an Open/Open error which is not covered by the
+    unambiguous single recall error, we try fixing it by putting the
+    close at the end of the outer constituent
+
+    """
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    if not isinstance(gold_transition, OpenConstituent):
+        return None
+
+    if pred_transition == gold_transition:
+        return None
+    if gold_sequence[gold_index+1] == pred_transition:
+        # This case is covered by the nested open repair
+        return None
+
+    close_index = advance_past_constituents(gold_sequence, gold_index)
+    updated_sequence = gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:close_index] + [CloseConstituent()] + gold_sequence[close_index:]
+    return updated_sequence
+
 
 class RepairType(Enum):
     """
@@ -291,6 +475,37 @@ class RepairType(Enum):
        +close/shift (only)   0.9270     0.9230
        +close/shift w/ opens 0.9262     0.9221
        +close/open one con   0.9273     0.9230
+
+    Potential solutions for various ambiguous transitions:
+
+    close/open
+      can close immediately after the corresponding constituent or after any number of constituents
+
+    close/shift
+      can close immediately
+      can close anywhere up to the next close
+      any number of missed Opens are treated as recall errors
+
+    open/open
+      could treat as unary
+      could close at any number of positions after the next structures, up to the outer open's closing
+
+    shift/open ambiguity resolutions:
+      treat as unary
+      treat as wrapper around the next full constituent to build
+      treat as wrapper around everything to build until the next constituent
+
+    testing one at a time in addition to the full set of unambiguous corrections:
+       +close/open immediate   0.9259     0.9225
+       +close/open later       0.9258     0.9257
+       +close/shift immediate  0.9261     0.9219
+       +close/shift later      0.9270     0.9230
+       +open/open later        0.9269     0.9239
+       +open/open unary        0.9275     0.9246
+       +shift/open later       0.9263     0.9253
+       +shift/open unary       0.9264     0.9243
+
+    so there is some evidence that open/open or shift/open would be beneficial
     """
     def __new__(cls, fn, correct=False):
         """
@@ -311,32 +526,49 @@ class RepairType(Enum):
     # This causes both a precision and a recall error as there is now
     # an incorrect bracket and a missing correct bracket
     # Any bracket creation here would cause more wrong brackets, though
-    SHIFT_CLOSE_ERROR            = (fix_shift_close,)
+    SHIFT_CLOSE_ERROR                      = (fix_shift_close,)
 
-    OPEN_CLOSE_ERROR             = (fix_open_close,)
-
-    # open followed by shift was instead predicted to be shift
-    ONE_OPEN_SHIFT_ERROR         = (fix_one_open_shift,)
+    OPEN_CLOSE_ERROR                       = (fix_open_close,)
 
     # open followed by shift was instead predicted to be shift
-    MULTIPLE_OPEN_SHIFT_ERROR    = (fix_multiple_open_shift,)
+    ONE_OPEN_SHIFT_ERROR                   = (fix_one_open_shift,)
+
+    # open followed by shift was instead predicted to be shift
+    MULTIPLE_OPEN_SHIFT_ERROR              = (fix_multiple_open_shift,)
 
     # should have done Open(X), Open(Y)
     # instead just did Open(Y)
-    NESTED_OPEN_OPEN_ERROR       = (fix_nested_open_constituent,)
+    NESTED_OPEN_OPEN_ERROR                 = (fix_nested_open_constituent,)
 
-    SHIFT_OPEN_ERROR             = (fix_shift_open_immediate_close,)
+    SHIFT_OPEN_ERROR                       = (fix_shift_open_immediate_close,)
 
-    CLOSE_SHIFT_ERROR            = (fix_close_shift,)
+    CLOSE_SHIFT_ERROR                      = (fix_close_shift,)
 
-    CLOSE_SHIFT_WITH_OPENS_ERROR = (fix_close_shift_with_opens,)
+    CLOSE_SHIFT_WITH_OPENS_ERROR           = (fix_close_shift_with_opens,)
 
-    CLOSE_OPEN_ONE_CON_ERROR     = (fix_close_open_one_con,)
+    CLOSE_OPEN_ONE_CON_ERROR               = (fix_close_open_correct_open,)
 
-    CORRECT                      = (None, True)
+    CORRECT                                = (None, True)
 
-    UNKNOWN                      = None
+    UNKNOWN                                = None
+
+    CLOSE_OPEN_AMBIGUOUS_IMMEDIATE_ERROR   = (fix_close_open_correct_open_ambiguous_immediate,)
+
+    CLOSE_OPEN_AMBIGUOUS_LATER_ERROR       = (fix_close_open_correct_open_ambiguous_later,)
+
+    CLOSE_SHIFT_AMBIGUOUS_IMMEDIATE_ERROR  = (fix_close_shift_ambiguous_immediate,)
+
+    CLOSE_SHIFT_AMBIGUOUS_LATER_ERROR      = (fix_close_shift_ambiguous_later,)
+
+    OPEN_OPEN_AMBIGUOUS_UNARY_ERROR        = (fix_open_open_ambiguous_unary,)
+
+    OPEN_OPEN_AMBIGUOUS_LATER_ERROR        = (fix_open_open_ambiguous_later,)
+
+    SHIFT_OPEN_AMBIGUOUS_UNARY_ERROR       = (fix_shift_open_ambiguous_unary,)
+
+    SHIFT_OPEN_AMBIGUOUS_LATER_ERROR       = (fix_shift_open_ambiguous_later,)
+
 
 class TopDownOracle(DynamicOracle):
-    def __init__(self, root_labels, oracle_level):
-        super().__init__(root_labels, oracle_level, RepairType)
+    def __init__(self, root_labels, oracle_level, additional_oracle_levels):
+        super().__init__(root_labels, oracle_level, RepairType, additional_oracle_levels)
