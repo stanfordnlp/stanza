@@ -75,6 +75,7 @@ class CNNClassifier(BaseClassifier):
         bert_finetune = getattr(args, "bert_finetune", False)
         force_bert_saved = force_bert_saved or bert_finetune
         logger.debug("bert_finetune %s / force_bert_saved %s", bert_finetune, force_bert_saved)
+
         # we build a separate config out of the args so that we can easily save it in torch
         self.config = SimpleNamespace(filter_channels = args.filter_channels,
                                       filter_sizes = args.filter_sizes,
@@ -87,6 +88,8 @@ class CNNClassifier(BaseClassifier):
                                       extra_wordvec_max_norm = args.extra_wordvec_max_norm,
                                       char_lowercase = args.char_lowercase,
                                       charlm_projection = args.charlm_projection,
+                                      has_charlm_forward = charmodel_forward is not None,
+                                      has_charlm_backward = charmodel_backward is not None,
                                       use_elmo = args.use_elmo,
                                       elmo_projection = args.elmo_projection,
                                       bert_model = args.bert_model,

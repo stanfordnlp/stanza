@@ -93,8 +93,20 @@ class Trainer:
         if model_type == ModelType.CNN:
             pretrain = Trainer.load_pretrain(args, foundation_cache)
             elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
-            charmodel_forward = load_charlm(args.charlm_forward_file, foundation_cache)
-            charmodel_backward = load_charlm(args.charlm_backward_file, foundation_cache)
+            # TODO: existing models don't have this attribute, so we
+            # use None as not having a setting.  If the setting is
+            # False, though, we don't load the charlm
+            # We don't want to pass a charlm to a model which doesn't use one
+            has_charlm_forward = getattr(model_params['config'], 'has_charlm_forward', None)
+            if has_charlm_forward != False:
+                charmodel_forward = load_charlm(args.charlm_forward_file, foundation_cache)
+            else:
+                charmodel_forward = None
+            has_charlm_backward = getattr(model_params['config'], 'has_charlm_backward', None)
+            if has_charlm_backward != False:
+                charmodel_backward = load_charlm(args.charlm_backward_file, foundation_cache)
+            else:
+                charmodel_backward = None
 
             bert_model = model_params['config'].bert_model
             # TODO: can get rid of the getattr after rebuilding all models
