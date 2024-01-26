@@ -139,7 +139,7 @@ class CNNClassifier(BaseClassifier):
                                      target_modules=["query", "value", "output.dense", "intermediate.dense"], # self.config.lora_targets,
                                      lora_alpha=self.config.lora_alpha,
                                      lora_dropout=self.config.lora_dropout,
-                                     modules_to_save=["pooler"], # self.config.lora_fully_tune,
+                                     modules_to_save=[], # self.config.lora_fully_tune,
                                      bias="none")
 
             bert_model = get_peft_model(bert_model, peft_config)
