@@ -16,7 +16,7 @@ from stanza.models.pos.vocab import CharVocab
 import stanza.models.classifiers.data as data
 from stanza.models.classifiers.trainer import Trainer
 from stanza.models.classifiers.utils import WVType, ExtraVectors, ModelType
-from stanza.models.common.peft_config import add_peft_args
+from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
 
 from stanza.utils.confusion import format_confusion, confusion_to_accuracy, confusion_to_macro_f1
 
@@ -297,6 +297,7 @@ def parse_args(args=None):
     """
     parser = build_argparse()
     args = parser.parse_args(args)
+    resolve_peft_args(args)
 
     if args.wandb_name:
         args.wandb = True
