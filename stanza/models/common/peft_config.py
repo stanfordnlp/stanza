@@ -12,6 +12,12 @@ DEFAULT_LORA_ALPHA = 128
 TRANSFORMER_LORA_DROPOUT = {}
 DEFAULT_LORA_DROPOUT = 0.1
 
+TRANSFORMER_LORA_TARGETS = {}
+DEFAULT_LORA_TARGETS = "query,value,output.dense,intermediate.dense"
+
+TRANSFORMER_LORA_SAVE = {}
+DEFAULT_LORA_SAVE = ""
+
 def add_peft_args(parser):
     """
     Add common default flags to an argparse
@@ -19,6 +25,8 @@ def add_peft_args(parser):
     parser.add_argument('--lora_rank', type=int, default=None, help="Rank of a LoRA approximation.  Default will be %d or a model-specific parameter" % DEFAULT_LORA_RANK)
     parser.add_argument('--lora_alpha', type=int, default=None, help="Alpha of a LoRA approximation.  Default will be %d or a model-specific parameter" % DEFAULT_LORA_ALPHA)
     parser.add_argument('--lora_dropout', type=float, default=None, help="Dropout for the LoRA approximation.  Default will be %s or a model-specific parameter" % DEFAULT_LORA_DROPOUT)
+    parser.add_argument('--lora_target_modules', type=str, default=None, help="Comma separated list of LoRA targets.  Default will be '%s' or a model-specific parameter" % DEFAULT_LORA_TARGETS)
+    parser.add_argument('--lora_modules_to_save', type=str, default=None, help="Comma separated list of modules to save (eg, fully tune) when using LoRA.  Default will be '%s' or a model-specific parameter" % DEFAULT_LORA_SAVE)
 
 
 def resolve_peft_args(args):
@@ -33,3 +41,17 @@ def resolve_peft_args(args):
 
     if args.lora_dropout is None:
         args.lora_dropout = TRANSFORMER_LORA_DROPOUT.get(args.bert_model, DEFAULT_LORA_DROPOUT)
+
+    if args.lora_target_modules is None:
+        args.lora_target_modules = TRANSFORMER_LORA_TARGETS.get(args.bert_model, DEFAULT_LORA_TARGETS)
+    if not args.lora_target_modules.strip():
+        args.lora_target_modules = []
+    else:
+        args.lora_target_modules = args.lora_target_modules.split(",")
+
+    if args.lora_modules_to_save is None:
+        args.lora_modules_to_save = TRANSFORMER_LORA_SAVE.get(args.bert_model, DEFAULT_LORA_SAVE)
+    if not args.lora_modules_to_save.strip():
+        args.lora_modules_to_save = []
+    else:
+        args.lora_modules_to_save = args.lora_modules_to_save.split(",")
