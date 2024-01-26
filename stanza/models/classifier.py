@@ -16,6 +16,7 @@ from stanza.models.pos.vocab import CharVocab
 import stanza.models.classifiers.data as data
 from stanza.models.classifiers.trainer import Trainer
 from stanza.models.classifiers.utils import WVType, ExtraVectors, ModelType
+from stanza.models.common.peft_config import add_peft_args
 
 from stanza.utils.confusion import format_confusion, confusion_to_accuracy, confusion_to_macro_f1
 
@@ -284,6 +285,7 @@ def build_argparse():
 
     parser.add_argument('--seed', default=None, type=int, help='Random seed for model')
 
+    add_peft_args(parser)
     utils.add_device_args(parser)
 
     return parser

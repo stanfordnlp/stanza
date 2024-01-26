@@ -96,7 +96,12 @@ class CNNClassifier(BaseClassifier):
                                       bert_model = args.bert_model,
                                       bert_finetune = bert_finetune,
                                       force_bert_saved = force_bert_saved,
+
                                       use_peft = use_peft,
+                                      lora_rank = getattr(args, 'lora_rank', None),
+                                      lora_alpha = getattr(args, 'lora_alpha', None),
+                                      lora_dropout = getattr(args, 'lora_dropout', None),
+
                                       bilstm = args.bilstm,
                                       bilstm_hidden_dim = args.bilstm_hidden_dim,
                                       maxpool_width = args.maxpool_width,
@@ -126,14 +131,14 @@ class CNNClassifier(BaseClassifier):
         if self.config.use_peft:
             # Hide import so that the peft dependency is optional
             from peft import LoraConfig, get_peft_model
-            logger.info("Creating lora adapter with rank %d", 64)
+            logger.info("Creating lora adapter with rank %d and alpha %d", self.config.lora_rank, self.config.lora_alpha)
             # TODO: add various options for these values
             # TODO: perhaps keep track of good values for lora_targets and lora_fully_tune for different transformers
             peft_config = LoraConfig(inference_mode=False,
-                                     r=64, #self.config.lora_rank,
+                                     r=self.config.lora_rank,
                                      target_modules=["query", "value", "output.dense", "intermediate.dense"], # self.config.lora_targets,
-                                     lora_alpha=128, #self.config.lora_alpha,
-                                     lora_dropout=0.1, #self.config.lora_dropout,
+                                     lora_alpha=self.config.lora_alpha,
+                                     lora_dropout=self.config.lora_dropout,
                                      modules_to_save=["pooler"], # self.config.lora_fully_tune,
                                      bias="none")
 
