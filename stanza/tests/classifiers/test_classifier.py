@@ -181,7 +181,7 @@ class TestClassifier:
         """
         bert_model = "hf-internal-testing/tiny-bert"
 
-        trainer, save_filename = self.run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20", "--bert_model", bert_model, "--bert_finetune", "--use_peft"])
+        trainer, save_filename = self.run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20", "--bert_model", bert_model, "--bert_finetune", "--use_peft", "--lora_modules_to_save", "pooler"])
         assert os.path.exists(save_filename)
         saved_model = torch.load(save_filename, lambda storage, loc: storage)
         # after finetuning the bert model, make sure that the save file DOES contain parts of the transformer, but only in peft form
