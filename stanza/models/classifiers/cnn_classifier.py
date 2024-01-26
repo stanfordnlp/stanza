@@ -101,6 +101,8 @@ class CNNClassifier(BaseClassifier):
                                       lora_rank = getattr(args, 'lora_rank', None),
                                       lora_alpha = getattr(args, 'lora_alpha', None),
                                       lora_dropout = getattr(args, 'lora_dropout', None),
+                                      lora_modules_to_save = getattr(args, 'lora_modules_to_save', None),
+                                      lora_target_modules = getattr(args, 'lora_target_modules', None),
 
                                       bilstm = args.bilstm,
                                       bilstm_hidden_dim = args.bilstm_hidden_dim,
@@ -132,14 +134,12 @@ class CNNClassifier(BaseClassifier):
             # Hide import so that the peft dependency is optional
             from peft import LoraConfig, get_peft_model
             logger.info("Creating lora adapter with rank %d and alpha %d", self.config.lora_rank, self.config.lora_alpha)
-            # TODO: add various options for these values
-            # TODO: perhaps keep track of good values for lora_targets and lora_fully_tune for different transformers
             peft_config = LoraConfig(inference_mode=False,
                                      r=self.config.lora_rank,
-                                     target_modules=["query", "value", "output.dense", "intermediate.dense"], # self.config.lora_targets,
+                                     target_modules=self.config.lora_target_modules,
                                      lora_alpha=self.config.lora_alpha,
                                      lora_dropout=self.config.lora_dropout,
-                                     modules_to_save=[], # self.config.lora_fully_tune,
+                                     modules_to_save=self.config.lora_modules_to_save,
                                      bias="none")
 
             bert_model = get_peft_model(bert_model, peft_config)
