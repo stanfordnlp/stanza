@@ -67,7 +67,10 @@ class Dataset:
         wordvocab = WordVocab(data, args['shorthand'], cutoff=args['word_cutoff'], lower=True)
         uposvocab = WordVocab(data, args['shorthand'], idx=1)
         xposvocab = xpos_vocab_factory(data, args['shorthand'])
-        featsvocab = FeatureVocab(data, args['shorthand'], idx=3)
+        try:
+            featsvocab = FeatureVocab(data, args['shorthand'], idx=3)
+        except ValueError as e:
+            raise ValueError("Unable to build features vocab.  Please check the Features column of your data for an error which may match the following description.") from e
         vocab = MultiVocab({'char': charvocab,
                             'word': wordvocab,
                             'upos': uposvocab,
