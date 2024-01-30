@@ -91,6 +91,7 @@ def build_argparse():
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
     parser.add_argument('--second_lr', type=float, default=3e-4, help='Secondary stage learning rate')
     parser.add_argument('--beta2', type=float, default=0.95)
+    parser.add_argument('--second_optim_start_step', type=int, default=None, help='If set, switch to the second optimizer when stalled or at this step regardless of performance.  Normally, the optimizer only switches when the dev scores have stalled for --max_steps_before_stop steps')
 
     parser.add_argument('--max_steps', type=int, default=50000)
     parser.add_argument('--eval_interval', type=int, default=100)
@@ -129,7 +130,7 @@ def main(args=None):
     logger.info("Running parser in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
-        train(args)
+        return train(args)
     else:
         evaluate(args)
 
@@ -202,7 +203,8 @@ def train(args):
     checkpoint_file = None # used explicitly as the *PATH TO THE CHECKPOINT* could be None if we don't want to save chkpt
     if args.get("checkpoint"):
         model_to_load = utils.checkpoint_name(args.get("save_dir"), model_file, args.get("checkpoint_save_name"))
-        checkpoint_file = copy.deepcopy(model_to_load)
+        checkpoint_file = model_to_load
+        args["checkpoint_save_name"] = checkpoint_file
     if args["continue_from"]:
         model_to_load = args["continue_from"]
 
@@ -264,8 +266,8 @@ def train(args):
 
                 dev_score_history += [dev_score]
 
-            if global_step - last_best_step >= args['max_steps_before_stop']:
-                if not is_second_stage and args.get('second_optim', None) is not None:
+            if not is_second_stage and args.get('second_optim', None) is not None:
+                if global_step - last_best_step >= args['max_steps_before_stop'] or (args['second_optim_start_step'] is not None and global_step >= args['second_optim_start_step']):
                     logger.info("Switching to second optimizer: {}".format(args.get('second_optim', None)))
                     args["second_stage"] = True
                     # if the loader gets a model file, it uses secondary optimizer
@@ -274,7 +276,8 @@ def train(args):
                     logger.info('Reloading best model to continue from current local optimum')
                     is_second_stage = True
                     last_best_step = global_step
-                else:
+            else:
+                if global_step - last_best_step >= args['max_steps_before_stop']:
                     do_break = True
                     break
 
@@ -306,6 +309,7 @@ def train(args):
         logger.info("Dev set never evaluated.  Saving final model.")
         trainer.save(model_file)
 
+    return trainer
 
 def evaluate(args):
     # file paths

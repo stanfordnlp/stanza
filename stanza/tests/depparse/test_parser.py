@@ -7,6 +7,8 @@ Uses a couple sentences of UD_English-EWT as training/dev data
 import os
 import pytest
 
+import torch
+
 from stanza.models import parser
 from stanza.models.common import pretrain
 from stanza.models.depparse.trainer import Trainer
@@ -108,12 +110,13 @@ class TestParser:
             args.extend(["--augment_nopunct", "0.0"])
         if extra_args is not None:
             args = args + extra_args
-        parser.main(args)
+        trainer = parser.main(args)
 
         assert os.path.exists(save_file)
         pt = pretrain.Pretrain(wordvec_pretrain_file)
+        # test loading the saved model
         saved_model = Trainer(pretrain=pt, model_file=save_file)
-        return saved_model
+        return trainer
 
     def test_train(self, tmp_path, wordvec_pretrain_file):
         """
@@ -126,4 +129,40 @@ class TestParser:
 
     def test_with_bert_nlayers(self, tmp_path, wordvec_pretrain_file):
         self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_hidden_layers', '2'])
+
+    def test_single_optimizer_checkpoint(self, tmp_path, wordvec_pretrain_file):
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam'])
+
+        save_dir = trainer.args['save_dir']
+        save_name = trainer.args['save_name']
+        checkpoint_name = trainer.args["checkpoint_save_name"]
+
+        assert os.path.exists(os.path.join(save_dir, save_name))
+        assert checkpoint_name is not None
+        assert os.path.exists(checkpoint_name)
+
+        assert isinstance(trainer.optimizer, torch.optim.Adam)
+
+        pt = pretrain.Pretrain(wordvec_pretrain_file)
+        checkpoint = Trainer(args=trainer.args, pretrain=pt, model_file=checkpoint_name)
+        assert checkpoint.optimizer is not None
+        assert isinstance(checkpoint.optimizer, torch.optim.Adam)
+
+    def test_two_optimizers_checkpoint(self, tmp_path, wordvec_pretrain_file):
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam', '--second_optim', 'sgd', '--second_optim_start_step', '40'])
+
+        save_dir = trainer.args['save_dir']
+        save_name = trainer.args['save_name']
+        checkpoint_name = trainer.args["checkpoint_save_name"]
+
+        assert os.path.exists(os.path.join(save_dir, save_name))
+        assert checkpoint_name is not None
+        assert os.path.exists(checkpoint_name)
+
+        assert isinstance(trainer.optimizer, torch.optim.SGD)
+
+        pt = pretrain.Pretrain(wordvec_pretrain_file)
+        checkpoint = Trainer(args=trainer.args, pretrain=pt, model_file=checkpoint_name)
+        assert checkpoint.optimizer is not None
+        assert isinstance(checkpoint.optimizer, torch.optim.SGD)
 
