@@ -30,16 +30,26 @@ def unpack_batch(batch, device):
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, pretrain=None, model_file=None,
-                 device=None, foundation_cache=None, ignore_model_config=False):
+                 device=None, foundation_cache=None, ignore_model_config=False, reset_history=False):
+        self.global_step = 0
+        self.last_best_step = 0
+        self.dev_score_history = []
+
         orig_args = copy.deepcopy(args)
         # whether the training is in primary or secondary stage
         # during FT (loading weights), etc., the training is considered to be in "secondary stage"
         # during this time, we (optionally) use a different set of optimizers than that during "primary stage".
         #
         # Regardless, we use TWO SETS of optimizers; once primary converges, we switch to secondary
+
         if model_file is not None:
             # load everything from file
             self.load(model_file, pretrain, args, foundation_cache, device)
+
+            if reset_history:
+                self.global_step = 0
+                self.last_best_step = 0
+                self.dev_score_history = []
         else:
             # build model from scratch
             self.args = args
@@ -112,7 +122,10 @@ class Trainer(BaseTrainer):
         params = {
                 'model': model_state,
                 'vocab': self.vocab.state_dict(),
-                'config': self.args
+                'config': self.args,
+                'global_step': self.global_step,
+                'last_best_step': self.last_best_step,
+                'dev_score_history': self.dev_score_history,
                 }
 
         if save_optimizer and self.optimizer is not None:
@@ -157,3 +170,6 @@ class Trainer(BaseTrainer):
         if optim_state_dict:
             self.optimizer.load_state_dict(optim_state_dict)
 
+        self.global_step = checkpoint.get("global_step", 0)
+        self.last_best_step = checkpoint.get("last_best_step", 0)
+        self.dev_score_history = checkpoint.get("dev_score_history", list())
