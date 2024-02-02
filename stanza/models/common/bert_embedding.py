@@ -24,7 +24,7 @@ class TextTooLongError(ValueError):
 
 
 def update_max_length(model_name, tokenizer):
-    if model_name in ('google/muril-base-cased', 'airesearch/wangchanberta-base-att-spm-uncased', 'camembert/camembert-large'):
+    if model_name in ('google/muril-base-cased', 'airesearch/wangchanberta-base-att-spm-uncased', 'camembert/camembert-large', 'hfl/chinese-electra-180g-large-discriminator'):
         tokenizer.model_max_length = 512
 
 def load_tokenizer(model_name):
@@ -382,8 +382,8 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
         if any(x is None for x in list_offsets[idx]):
             raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
 
-        if len(offsets) > tokenizer.model_max_length - 2:
-            logger.error("Invalid size, max size: %d, got %d.\nTokens: %s\nTokenized: %s", tokenizer.model_max_length, len(offsets), data[idx], offsets)
+        if list_offsets[idx][-1] > tokenizer.model_max_length - 1:
+            logger.error("Invalid size, max size: %d, got %d.\nTokens: %s\nTokenized: %s", tokenizer.model_max_length, len(offsets), data[idx][:1000], offsets[:1000])
             raise TextTooLongError(len(offsets), tokenizer.model_max_length, idx, " ".join(data[idx]))
 
     features = []
