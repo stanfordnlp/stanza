@@ -374,6 +374,26 @@ def fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_
 class RepairType(Enum):
     """
     Keep track of which repair is used, if any, on an incorrect transition
+
+    Statistics on English w/ no charlm, no transformer,
+      eg word vectors only, best model as of January 2024
+
+    unambiguous transitions only:
+        oracle scheme          dev      test
+         no oracle            0.9245   0.9226
+          +wrong_open_root    0.9244   0.9224
+          +wrong_unary_chain  0.9243   0.9237
+          +wrong_open_unary   0.9249   0.9223
+          +wrong_open_general 0.9251   0.9215
+          +missed_unary       0.9248   0.9215
+          +open_shift         0.9243   0.9216
+          +open_close         0.9254   0.9217
+          +shift_close        0.9261   0.9238
+          +close_shift_nested 0.9253   0.9250
+
+    So honestly on EN it doesn't look too promising to use the oracle.
+    On VI, though, it seemed to do better.  Need to run more
+    experiments
     """
     def __new__(cls, fn, correct=False):
         """
