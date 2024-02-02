@@ -173,7 +173,7 @@ def build_argparse():
     parser.add_argument('--test_file', type=str, default=DEFAULT_TEST, help='Input file(s) to use as the test set.')
     parser.add_argument('--output_predictions', default=False, action='store_true', help='Output predictions when running the test set')
     parser.add_argument('--max_epochs', type=int, default=100)
-    parser.add_argument('--tick', type=int, default=2000)
+    parser.add_argument('--tick', type=int, default=50)
 
     parser.add_argument('--model_type', type=lambda x: ModelType[x.upper()], default=ModelType.CNN,
                         help='Model type to use.  Options: %s' % " ".join(x.name for x in ModelType))
@@ -184,7 +184,8 @@ def build_argparse():
     parser.add_argument('--dropout', default=0.5, type=float, help='Dropout value to use')
 
     parser.add_argument('--batch_size', default=50, type=int, help='Batch size when training')
-    parser.add_argument('--dev_eval_steps', default=100000, type=int, help='Run the dev set after this many train steps.  Set to 0 to only do it once per epoch')
+    parser.add_argument('--batch_single_item', default=200, type=int, help='Items of this size go in their own batch')
+    parser.add_argument('--dev_eval_batches', default=2000, type=int, help='Run the dev set after this many train batches.  Set to 0 to only do it once per epoch')
     parser.add_argument('--dev_eval_scoring', type=lambda x: DevScoring[x.upper()], default=DevScoring.WEIGHTED_F1,
                         help=('Scoring method to use for choosing the best model.  Options: %s' %
                               " ".join(x.name for x in DevScoring)))
@@ -500,8 +501,6 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
     log_param_sizes(model)
 
     # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
-    batch_starts = list(range(0, len(train_set), args.batch_size))
-
     if args.wandb:
         import wandb
         wandb_name = args.wandb_name if args.wandb_name else "%s_classifier" % args.shorthand
@@ -513,19 +512,18 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
     for trainer.epochs_trained in range(trainer.epochs_trained, args.max_epochs):
         running_loss = 0.0
         epoch_loss = 0.0
-        shuffled = data.shuffle_dataset(train_set_by_len)
+        shuffled_batches = data.shuffle_dataset(train_set_by_len, args.batch_size, args.batch_single_item)
 
         model.train()
         logger.info("Starting epoch %d", trainer.epochs_trained)
         if args.log_norms:
             model.log_norms()
 
-        random.shuffle(batch_starts)
-        for batch_num, start_batch in enumerate(batch_starts):
+        for batch_num, batch in enumerate(shuffled_batches):
+            # logger.debug("Batch size %d max len %d" % (len(batch), max(len(x.text) for x in batch)))
             trainer.global_step += 1
-            logger.debug("Starting batch: %d step %d", start_batch, trainer.global_step)
+            logger.debug("Starting batch: %d step %d", batch_num, trainer.global_step)
 
-            batch = shuffled[start_batch:start_batch+args.batch_size]
             batch_labels = torch.stack([label_tensors[x.sentiment] for x in batch])
 
             # zero the parameter gradients
@@ -539,12 +537,12 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
 
             # print statistics
             running_loss += batch_loss.item()
-            if ((batch_num + 1) * args.batch_size) % args.tick < args.batch_size: # print every 2000 items
+            if (batch_num + 1) % args.tick == 0: # print every so many batches
                 train_loss = running_loss / args.tick
-                logger.info('[%d, %5d] Average loss: %.3f', trainer.epochs_trained + 1, (batch_num + 1) * args.batch_size, train_loss)
+                logger.info('[%d, %5d] Average loss: %.3f', trainer.epochs_trained + 1, batch_num + 1, train_loss)
                 if args.wandb:
                     wandb.log({'train_loss': train_loss}, step=trainer.global_step)
-                if args.dev_eval_steps > 0 and ((batch_num + 1) * args.batch_size) % args.dev_eval_steps < args.batch_size:
+                if args.dev_eval_batches > 0 and (batch_num + 1) % args.dev_eval_batches == 0:
                     logger.info('---- Interim analysis ----')
                     dev_score, accuracy, macro_f1 = score_dev_set(model, dev_set, args.dev_eval_scoring)
                     if args.wandb:
