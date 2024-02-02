@@ -160,8 +160,7 @@ def build_argparse():
 
     parser.add_argument('--load_name', type=str, default=None, help='Name for loading an existing model')
     parser.add_argument('--save_dir', type=str, default='saved_models/classifier', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default=None, help='Name for saving the model')
-    parser.add_argument('--base_name', type=str, default='sst', help="Base name of the model to use when building a model name from args")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_{shape}_classifier.pt", help='Name for saving the model')
 
     parser.add_argument('--checkpoint_save_name', type=str, default=None, help="File name to save the most recent checkpoint")
     parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
@@ -289,6 +288,16 @@ def build_argparse():
     utils.add_device_args(parser)
 
     return parser
+
+def build_model_filename(args):
+    shape = "FS_%s" % "_".join([str(x) for x in args.filter_sizes])
+    shape = shape + "_C_%d_" % args.filter_channels
+    if args.fc_shapes:
+        shape = shape + "_FC_%s_" % "_".join([str(x) for x in args.fc_shapes])
+
+    model_save_file = utils.standard_model_file_name(vars(args), "classifier", shape=shape)
+    logger.info("Expanded save_name: %s", model_save_file)
+    return model_save_file
 
 def parse_args(args=None):
     """
@@ -576,14 +585,7 @@ def main(args=None):
 
     utils.ensure_dir(args.save_dir)
 
-    save_name = args.save_name
-    if not(save_name):
-        save_name = args.base_name + "_" + args.shorthand + "_"
-        save_name = save_name + "FS_%s_" % "_".join([str(x) for x in args.filter_sizes])
-        save_name = save_name + "C_%d_" % args.filter_channels
-        if model.config.fc_shapes:
-            save_name = save_name + "FC_%s_" % "_".join([str(x) for x in model.config.fc_shapes])
-        save_name = save_name + "classifier.pt"
+    save_name = build_model_filename(args)
 
     # TODO: maybe the dataset needs to be in a torch data loader in order to
     # make cuda operations faster
@@ -597,8 +599,8 @@ def main(args=None):
         if args.checkpoint:
             checkpoint_file = utils.checkpoint_name(args.save_dir, save_name, args.checkpoint_save_name)
     elif not args.load_name:
-        if args.save_name:
-            args.load_name = args.save_name
+        if save_name:
+            args.load_name = save_name
         else:
             raise ValueError("No model provided and not asked to train a model.  This makes no sense")
     else:
@@ -613,8 +615,6 @@ def main(args=None):
 
     trainer.model.log_configuration()
 
-    model_file = os.path.join(args.save_dir, save_name)
-
     if args.train:
         utils.log_training_args(args, logger)
 
@@ -624,7 +624,7 @@ def main(args=None):
         logger.info("Dev set has %d items", len(dev_set))
         data.check_labels(trainer.model.labels, dev_set)
 
-        train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, trainer.model.labels)
+        train_model(trainer, save_name, checkpoint_file, args, train_set, dev_set, trainer.model.labels)
 
     if args.log_norms:
         trainer.model.log_norms()

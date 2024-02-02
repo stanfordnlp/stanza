@@ -545,7 +545,7 @@ def embedding_name(args):
 
     return embedding
 
-def standard_model_file_name(args, model_type):
+def standard_model_file_name(args, model_type, **kwargs):
     """
     Returns a model file name based on some common args found in the various models.
 
@@ -565,18 +565,27 @@ def standard_model_file_name(args, model_type):
         if "bert_learning_rate" in args:
             transformer_lr = "{}".format(args["bert_learning_rate"])
 
+    use_peft = "nopeft"
+    if args.get("bert_finetune", False) and args.get("use_peft", False):
+        use_peft = "peft"
+
     seed = args.get('seed', None)
     if seed is None:
         seed = ""
     else:
         seed = str(seed)
 
-    model_file = args['save_name'].format(shorthand=args['shorthand'],
-                                          batch_size=args['batch_size'],
-                                          embedding=embedding,
-                                          finetune=finetune,
-                                          seed=seed,
-                                          transformer_lr=transformer_lr)
+    format_args = {
+        "batch_size":     args['batch_size'],
+        "embedding":      embedding,
+        "finetune":       finetune,
+        "peft":           use_peft,
+        "seed":           seed,
+        "shorthand":      args['shorthand'],
+        "transformer_lr": transformer_lr,
+    }
+    format_args.update(**kwargs)
+    model_file = args['save_name'].format(**format_args)
     model_file = re.sub("_+", "_", model_file)
 
     model_dir = os.path.split(model_file)[0]
