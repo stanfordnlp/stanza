@@ -14,6 +14,7 @@ from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
 from stanza.models.common.vocab import CompositeVocab
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
+from stanza.models.common import utils
 
 logger = logging.getLogger('stanza')
 
@@ -122,6 +123,9 @@ class Parser(nn.Module):
 
         self.drop = nn.Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
+
+    def log_norms(self):
+        utils.log_norms(self)
 
     def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         def pack(x):

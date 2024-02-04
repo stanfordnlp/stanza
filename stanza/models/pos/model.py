@@ -14,6 +14,7 @@ from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
 from stanza.models.common.vocab import CompositeVocab
 from stanza.models.common.char_model import CharacterModel
+from stanza.models.common import utils
 
 logger = logging.getLogger('stanza')
 
@@ -144,17 +145,7 @@ class Tagger(nn.Module):
         self.worddrop = WordDropout(args['word_dropout'])
 
     def log_norms(self):
-        lines = ["NORMS FOR MODEL PARAMTERS"]
-        pieces = []
-        for name, param in self.named_parameters():
-            if param.requires_grad:
-                pieces.append((name, "%.6g" % torch.norm(param).item(), "%d" % param.numel()))
-        name_len = max(len(x[0]) for x in pieces)
-        norm_len = max(len(x[1]) for x in pieces)
-        line_format = "  %-" + str(name_len) + "s   %" + str(norm_len) + "s     %s"
-        for line in pieces:
-            lines.append(line_format % line)
-        logger.info("\n".join(lines))
+        utils.log_norms(self)
 
     def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text):
         

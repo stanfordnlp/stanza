@@ -713,3 +713,17 @@ def misc_to_space_after(misc):
             misc_space = piece.split("=", maxsplit=1)[1]
             return unescape_misc_space(misc_space)
     return " "
+
+def log_norms(model):
+    lines = ["NORMS FOR MODEL PARAMTERS"]
+    pieces = []
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            pieces.append((name, "%.6g" % torch.norm(param).item(), "%d" % param.numel()))
+    name_len = max(len(x[0]) for x in pieces)
+    norm_len = max(len(x[1]) for x in pieces)
+    line_format = "  %-" + str(name_len) + "s   %" + str(norm_len) + "s     %s"
+    for line in pieces:
+        lines.append(line_format % line)
+    logger.info("\n".join(lines))
+

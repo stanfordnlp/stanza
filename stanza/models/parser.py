@@ -99,6 +99,7 @@ def build_argparse():
     parser.add_argument('--batch_size', type=int, default=5000)
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
+    parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
     parser.add_argument('--save_dir', type=str, default='saved_models/depparse', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_parser.pt", help="File name to save the model")
     parser.add_argument('--continue_from', type=str, default=None, help="File name to preload the model to continue training from")
@@ -222,6 +223,8 @@ def train(args):
     is_second_stage = False
     # start training
     train_loss = 0
+    if args['log_norms']:
+        trainer.model.log_norms()
     while True:
         do_break = False
         for i, batch in enumerate(train_batch):
@@ -261,6 +264,8 @@ def train(args):
                     logger.info("new best model saved.")
 
                 trainer.dev_score_history += [dev_score]
+                if args['log_norms']:
+                    trainer.model.log_norms()
 
             if not is_second_stage and args.get('second_optim', None) is not None:
                 if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop'] or (args['second_optim_start_step'] is not None and trainer.global_step >= args['second_optim_start_step']):
