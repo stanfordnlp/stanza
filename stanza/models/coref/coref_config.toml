@@ -15,6 +15,9 @@ train_data = "data/coref/english_train_head.jsonlines"
 dev_data = "data/coref/english_development_head.jsonlines"
 test_data = "data/coref/english_test_head.jsonlines"
 
+# do not use the full pairwise encoding scheme
+full_pairwise = false
+
 # The device where everything is to be placed. "cuda:N"/"cpu" are supported.
 device = "cuda:0"
 

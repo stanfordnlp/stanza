@@ -40,6 +40,8 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
     lora_rank: int
     lora_dropout: float
 
+    full_pairwise: bool
+
     lora_targets: List[str]
     lora_fully_tune: List[str]
 

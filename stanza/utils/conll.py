@@ -139,7 +139,7 @@ class CoNLL:
         return Document(doc_dict, text=None, comments=doc_comments, empty_sentences=doc_empty)
 
     @staticmethod
-    def conll2multi_docs(input_file=None, input_str=None, ignore_gapping=True, zip_file=None):
+    def conll2multi_docs(input_file=None, input_str=None, ignore_gapping=True, zip_file=None, return_doc_ids=False):
         doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file)
 
         docs = []
@@ -149,13 +149,16 @@ class CoNLL:
         current_doc_id = None
         for doc, comments, empty in zip(doc_dict, doc_comments, doc_empty):
             for comment in comments:
-                if comment.startswith("# doc_id ="):
+                if comment.startswith("# doc_id =") or comment.startswith("# newdoc id ="):
                     doc_id = comment.split("=", maxsplit=1)[1]
                     if len(current_doc) == 0:
                         current_doc_id = doc_id
                     elif doc_id != current_doc_id:
                         new_doc = Document(current_doc, text=None, comments=current_comments, empty_sentences=current_empty)
-                        docs.append(new_doc)
+                        if return_doc_ids:
+                            docs.append((new_doc, current_doc_id.strip()))
+                        else:
+                            docs.append(new_doc)
                         current_doc_id = doc_id
                     else:
                         continue
@@ -169,7 +172,12 @@ class CoNLL:
                 current_empty.append(empty)
         if len(current_doc) > 0:
             new_doc = Document(current_doc, text=None, comments=current_comments, empty_sentences=current_empty)
-            docs.append(new_doc)
+            if return_doc_ids:
+                docs.append((new_doc, current_doc_id.strip()))
+            else:
+                docs.append(new_doc)
+            current_doc_id = doc_id
+
         return docs
 
     @staticmethod
