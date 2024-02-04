@@ -141,12 +141,16 @@ class TestParser:
         assert checkpoint_name is not None
         assert os.path.exists(checkpoint_name)
 
-        assert isinstance(trainer.optimizer, torch.optim.Adam)
+        assert len(trainer.optimizer) == 1
+        for opt in trainer.optimizer.values():
+            assert isinstance(opt, torch.optim.Adam)
 
         pt = pretrain.Pretrain(wordvec_pretrain_file)
         checkpoint = Trainer(args=trainer.args, pretrain=pt, model_file=checkpoint_name)
         assert checkpoint.optimizer is not None
-        assert isinstance(checkpoint.optimizer, torch.optim.Adam)
+        assert len(checkpoint.optimizer) == 1
+        for opt in checkpoint.optimizer.values():
+            assert isinstance(opt, torch.optim.Adam)
 
     def test_two_optimizers_checkpoint(self, tmp_path, wordvec_pretrain_file):
         trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam', '--second_optim', 'sgd', '--second_optim_start_step', '40'])
@@ -159,10 +163,14 @@ class TestParser:
         assert checkpoint_name is not None
         assert os.path.exists(checkpoint_name)
 
-        assert isinstance(trainer.optimizer, torch.optim.SGD)
+        assert len(trainer.optimizer) == 1
+        for opt in trainer.optimizer.values():
+            assert isinstance(opt, torch.optim.SGD)
 
         pt = pretrain.Pretrain(wordvec_pretrain_file)
         checkpoint = Trainer(args=trainer.args, pretrain=pt, model_file=checkpoint_name)
         assert checkpoint.optimizer is not None
-        assert isinstance(checkpoint.optimizer, torch.optim.SGD)
+        assert len(checkpoint.optimizer) == 1
+        for opt in trainer.optimizer.values():
+            assert isinstance(opt, torch.optim.SGD)
 
