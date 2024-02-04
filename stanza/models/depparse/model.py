@@ -127,7 +127,7 @@ class Parser(nn.Module):
     def log_norms(self):
         utils.log_norms(self)
 
-    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, detach=True):
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
 
@@ -181,7 +181,7 @@ class Parser(nn.Module):
 
         if self.bert_model is not None:
             device = next(self.parameters()).device
-            detach = not self.args.get('bert_finetune', False) or not self.training
+            detach = detach or not self.args.get('bert_finetune', False) or not self.training
             processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=True,
                                                      num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
                                                      detach=detach)

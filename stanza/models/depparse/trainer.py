@@ -68,13 +68,13 @@ class Trainer(BaseTrainer):
 
     def __init_optim(self):
         if (self.args.get("second_stage", False) and self.args.get('second_optim')):
-            self.optimizer = utils.get_optimizer(self.args['second_optim'], self.model,
-                                                 self.args['second_lr'], betas=(0.9, self.args['beta2']), eps=1e-6,
-                                                 bert_learning_rate=self.args.get('second_bert_learning_rate', 0.0))
+            self.optimizer = utils.get_split_optimizer(self.args['second_optim'], self.model,
+                                                       self.args['second_lr'], betas=(0.9, self.args['beta2']), eps=1e-6,
+                                                       bert_learning_rate=self.args.get('second_bert_learning_rate', 0.0))
         else:
-            self.optimizer = utils.get_optimizer(self.args['optim'], self.model,
-                                                self.args['lr'], betas=(0.9, self.args['beta2']),
-                                                eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
+            self.optimizer = utils.get_split_optimizer(self.args['optim'], self.model,
+                                                       self.args['lr'], betas=(0.9, self.args['beta2']),
+                                                       eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
@@ -85,15 +85,19 @@ class Trainer(BaseTrainer):
             self.model.eval()
         else:
             self.model.train()
-            self.optimizer.zero_grad()
-        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+            for opt in self.optimizer.values():
+                opt.zero_grad()
+        # if there is no bert optimizer, we will tell the model to detach bert so it uses less GPU
+        detach = "bert_optimizer" not in self.optimizer
+        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, detach=detach)
         loss_val = loss.data.item()
         if eval:
             return loss_val
 
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
-        self.optimizer.step()
+        for opt in self.optimizer.values():
+            opt.step()
         return loss_val
 
     def predict(self, batch, unsort=True):
@@ -129,7 +133,7 @@ class Trainer(BaseTrainer):
                 }
 
         if save_optimizer and self.optimizer is not None:
-            params['optimizer_state_dict'] = self.optimizer.state_dict()
+            params['optimizer_state_dict'] = {k: opt.state_dict() for k, opt in self.optimizer.items()}
 
         try:
             torch.save(params, filename, _use_new_zipfile_serialization=False)
@@ -168,7 +172,8 @@ class Trainer(BaseTrainer):
         self.__init_optim()
         optim_state_dict = checkpoint.get("optimizer_state_dict")
         if optim_state_dict:
-            self.optimizer.load_state_dict(optim_state_dict)
+            for k, state in optim_state_dict.items():
+                self.optimizer[k].load_state_dict(state)
 
         self.global_step = checkpoint.get("global_step", 0)
         self.last_best_step = checkpoint.get("last_best_step", 0)
