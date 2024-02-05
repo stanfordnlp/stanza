@@ -95,6 +95,7 @@ def build_argparse():
 
     parser.add_argument('--max_steps', type=int, default=50000)
     parser.add_argument('--eval_interval', type=int, default=100)
+    parser.add_argument('--checkpoint_interval', type=int, default=500)
     parser.add_argument('--max_steps_before_stop', type=int, default=1000)
     parser.add_argument('--batch_size', type=int, default=5000)
     parser.add_argument('--second_batch_size', type=int, default=None, help='Use a different batch size for the second optimizer.  Can be relevant for models with different transformer finetuning settings between optimizers, for example, where the larger batch size is impossible for FT the transformer"')
@@ -233,6 +234,9 @@ def train(args):
             trainer.global_step += 1
             loss = trainer.update(batch, eval=False) # update step
             train_loss += loss
+
+            # will checkpoint if we switch optimizers or score a new best score
+            force_checkpoint = False
             if trainer.global_step % args['log_step'] == 0:
                 duration = time.time() - start_time
                 logger.info(format_str.format(trainer.global_step, max_steps, loss, duration, current_lr))
@@ -263,6 +267,7 @@ def train(args):
                     trainer.last_best_step = trainer.global_step
                     trainer.save(model_file)
                     logger.info("new best model saved.")
+                    force_checkpoint = True
 
                 trainer.dev_score_history += [dev_score]
                 if args['log_norms']:
@@ -280,12 +285,13 @@ def train(args):
                     trainer.last_best_step = trainer.global_step
                     if args['second_batch_size'] is not None:
                         train_batch.set_batch_size(args['second_batch_size'])
+                    force_checkpoint = True
             else:
                 if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop']:
                     do_break = True
                     break
 
-            if trainer.global_step % args['eval_interval'] == 0:
+            if trainer.global_step % args['eval_interval'] == 0 or force_checkpoint:
                 # if we need to save checkpoint, do so
                 # (save after switching the optimizer, if applicable, so that
                 # the new optimizer is the optimizer used if a restart happens)
