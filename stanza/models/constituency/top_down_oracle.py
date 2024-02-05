@@ -1,4 +1,5 @@
 from enum import Enum, auto
+import random
 
 from stanza.models.constituency.dynamic_oracle import advance_past_constituents, DynamicOracle
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent
@@ -455,6 +456,30 @@ def fix_open_open_ambiguous_later(gold_transition, pred_transition, gold_sequenc
     updated_sequence = gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:close_index] + [CloseConstituent()] + gold_sequence[close_index:]
     return updated_sequence
 
+def fix_open_open_ambiguous_random(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    """
+    If there is an Open/Open error which is not covered by the
+    unambiguous single recall error, we try fixing it by putting the
+    close at the end of the outer constituent
+
+    """
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    if not isinstance(gold_transition, OpenConstituent):
+        return None
+
+    if pred_transition == gold_transition:
+        return None
+    if gold_sequence[gold_index+1] == pred_transition:
+        # This case is covered by the nested open repair
+        return None
+
+    if random.random() < 0.5:
+        return fix_open_open_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels)
+    else:
+        return fix_open_open_ambiguous_unary(gold_transition, pred_transition, gold_sequence, gold_index, root_labels)
+
 
 class RepairType(Enum):
     """
@@ -506,6 +531,10 @@ class RepairType(Enum):
        +shift/open unary       0.9264     0.9243
 
     so there is some evidence that open/open or shift/open would be beneficial
+
+    Training by randomly choosing between the open/open, 50/50
+       +open/open random       0.9257     0.9235
+    so that didn't work great compared to the individual transitions
     """
     def __new__(cls, fn, correct=False):
         """
@@ -563,6 +592,8 @@ class RepairType(Enum):
     OPEN_OPEN_AMBIGUOUS_UNARY_ERROR        = (fix_open_open_ambiguous_unary,)
 
     OPEN_OPEN_AMBIGUOUS_LATER_ERROR        = (fix_open_open_ambiguous_later,)
+
+    OPEN_OPEN_AMBIGUOUS_RANDOM_ERROR       = (fix_open_open_ambiguous_random,)
 
     SHIFT_OPEN_AMBIGUOUS_UNARY_ERROR       = (fix_shift_open_ambiguous_unary,)
 
