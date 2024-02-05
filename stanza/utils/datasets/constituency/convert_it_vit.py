@@ -110,6 +110,7 @@ def read_constituency_sentences(fin):
     return sentences
 
 def read_constituency_file(filename):
+    print("Reading raw constituencies from %s" % filename)
     with open(filename, encoding='utf-8') as fin:
         return read_constituency_sentences(fin)
 
@@ -610,7 +611,7 @@ def read_updated_trees(paths, debug_sentence=None):
     ud_vit_dev   = os.path.join(ud_directory, "it_vit-ud-dev.conllu")
     ud_vit_test  = os.path.join(ud_directory, "it_vit-ud-test.conllu")
 
-    print("Reading UD train/dev/test")
+    print("Reading UD train/dev/test from %s" % ud_directory)
     ud_train_data = CoNLL.conll2doc(input_file=ud_vit_train)
     ud_dev_data   = CoNLL.conll2doc(input_file=ud_vit_dev)
     ud_test_data  = CoNLL.conll2doc(input_file=ud_vit_test)
