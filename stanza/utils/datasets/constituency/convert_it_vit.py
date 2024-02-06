@@ -118,7 +118,9 @@ OPEN = "-["
 CLOSE = "]"
 
 DATE_RE = re.compile("^([0-9]{1,2})[_]([0-9]{2})$")
-PERCENT_RE = re.compile(r"^([0-9]{1,2})[_]([0-9]{1,2}[%])$")
+INTEGER_PERCENT_RE = re.compile(r"^((?:min|plus)?[0-9]{1,3})[%]$")
+DECIMAL_PERCENT_RE = re.compile(r"^((?:min|plus)?[0-9]{1,3})[/_]([0-9]{1,3})[%]$")
+RANGE_PERCENT_RE = re.compile(r"^([0-9]{1,2}[/_][0-9]{1,2})[/]([0-9]{1,2}[/_][0-9]{1,2})[%]$")
 DECIMAL_RE = re.compile(r"^([0-9])[_]([0-9])$")
 
 ProcessedTree = namedtuple('ProcessedTree', ['con_id', 'dep_id', 'tree'])
@@ -210,15 +212,15 @@ def raw_tree(text):
         "num-3EQ429_20":           "(num 3eq429/20)",
         "num-'1990-EQU-100'":      "(num 1990-EQU-100)",
         "num-'500-EQU-250'":       "(num 500-EQU-250)",
-        "num-0_39%minus":          "(num 0,39%-)",
+        "num-0_39%minus":          "(num 0,39) (num %%) (num -)",
         "num-1_88/76":             "(num 1-88/76)",
         "num-'70/80'":             "(num 70,80)",
         "num-'18/20'":             "(num 18:20)",
         "num-295/mila'":           "(num 295mila)",
         "num-'295/mila'":          "(num 295mila)",
-        "num-0/07%plus":           "(num 0,07%) (num plus)",
-        "num-0/69%minus":          "(num 0,69%) (num minus)",
-        "num-0_39%minus":          "(num 0,39%) (num minus)",
+        "num-0/07%plus":           "(num 0,07) (num %%) (num plus)",
+        "num-0/69%minus":          "(num 0,69) (num %%) (num minus)",
+        "num-0_39%minus":          "(num 0,39) (num %%) (num minus)",
         "num-9_11/16":             "(num 9-11,16)",
         "num-2/184_90":            "(num 2=184/90)",
         "num-3/429_20":            "(num 3eq429/20)",
@@ -283,9 +285,15 @@ def raw_tree(text):
                 # 16_30 special case sent_07098
                 # 21_15 special case sent_07099 and others
                 word = date_match.group(1) + ":" + date_match.group(2)
-            percent = PERCENT_RE.match(word)
+            integer_percent = INTEGER_PERCENT_RE.match(word)
+            if integer_percent:
+                word = integer_percent.group(1) + "_%%"
+            range_percent = RANGE_PERCENT_RE.match(word)
+            if range_percent:
+                word = range_percent.group(1) + "," + range_percent.group(2) + "_%%"
+            percent = DECIMAL_PERCENT_RE.match(word)
             if percent:
-                word = percent.group(1) + "," + percent.group(2)
+                word = percent.group(1) + "," + percent.group(2) + "_%%"
             decimal = DECIMAL_RE.match(word)
             if decimal:
                 word = decimal.group(1) + "," + decimal.group(2)
