@@ -152,6 +152,10 @@ def request_file(url, path, proxies=None, md5=None, raise_for_status=False, log_
         download_file(url, temppath, proxies, raise_for_status)
         os.replace(temppath, path)
     assert_file_exists(path, md5, alternate_md5)
+    if log_info:
+        logger.info(f'Downloaded file to {path}')
+    else:
+        logger.debug(f'Downloaded file to {path}')
 
 def sort_processors(processor_list):
     sorted_list = []
