@@ -556,7 +556,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             self.schedulers["bert_scheduler"] = torch.optim.lr_scheduler.SequentialLR(
                 self.optimizers["bert_optimizer"],
                 schedulers=[zero_scheduler, warmup_scheduler],
-                milestones=[n_docs * self.config.bert_finetune_begin_epoch])
+                milestones=[start_finetuning])
 
         # Must ensure the same ordering of parameters between launches
         modules = sorted((key, value) for key, value in self.trainable.items()
