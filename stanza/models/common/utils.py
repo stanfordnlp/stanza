@@ -569,6 +569,13 @@ def standard_model_file_name(args, model_type, **kwargs):
     if args.get("bert_finetune", False) and args.get("use_peft", False):
         use_peft = "peft"
 
+    bert_finetuning = ""
+    if args.get("bert_finetune", False):
+        if args.get("use_peft", False):
+            bert_finetuning = "peft"
+        else:
+            bert_finetuning = "ft"
+
     seed = args.get('seed', None)
     if seed is None:
         seed = ""
@@ -576,13 +583,14 @@ def standard_model_file_name(args, model_type, **kwargs):
         seed = str(seed)
 
     format_args = {
-        "batch_size":     args['batch_size'],
-        "embedding":      embedding,
-        "finetune":       finetune,
-        "peft":           use_peft,
-        "seed":           seed,
-        "shorthand":      args['shorthand'],
-        "transformer_lr": transformer_lr,
+        "batch_size":      args['batch_size'],
+        "bert_finetuning": bert_finetuning,
+        "embedding":       embedding,
+        "finetune":        finetune,
+        "peft":            use_peft,
+        "seed":            seed,
+        "shorthand":       args['shorthand'],
+        "transformer_lr":  transformer_lr,
     }
     format_args.update(**kwargs)
     model_file = args['save_name'].format(**format_args)
