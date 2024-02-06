@@ -160,7 +160,7 @@ def build_argparse():
 
     parser.add_argument('--load_name', type=str, default=None, help='Name for loading an existing model')
     parser.add_argument('--save_dir', type=str, default='saved_models/classifier', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_{bert_finetuning}_{shape}_classifier.pt", help='Name for saving the model')
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_{bert_finetuning}_{classifier_type}_classifier.pt", help='Name for saving the model')
 
     parser.add_argument('--checkpoint_save_name', type=str, default=None, help="File name to save the most recent checkpoint")
     parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
@@ -296,7 +296,7 @@ def build_model_filename(args):
     if args.fc_shapes:
         shape = shape + "_FC_%s_" % "_".join([str(x) for x in args.fc_shapes])
 
-    model_save_file = utils.standard_model_file_name(vars(args), "classifier", shape=shape)
+    model_save_file = utils.standard_model_file_name(vars(args), "classifier", shape=shape, classifier_type=args.model_type.name)
     logger.info("Expanded save_name: %s", model_save_file)
     return model_save_file
 
