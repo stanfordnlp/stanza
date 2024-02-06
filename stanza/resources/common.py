@@ -607,4 +607,4 @@ def download(
                         model_url=model_url,
                         proxies=proxies,
                         log_info=True)
-    logger.info(f'Finished downloading models and saved to {model_dir}.')
+    logger.info(f'Finished downloading models and saved to {model_dir}')
