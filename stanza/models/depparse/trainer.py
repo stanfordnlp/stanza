@@ -8,6 +8,11 @@ import logging
 import torch
 from torch import nn
 
+try:
+    import transformers
+except ImportError:
+    pass
+
 from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common import utils, loss
 from stanza.models.common.foundation_cache import NoTransformerFoundationCache
@@ -75,6 +80,19 @@ class Trainer(BaseTrainer):
             self.optimizer = utils.get_split_optimizer(self.args['optim'], self.model,
                                                        self.args['lr'], betas=(0.9, self.args['beta2']),
                                                        eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
+        self.scheduler = {}
+        # only do the warmup scheduler for the first optimizer.
+        # presumably the model is already warmed up by the time the
+        # second scheduler starts.  (assumption not fully tested yet)
+        if "bert_optimizer" in self.optimizer and not (self.args.get("second_stage", False) and self.args.get('second_optim')):
+            zero_scheduler = torch.optim.lr_scheduler.ConstantLR(self.optimizer["bert_optimizer"], factor=0, total_iters=self.args['bert_start_finetuning'])
+            warmup_scheduler = transformers.get_constant_schedule_with_warmup(
+                self.optimizer["bert_optimizer"],
+                self.args['bert_warmup_steps'])
+            self.scheduler["bert_scheduler"] = torch.optim.lr_scheduler.SequentialLR(
+                self.optimizer["bert_optimizer"],
+                schedulers=[zero_scheduler, warmup_scheduler],
+                milestones=[self.args['bert_start_finetuning']])
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
@@ -98,6 +116,8 @@ class Trainer(BaseTrainer):
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
         for opt in self.optimizer.values():
             opt.step()
+        for scheduler in self.scheduler.values():
+            scheduler.step()
         return loss_val
 
     def predict(self, batch, unsort=True):
@@ -134,6 +154,7 @@ class Trainer(BaseTrainer):
 
         if save_optimizer and self.optimizer is not None:
             params['optimizer_state_dict'] = {k: opt.state_dict() for k, opt in self.optimizer.items()}
+            params['scheduler_state_dict'] = {k: scheduler.state_dict() for k, scheduler in self.scheduler.items()}
 
         try:
             torch.save(params, filename, _use_new_zipfile_serialization=False)
@@ -174,6 +195,11 @@ class Trainer(BaseTrainer):
         if optim_state_dict:
             for k, state in optim_state_dict.items():
                 self.optimizer[k].load_state_dict(state)
+
+        scheduler_state_dict = checkpoint.get("scheduler_state_dict")
+        if scheduler_state_dict:
+            for k, state in scheduler_state_dict.items():
+                self.scheduler[k].load_state_dict(state)
 
         self.global_step = checkpoint.get("global_step", 0)
         self.last_best_step = checkpoint.get("last_best_step", 0)
