@@ -80,6 +80,8 @@ def build_argparse():
     parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
     parser.add_argument('--bert_learning_rate', default=1.0, type=float, help='Scale the learning rate for transformer finetuning by this much')
     parser.add_argument('--second_bert_learning_rate', default=1e-3, type=float, help='Secondary stage transformer finetuning learning rate scale')
+    parser.add_argument('--bert_start_finetuning', default=200, type=int, help='When to start finetuning the transformer')
+    parser.add_argument('--bert_warmup_steps', default=200, type=int, help='How many steps for a linear warmup when finetuning the transformer')
 
     parser.add_argument('--no_pretrain', dest='pretrain', action='store_false', help="Turn off pretrained embeddings.")
     parser.add_argument('--no_linearization', dest='linearization', action='store_false', help="Turn off linearization term.")
@@ -269,6 +271,8 @@ def train(args):
                     logger.info("new best model saved.")
                     force_checkpoint = True
 
+                for scheduler_name, scheduler in trainer.scheduler.items():
+                    logger.info('scheduler %s learning rate: %s', scheduler_name, scheduler.get_last_lr())
                 trainer.dev_score_history += [dev_score]
                 if args['log_norms']:
                     trainer.model.log_norms()
