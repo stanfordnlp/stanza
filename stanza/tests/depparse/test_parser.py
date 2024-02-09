@@ -105,6 +105,9 @@ class TestParser:
                 "--shorthand", "en_test",
                 "--save_dir", str(tmp_path),
                 "--save_name", save_name,
+                # in case we are doing a bert test
+                "--bert_start_finetuning", "10",
+                "--bert_warmup_steps", "10",
                 "--lang", "en"]
         if not augment_nopunct:
             args.extend(["--augment_nopunct", "0.0"])
@@ -129,6 +132,11 @@ class TestParser:
 
     def test_with_bert_nlayers(self, tmp_path, wordvec_pretrain_file):
         self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_hidden_layers', '2'])
+
+    def test_with_bert_finetuning(self, tmp_path, wordvec_pretrain_file):
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune'])
+        assert 'bert_optimizer' in trainer.optimizer.keys()
+        assert 'bert_scheduler' in trainer.scheduler.keys()
 
     def test_single_optimizer_checkpoint(self, tmp_path, wordvec_pretrain_file):
         trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam'])
