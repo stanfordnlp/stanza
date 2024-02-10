@@ -77,8 +77,8 @@ def choose_tagger_model(short_language, dataset, tagger_model, args):
     pos_path = os.path.join(DEFAULT_MODEL_DIR, short_language, "pos", dataset + ".pt")
     try:
         download(lang=short_language, package=None, processors={"pos": dataset})
-    except UnknownLanguageError:
-        raise FileNotFoundError("The language %s appears to be a language new to Stanza.  Unfortunately, that means there are no taggers available for retagging the dependency dataset.  Furthermore, there are no tagger models for this language found in %s.  You can specify a different directory for already trained tagger models with --save_dir, specify an exact tagger model name with --tagger_model, or use gold tags with --gold" % (short_language, args.save_dir))
+    except UnknownLanguageError as e:
+        raise FileNotFoundError("The language %s appears to be a language new to Stanza.  Unfortunately, that means there are no taggers available for retagging the dependency dataset.  Furthermore, there are no tagger models for this language found in %s.  You can specify a different directory for already trained tagger models with --save_dir, specify an exact tagger model name with --tagger_model, or use gold tags with --gold" % (short_language, args.save_dir)) from e
     return pos_path
 
 
