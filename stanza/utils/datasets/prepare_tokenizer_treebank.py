@@ -864,11 +864,13 @@ def build_extra_combined_italian_dataset(paths, dataset):
     extra_italian = os.path.join(handparsed_dir, "italian-mwt", "italian.mwt")
     if not os.path.exists(extra_italian):
         raise FileNotFoundError("Cannot find the extra dataset 'italian.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
+
     extra_sents = read_sentences_from_conllu(extra_italian)
     for sentence in extra_sents:
         if not sentence[2].endswith("_") or not MWT_RE.match(sentence[2]):
             raise AssertionError("Unexpected format of the italian.mwt file.  Has it already be modified to have SpaceAfter=No everywhere?")
         sentence[2] = sentence[2][:-1] + "SpaceAfter=No"
+    print("Loaded %d sentences from %s" % (len(extra_sents), extra_italian))
     return extra_sents
 
 def replace_semicolons(sentences):
