@@ -203,6 +203,7 @@ def train(args):
         wandb.run.define_metric('dev_score', summary='max')
 
     logger.info("Training parser...")
+    checkpoint_file = None
     if args.get("checkpoint"):
         # calculate checkpoint file name from the save filename
         checkpoint_file = utils.checkpoint_name(args.get("save_dir"), model_file, args.get("checkpoint_save_name"))
