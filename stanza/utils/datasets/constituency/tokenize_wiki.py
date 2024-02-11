@@ -47,6 +47,16 @@ def parse_args():
         default=None,
         help='Which bert tokenizer (if any) to use to filter long sentences'
     )
+    parser.add_argument(
+        '--tokenizer_model',
+        default=None,
+        help='Use this model instead of the current Stanza tokenizer for this language'
+    )
+    parser.add_argument(
+        '--download_method',
+        default=None,
+        help='Download pipeline models using this method (defaults to downloading updates from HF)'
+    )
     add_length_args(parser)
     args = parser.parse_args()
     return args
@@ -58,7 +68,12 @@ def main():
     if args.bert_tokenizer:
         tokenizer = load_tokenizer(args.bert_tokenizer)
         print("Max model length: %d" % tokenizer.model_max_length)
-    pipe = stanza.Pipeline(args.lang, processors="tokenize")
+    pipeline_args = {}
+    if args.tokenizer_model:
+        pipeline_args["tokenize_model_path"] = args.tokenizer_model
+    if args.download_method:
+        pipeline_args["download_method"] = args.download_method
+    pipe = stanza.Pipeline(args.lang, processors="tokenize", **pipeline_args)
 
     with open(args.output_file, "w", encoding="utf-8") as fout:
         for filename in tqdm(files):
