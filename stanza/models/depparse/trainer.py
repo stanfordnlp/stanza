@@ -72,6 +72,7 @@ class Trainer(BaseTrainer):
             wandb.watch(self.model, log_freq=4, log="all", log_graph=True)
 
     def __init_optim(self):
+        # TODO: can get rid of args.get when models are rebuilt
         if (self.args.get("second_stage", False) and self.args.get('second_optim')):
             self.optimizer = utils.get_split_optimizer(self.args['second_optim'], self.model,
                                                        self.args['second_lr'], betas=(0.9, self.args['beta2']), eps=1e-6,
@@ -79,7 +80,9 @@ class Trainer(BaseTrainer):
         else:
             self.optimizer = utils.get_split_optimizer(self.args['optim'], self.model,
                                                        self.args['lr'], betas=(0.9, self.args['beta2']),
-                                                       eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
+                                                       eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0),
+                                                       weight_decay=self.args.get('weight_decay', None),
+                                                       bert_weight_decay=self.args.get('bert_weight_decay', 0.0))
         self.scheduler = {}
         # only do the warmup scheduler for the first optimizer.
         # presumably the model is already warmed up by the time the
