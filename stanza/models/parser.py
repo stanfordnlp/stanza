@@ -82,6 +82,7 @@ def build_argparse():
     parser.add_argument('--second_bert_learning_rate', default=1e-3, type=float, help='Secondary stage transformer finetuning learning rate scale')
     parser.add_argument('--bert_start_finetuning', default=200, type=int, help='When to start finetuning the transformer')
     parser.add_argument('--bert_warmup_steps', default=200, type=int, help='How many steps for a linear warmup when finetuning the transformer')
+    parser.add_argument('--bert_weight_decay', default=0.0, type=float, help='Weight decay bert parameters by this much')
 
     parser.add_argument('--no_pretrain', dest='pretrain', action='store_false', help="Turn off pretrained embeddings.")
     parser.add_argument('--no_linearization', dest='linearization', action='store_false', help="Turn off linearization term.")
@@ -92,6 +93,7 @@ def build_argparse():
     parser.add_argument('--second_optim', type=str, default=None, help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
     parser.add_argument('--second_lr', type=float, default=3e-4, help='Secondary stage learning rate')
+    parser.add_argument('--weight_decay', type=float, default=None, help='Weight decay for the first optimizer')
     parser.add_argument('--beta2', type=float, default=0.95)
     parser.add_argument('--second_optim_start_step', type=int, default=None, help='If set, switch to the second optimizer when stalled or at this step regardless of performance.  Normally, the optimizer only switches when the dev scores have stalled for --max_steps_before_stop steps')
 
