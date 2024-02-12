@@ -10,6 +10,8 @@ Some common issues with the tokenizer are accounted for by discarding those line
 Also, to account for languages such as VI where whitespace occurs within words,
 spaces are replaced with _  This should not cause any confusion, as any line with
 a natural _ in has already been discarded.
+
+for i in `echo A B C D E F G H I J K`; do nlprun "python3 stanza/utils/datasets/constituency/tokenize_wiki.py --output_file /u/nlp/data/constituency-parser/italian/2024_wiki_tokenization/it_wiki_tokenized_B$i.txt --lang it --max_len 120 --input_dir /u/nlp/data/Wikipedia/itwiki/B$i --tokenizer_model saved_models/tokenize/it_combined_tokenizer.pt --download_method None" -o /u/nlp/data/constituency-parser/italian/2024_wiki_tokenization/it_wiki_tokenized_B$i.out; done
 """
 
 import argparse
