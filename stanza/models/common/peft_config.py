@@ -28,8 +28,9 @@ def add_peft_args(parser):
     parser.add_argument('--lora_target_modules', type=str, default=None, help="Comma separated list of LoRA targets.  Default will be '%s' or a model-specific parameter" % DEFAULT_LORA_TARGETS)
     parser.add_argument('--lora_modules_to_save', type=str, default=None, help="Comma separated list of modules to save (eg, fully tune) when using LoRA.  Default will be '%s' or a model-specific parameter" % DEFAULT_LORA_SAVE)
 
+    parser.add_argument('--use_peft', default=False, action='store_true', help="Finetune Bert using peft")
 
-def resolve_peft_args(args):
+def resolve_peft_args(args, logger):
     if not hasattr(args, 'bert_model'):
         return
 
@@ -55,3 +56,8 @@ def resolve_peft_args(args):
         args.lora_modules_to_save = []
     else:
         args.lora_modules_to_save = args.lora_modules_to_save.split(",")
+
+    if hasattr(args, 'bert_finetune'):
+        if args.use_peft and not args.bert_finetune:
+            logger.info("--use_peft set.  setting --bert_finetune as well")
+            args.bert_finetune = True
