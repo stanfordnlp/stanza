@@ -318,7 +318,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         # Obtain bilinear scores and leave only top-k antecedents for each word
         # top_rough_scores  [n_words, n_ants]
         # top_indices       [n_words, n_ants]
-        top_rough_scores, top_indices = self.rough_scorer(words)
+        top_rough_scores, top_indices, rough_scores = self.rough_scorer(words)
 
         # Get pairwise features [n_words, n_ants, n_pw_features]
         pw = self.pw(top_indices, doc)
@@ -492,7 +492,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
         special_tokens = np.array([self.tokenizer.cls_token_id,
                                    self.tokenizer.sep_token_id,
-                                   self.tokenizer.pad_token_id])
+                                   self.tokenizer.pad_token_id,
+                                   self.tokenizer.eos_token_id])
         subword_mask = ~(np.isin(subwords_batches, special_tokens))
 
         subwords_batches_tensor = torch.tensor(subwords_batches,
@@ -503,10 +504,17 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
         # Obtain bert output for selected batches only
         attention_mask = (subwords_batches != self.tokenizer.pad_token_id)
-        out = self.bert(
-            subwords_batches_tensor,
-            attention_mask=torch.tensor(
-                attention_mask, device=self.config.device))
+        if "t5" in self.config.bert_model:
+            out = self.bert.encoder(
+                    input_ids=subwords_batches_tensor,
+                    attention_mask=torch.tensor(
+                        attention_mask, device=self.config.device))
+        else:
+            out = self.bert(
+                    subwords_batches_tensor,
+                    attention_mask=torch.tensor(
+                        attention_mask, device=self.config.device))
+
         out = out['last_hidden_state']
 
         # [n_subwords, bert_emb]
