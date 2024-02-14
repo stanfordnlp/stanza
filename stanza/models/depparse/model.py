@@ -181,9 +181,10 @@ class Parser(nn.Module):
 
         if self.bert_model is not None:
             device = next(self.parameters()).device
+            detach = not self.args.get('bert_finetune', False) or not self.training
             processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=True,
                                                      num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
-                                                     detach=not self.args.get('bert_finetune', False))
+                                                     detach=detach)
             if self.bert_layer_mix is not None:
                 # add the average so that the default behavior is to
                 # take an average of the N layers, and anything else
