@@ -98,6 +98,7 @@ def build_argparse():
     parser.add_argument('--weight_decay', type=float, default=None, help='Weight decay for the first optimizer')
     parser.add_argument('--beta2', type=float, default=0.95)
     parser.add_argument('--second_optim_start_step', type=int, default=None, help='If set, switch to the second optimizer when stalled or at this step regardless of performance.  Normally, the optimizer only switches when the dev scores have stalled for --max_steps_before_stop steps')
+    parser.add_argument('--second_warmup_steps', type=int, default=200, help="If set, give the 2nd optimizer a linear warmup.  Idea being that the optimizer won't have a good grasp on the initial gradients and square gradients when it first starts")
 
     parser.add_argument('--max_steps', type=int, default=50000)
     parser.add_argument('--eval_interval', type=int, default=100)

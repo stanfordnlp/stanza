@@ -86,18 +86,22 @@ class Trainer(BaseTrainer):
                                                        bert_weight_decay=self.args.get('bert_weight_decay', 0.0),
                                                        is_peft=self.args.get('use_peft', False))
         self.scheduler = {}
-        # only do the warmup scheduler for the first optimizer.
-        # presumably the model is already warmed up by the time the
-        # second scheduler starts.  (assumption not fully tested yet)
-        if "bert_optimizer" in self.optimizer and not (self.args.get("second_stage", False) and self.args.get('second_optim')):
-            zero_scheduler = torch.optim.lr_scheduler.ConstantLR(self.optimizer["bert_optimizer"], factor=0, total_iters=self.args['bert_start_finetuning'])
-            warmup_scheduler = transformers.get_constant_schedule_with_warmup(
-                self.optimizer["bert_optimizer"],
-                self.args['bert_warmup_steps'])
-            self.scheduler["bert_scheduler"] = torch.optim.lr_scheduler.SequentialLR(
-                self.optimizer["bert_optimizer"],
-                schedulers=[zero_scheduler, warmup_scheduler],
-                milestones=[self.args['bert_start_finetuning']])
+        if self.args.get("second_stage", False) and self.args.get('second_optim'):
+            if self.args.get('second_warmup_steps', None):
+                for name, optimizer in self.optimizer.items():
+                    name = name + "_scheduler"
+                    warmup_scheduler = transformers.get_constant_schedule_with_warmup(optimizer, self.args['second_warmup_steps'])
+                    self.scheduler[name] = warmup_scheduler
+        else:
+            if "bert_optimizer" in self.optimizer:
+                zero_scheduler = torch.optim.lr_scheduler.ConstantLR(self.optimizer["bert_optimizer"], factor=0, total_iters=self.args['bert_start_finetuning'])
+                warmup_scheduler = transformers.get_constant_schedule_with_warmup(
+                    self.optimizer["bert_optimizer"],
+                    self.args['bert_warmup_steps'])
+                self.scheduler["bert_scheduler"] = torch.optim.lr_scheduler.SequentialLR(
+                    self.optimizer["bert_optimizer"],
+                    schedulers=[zero_scheduler, warmup_scheduler],
+                    milestones=[self.args['bert_start_finetuning']])
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
