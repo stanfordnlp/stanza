@@ -249,7 +249,7 @@ def get_split_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=
     optimizers = {
         "general_optimizer": dispatch_optimizer(name, parameters, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
     }
-    if bert_parameters is not None:
+    if bert_parameters is not None and bert_learning_rate > 0.0:
         if bert_weight_decay is not None:
             bert_parameters['weight_decay'] = bert_weight_decay
         optimizers["bert_optimizer"] = dispatch_optimizer(name, bert_parameters, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
