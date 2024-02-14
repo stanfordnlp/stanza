@@ -97,6 +97,7 @@ def build_argparse():
     parser.add_argument('--eval_interval', type=int, default=100)
     parser.add_argument('--max_steps_before_stop', type=int, default=1000)
     parser.add_argument('--batch_size', type=int, default=5000)
+    parser.add_argument('--second_batch_size', type=int, default=None, help='Use a different batch size for the second optimizer.  Can be relevant for models with different transformer finetuning settings between optimizers, for example, where the larger batch size is impossible for FT the transformer"')
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
@@ -277,6 +278,8 @@ def train(args):
                     logger.info('Reloading best model to continue from current local optimum')
                     is_second_stage = True
                     trainer.last_best_step = trainer.global_step
+                    if args['second_batch_size'] is not None:
+                        train_batch.set_batch_size(args['second_batch_size'])
             else:
                 if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop']:
                     do_break = True
