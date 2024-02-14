@@ -62,6 +62,7 @@ lcode2lang_raw = [
     ("ny",  "Chichewa"),
     ("ckt", "Chukchi"),
     ("cv",  "Chuvash"),
+    ("xcl", "Classical_Armenian"),
     ("lzh", "Classical_Chinese"),
     ("cop", "Coptic"),
     ("kw",  "Cornish"),
