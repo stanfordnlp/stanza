@@ -160,6 +160,15 @@ def load_pretrain(args):
         pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
 
+def predict_dataset(trainer, dev_batch):
+    dev_preds = []
+    if len(dev_batch) > 0:
+        for batch in dev_batch:
+            preds = trainer.predict(batch)
+            dev_preds += preds
+        dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
+    return dev_preds
+
 def train(args):
     model_file = model_file_name(args)
     utils.ensure_dir(os.path.split(model_file)[0])
@@ -253,11 +262,7 @@ def train(args):
             if trainer.global_step % args['eval_interval'] == 0:
                 # eval on dev
                 logger.info("Evaluating on dev set...")
-                dev_preds = []
-                for batch in dev_batch:
-                    preds = trainer.predict(batch)
-                    dev_preds += preds
-                dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
+                dev_preds = predict_dataset(trainer, dev_batch)
 
                 dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
                 CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
@@ -289,9 +294,17 @@ def train(args):
                     logger.info("Switching to second optimizer: {}".format(args.get('second_optim', None)))
                     args["second_stage"] = True
                     # if the loader gets a model file, it uses secondary optimizer
+                    # (because of the second_stage = True argument)
                     trainer = Trainer(args=args, vocab=trainer.vocab, pretrain=pretrain,
                                       model_file=model_file, device=args['device'])
                     logger.info('Reloading best model to continue from current local optimum')
+
+                    dev_preds = predict_dataset(trainer, dev_batch)
+                    dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
+                    CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
+                    _, _, dev_score = scorer.score(system_pred_file, gold_file)
+                    logger.info("Reloaded model with dev score %.4f", dev_score)
+
                     is_second_stage = True
                     trainer.last_best_step = trainer.global_step
                     if args['second_batch_size'] is not None:
@@ -362,15 +375,7 @@ def evaluate(args):
     doc = CoNLL.conll2doc(input_file=args['eval_file'])
     batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
-    if len(batch) > 0:
-        logger.info("Start evaluation...")
-        preds = []
-        for i, b in enumerate(batch):
-            preds += trainer.predict(b)
-    else:
-        # skip eval if dev data does not exist
-        preds = []
-    preds = utils.unsort(preds, batch.data_orig_idx)
+    preds = predict_dataset(trainer, batch)
 
     # write to file and score
     batch.doc.set([HEAD, DEPREL], [y for x in preds for y in x])
