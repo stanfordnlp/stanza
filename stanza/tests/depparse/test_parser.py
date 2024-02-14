@@ -161,6 +161,11 @@ class TestParser:
         checkpoint = torch.load(filename, lambda storage, loc: storage)
         assert any(x.startswith("bert_model") for x in checkpoint['model'].keys())
 
+    def test_with_peft(self, tmp_path, wordvec_pretrain_file):
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2', '--use_peft'])
+        assert 'bert_optimizer' in trainer.optimizer.keys()
+        assert 'bert_scheduler' in trainer.scheduler.keys()
+
     def test_single_optimizer_checkpoint(self, tmp_path, wordvec_pretrain_file):
         trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam'])
 

@@ -29,6 +29,7 @@ from stanza.models.common import utils
 from stanza.models.common import pretrain
 from stanza.models.common.data import augment_punct
 from stanza.models.common.doc import *
+from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
 from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
 
@@ -112,6 +113,7 @@ def build_argparse():
     parser.add_argument('--continue_from', type=str, default=None, help="File name to preload the model to continue training from")
 
     parser.add_argument('--seed', type=int, default=1234)
+    add_peft_args(parser)
     utils.add_device_args(parser)
 
     parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%%')
@@ -123,6 +125,7 @@ def build_argparse():
 def parse_args(args=None):
     parser = build_argparse()
     args = parser.parse_args(args=args)
+    resolve_peft_args(args, logger)
 
     if args.wandb_name:
         args.wandb = True
