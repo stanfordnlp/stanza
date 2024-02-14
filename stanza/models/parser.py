@@ -293,6 +293,7 @@ def train(args):
             if not is_second_stage and args.get('second_optim', None) is not None:
                 if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop'] or (args['second_optim_start_step'] is not None and trainer.global_step >= args['second_optim_start_step']):
                     logger.info("Switching to second optimizer: {}".format(args.get('second_optim', None)))
+                    global_step = trainer.global_step
                     args["second_stage"] = True
                     # if the loader gets a model file, it uses secondary optimizer
                     # (because of the second_stage = True argument)
@@ -307,7 +308,8 @@ def train(args):
                     logger.info("Reloaded model with dev score %.4f", dev_score)
 
                     is_second_stage = True
-                    trainer.last_best_step = trainer.global_step
+                    trainer.global_step = global_step
+                    trainer.last_best_step = global_step
                     if args['second_batch_size'] is not None:
                         train_batch.set_batch_size(args['second_batch_size'])
                     force_checkpoint = True
