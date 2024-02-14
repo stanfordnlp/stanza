@@ -272,7 +272,8 @@ def train(args):
                 train_loss = 0
 
                 # save best model
-                if len(trainer.dev_score_history) == 0 or dev_score > max(trainer.dev_score_history):
+                trainer.dev_score_history += [dev_score]
+                if dev_score >= max(trainer.dev_score_history):
                     trainer.last_best_step = trainer.global_step
                     trainer.save(model_file)
                     logger.info("new best model saved.")
@@ -280,7 +281,6 @@ def train(args):
 
                 for scheduler_name, scheduler in trainer.scheduler.items():
                     logger.info('scheduler %s learning rate: %s', scheduler_name, scheduler.get_last_lr())
-                trainer.dev_score_history += [dev_score]
                 if args['log_norms']:
                     trainer.model.log_norms()
 
