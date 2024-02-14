@@ -76,13 +76,15 @@ class Trainer(BaseTrainer):
         if (self.args.get("second_stage", False) and self.args.get('second_optim')):
             self.optimizer = utils.get_split_optimizer(self.args['second_optim'], self.model,
                                                        self.args['second_lr'], betas=(0.9, self.args['beta2']), eps=1e-6,
-                                                       bert_learning_rate=self.args.get('second_bert_learning_rate', 0.0))
+                                                       bert_learning_rate=self.args.get('second_bert_learning_rate', 0.0),
+                                                       is_peft=self.args.get('use_peft', False))
         else:
             self.optimizer = utils.get_split_optimizer(self.args['optim'], self.model,
                                                        self.args['lr'], betas=(0.9, self.args['beta2']),
                                                        eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0),
                                                        weight_decay=self.args.get('weight_decay', None),
-                                                       bert_weight_decay=self.args.get('bert_weight_decay', 0.0))
+                                                       bert_weight_decay=self.args.get('bert_weight_decay', 0.0),
+                                                       is_peft=self.args.get('use_peft', False))
         self.scheduler = {}
         # only do the warmup scheduler for the first optimizer.
         # presumably the model is already warmed up by the time the
@@ -154,6 +156,10 @@ class Trainer(BaseTrainer):
                 'last_best_step': self.last_best_step,
                 'dev_score_history': self.dev_score_history,
                 }
+        if self.args.get('use_peft', False):
+            # Hide import so that peft dependency is optional
+            from peft import get_peft_model_state_dict
+            params["bert_lora"] = get_peft_model_state_dict(self.model.bert_model)
 
         if save_optimizer and self.optimizer is not None:
             params['optimizer_state_dict'] = {k: opt.state_dict() for k, opt in self.optimizer.items()}
@@ -196,6 +202,10 @@ class Trainer(BaseTrainer):
 
         self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, force_bert_saved=force_bert_saved)
         self.model.load_state_dict(checkpoint['model'], strict=False)
+        if self.args.get('use_peft', False):
+            # hide import so that the peft dependency is optional
+            from peft import set_peft_model_state_dict
+            set_peft_model_state_dict(self.model.bert_model, checkpoint['bert_lora'])
         if device is not None:
             self.model = self.model.to(device)
 

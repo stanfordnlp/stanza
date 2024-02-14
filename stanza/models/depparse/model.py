@@ -83,7 +83,25 @@ class Parser(nn.Module):
                 # an average of layers 2, 3, 4 will be used
                 # (for historic reasons)
                 self.bert_layer_mix = None
-            if self.args.get('bert_finetune', False) or force_bert_saved:
+            if self.args.get('use_peft', False):
+                # Hide import so that the peft dependency is optional
+                from peft import LoraConfig, get_peft_model
+                logger.debug("Creating lora adapter with rank %d and alpha %d", self.args['lora_rank'], self.args['lora_alpha'])
+                peft_config = LoraConfig(inference_mode=False,
+                                         r=self.args['lora_rank'],
+                                         target_modules=self.args['lora_target_modules'],
+                                         lora_alpha=self.args['lora_alpha'],
+                                         lora_dropout=self.args['lora_dropout'],
+                                         modules_to_save=self.args['lora_modules_to_save'],
+                                         bias="none")
+
+                bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
+                bert_model = get_peft_model(bert_model, peft_config)
+                # we use a peft-specific pathway for saving peft weights
+                add_unsaved_module('bert_model', bert_model)
+                add_unsaved_module('bert_tokenizer', bert_tokenizer)
+                self.bert_model.train()
+            elif self.args.get('bert_finetune', False) or force_bert_saved:
                 bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
                 self.bert_model = bert_model
                 add_unsaved_module('bert_tokenizer', bert_tokenizer)
