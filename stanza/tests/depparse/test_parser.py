@@ -135,6 +135,32 @@ class TestParser:
         assert 'bert_optimizer' in trainer.optimizer.keys()
         assert 'bert_scheduler' in trainer.scheduler.keys()
 
+    def test_with_bert_finetuning_resaved(self, tmp_path, wordvec_pretrain_file):
+        """
+        Check that if we save, then load, then save a model with a finetuned bert, that bert isn't lost
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2'])
+        assert 'bert_optimizer' in trainer.optimizer.keys()
+        assert 'bert_scheduler' in trainer.scheduler.keys()
+
+        save_name = trainer.args['save_name']
+        filename = tmp_path / save_name
+        assert os.path.exists(filename)
+        checkpoint = torch.load(filename, lambda storage, loc: storage)
+        assert any(x.startswith("bert_model") for x in checkpoint['model'].keys())
+
+        # Test loading the saved model, saving it, and still having bert in it
+        # even if we have set bert_finetune to False for this incarnation
+        pt = pretrain.Pretrain(wordvec_pretrain_file)
+        args = {"bert_finetune": False}
+        saved_model = Trainer(pretrain=pt, model_file=filename, args=args)
+
+        saved_model.save(filename)
+
+        # This is the part that would fail if the force_bert_saved option did not exist
+        checkpoint = torch.load(filename, lambda storage, loc: storage)
+        assert any(x.startswith("bert_model") for x in checkpoint['model'].keys())
+
     def test_single_optimizer_checkpoint(self, tmp_path, wordvec_pretrain_file):
         trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam'])
 
