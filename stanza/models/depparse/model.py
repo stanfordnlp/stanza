@@ -19,7 +19,7 @@ from stanza.models.common import utils
 logger = logging.getLogger('stanza')
 
 class Parser(nn.Module):
-    def __init__(self, args, vocab, emb_matrix=None, share_hid=False, foundation_cache=None):
+    def __init__(self, args, vocab, emb_matrix=None, share_hid=False, foundation_cache=None, force_bert_saved=False):
         super().__init__()
 
         self.vocab = vocab
@@ -83,7 +83,7 @@ class Parser(nn.Module):
                 # an average of layers 2, 3, 4 will be used
                 # (for historic reasons)
                 self.bert_layer_mix = None
-            if self.args.get('bert_finetune', False):
+            if self.args.get('bert_finetune', False) or force_bert_saved:
                 bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
                 self.bert_model = bert_model
                 add_unsaved_module('bert_tokenizer', bert_tokenizer)

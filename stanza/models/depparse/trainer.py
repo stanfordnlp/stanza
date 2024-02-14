@@ -188,7 +188,13 @@ class Trainer(BaseTrainer):
         if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
             logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
             foundation_cache = NoTransformerFoundationCache(foundation_cache)
-        self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache)
+
+        # if we are set to not finetune bert, but there is an existing
+        # bert in the model, we need to respect that and force it to
+        # be resaved next time the model is saved
+        force_bert_saved = any(x.startswith("bert_model") for x in checkpoint['model'].keys())
+
+        self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, force_bert_saved=force_bert_saved)
         self.model.load_state_dict(checkpoint['model'], strict=False)
         if device is not None:
             self.model = self.model.to(device)
