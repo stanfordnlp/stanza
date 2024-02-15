@@ -423,6 +423,7 @@ def build_argparse():
     parser.add_argument('--save_each_name', type=str, default=None, help="Save each model in sequence to this pattern.  Mostly for testing")
     parser.add_argument('--save_each_start', type=int, default=None, help="When to start saving each model")
     parser.add_argument('--save_each_frequency', type=int, default=1, help="How frequently to save each model")
+    parser.add_argument('--no_save_each_optimizer', dest='save_each_optimizer', default=True, action='store_false', help="Don't save the optimizer when saving 'each' model")
 
     parser.add_argument('--seed', type=int, default=1234)
 
