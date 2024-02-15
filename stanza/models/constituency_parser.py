@@ -779,6 +779,16 @@ def parse_args(args=None):
     model_save_file = build_model_filename(args)
     args['save_name'] = model_save_file
 
+    if args['save_each_name']:
+        model_save_each_file = os.path.join(args['save_dir'], args['save_each_name'])
+        try:
+            model_save_each_file % 1
+        except TypeError:
+            # so models.pt -> models_0001.pt, etc
+            pieces = os.path.splitext(model_save_each_file)
+            model_save_each_file = pieces[0] + "_%04d" + pieces[1]
+        args['save_each_name'] = model_save_each_file
+
     if args['checkpoint']:
         args['checkpoint_save_name'] = utils.checkpoint_name(args['save_dir'], model_save_file, args['checkpoint_save_name'])
 
@@ -796,16 +806,6 @@ def main(args=None):
 
     logger.info("Running constituency parser in %s mode", args['mode'])
     logger.debug("Using device: %s", args['device'])
-
-    model_save_each_file = None
-    if args['save_each_name']:
-        model_save_each_file = os.path.join(args['save_dir'], args['save_each_name'])
-        try:
-            model_save_each_file % 1
-        except TypeError:
-            # so models.pt -> models_0001.pt, etc
-            pieces = os.path.splitext(model_save_each_file)
-            model_save_each_file = pieces[0] + "_%04d" + pieces[1]
 
     model_load_file = args['save_name']
     if args['load_name']:
@@ -837,7 +837,7 @@ def main(args=None):
         if tlogger.level == logging.NOTSET:
             tlogger.setLevel(logging.DEBUG)
             tlogger.debug("Set trainer logging level to DEBUG")
-        trainer.train(args, model_load_file, model_save_each_file, retag_pipeline)
+        trainer.train(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'predict':
         trainer.evaluate(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'parse_text':

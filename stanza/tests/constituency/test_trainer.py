@@ -205,7 +205,7 @@ class TestTrainer:
         if not exists_ok:
             assert not os.path.exists(args['save_name'])
         retag_pipeline = Pipeline(lang="en", processors="tokenize, pos", tokenize_pretokenized=True, dir=TEST_MODELS_DIR, foundation_cache=foundation_cache)
-        trained_model = trainer.train(args, None, each_name, [retag_pipeline])
+        trained_model = trainer.train(args, None, [retag_pipeline])
         # check that hooks are in the model if expected
         for p in trained_model.model.parameters():
             if p.requires_grad:
