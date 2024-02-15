@@ -175,7 +175,7 @@ class TestTrainer:
         # let's not make the model huge...
         args = ['--pattn_num_layers', '0', '--pattn_d_model', '128', '--lattn_d_proj', '0', '--use_lattn', '--hidden_size', '20', '--delta_embedding_dim', '10',
                 '--wordvec_pretrain_file', wordvec_pretrain_file, '--data_dir', tmpdirname,
-                '--save_dir', tmpdirname, '--save_name', 'test.pt', '--save_each_name', os.path.join(tmpdirname, 'each_%02d.pt'),
+                '--save_dir', tmpdirname, '--save_name', 'test.pt', '--save_each_start', '0', '--save_each_name', os.path.join(tmpdirname, 'each_%02d.pt'),
                 '--train_file', train_treebank_file, '--eval_file', eval_treebank_file,
                 '--epoch_size', '6', '--train_batch_size', '3',
                 '--shorthand', 'en_test']

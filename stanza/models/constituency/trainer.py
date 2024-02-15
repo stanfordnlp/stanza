@@ -847,7 +847,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         tlogger.info("Restarting trainer with a model trained for %d epochs.  Best epoch %d, f1 %f", trainer.epochs_trained, trainer.best_epoch, trainer.best_f1)
 
     # if we're training a new model, save the initial state so it can be inspected
-    if args['save_each_name'] and trainer.epochs_trained == 0:
+    if args['save_each_start'] == 0 and trainer.epochs_trained == 0:
         trainer.save(args['save_each_name'] % trainer.epochs_trained, save_optimizer=True)
 
     # trainer.epochs_trained+1 so that if the trainer gets saved after 1 epoch, the epochs_trained is 1
@@ -939,7 +939,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             trainer.save(args['checkpoint_save_name'], save_optimizer=True)
         # same with the "each filename", actually, in case those are
         # brought back for more training or even just for testing
-        if args['save_each_name']:
+        if args['save_each_start'] is not None and args['save_each_start'] <= trainer.epochs_trained and trainer.epochs_trained % args['save_each_frequency'] == 0:
             trainer.save(args['save_each_name'] % trainer.epochs_trained, save_optimizer=True)
 
     return trainer
