@@ -12,6 +12,7 @@ from stanza.models.common.biaffine import DeepBiaffineScorer
 from stanza.models.common.foundation_cache import load_bert, load_charlm
 from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
+from stanza.models.common.peft_config import build_peft_wrapper
 from stanza.models.common.vocab import CompositeVocab
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanza.models.common import utils
@@ -84,19 +85,8 @@ class Parser(nn.Module):
                 # (for historic reasons)
                 self.bert_layer_mix = None
             if self.args.get('use_peft', False):
-                # Hide import so that the peft dependency is optional
-                from peft import LoraConfig, get_peft_model
-                logger.debug("Creating lora adapter with rank %d and alpha %d", self.args['lora_rank'], self.args['lora_alpha'])
-                peft_config = LoraConfig(inference_mode=False,
-                                         r=self.args['lora_rank'],
-                                         target_modules=self.args['lora_target_modules'],
-                                         lora_alpha=self.args['lora_alpha'],
-                                         lora_dropout=self.args['lora_dropout'],
-                                         modules_to_save=self.args['lora_modules_to_save'],
-                                         bias="none")
-
                 bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
-                bert_model = get_peft_model(bert_model, peft_config)
+                bert_model = build_peft_wrapper(bert_model, self.args, logger)
                 # we use a peft-specific pathway for saving peft weights
                 add_unsaved_module('bert_model', bert_model)
                 add_unsaved_module('bert_tokenizer', bert_tokenizer)

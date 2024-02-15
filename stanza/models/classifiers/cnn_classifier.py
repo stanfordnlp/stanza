@@ -17,6 +17,7 @@ from stanza.models.classifiers.utils import ExtraVectors, ModelType, build_outpu
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
 from stanza.models.common.foundation_cache import load_bert
+from stanza.models.common.peft_config import build_peft_wrapper
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 
 """
@@ -131,18 +132,7 @@ class CNNClassifier(BaseClassifier):
                 raise ValueError("Got a forward charlm as a backward charlm!")
 
         if self.config.use_peft:
-            # Hide import so that the peft dependency is optional
-            from peft import LoraConfig, get_peft_model
-            logger.info("Creating lora adapter with rank %d and alpha %d", self.config.lora_rank, self.config.lora_alpha)
-            peft_config = LoraConfig(inference_mode=False,
-                                     r=self.config.lora_rank,
-                                     target_modules=self.config.lora_target_modules,
-                                     lora_alpha=self.config.lora_alpha,
-                                     lora_dropout=self.config.lora_dropout,
-                                     modules_to_save=self.config.lora_modules_to_save,
-                                     bias="none")
-
-            bert_model = get_peft_model(bert_model, peft_config)
+            bert_model = build_peft_wrapper(bert_model, vars(self.config), tlogger)
             # we use a peft-specific pathway for saving peft weights
             self.add_unsaved_module('bert_model', bert_model)
             self.bert_model.train()

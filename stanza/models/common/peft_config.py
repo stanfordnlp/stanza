@@ -61,3 +61,18 @@ def resolve_peft_args(args, logger):
         if args.use_peft and not args.bert_finetune:
             logger.info("--use_peft set.  setting --bert_finetune as well")
             args.bert_finetune = True
+
+def build_peft_wrapper(bert_model, args, logger):
+    # Hide import so that the peft dependency is optional
+    from peft import LoraConfig, get_peft_model
+    logger.info("Creating lora adapter with rank %d and alpha %d", args['lora_rank'], args['lora_alpha'])
+    peft_config = LoraConfig(inference_mode=False,
+                             r=args['lora_rank'],
+                             target_modules=args['lora_target_modules'],
+                             lora_alpha=args['lora_alpha'],
+                             lora_dropout=args['lora_dropout'],
+                             modules_to_save=args['lora_modules_to_save'],
+                             bias="none")
+
+    bert_model = get_peft_model(bert_model, peft_config)
+    return bert_model
