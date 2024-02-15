@@ -649,7 +649,7 @@ def remove_no_tags(trees):
         tlogger.info("Eliminated %d trees with missing structure", (len(trees) - len(new_trees)))
     return new_trees
 
-def train(args, model_load_file, model_save_each_file, retag_pipeline):
+def train(args, model_load_file, retag_pipeline):
     """
     Build a model, train it using the requested train & dev files
     """
@@ -703,7 +703,7 @@ def train(args, model_load_file, model_save_each_file, retag_pipeline):
 
         if args['log_shapes']:
             model.log_shapes()
-        trainer = iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, silver_trees, silver_sequences, foundation_cache, model_save_each_file, evaluator)
+        trainer = iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, silver_trees, silver_sequences, foundation_cache, evaluator)
 
     if args['wandb']:
         wandb.finish()
@@ -777,7 +777,7 @@ def update_bert_learning_rate(args, optimizer, epochs_trained):
             if param_group['lr'] != old_lr:
                 tlogger.info("Setting %s finetuning rate from %f to %f", param_group['param_group_name'], old_lr, param_group['lr'])
 
-def iterate_training(args, trainer, train_trees, train_sequences, transitions, dev_trees, silver_trees, silver_sequences, foundation_cache, model_save_each_filename, evaluator):
+def iterate_training(args, trainer, train_trees, train_sequences, transitions, dev_trees, silver_trees, silver_sequences, foundation_cache, evaluator):
     """
     Given an initialized model, a processed dataset, and a secondary dev dataset, train the model
 
@@ -847,8 +847,8 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         tlogger.info("Restarting trainer with a model trained for %d epochs.  Best epoch %d, f1 %f", trainer.epochs_trained, trainer.best_epoch, trainer.best_f1)
 
     # if we're training a new model, save the initial state so it can be inspected
-    if model_save_each_filename and trainer.epochs_trained == 0:
-        trainer.save(model_save_each_filename % trainer.epochs_trained, save_optimizer=True)
+    if args['save_each_name'] and trainer.epochs_trained == 0:
+        trainer.save(args['save_each_name'] % trainer.epochs_trained, save_optimizer=True)
 
     # trainer.epochs_trained+1 so that if the trainer gets saved after 1 epoch, the epochs_trained is 1
     for trainer.epochs_trained in range(trainer.epochs_trained+1, args['epochs']+1):
@@ -939,8 +939,8 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             trainer.save(args['checkpoint_save_name'], save_optimizer=True)
         # same with the "each filename", actually, in case those are
         # brought back for more training or even just for testing
-        if model_save_each_filename:
-            trainer.save(model_save_each_filename % trainer.epochs_trained, save_optimizer=True)
+        if args['save_each_name']:
+            trainer.save(args['save_each_name'] % trainer.epochs_trained, save_optimizer=True)
 
     return trainer
 
