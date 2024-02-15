@@ -940,7 +940,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         # same with the "each filename", actually, in case those are
         # brought back for more training or even just for testing
         if args['save_each_start'] is not None and args['save_each_start'] <= trainer.epochs_trained and trainer.epochs_trained % args['save_each_frequency'] == 0:
-            trainer.save(args['save_each_name'] % trainer.epochs_trained, save_optimizer=True)
+            trainer.save(args['save_each_name'] % trainer.epochs_trained, save_optimizer=args['save_each_optimizer'])
 
     return trainer
 
