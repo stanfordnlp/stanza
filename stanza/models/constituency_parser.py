@@ -421,6 +421,8 @@ def build_argparse():
     parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_{finetune}_constituency.pt", help="File name to save the model")
     parser.add_argument('--save_each_name', type=str, default=None, help="Save each model in sequence to this pattern.  Mostly for testing")
+    parser.add_argument('--save_each_start', type=int, default=None, help="When to start saving each model")
+    parser.add_argument('--save_each_frequency', type=int, default=1, help="How frequently to save each model")
 
     parser.add_argument('--seed', type=int, default=1234)
 
@@ -787,6 +789,12 @@ def parse_args(args=None):
             # so models.pt -> models_0001.pt, etc
             pieces = os.path.splitext(model_save_each_file)
             model_save_each_file = pieces[0] + "_%04d" + pieces[1]
+        args['save_each_name'] = model_save_each_file
+    else:
+        # in the event that there is a start epoch setting,
+        # this will make a reasonable default for the path
+        pieces = os.path.splitext(args['save_name'])
+        model_save_each_file = pieces[0] + "_%04d" + pieces[1]
         args['save_each_name'] = model_save_each_file
 
     if args['checkpoint']:
