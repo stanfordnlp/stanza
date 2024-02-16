@@ -285,7 +285,7 @@ def main():
                 retagged_treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
                 logger.info("Retagging finished")
 
-            f1, kbestF1 = run_dev_set(ensemble, retagged_treebank, treebank, args, evaluator)
+            f1, kbestF1, _ = run_dev_set(ensemble, retagged_treebank, treebank, args, evaluator)
             logger.info("F1 score on %s: %f", args['eval_file'], f1)
             if kbestF1 is not None:
                 logger.info("KBest F1 score on %s: %f", args['eval_file'], kbestF1)
