@@ -1113,16 +1113,17 @@ def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None):
     tlogger.info("Processing %d trees from %s", len(retagged_trees), args['eval_file'])
     model.eval()
 
-    keep_scores = args['num_generate'] > 0
+    num_generate = args.get('num_generate', 0)
+    keep_scores = num_generate > 0
 
     tree_iterator = iter(tqdm(retagged_trees))
     treebank = model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.predict, keep_scores=keep_scores)
     full_results = treebank
 
-    if args['num_generate'] > 0:
+    if num_generate > 0:
         tlogger.info("Generating %d random analyses", args['num_generate'])
         generated_treebanks = [treebank]
-        for i in tqdm(range(args['num_generate'])):
+        for i in tqdm(range(num_generate)):
             tree_iterator = iter(tqdm(retagged_trees, leave=False, postfix="tb%03d" % i))
             generated_treebanks.append(model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.weighted_choice, keep_scores=keep_scores))
 
@@ -1139,7 +1140,7 @@ def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None):
     else:
         full_results = [x._replace(gold=gold) for x, gold in zip(full_results, original_trees)]
 
-    if args['mode'] == 'predict' and args['predict_file']:
+    if args.get('mode', None) == 'predict' and args['predict_file']:
         utils.ensure_dir(args['predict_dir'], verbose=False)
         pred_file = os.path.join(args['predict_dir'], args['predict_file'] + ".pred.mrg")
         orig_file = os.path.join(args['predict_dir'], args['predict_file'] + ".orig.mrg")
@@ -1153,7 +1154,7 @@ def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None):
                     fout.write(args['predict_format'].format(tree.predictions[0].tree))
                     fout.write("\n")
 
-            for i in range(args['num_generate']):
+            for i in range(num_generate):
                 pred_file = os.path.join(args['predict_dir'], args['predict_file'] + ".%03d.pred.mrg" % i)
                 with open(pred_file, 'w') as fout:
                     for tree in generated_treebanks[:-num_generate]:
@@ -1168,7 +1169,7 @@ def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None):
     if len(full_results) == 0:
         return 0.0, 0.0
     if evaluator is None:
-        if args['num_generate'] > 0:
+        if num_generate > 0:
             kbest = max(len(fr.predictions) for fr in full_results)
         else:
             kbest = None
