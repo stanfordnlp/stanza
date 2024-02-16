@@ -415,7 +415,7 @@ def evaluate(args, model_file, retag_pipeline):
 
         if args['log_norms']:
             trainer.model.log_norms()
-        f1, kbestF1 = run_dev_set(trainer.model, retagged_treebank, treebank, args, evaluator)
+        f1, kbestF1, _ = run_dev_set(trainer.model, retagged_treebank, treebank, args, evaluator)
         tlogger.info("F1 score on %s: %f", args['eval_file'], f1)
         if kbestF1 is not None:
             tlogger.info("KBest F1 score on %s: %f", args['eval_file'], kbestF1)
@@ -868,7 +868,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         # print statistics
         # by now we've forgotten about the original tags on the trees,
         # but it doesn't matter for hill climbing
-        f1, _ = run_dev_set(model, dev_trees, dev_trees, args, evaluator)
+        f1, _, _ = run_dev_set(model, dev_trees, dev_trees, args, evaluator)
         if f1 > trainer.best_f1 or (trainer.best_epoch == 0 and trainer.best_f1 == 0.0):
             # best_epoch == 0 to force a save of an initial model
             # useful for tests which expect something, even when a
@@ -1178,4 +1178,4 @@ def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None):
         response = evaluator.process(full_results)
 
     kbestF1 = response.kbestF1 if response.HasField("kbestF1") else None
-    return response.f1, kbestF1
+    return response.f1, kbestF1, response.treeF1
