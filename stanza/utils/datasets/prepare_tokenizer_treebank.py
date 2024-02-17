@@ -850,7 +850,9 @@ def build_extra_combined_english_dataset(paths, dataset):
     handparsed_dir = paths["HANDPARSED_DIR"]
     sents = []
     if dataset == 'train':
-        sents.extend(read_sentences_from_conllu(os.path.join(handparsed_dir, "english-handparsed", "english.conll")))
+        handparsed_path = os.path.join(handparsed_dir, "english-handparsed", "english.conll")
+        sents.extend(read_sentences_from_conllu(handparsed_path))
+        print("Loaded %d sentences from %s" % (len(sents), handparsed_path))
     return sents
 
 def build_extra_combined_italian_dataset(paths, dataset):
