@@ -21,7 +21,7 @@ class DataLoader:
         self.shuffled = not self.eval
         self.doc = doc
 
-        data = self.load_doc(self.doc, self.args.get('caseless', False))
+        data = self.load_doc(self.doc, self.args.get('caseless', False), self.eval)
 
         if conll_only: # only load conll file
             return
@@ -115,12 +115,38 @@ class DataLoader:
             yield self.__getitem__(i)
 
     @staticmethod
-    def load_doc(doc, caseless):
-        data = doc.get([TEXT, UPOS, LEMMA])
+    def load_doc(doc, caseless, evaluation):
+        if evaluation:
+            data = doc.get([TEXT, UPOS, LEMMA])
+        else:
+            data = doc.get([TEXT, UPOS, LEMMA, HEAD, DEPREL], as_sentences=True)
+            data = DataLoader.remove_goeswith(data)
         data = DataLoader.resolve_none(data)
         if caseless:
             data = DataLoader.lowercase_data(data)
         return data
+
+    @staticmethod
+    def remove_goeswith(data):
+        """
+        This method specifically removes words that goeswith something else, along with the something else
+
+        The purpose is to eliminate text such as
+
+1	Ken	kenrice@enroncommunications	X	GW	Typo=Yes	0	root	0:root	_
+2	Rice@ENRON	_	X	GW	_	1	goeswith	1:goeswith	_
+3	COMMUNICATIONS	_	X	ADD	_	1	goeswith	1:goeswith	_
+        """
+        filtered_data = []
+        remove_indices = set()
+        for sentence in data:
+            remove_indices.clear()
+            for word_idx, word in enumerate(sentence):
+                if word[4] == 'goeswith':
+                    remove_indices.add(word_idx)
+                    remove_indices.add(word[3]-1)
+            filtered_data.extend([x[:3] for idx, x in enumerate(sentence) if idx not in remove_indices])
+        return filtered_data
 
     @staticmethod
     def lowercase_data(data):
