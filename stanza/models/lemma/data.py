@@ -21,7 +21,7 @@ class DataLoader:
         self.shuffled = not self.eval
         self.doc = doc
 
-        data = self.load_doc(self.doc)
+        data = self.load_doc(self.doc, self.args.get('caseless', False))
 
         if conll_only: # only load conll file
             return
@@ -114,19 +114,22 @@ class DataLoader:
         for i in range(self.__len__()):
             yield self.__getitem__(i)
 
-    def load_doc(self, doc):
+    @staticmethod
+    def load_doc(doc, caseless):
         data = doc.get([TEXT, UPOS, LEMMA])
-        data = self.resolve_none(data)
-        if self.args.get('caseless', False):
-            data = self.lowercase_data(data)
+        data = DataLoader.resolve_none(data)
+        if caseless:
+            data = DataLoader.lowercase_data(data)
         return data
 
-    def lowercase_data(self, data):
+    @staticmethod
+    def lowercase_data(data):
         for token in data:
             token[0] = token[0].lower()
         return data
 
-    def resolve_none(self, data):
+    @staticmethod
+    def resolve_none(data):
         # replace None to '_'
         for tok_idx in range(len(data)):
             for feat_idx in range(len(data[tok_idx])):
