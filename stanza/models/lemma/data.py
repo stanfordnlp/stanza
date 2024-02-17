@@ -21,7 +21,7 @@ class DataLoader:
         self.shuffled = not self.eval
         self.doc = doc
 
-        data = self.load_doc(self.doc, self.args.get('caseless', False), self.eval)
+        data = self.raw_data()
 
         if conll_only: # only load conll file
             return
@@ -113,6 +113,9 @@ class DataLoader:
     def __iter__(self):
         for i in range(self.__len__()):
             yield self.__getitem__(i)
+
+    def raw_data(self):
+        return self.load_doc(self.doc, self.args.get('caseless', False), self.eval)
 
     @staticmethod
     def load_doc(doc, caseless, evaluation):
