@@ -181,12 +181,25 @@ def dispatch_optimizer(name, parameters, lr=None, betas=None, eps=None, momentum
         return torch.optim.Adamax(parameters, **extra_args) # use default lr
     elif name == 'adadelta':
         return torch.optim.Adadelta(parameters, lr=lr, **extra_args)
+    elif name == 'adabelief':
+        try:
+            from adabelief_pytorch import AdaBelief
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError("Could not create adabelief optimizer.  Perhaps the adabelief-pytorch package is not installed") from e
+        # TODO: add weight_decouple and rectify as extra args?
+        return AdaBelief(parameters, lr=lr, eps=eps, weight_decouple=True, rectify=True, **extra_args)
     elif name == 'madgrad':
         try:
             import madgrad
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
         return madgrad.MADGRAD(parameters, lr=lr, momentum=momentum, **extra_args)
+    elif name == 'mirror_madgrad':
+        try:
+            import madgrad
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError("Could not create mirror_madgrad optimizer.  Perhaps the madgrad package is not installed") from e
+        return madgrad.MirrorMADGRAD(parameters, lr=lr, momentum=momentum, **extra_args)
     else:
         raise ValueError("Unsupported optimizer: {}".format(name))
 
