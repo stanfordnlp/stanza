@@ -80,6 +80,7 @@ def build_argparse():
     parser.add_argument('--bert_hidden_layers_original', action='store_const', const=None, dest='bert_hidden_layers', help='Use layers 2,3,4 of the Bert embedding')
     parser.add_argument('--bert_finetune', default=False, action='store_true', help='Finetune the bert (or other transformer)')
     parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
+    parser.add_argument('--bert_finetune_layers', default=None, type=int, help='Only finetune this many layers from the transformer')
     parser.add_argument('--bert_learning_rate', default=1.0, type=float, help='Scale the learning rate for transformer finetuning by this much')
     parser.add_argument('--second_bert_learning_rate', default=1e-3, type=float, help='Secondary stage transformer finetuning learning rate scale')
     parser.add_argument('--bert_start_finetuning', default=200, type=int, help='When to start finetuning the transformer')
