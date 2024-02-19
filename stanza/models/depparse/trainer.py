@@ -77,14 +77,16 @@ class Trainer(BaseTrainer):
             self.optimizer = utils.get_split_optimizer(self.args['second_optim'], self.model,
                                                        self.args['second_lr'], betas=(0.9, self.args['beta2']), eps=1e-6,
                                                        bert_learning_rate=self.args.get('second_bert_learning_rate', 0.0),
-                                                       is_peft=self.args.get('use_peft', False))
+                                                       is_peft=self.args.get('use_peft', False),
+                                                       bert_finetune_layers=self.args.get('bert_finetune_layers', None))
         else:
             self.optimizer = utils.get_split_optimizer(self.args['optim'], self.model,
                                                        self.args['lr'], betas=(0.9, self.args['beta2']),
                                                        eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0),
                                                        weight_decay=self.args.get('weight_decay', None),
                                                        bert_weight_decay=self.args.get('bert_weight_decay', 0.0),
-                                                       is_peft=self.args.get('use_peft', False))
+                                                       is_peft=self.args.get('use_peft', False),
+                                                       bert_finetune_layers=self.args.get('bert_finetune_layers', None))
         self.scheduler = {}
         if self.args.get("second_stage", False) and self.args.get('second_optim'):
             if self.args.get('second_warmup_steps', None):
