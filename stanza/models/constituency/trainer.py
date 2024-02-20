@@ -77,6 +77,10 @@ class Trainer:
             'best_f1': self.best_f1,
             'best_epoch': self.best_epoch,
         }
+        if self.model.args.get('use_peft', False):
+            # Hide import so that peft dependency is optional
+            from peft import get_peft_model_state_dict
+            checkpoint["bert_lora"] = get_peft_model_state_dict(self.model.bert_model)
         if save_optimizer and self.optimizer is not None:
             checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
             checkpoint['scheduler_state_dict'] = self.scheduler.state_dict()
@@ -202,6 +206,10 @@ class Trainer:
 
         params = checkpoint['params']
         model = Trainer.model_from_params(params, args, foundation_cache)
+        if model.args.get('use_peft', False):
+            # hide import so that the peft dependency is optional
+            from peft import set_peft_model_state_dict
+            set_peft_model_state_dict(model.bert_model, checkpoint['bert_lora'])
 
         epochs_trained = checkpoint['epochs_trained']
         batches_trained = checkpoint.get('batches_trained', 0)
