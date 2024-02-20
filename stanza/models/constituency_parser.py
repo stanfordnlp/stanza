@@ -168,6 +168,7 @@ import torch
 import stanza
 from stanza.models.common import constant
 from stanza.models.common import utils
+from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
 from stanza.models.constituency import retagging
 from stanza.models.constituency import trainer
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary, StackHistory
@@ -319,6 +320,8 @@ def build_argparse():
     parser.add_argument('--bert_weight_decay', default=0.0001, type=float, help='Scale the weight decay for transformer finetuning by this much')
     parser.add_argument('--stage1_bert_finetune', default=None, action='store_true', help="Finetune the bert (or other transformer) during an AdaDelta warmup, even if the second half doesn't use bert_finetune")
     parser.add_argument('--no_stage1_bert_finetune', dest='stage1_bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer) during an AdaDelta warmup, even if the second half doesn't use bert_finetune")
+
+    add_peft_args(parser)
 
     parser.add_argument('--tag_embedding_dim', type=int, default=20, help="Embedding size for a tag.  0 turns off the feature")
     # Smaller values also seem to work
@@ -707,6 +710,7 @@ def parse_args(args=None):
     parser = build_argparse()
 
     args = parser.parse_args(args=args)
+    resolve_peft_args(args, logger, check_bert_finetune=False)
     if not args.lang and args.shorthand and len(args.shorthand.split("_", maxsplit=1)) == 2:
         args.lang = args.shorthand.split("_")[0]
 
@@ -717,6 +721,9 @@ def parse_args(args=None):
         if not args.multistage:
             # this seemed to work the best when not doing multistage
             args.optim = "adadelta"
+            if args.use_peft and not args.bert_finetune:
+                logger.info("--use_peft set.  setting --bert_finetune as well")
+                args.bert_finetune = True
         elif args.bert_finetune or args.stage1_bert_finetune:
             logger.info("Multistage training is set, optimizer is not chosen, and bert finetuning is active.  Will use AdamW as the second stage optimizer.")
             args.optim = "adamw"

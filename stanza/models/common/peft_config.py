@@ -30,7 +30,7 @@ def add_peft_args(parser):
 
     parser.add_argument('--use_peft', default=False, action='store_true', help="Finetune Bert using peft")
 
-def resolve_peft_args(args, logger):
+def resolve_peft_args(args, logger, check_bert_finetune=True):
     if not hasattr(args, 'bert_model'):
         return
 
@@ -57,7 +57,7 @@ def resolve_peft_args(args, logger):
     else:
         args.lora_modules_to_save = args.lora_modules_to_save.split(",")
 
-    if hasattr(args, 'bert_finetune'):
+    if check_bert_finetune and hasattr(args, 'bert_finetune'):
         if args.use_peft and not args.bert_finetune:
             logger.info("--use_peft set.  setting --bert_finetune as well")
             args.bert_finetune = True
