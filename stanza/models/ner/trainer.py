@@ -15,7 +15,6 @@ from stanza.models.ner.model import NERTagger
 from stanza.models.ner.vocab import MultiVocab
 from stanza.models.common.crf import viterbi_decode
 
-from peft import get_peft_model_state_dict, set_peft_model_state_dict
 from stanza.models.common.peft_config import build_peft_wrapper
 
 logger = logging.getLogger('stanza')
@@ -189,6 +188,7 @@ class Trainer(BaseTrainer):
                 }
 
         if self.args["use_peft"]:
+            from peft import get_peft_model_state_dict
             params["bert_lora"] = get_peft_model_state_dict(self.model.bert_model)
         try:
             torch.save(params, filename, _use_new_zipfile_serialization=False)
@@ -248,6 +248,7 @@ class Trainer(BaseTrainer):
 
         # load lora weights, which is special
         if lora_weights:
+            from peft import set_peft_model_state_dict
             self.model.bert_model = build_peft_wrapper(self.model.bert_model,
                                                        self.args, logger)
             self.model.unsaved_modules += ["bert_model"]
