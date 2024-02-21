@@ -177,6 +177,7 @@ from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARN
 from stanza.resources.common import DEFAULT_MODEL_DIR
 
 logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.constituency.trainer')
 
 def build_argparse():
     """
@@ -833,6 +834,9 @@ def main(args=None):
     retag_pipeline = retagging.build_retag_pipeline(args)
 
     if args['mode'] == 'train':
+        if tlogger.level == logging.NOTSET:
+            tlogger.setLevel(logging.DEBUG)
+            tlogger.debug("Set trainer logging level to DEBUG")
         trainer.train(args, model_load_file, model_save_each_file, retag_pipeline)
     elif args['mode'] == 'predict':
         trainer.evaluate(args, model_load_file, retag_pipeline)
