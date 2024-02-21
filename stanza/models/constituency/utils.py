@@ -10,6 +10,7 @@ import torch.nn as nn
 from torch import optim
 
 from stanza.models.common.doc import TEXT, Document
+from stanza.models.common.utils import get_optimizer
 from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
@@ -212,14 +213,18 @@ def build_optimizer(args, model, build_simple_adadelta=False):
     we build an AdaDelta optimizer instead of whatever was requested
     The build_simple_adadelta parameter controls this
     """
+    bert_learning_rate = 0.0
+    bert_weight_decay = args['bert_weight_decay']
     if build_simple_adadelta:
         optim_type = 'adadelta'
         bert_finetune = args.get('stage1_bert_finetune', False)
         if bert_finetune:
             bert_learning_rate = args['stage1_bert_learning_rate']
+        learning_beta2 = 0.999   # doesn't matter for AdaDelta
         learning_eps = DEFAULT_LEARNING_EPS['adadelta']
         learning_rate = args['stage1_learning_rate']
         learning_rho = DEFAULT_LEARNING_RHO
+        momentum = None    # also doesn't matter for AdaDelta
         weight_decay = DEFAULT_WEIGHT_DECAY['adadelta']
     else:
         optim_type = args['optim'].lower()
@@ -233,57 +238,17 @@ def build_optimizer(args, model, build_simple_adadelta=False):
         momentum = args['learning_momentum']
         weight_decay = args['learning_weight_decay']
 
-    base_parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name) and not name.startswith("bert_model.")]
-    parameters = [
-        {'param_group_name': 'base', 'params': base_parameters},
-    ]
-    if bert_finetune:
-        bert_parameters = [param for name, param in model.named_parameters()
-                           if not model.is_unsaved_module(name) and name.startswith("bert_model.")]
-        logger.debug("Finetuning %d transformer parameters" % len(bert_parameters))
-        if len(bert_parameters) > 0 and args['bert_finetune_layers'] is not None:
-            num_layers = model.bert_model.config.num_hidden_layers
-            start_layer = num_layers - args['bert_finetune_layers']
-            bert_parameters = []
-            for layer_num in range(start_layer, num_layers):
-                #print([name for name, param in model.named_parameters()
-                #       if not model.is_unsaved_module(name) and name.startswith("bert_model.") and "layer.%d." % layer_num in name])
-                bert_parameters.extend([param for name, param in model.named_parameters()
-                                        if not model.is_unsaved_module(name) and name.startswith("bert_model.") and "layer.%d." % layer_num in name])
-        if len(bert_parameters) > 0:
-            parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': learning_rate * bert_learning_rate, 'weight_decay': weight_decay * args['bert_weight_decay']})
-
-    if optim_type == 'sgd':
-        logger.info("Building SGD with lr=%f, momentum=%f, weight_decay=%f", learning_rate, momentum, weight_decay)
-        optimizer = optim.SGD(parameters, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
-    elif optim_type == 'adadelta':
-        logger.info("Building Adadelta with lr=%f, eps=%f, weight_decay=%f, rho=%f", learning_rate, learning_eps, weight_decay, learning_rho)
-        optimizer = optim.Adadelta(parameters, lr=learning_rate, eps=learning_eps, weight_decay=weight_decay, rho=learning_rho)
-    elif optim_type == 'adamw':
-        logger.info("Building AdamW with lr=%f, beta2=%f, eps=%f, weight_decay=%f", learning_rate, learning_beta2, learning_eps, weight_decay)
-        optimizer = optim.AdamW(parameters, lr=learning_rate, betas=(0.9, learning_beta2), eps=learning_eps, weight_decay=weight_decay)
-    elif optim_type == 'adabelief':
-        try:
-            from adabelief_pytorch import AdaBelief
-        except ModuleNotFoundError as e:
-            raise ModuleNotFoundError("Could not create adabelief optimizer.  Perhaps the adabelief-pytorch package is not installed") from e
-        logger.info("Building AdaBelief with lr=%f, eps=%f, weight_decay=%f", learning_rate, learning_eps, weight_decay)
-        # TODO: make these args
-        optimizer = AdaBelief(parameters, lr=learning_rate, eps=learning_eps, weight_decay=weight_decay, weight_decouple=False, rectify=False)
-    elif optim_type == 'madgrad' or optim_type == 'mirror_madgrad':
-        try:
-            import madgrad
-        except ModuleNotFoundError as e:
-            raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-        if optim_type == 'madgrad':
-            logger.info("Building madgrad with lr=%f, weight_decay=%f, momentum=%f", learning_rate, weight_decay, momentum)
-            optimizer = madgrad.MADGRAD(parameters, lr=learning_rate, weight_decay=weight_decay, momentum=momentum)
-        else:
-            logger.info("Building mirror madgrad with lr=%f, weight_decay=%f, momentum=%f", learning_rate, weight_decay, momentum)
-            optimizer = madgrad.MirrorMADGRAD(parameters, lr=learning_rate, weight_decay=weight_decay, momentum=momentum)
-    else:
-        raise ValueError("Unknown optimizer: %s" % optim)
-    return optimizer
+    # TODO: allow rho as an arg for AdaDelta
+    return get_optimizer(name=optim_type,
+                         model=model,
+                         lr=learning_rate,
+                         betas=(0.9, learning_beta2),
+                         eps=learning_eps,
+                         momentum=momentum,
+                         weight_decay=weight_decay,
+                         bert_learning_rate=bert_learning_rate,
+                         bert_weight_decay=weight_decay*bert_weight_decay,
+                         bert_finetune_layers=args['bert_finetune_layers'])
 
 def build_scheduler(args, optimizer, first_optimizer=False):
     """
