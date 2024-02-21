@@ -20,7 +20,7 @@ DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
 DEFAULT_LEARNING_RHO = 0.9
 DEFAULT_MOMENTUM = { "madgrad": 0.9, "mirror_madgrad": 0.9, "sgd": 0.9 }
 
-logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.constituency.trainer')
 
 # madgrad experiment for weight decay
 # with learning_rate set to 0.0000007 and momentum 0.9
@@ -249,7 +249,8 @@ def build_optimizer(args, model, build_simple_adadelta=False):
                          bert_learning_rate=bert_learning_rate,
                          bert_weight_decay=weight_decay*bert_weight_decay,
                          is_peft=args.get('use_peft', False),
-                         bert_finetune_layers=args['bert_finetune_layers'])
+                         bert_finetune_layers=args['bert_finetune_layers'],
+                         opt_logger=tlogger)
 
 def build_scheduler(args, optimizer, first_optimizer=False):
     """
