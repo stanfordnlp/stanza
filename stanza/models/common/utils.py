@@ -204,7 +204,7 @@ def dispatch_optimizer(name, parameters, lr=None, betas=None, eps=None, momentum
         raise ValueError("Unsupported optimizer: {}".format(name))
 
 
-def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, bert_weight_decay=None, charlm_learning_rate=0.0, is_peft=False):
+def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, bert_weight_decay=None, charlm_learning_rate=0.0, is_peft=False, bert_finetune_layers=None):
     base_parameters = [p for n, p in model.named_parameters()
                        if p.requires_grad and not n.startswith("bert_model.")
                        and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
@@ -217,6 +217,16 @@ def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, wei
 
     if not is_peft:
         bert_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
+
+        # bert_finetune_layers limits the bert finetuning to the *last* N layers of the model
+        if len(bert_parameters) > 0 and bert_finetune_layers is not None:
+            num_layers = model.bert_model.config.num_hidden_layers
+            start_layer = num_layers - bert_finetune_layers
+            bert_parameters = []
+            for layer_num in range(start_layer, num_layers):
+                bert_parameters.extend([param for name, param in model.named_parameters()
+                                        if param.requires_grad and name.startswith("bert_model.") and "layer.%d." % layer_num in name])
+
         if len(bert_parameters) > 0 and bert_learning_rate > 0:
             logger.debug("Finetuning %d bert parameters with LR %s and WD %s", len(bert_parameters), lr * bert_learning_rate, bert_weight_decay)
             parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': lr * bert_learning_rate})
