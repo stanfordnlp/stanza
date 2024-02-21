@@ -164,28 +164,41 @@ def harmonic_mean(a, weights=None):
             return sum(weights) / sum(w/x for x, w in zip(a, weights))
 
 # torch utils
-def dispatch_optimizer(name, parameters, lr=None, betas=None, eps=None, momentum=None, **extra_args):
+def dispatch_optimizer(name, parameters, opt_logger, lr=None, betas=None, eps=None, momentum=None, **extra_args):
+    extra_logging = ""
+    if len(extra_args) > 0:
+        extra_logging = ", " + ", ".join("%s=%s" % (x, y) for x, y in extra_args.items())
+
     if name == 'amsgrad':
+        opt_logger.debug("Building Adam w/ amsgrad with lr=%f, betas=%s, eps=%f%s", lr, betas, eps, extra_logging)
         return torch.optim.Adam(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
     elif name == 'amsgradw':
+        opt_logger.debug("Building AdamW w/ amsgrad with lr=%f, betas=%s, eps=%f%s", lr, betas, eps, extra_logging)
         return torch.optim.AdamW(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
     elif name == 'sgd':
+        opt_logger.debug("Building SGD with lr=%f, momentum=%f%s", lr, momentum, extra_logging)
         return torch.optim.SGD(parameters, lr=lr, momentum=momentum, **extra_args)
     elif name == 'adagrad':
+        opt_logger.debug("Building Adagrad with lr=%f%s", lr, extra_logging)
         return torch.optim.Adagrad(parameters, lr=lr, **extra_args)
     elif name == 'adam':
+        opt_logger.debug("Building Adam with lr=%f, betas=%s, eps=%f%s", lr, betas, eps, extra_logging)
         return torch.optim.Adam(parameters, lr=lr, betas=betas, eps=eps, **extra_args)
     elif name == 'adamw':
+        opt_logger.debug("Building AdamW with lr=%f, betas=%s, eps=%f%s", lr, betas, eps, extra_logging)
         return torch.optim.AdamW(parameters, lr=lr, betas=betas, eps=eps, **extra_args)
     elif name == 'adamax':
+        opt_logger.debug("Building Adamax%s", extra_logging)
         return torch.optim.Adamax(parameters, **extra_args) # use default lr
     elif name == 'adadelta':
+        opt_logger.debug("Building Adadelta with lr=%f%s", lr, extra_logging)
         return torch.optim.Adadelta(parameters, lr=lr, **extra_args)
     elif name == 'adabelief':
         try:
             from adabelief_pytorch import AdaBelief
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("Could not create adabelief optimizer.  Perhaps the adabelief-pytorch package is not installed") from e
+        opt_logger.debug("Building AdaBelief with lr=%f, eps=%f%s", lr, eps, extra_logging)
         # TODO: add weight_decouple and rectify as extra args?
         return AdaBelief(parameters, lr=lr, eps=eps, weight_decouple=True, rectify=True, **extra_args)
     elif name == 'madgrad':
@@ -193,18 +206,21 @@ def dispatch_optimizer(name, parameters, lr=None, betas=None, eps=None, momentum
             import madgrad
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
+        opt_logger.debug("Building MADGRAD with lr=%f, momentum=%f%s", lr, momentum, extra_logging)
         return madgrad.MADGRAD(parameters, lr=lr, momentum=momentum, **extra_args)
     elif name == 'mirror_madgrad':
         try:
             import madgrad
         except ModuleNotFoundError as e:
             raise ModuleNotFoundError("Could not create mirror_madgrad optimizer.  Perhaps the madgrad package is not installed") from e
+        opt_logger.debug("Building MirrorMADGRAD with lr=%f, momentum=%f%s", lr, momentum, extra_logging)
         return madgrad.MirrorMADGRAD(parameters, lr=lr, momentum=momentum, **extra_args)
     else:
         raise ValueError("Unsupported optimizer: {}".format(name))
 
 
-def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, bert_weight_decay=None, charlm_learning_rate=0.0, is_peft=False, bert_finetune_layers=None):
+def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, bert_weight_decay=None, charlm_learning_rate=0.0, is_peft=False, bert_finetune_layers=None, opt_logger=None):
+    opt_logger = opt_logger if opt_logger is not None else logger
     base_parameters = [p for n, p in model.named_parameters()
                        if p.requires_grad and not n.startswith("bert_model.")
                        and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
@@ -228,7 +244,7 @@ def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, wei
                                         if param.requires_grad and name.startswith("bert_model.") and "layer.%d." % layer_num in name])
 
         if len(bert_parameters) > 0 and bert_learning_rate > 0:
-            logger.debug("Finetuning %d bert parameters with LR %s and WD %s", len(bert_parameters), lr * bert_learning_rate, bert_weight_decay)
+            opt_logger.debug("Finetuning %d bert parameters with LR %s and WD %s", len(bert_parameters), lr * bert_learning_rate, bert_weight_decay)
             parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': lr * bert_learning_rate})
             if bert_weight_decay is not None:
                 parameters[-1]['weight_decay'] = bert_weight_decay
@@ -244,7 +260,7 @@ def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, wei
     if weight_decay is not None:
         extra_args["weight_decay"] = weight_decay
 
-    return dispatch_optimizer(name, parameters, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
+    return dispatch_optimizer(name, parameters, opt_logger=opt_logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
 
 def get_split_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, bert_weight_decay=None, charlm_learning_rate=0.0, is_peft=False, bert_finetune_layers=None):
     """Same as `get_optimizer`, but splits the optimizer for Bert into a seperate optimizer"""
@@ -282,12 +298,12 @@ def get_split_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=
         extra_args["weight_decay"] = weight_decay
 
     optimizers = {
-        "general_optimizer": dispatch_optimizer(name, parameters, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
+        "general_optimizer": dispatch_optimizer(name, parameters, opt_logger=logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
     }
     if bert_parameters is not None and bert_learning_rate > 0.0:
         if bert_weight_decay is not None:
             extra_args['weight_decay'] = bert_weight_decay
-        optimizers["bert_optimizer"] = dispatch_optimizer(name, bert_parameters, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
+        optimizers["bert_optimizer"] = dispatch_optimizer(name, bert_parameters, opt_logger=logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
     return optimizers
 
 
