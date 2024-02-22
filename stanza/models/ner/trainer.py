@@ -74,7 +74,6 @@ class Trainer(BaseTrainer):
             self.vocab = vocab
             self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, foundation_cache=foundation_cache)
 
-                
             # PEFT the model, if needed
             if self.args["use_peft"] and self.args["bert_model"]:
                 # fine tune the bert
