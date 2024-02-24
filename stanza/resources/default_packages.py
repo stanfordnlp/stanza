@@ -377,12 +377,12 @@ default_ners = {
 
 # a few languages have sentiment classifier models
 default_sentiment = {
-    "en": "sstplus",
-    "de": "sb10k",
-    "es": "tass2020",
-    "mr": "l3cube",
-    "vi": "vsfc",
-    "zh-hans": "ren",
+    "en": "sstplus_charlm",
+    "de": "sb10k_charlm",
+    "es": "tass2020_charlm",
+    "mr": "l3cube_charlm",
+    "vi": "vsfc_charlm",
+    "zh-hans": "ren_charlm",
 }
 
 # also, a few languages (very few, currently) have constituency parser models
