@@ -472,7 +472,7 @@ def get_default_accurate(resources, lang):
 
     transformer = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(lang, None), None)
     if transformer is not None:
-        for processor in 'pos', 'depparse', 'constituency':
+        for processor in ('pos', 'depparse', 'constituency', 'sentiment'):
             update_processor_add_transformer(resources, lang, default_processors, processor, transformer)
 
     optional = get_optional_accurate(resources, lang)
@@ -486,7 +486,7 @@ def get_optional_accurate(resources, lang):
 
     transformer = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(lang, None), None)
     if transformer is not None:
-        for processor in 'pos', 'depparse', 'constituency':
+        for processor in ('pos', 'depparse', 'constituency', 'sentiment'):
             update_processor_add_transformer(resources, lang, optional_processors, processor, transformer)
 
     if lang in optional_coref:
