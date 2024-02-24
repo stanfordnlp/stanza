@@ -262,11 +262,11 @@ def load_pretrain_or_wordvec(args):
     pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
 
-def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse, name):
+def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse, name, root_labels):
     """
     Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
     """
-    model = SimpleModel(transition_scheme, unary_limit, reverse)
+    model = SimpleModel(transition_scheme, unary_limit, reverse, root_labels)
     tlogger.info("Verifying the transition sequences for %d trees", len(trees))
 
     data = zip(trees, sequences)
@@ -520,8 +520,8 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     check_root_labels(root_labels, silver_trees, "silver")
     tlogger.info("Root labels in treebank: %s", root_labels)
 
-    verify_transitions(train_trees, train_sequences, args['transition_scheme'], unary_limit, args['reversed'], "train")
-    verify_transitions(dev_trees, dev_sequences, args['transition_scheme'], unary_limit, args['reversed'], "dev")
+    verify_transitions(train_trees, train_sequences, args['transition_scheme'], unary_limit, args['reversed'], "train", root_labels)
+    verify_transitions(dev_trees, dev_sequences, args['transition_scheme'], unary_limit, args['reversed'], "dev", root_labels)
 
     # we don't check against the words in the dev set as it is
     # expected there will be some UNK words

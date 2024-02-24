@@ -222,7 +222,7 @@ class LSTMModel(BaseModel, nn.Module):
           note that there will be an attempt made to learn UNK words as well,
           and tags by themselves may help UNK words
         rare_words: a list of rare words, used to occasionally replace with UNK
-        root_labels: probably ROOT, although apparently some treebanks like TOP
+        root_labels: probably ROOT, although apparently some treebanks like TOP or even s
         constituent_opens: a list of all possible open nodes which will go on the stack
           - this might be different from constituents if there are nodes
             which represent multiple constituents at once
@@ -234,7 +234,7 @@ class LSTMModel(BaseModel, nn.Module):
         However, that would only work at train time.  At eval or
         pipeline time we will load the lists from the saved model.
         """
-        super().__init__(transition_scheme=args['transition_scheme'], unary_limit=unary_limit, reverse_sentence=args.get('reversed', False))
+        super().__init__(transition_scheme=args['transition_scheme'], unary_limit=unary_limit, reverse_sentence=args.get('reversed', False), root_labels=root_labels)
 
         self.args = args
         self.unsaved_modules = []
@@ -250,7 +250,6 @@ class LSTMModel(BaseModel, nn.Module):
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]
 
-        self.root_labels = sorted(list(root_labels))
         self.constituents = sorted(list(constituents))
 
         self.hidden_size = self.args['hidden_size']
@@ -665,9 +664,6 @@ class LSTMModel(BaseModel, nn.Module):
 
     def is_unsaved_module(self, name):
         return name.split('.')[0] in self.unsaved_modules
-
-    def get_root_labels(self):
-        return self.root_labels
 
     def get_norms(self):
         lines = []
