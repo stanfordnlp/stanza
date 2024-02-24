@@ -46,12 +46,13 @@ class BaseModel(ABC):
     The constructor forwards all unused arguments to other classes in the
     constructor sequence, so put this before other classes such as nn.Module
     """
-    def __init__(self, transition_scheme, unary_limit, reverse_sentence, *args, **kwargs):
+    def __init__(self, transition_scheme, unary_limit, reverse_sentence, root_labels, *args, **kwargs):
         super().__init__(*args, **kwargs)  # forwards all unused arguments
 
         self._transition_scheme = transition_scheme
         self._unary_limit = unary_limit
         self._reverse_sentence = reverse_sentence
+        self.root_labels = sorted(list(root_labels))
 
     @abstractmethod
     def initial_word_queues(self, tagged_word_lists):
@@ -132,8 +133,10 @@ class BaseModel(ABC):
     def get_root_labels(self):
         """
         Return ROOT labels for this model.  Probably ROOT, TOP, or both
+
+        (Danish uses 's', though)
         """
-        return ("ROOT",)
+        return self.root_labels
 
     def unary_limit(self):
         """
@@ -394,8 +397,8 @@ class SimpleModel(BaseModel):
     transitions in situations where the NN state is not relevant,
     as this class will be faster than using the NN
     """
-    def __init__(self, transition_scheme=TransitionScheme.TOP_DOWN_UNARY, unary_limit=UNARY_LIMIT, reverse_sentence=False):
-        super().__init__(transition_scheme=transition_scheme, unary_limit=unary_limit, reverse_sentence=reverse_sentence)
+    def __init__(self, transition_scheme=TransitionScheme.TOP_DOWN_UNARY, unary_limit=UNARY_LIMIT, reverse_sentence=False, root_labels=("ROOT",)):
+        super().__init__(transition_scheme=transition_scheme, unary_limit=unary_limit, reverse_sentence=reverse_sentence, root_labels=root_labels)
 
     def initial_word_queues(self, tagged_word_lists):
         word_queues = []
