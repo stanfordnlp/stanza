@@ -407,7 +407,7 @@ class OpenConstituent(Transition):
             return False
         if model.is_top_down():
             # If the model is top down, you can't Open if there are
-            # no word to eventually eat
+            # no words to eventually eat
             if state.empty_word_queue():
                 return False
             # Also, you can only Open a ROOT iff it is at the root position
