@@ -53,6 +53,7 @@ from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity, initialize_linear
 
 logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.constituency.trainer')
 
 WordNode = namedtuple("WordNode", ['value', 'hx'])
 
@@ -353,7 +354,7 @@ class LSTMModel(BaseModel, nn.Module):
         # try to train our own
         self.force_bert_saved = force_bert_saved
         if self.args.get('use_peft', False):
-            bert_model = build_peft_wrapper(bert_model, self.args, logger)
+            bert_model = build_peft_wrapper(bert_model, self.args, tlogger)
             # we use a peft-specific pathway for saving peft weights
             self.add_unsaved_module('bert_model', bert_model)
             self.bert_model.train()
