@@ -24,6 +24,7 @@ To build and customize the pipeline, you can specify the options in the table be
 | logging_level | `str` | `'INFO'` | Controls the level of logging information to display when the Pipeline is instantiated and run. Can be one of `'DEBUG'`, `'INFO'`, `'WARN'`, `'ERROR'`, `'CIRTICAL'`, or `'FATAL'`. Less and less information will be displayed from `'DEBUG'` to `'FATAL'`. |
 | verbose | `str` | `None` | Simplified option for logging level. If `True`, logging level will be set to `'INFO'`. If `False`, logging level will be set to `'ERROR'`.  |
 | use_gpu | `bool` | `True` | Attempt to use a GPU if available. Set this to `False` if you are in a GPU-enabled environment but want to explicitly keep Stanza from using the GPU. |
+| device  | `str` | None | Which device to use for the Pipeline.  Can be used to put the pipeline on `cuda:1` instead of `cuda:0`, for example |
 | kwargs | - | - | Options for each of the individual processors. See the individual processor pages for descriptions. |
 | {processor}_model_path | - | - | Path to load an alternate model.  For example, `pos_model_path=xyz.pt` to load `xyz.pt` for the pos processor. |
 | {processor}_pretrain_path | - | - | For processors which use word vectors, path to load an alternate set of word vectors.  For example, `pos_pretrain_path=abc.pt` to load the `abc.pt` pretrain for the pos processor. Will not work for NER, which has the vectors saved with the model. |
