@@ -840,12 +840,14 @@ def main(args=None):
 
     # TODO: when loading a saved model, we should default to whatever
     # is in the model file for --retag_method, not the default for the language
-    retag_pipeline = retagging.build_retag_pipeline(args)
-
     if args['mode'] == 'train':
         if tlogger.level == logging.NOTSET:
             tlogger.setLevel(logging.DEBUG)
             tlogger.debug("Set trainer logging level to DEBUG")
+
+    retag_pipeline = retagging.build_retag_pipeline(args)
+
+    if args['mode'] == 'train':
         trainer.train(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'predict':
         trainer.evaluate(args, model_load_file, retag_pipeline)
