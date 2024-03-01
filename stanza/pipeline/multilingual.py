@@ -134,13 +134,16 @@ class MultilingualPipeline:
                     logger.info("Not all requested processors %s available for %s.  Loading %s instead", self.default_processors, lang, lang_processors)
                 lang_config['processors'] = ",".join(lang_processors)
 
+        if 'device' not in lang_config:
+            lang_config['device'] = self.device
+
         # update pipeline cache
         if lang not in self.pipeline_cache:
             logger.debug("Loading unknown language in MultilingualPipeline: %s", lang)
             # clear least recently used lang from pipeline cache
             if len(self.pipeline_cache) == self.max_cache_size:
                 self.pipeline_cache.popitem(last=False)
-            self.pipeline_cache[lang] = Pipeline(dir=self.model_dir, device=self.device, **self.lang_configs[lang])
+            self.pipeline_cache[lang] = Pipeline(dir=self.model_dir, **self.lang_configs[lang])
 
     def process(self, doc):
         """
