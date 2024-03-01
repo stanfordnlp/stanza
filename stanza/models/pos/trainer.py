@@ -41,7 +41,7 @@ class Trainer(BaseTrainer):
 
         self.schedulers = {}
 
-        if self.args["bert_finetune"]:
+        if self.args.get('bert_finetune', None):
             import transformers
             warmup_scheduler = transformers.get_linear_schedule_with_warmup(
                 self.optimizers["bert_optimizer"],
