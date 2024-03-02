@@ -230,8 +230,12 @@ class Pipeline:
                 logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
                 lang = resources[lang]['alias']
             lang_name = resources[lang]['lang_name'] if 'lang_name' in resources[lang] else ''
+        elif allow_unknown_language:
+            logger.warning("Trying to create pipeline for unsupported language: %s", lang)
+            lang_name = langcode_to_lang(lang)
         else:
-            logger.warning(f'Unsupported language: {lang}.')
+            logger.warning("Unsupported language: %s  If trying to add a new language, consider using allow_unknown_language=True", lang)
+            lang_name = langcode_to_lang(lang)
 
         # Maintain load list
         if lang in resources:
@@ -255,7 +259,6 @@ class Pipeline:
         elif allow_unknown_language:
             self.load_list = [(proc, [ModelSpecification(processor=proc, package='default', dependencies=None)])
                               for proc in list(processors.keys())]
-            lang_name = langcode_to_lang(lang)
         else:
             self.load_list = []
         self.load_list = self.update_kwargs(kwargs, self.load_list)
