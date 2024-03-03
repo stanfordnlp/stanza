@@ -111,6 +111,9 @@ def build_argparse():
     parser.add_argument('--eval_interval', type=int, default=100)
     parser.add_argument('--checkpoint_interval', type=int, default=500)
     parser.add_argument('--max_steps_before_stop', type=int, default=1000)
+    parser.add_argument('--plateau_decay', type=float, default=0.75, help='If set, decay the learning rate of the first optimizer every plateau_steps by plateau_decay')
+    parser.add_argument('--plateau_steps', type=int, default=3, help='If set, decay the learning rate of the first optimizer every plateau_steps by plateau_decay')
+    parser.add_argument('--no_plateau', action='store_const', dest='plateau_steps', const=None, help="Unset plateau_steps so as to not use a ReduceLROnPlateau scheduler")
     parser.add_argument('--batch_size', type=int, default=5000)
     parser.add_argument('--second_batch_size', type=int, default=None, help='Use a different batch size for the second optimizer.  Can be relevant for models with different transformer finetuning settings between optimizers, for example, where the larger batch size is impossible for FT the transformer"')
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
@@ -282,6 +285,11 @@ def train(args):
             start_time = time.time()
             trainer.global_step += 1
             loss = trainer.update(batch, eval=False) # update step
+            # TODO: if this works (or even if not, since we know it works for constituency)
+            # we should make a version of ReduceLROnPlateau which incorporates a delay and a warmup
+            if trainer.global_step <= args['bert_start_finetuning'] + args['bert_warmup_steps']:
+                for scheduler in trainer.scheduler.values():
+                    scheduler.step()
             train_loss += loss
 
             # will checkpoint if we switch optimizers or score a new best score
@@ -315,8 +323,12 @@ def train(args):
                     logger.info("new best model saved.")
                     force_checkpoint = True
 
-                for scheduler_name, scheduler in trainer.scheduler.items():
-                    logger.info('scheduler %s learning rate: %s', scheduler_name, scheduler.get_last_lr())
+                if trainer.global_step > args['bert_start_finetuning'] + args['bert_warmup_steps']:
+                    for reduce_scheduler_name, reduce_scheduler in trainer.reduce_scheduler.items():
+                        reduce_scheduler.step(dev_score)
+                for optimizer_name, optimizer in trainer.optimizer.items():
+                    current_lr = optimizer.param_groups[0]['lr']
+                    logger.info("optimizer %s learning rate: %s", optimizer_name, current_lr)
                 if args['log_norms']:
                     trainer.model.log_norms()
 
