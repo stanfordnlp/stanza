@@ -117,7 +117,7 @@ class Trainer(BaseTrainer):
             for opt in self.optimizer.values():
                 opt.zero_grad()
         # if there is no bert optimizer, we will tell the model to detach bert so it uses less GPU
-        detach = "bert_optimizer" not in self.optimizer
+        detach = any(x.startswith("bert") or x.startswith("peft") for x in self.optimizer)
         loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, detach=detach)
         loss_val = loss.data.item()
         if eval:
