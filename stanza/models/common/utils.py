@@ -262,7 +262,7 @@ def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, wei
 
     return dispatch_optimizer(name, parameters, opt_logger=opt_logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
 
-def get_split_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, bert_weight_decay=None, charlm_learning_rate=0.0, is_peft=False, bert_finetune_layers=None):
+def get_split_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, bert_weight_decay=None, charlm_learning_rate=0.0, is_peft=False, split_peft=False, split_peft_beta=8.0, bert_finetune_layers=None):
     """Same as `get_optimizer`, but splits the optimizer for Bert into a seperate optimizer"""
     base_parameters = [p for n, p in model.named_parameters()
                        if p.requires_grad and not n.startswith("bert_model.")
@@ -289,6 +289,11 @@ def get_split_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=
 
         if len(trainable_parameters) > 0:
             bert_parameters = [{'param_group_name': 'bert', 'params': trainable_parameters, 'lr': lr * bert_learning_rate}]
+    elif split_peft:
+        bert_parameters = [
+            {'param_group_name': 'peft_A', 'params': [param for name, param in model.bert_model.named_parameters() if name.find("lora_A") >= 0], 'lr': lr * bert_learning_rate},
+            {'param_group_name': 'peft_B', 'params': [param for name, param in model.bert_model.named_parameters() if name.find("lora_B") >= 0], 'lr': lr * bert_learning_rate * split_peft_beta},
+        ]
     else:
         # because PEFT handles what to hand to an optimizer, we don't want to touch that
         bert_parameters = [{'param_group_name': 'bert', 'params': model.bert_model.parameters(), 'lr': lr * bert_learning_rate}]
@@ -303,7 +308,9 @@ def get_split_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=
     if bert_parameters is not None and bert_learning_rate > 0.0:
         if bert_weight_decay is not None:
             extra_args['weight_decay'] = bert_weight_decay
-        optimizers["bert_optimizer"] = dispatch_optimizer(name, bert_parameters, opt_logger=logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
+        for bert_group in bert_parameters:
+            group_name = bert_group['param_group_name'] + "_optimizer"
+            optimizers[group_name] = dispatch_optimizer(name, [bert_group], opt_logger=logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
     return optimizers
 
 

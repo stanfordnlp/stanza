@@ -33,6 +33,9 @@ def add_peft_args(parser):
 
     parser.add_argument('--use_peft', default=False, action='store_true', help="Finetune Bert using peft")
 
+    parser.add_argument('--split_peft', default=False, action='store_true', help="Split peft training into alpha/beta, such as in LoRA+")
+    parser.add_argument('--split_peft_beta', default=8.0, type=float, help='Amount to overweight training LoRA betas vs the alphas when implementing LoRA+')
+
 def pop_peft_args(args):
     """
     Pop all of the peft-related arguments from a given dict
@@ -48,6 +51,8 @@ def pop_peft_args(args):
 
     args.pop("use_peft", None)
 
+    args.pop("split_peft", None)
+    args.pop("split_peft_beta", None)
 
 def resolve_peft_args(args, logger, check_bert_finetune=True):
     if not hasattr(args, 'bert_model'):
