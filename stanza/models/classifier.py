@@ -505,6 +505,10 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
         wandb.run.define_metric('macro_f1', summary='max')
         wandb.run.define_metric('epoch_loss', summary='min')
 
+    for opt_name, opt in optimizer.items():
+        current_lr = opt.param_groups[0]['lr']
+        logger.info("optimizer %s learning rate: %s", opt_name, current_lr)
+
     for trainer.epochs_trained in range(trainer.epochs_trained, args.max_epochs):
         running_loss = 0.0
         epoch_loss = 0.0
