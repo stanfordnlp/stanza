@@ -523,13 +523,15 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
             batch_labels = torch.stack([label_tensors[x.sentiment] for x in batch])
 
             # zero the parameter gradients
-            optimizer.zero_grad()
+            for opt in optimizer.values():
+                opt.zero_grad()
 
             outputs = model(batch)
             outputs = process_outputs(outputs)
             batch_loss = loss_function(outputs, batch_labels)
             batch_loss.backward()
-            optimizer.step()
+            for opt in optimizer.values():
+                opt.step()
 
             # print statistics
             running_loss += batch_loss.item()
@@ -590,8 +592,10 @@ def main(args=None):
         logger.info("Training set has %d labels" % len(data.dataset_labels(train_set)))
         tlogger.setLevel(logging.DEBUG)
 
+        tlogger.info("Saving checkpoints: %s", args.checkpoint)
         if args.checkpoint:
             checkpoint_file = utils.checkpoint_name(args.save_dir, save_name, args.checkpoint_save_name)
+            tlogger.info("Checkpoint filename: %s", checkpoint_file)
     elif not args.load_name:
         if save_name:
             args.load_name = save_name

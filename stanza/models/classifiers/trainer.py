@@ -15,7 +15,7 @@ import stanza.models.classifiers.constituency_classifier as constituency_classif
 from stanza.models.classifiers.utils import ModelType
 from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain
 from stanza.models.common.pretrain import Pretrain
-from stanza.models.common.utils import get_optimizer
+from stanza.models.common.utils import get_split_optimizer
 from stanza.models.constituency.tree_embedding import TreeEmbedding
 
 logger = logging.getLogger('stanza')
@@ -54,7 +54,7 @@ class Trainer:
             'best_score':     self.best_score,
         }
         if save_optimizer and self.optimizer is not None:
-            params['optimizer_state_dict'] = self.optimizer.state_dict()
+            params['optimizer_state_dict'] = {opt_name: opt.state_dict() for opt_name, opt in self.optimizer.items()}
         torch.save(params, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to {}".format(filename))
 
@@ -167,7 +167,8 @@ class Trainer:
         if load_optimizer:
             optimizer = Trainer.build_optimizer(model, args)
             if checkpoint.get('optimizer_state_dict', None) is not None:
-                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                for opt_name, opt_state_dict in checkpoint['optimizer_state_dict'].items():
+                    optimizer[opt_name].load_state_dict(opt_state_dict)
             else:
                 logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
 
@@ -263,4 +264,4 @@ class Trainer:
 
     @staticmethod
     def build_optimizer(model, args):
-        return get_optimizer(args.optim.lower(), model, args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay, bert_learning_rate=args.bert_learning_rate, bert_weight_decay=args.weight_decay * args.bert_weight_decay, is_peft=args.use_peft)
+        return get_split_optimizer(args.optim.lower(), model, args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay, bert_learning_rate=args.bert_learning_rate, bert_weight_decay=args.weight_decay * args.bert_weight_decay, is_peft=args.use_peft)
