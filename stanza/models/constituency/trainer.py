@@ -466,7 +466,7 @@ def check_constituents(train_constituents, trees, treebank_name):
     constituents = parse_tree.Tree.get_unique_constituent_labels(trees)
     for con in constituents:
         if con not in train_constituents:
-            raise RuntimeError("Found label {} in the {} set which don't exist in the train set".format(con, treebank_name))
+            raise RuntimeError("Found constituent label {} in the {} set which don't exist in the train set".format(con, treebank_name))
 
 def check_root_labels(root_labels, other_trees, treebank_name):
     """
