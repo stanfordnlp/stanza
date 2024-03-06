@@ -18,7 +18,11 @@ OPEN_PAREN = '('
 
 EMPTY_CHILDREN = ()
 
-CONSTITUENT_SPLIT = re.compile("[-=#]")
+# used to split off the functional tags from various treebanks
+# for example, the Icelandic treebank (which we don't currently
+# incorporate) uses * to distinguish 'ADJP', 'ADJP*OC' but we treat
+# those as the same
+CONSTITUENT_SPLIT = re.compile("[-=#*]")
 
 # These words occur in the VLSP dataset.
 # The documentation claims there might be *O*, although those don't
