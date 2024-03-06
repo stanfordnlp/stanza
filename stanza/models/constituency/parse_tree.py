@@ -308,6 +308,8 @@ class Tree(StanzaObject):
         """
         Walks over all of the trees and gets all of the unique constituent names from the trees
         """
+        if isinstance(trees, Tree):
+            trees = [trees]
         constituents = Tree.get_constituent_counts(trees)
         return sorted(set(constituents.keys()))
 
