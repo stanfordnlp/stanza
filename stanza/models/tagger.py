@@ -176,7 +176,8 @@ def get_eval_type(dev_batch):
 
 def load_training_data(args, pretrain):
     train_docs = []
-    for train_file in args['train_file'].split(";"):
+    train_files = args['train_file'].split(";")
+    for train_file in train_files:
         logger.info("Reading %s" % train_file)
         # train_data is now a list of sentences, where each sentence is a
         # list of words, in which each word is a dict of conll attributes
@@ -193,6 +194,21 @@ def load_training_data(args, pretrain):
     vocab = Dataset.init_vocab(train_docs, args)
     train_data = [Dataset(i, args, pretrain, vocab=vocab, evaluation=False)
                   for i in train_docs]
+
+    # reject partially tagged upos or xpos documents
+    # otherwise, the model will learn to output blanks for some words,
+    # which is probably a confusing result
+    # (and definitely throws off the depparse)
+    # another option would be to treat those as masked out
+    for td_idx, td in enumerate(train_data):
+        if td.has_upos:
+            upos_data = td.doc.get(UPOS, as_sentences=True)
+            for sentence_idx, sentence in enumerate(upos_data):
+                for word_idx, upos in enumerate(sentence):
+                    if upos == '_' or upos is None:
+                        conll = "{:C}".format(td.doc.sentences[sentence_idx])
+                        raise RuntimeError("Found a blank tag in the UPOS at sentence %d word %d of %s.\n%s" % ((sentence_idx+1), (word_idx+1), train_files[td_idx], conll))
+
     # here we make sure the model will learn to output _ for empty columns
     # if *any* dataset has data for the upos, xpos, or feature column,
     # we consider that data enough to train the model on that column
