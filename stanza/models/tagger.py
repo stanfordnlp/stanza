@@ -370,7 +370,6 @@ def train(args):
 
 def evaluate(args):
     # file paths
-    system_pred_file = args['output_file']
     model_file = model_file_name(args)
 
     pretrain = load_pretrain(args)
@@ -381,6 +380,10 @@ def evaluate(args):
     # load model
     logger.info("Loading model from: {}".format(model_file))
     trainer = Trainer(pretrain=pretrain, model_file=model_file, device=args['device'], args=load_args)
+    evaluate_trainer(args, trainer, pretrain)
+
+def evaluate_trainer(args, trainer, pretrain):
+    system_pred_file = args['output_file']
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config
