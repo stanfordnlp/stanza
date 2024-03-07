@@ -13,7 +13,7 @@ import stanza.models.classifiers.data as data
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.constituency_classifier as constituency_classifier
 from stanza.models.classifiers.utils import ModelType
-from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain
+from stanza.models.common.foundation_cache import load_bert, load_bert_copy, load_charlm, load_pretrain
 from stanza.models.common.pretrain import Pretrain
 from stanza.models.common.utils import get_split_optimizer
 from stanza.models.constituency.tree_embedding import TreeEmbedding
@@ -112,11 +112,13 @@ class Trainer:
             # TODO: can get rid of the getattr after rebuilding all models
             use_peft = getattr(model_params['config'], 'use_peft', False)
             force_bert_saved = getattr(model_params['config'], 'force_bert_saved', False)
-            if use_peft or force_bert_saved:
+            if use_peft:
                 # if loading a peft model, we first load the base transformer
                 # the CNNClassifier code wraps the transformer in peft
                 # after creating the CNNClassifier with the peft wrapper,
                 # we *then* load the weights
+                bert_model, bert_tokenizer = load_bert_copy(bert_model, foundation_cache)
+            elif force_bert_saved:
                 bert_model, bert_tokenizer = load_bert(bert_model)
             else:
                 bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
