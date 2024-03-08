@@ -46,6 +46,11 @@ def parse_args(args=None):
 
     parser.add_argument('--mode', default='predict', choices=['parse_text', 'predict'])
 
+    # another option would be to include the tree idx in each entry in an existing saved file
+    # the processing could then pick up at exactly the last known idx
+    parser.add_argument('--start_tree', type=int, default=0, help='Where to start... most useful if the previous incarnation crashed')
+    parser.add_argument('--end_tree', type=int, default=None, help='Where to end.  If unset, will process to the end of the file')
+
     retagging.add_retag_args(parser)
 
     args = vars(parser.parse_args())
@@ -74,7 +79,8 @@ def main():
 
     chunk_size = 1000
     with open(args['output_file'], 'w', encoding='utf-8') as fout:
-        for chunk_start in tqdm(range(0, len(tokenized_sentences), chunk_size)):
+        end_tree = len(tokenized_sentences) if args['end_tree'] is None else args['end_tree']
+        for chunk_start in tqdm(range(args['start_tree'], end_tree, chunk_size)):
             chunk = tokenized_sentences[chunk_start:chunk_start+chunk_size]
             logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
             parsed1 = trainer.parse_tokenized_sentences(args, e1, retag_pipeline, chunk)
