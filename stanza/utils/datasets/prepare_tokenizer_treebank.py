@@ -53,7 +53,7 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, postprocess=None
     """
     This utility method copies only the conllu files to the given destination directory.
 
-    Both POS and lemma annotators need this.
+    Both POS, lemma, and depparse annotators need this.
     """
     os.makedirs(dest_dir, exist_ok=True)
 
@@ -79,7 +79,7 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, postprocess=None
         postprocess(tokenizer_dir, "train.gold", dest_dir, "train.in", short_name)
         postprocess(tokenizer_dir, "dev.gold", dest_dir, "dev.in", short_name)
         postprocess(tokenizer_dir, "test.gold", dest_dir, "test.in", short_name)
-        if model_type is not common.ModelType.POS:
+        if model_type is not common.ModelType.POS and model_type is not common.ModelType.DEPPARSE:
             copy_conllu_file(dest_dir, "dev.in", dest_dir, "dev.gold", short_name)
             copy_conllu_file(dest_dir, "test.in", dest_dir, "test.gold", short_name)
 
