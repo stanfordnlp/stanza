@@ -24,12 +24,10 @@ def main():
     parser.add_argument('--short_name', default='sd_isra', help='Dataset name to use when writing output files')
     parser.add_argument('--no_remove_xpos', default=True, action='store_false', dest='remove_xpos', help='By default, we remove the xpos from the dataset')
     parser.add_argument('--no_remove_feats', default=True, action='store_false', dest='remove_feats', help='By default, we remove the feats from the dataset')
+    parser.add_argument('--output_directory', default=get_default_paths()["POS_DATA_DIR"], help="Where to put the split conllu")
     args = parser.parse_args()
 
     weights = (args.train, args.dev, args.test)
-
-    paths = get_default_paths()
-    output_directory = paths["POS_DATA_DIR"]
 
     doc = CoNLL.conll2doc(args.filename)
     random.seed(args.seed)
@@ -52,7 +50,7 @@ def main():
 
     splits = [Document(split[0], comments=split[1]) for split in splits]
     for split_doc, split_name in zip(splits, ("train", "dev", "test")):
-        filename = os.path.join(output_directory, "%s.%s.in.conllu" % (args.short_name, split_name))
+        filename = os.path.join(args.output_directory, "%s.%s.in.conllu" % (args.short_name, split_name))
         print("Outputting %d sentences to %s" % (len(split_doc.sentences), filename))
         CoNLL.write_doc2conll(split_doc, filename)
 
