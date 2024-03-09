@@ -189,7 +189,11 @@ def add_word_to_graph(graph, word, sent_idx, word_idx):
         edge = graph.edge.add()
         edge.source = word.head
         edge.target = word_idx+1
-        edge.dep = word.deprel
+        if word.deprel is not None:
+            edge.dep = word.deprel
+        else:
+            # the receiving side doesn't like null as a dependency
+            edge.dep = "_"
 
 def convert_networkx_graph(graph_proto, sentence, sent_idx):
     """
