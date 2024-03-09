@@ -185,7 +185,7 @@ def add_word_to_graph(graph, word, sent_idx, word_idx):
     node.sentenceIndex = sent_idx+1
     node.index = word_idx+1
 
-    if word.head != 0:
+    if word.head != 0 and word.head is not None:
         edge = graph.edge.add()
         edge.source = word.head
         edge.target = word_idx+1
