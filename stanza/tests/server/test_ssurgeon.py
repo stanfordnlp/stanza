@@ -373,3 +373,53 @@ def test_ssurgeon_mwt_misc():
     """
     check_empty_test(ITALIAN_MWT_MISC_INPUT)
 
+SINDHI_ROOT_EXAMPLE = """
+# sent_id = 1
+# text = غلام رهڻ سان ماڻهو منافق ٿئي ٿو .
+1	غلام	غلام	NOUN	NN__اسم	Case=Acc|Gender=Masc|Number=Sing|Person=3	2	compound	_	_
+2	رهڻ	ره	VERB	VB__فعل	Number=Sing	6	advcl	_	_
+3	سان	سان	ADP	IN__حرفِ_جر	Number=Sing	2	mark	_	_
+4	ماڻهو	ماڻهو	NOUN	NN__اسم	Case=Nom|Gender=Masc|Number=Sing|Person=3	6	nsubj	_	_
+5	منافق	منافق	ADJ	JJ__صفت	Case=Acc|Number=Sing|Person=3	6	xcomp	_	_
+6	ٿئي	ٿي	VERB	VB__فعل	Number=Sing	_	_	_	_
+7	ٿو	ٿو	AUX	VB__فعل	Number=Sing	6	aux	_	_
+8	.	.	PUNCT	-__پورو_دم	_	6	punct	_	_
+""".lstrip()
+
+SINDHI_ROOT_EXPECTED = """
+# sent_id = 1
+# text = غلام رهڻ سان ماڻهو منافق ٿئي ٿو .
+1	غلام	غلام	NOUN	NN__اسم	Case=Acc|Gender=Masc|Number=Sing|Person=3	2	compound	_	_
+2	رهڻ	ره	VERB	VB__فعل	Number=Sing	6	advcl	_	_
+3	سان	سان	ADP	IN__حرفِ_جر	Number=Sing	2	mark	_	_
+4	ماڻهو	ماڻهو	NOUN	NN__اسم	Case=Nom|Gender=Masc|Number=Sing|Person=3	6	nsubj	_	_
+5	منافق	منافق	ADJ	JJ__صفت	Case=Acc|Number=Sing|Person=3	6	xcomp	_	_
+6	ٿئي	ٿي	VERB	VB__فعل	Number=Sing	0	root	_	_
+7	ٿو	ٿو	AUX	VB__فعل	Number=Sing	6	aux	_	_
+8	.	.	PUNCT	-__پورو_دم	_	6	punct	_	_
+""".strip()
+
+SINDHI_EDIT = """
+{}=root !< {}
+setRoots root
+"""
+
+def test_ssurgeon_rewrite_sindhi_roots():
+    """
+    A user / contributor sent a dependency file with blank roots
+    """
+    edits = ssurgeon.parse_ssurgeon_edits(SINDHI_EDIT)
+    expected_edits = [ssurgeon.SsurgeonEdit(semgrex_pattern='{}=root !< {}',
+                                            ssurgeon_edits=['setRoots root'],
+                                            ssurgeon_id='1', notes='', language='UniversalEnglish')]
+    assert edits == expected_edits
+
+    blank_dep_doc = CoNLL.conll2doc(input_str=SINDHI_ROOT_EXAMPLE)
+    # test that the conversion will work w/o crashing, such as because of a missing root edge
+    request = ssurgeon.build_request(blank_dep_doc, edits)
+
+    response = ssurgeon.process_doc(blank_dep_doc, edits)
+    updated_doc = ssurgeon.convert_response_to_doc(blank_dep_doc, response)
+
+    result = "{:C}".format(updated_doc)
+    assert result == SINDHI_ROOT_EXPECTED
