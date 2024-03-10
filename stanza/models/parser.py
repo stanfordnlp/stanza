@@ -56,6 +56,8 @@ def build_argparse():
     parser.add_argument('--word_emb_dim', type=int, default=75)
     parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--tag_emb_dim', type=int, default=50)
+    parser.add_argument('--no_xpos', dest='use_xpos', action='store_false', default=True, help="Don't use xpos tags as part of the tag embedding")
+    parser.add_argument('--no_ufeats', dest='use_ufeats', action='store_false', default=True, help="Don't use ufeats as part of the tag embedding")
     parser.add_argument('--transformed_dim', type=int, default=125)
     parser.add_argument('--num_layers', type=int, default=3)
     parser.add_argument('--char_num_layers', type=int, default=1)
