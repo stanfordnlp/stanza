@@ -42,21 +42,23 @@ class Parser(nn.Module):
 
         if self.args['tag_emb_dim'] > 0:
             self.upos_emb = nn.Embedding(len(vocab['upos']), self.args['tag_emb_dim'], padding_idx=0)
+            if self.args.get('use_xpos', True):
+                if not isinstance(vocab['xpos'], CompositeVocab):
+                    self.xpos_emb = nn.Embedding(len(vocab['xpos']), self.args['tag_emb_dim'], padding_idx=0)
+                else:
+                    self.xpos_emb = nn.ModuleList()
 
-            if not isinstance(vocab['xpos'], CompositeVocab):
-                self.xpos_emb = nn.Embedding(len(vocab['xpos']), self.args['tag_emb_dim'], padding_idx=0)
-            else:
-                self.xpos_emb = nn.ModuleList()
+                    for l in vocab['xpos'].lens():
+                        self.xpos_emb.append(nn.Embedding(l, self.args['tag_emb_dim'], padding_idx=0))
+            input_size += self.args['tag_emb_dim']
 
-                for l in vocab['xpos'].lens():
-                    self.xpos_emb.append(nn.Embedding(l, self.args['tag_emb_dim'], padding_idx=0))
+            if self.args.get('use_ufeats', True):
+                self.ufeats_emb = nn.ModuleList()
 
-            self.ufeats_emb = nn.ModuleList()
+                for l in vocab['feats'].lens():
+                    self.ufeats_emb.append(nn.Embedding(l, self.args['tag_emb_dim'], padding_idx=0))
 
-            for l in vocab['feats'].lens():
-                self.ufeats_emb.append(nn.Embedding(l, self.args['tag_emb_dim'], padding_idx=0))
-
-            input_size += self.args['tag_emb_dim'] * 2
+                input_size += self.args['tag_emb_dim']
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('charlm', None):
@@ -159,19 +161,22 @@ class Parser(nn.Module):
         if self.args['tag_emb_dim'] > 0:
             pos_emb = self.upos_emb(upos)
 
-            if isinstance(self.vocab['xpos'], CompositeVocab):
-                for i in range(len(self.vocab['xpos'])):
-                    pos_emb += self.xpos_emb[i](xpos[:, :, i])
-            else:
-                pos_emb += self.xpos_emb(xpos)
+            if self.args.get('use_xpos', True):
+                if isinstance(self.vocab['xpos'], CompositeVocab):
+                    for i in range(len(self.vocab['xpos'])):
+                        pos_emb += self.xpos_emb[i](xpos[:, :, i])
+                else:
+                    pos_emb += self.xpos_emb(xpos)
             pos_emb = pack(pos_emb)
+            inputs += [pos_emb]
 
-            feats_emb = 0
-            for i in range(len(self.vocab['feats'])):
-                feats_emb += self.ufeats_emb[i](ufeats[:, :, i])
-            feats_emb = pack(feats_emb)
+            if self.args.get('use_ufeats', True):
+                feats_emb = 0
+                for i in range(len(self.vocab['feats'])):
+                    feats_emb += self.ufeats_emb[i](ufeats[:, :, i])
+                feats_emb = pack(feats_emb)
 
-            inputs += [pos_emb, feats_emb]
+                inputs += [pos_emb]
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('charlm', None):
