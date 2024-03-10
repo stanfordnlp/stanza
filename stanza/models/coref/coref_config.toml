@@ -64,16 +64,16 @@ max_span_len = 64
 
 # Controls how many pairs should be preserved per mention
 # after applying rough scoring.
-rough_k = 50
+rough_k = 124
 
 
 # Lora settings ===================
 
 # LoRA settings
 lora = false
-lora_alpha = 128
+lora_alpha = 256
 lora_dropout = 0.1
-lora_rank = 64
+lora_rank = 128
 lora_targets = []
 lora_fully_tune = []
 
@@ -91,7 +91,7 @@ bert_learning_rate = 1e-6
 bert_finetune_begin_epoch = 0.1
 
 # Task learning rate
-learning_rate = 5e-4
+learning_rate = 1e-3
 
 # For how many epochs the training is done
 train_epochs = 75
@@ -141,13 +141,20 @@ bert_learning_rate = 0.00002
 
 [electra_lora]
 bert_model = "google/electra-large-discriminator"
-bert_learning_rate = 0.00025
+bert_learning_rate = 0.000025
 lora = true
 lora_targets = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_fully_tune = [  ]
 
 [t5_lora]
 bert_model = "google-t5/t5-large"
+bert_learning_rate = 0.00025
+lora = true
+lora_targets = [ "q", "v", "o", "wi", "wo" ]
+lora_fully_tune = [  ]
+
+[deepnarrow_t5_xl_lora]
+bert_model = "google/t5-efficient-xl"
 bert_learning_rate = 0.00025
 lora = true
 lora_targets = [ "q", "v", "o", "wi", "wo" ]
