@@ -39,8 +39,8 @@ EXPECTED_MWT = """
 # text = She's not a nice person.
 # sent_id = 0
 1-2	She's	_	_	_	_	_	_	_	start_char=2|end_char=7|SpacesBefore=\\s\\s
-1	She	_	_	_	_	0	_	_	_
-2	's	_	_	_	_	1	_	_	_
+1	She	_	_	_	_	0	_	_	start_char=2|end_char=5
+2	's	_	_	_	_	1	_	_	start_char=5|end_char=7
 3	not	_	_	_	_	2	_	_	start_char=8|end_char=11
 4	a	_	_	_	_	3	_	_	start_char=12|end_char=13
 5	nice	_	_	_	_	4	_	_	start_char=14|end_char=18
@@ -59,8 +59,8 @@ EXPECTED_MWT = """
 8	Cerritos	_	_	_	_	7	_	_	start_char=62|end_char=70
 9	are	_	_	_	_	8	_	_	start_char=71|end_char=74
 10-11	Jennifer's	_	_	_	_	_	_	_	start_char=75|end_char=85|SpaceAfter=No
-10	Jennifer	_	_	_	_	9	_	_	_
-11	's	_	_	_	_	10	_	_	_
+10	Jennifer	_	_	_	_	9	_	_	start_char=75|end_char=83
+11	's	_	_	_	_	10	_	_	start_char=83|end_char=85
 12	.	_	_	_	_	11	_	_	start_char=85|end_char=86|SpacesAfter=\\s\\s
 """.strip()
 
