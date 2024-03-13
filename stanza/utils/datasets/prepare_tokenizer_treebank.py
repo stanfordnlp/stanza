@@ -843,6 +843,42 @@ def build_combined_english_dataset(paths, model_type, dataset):
 
     return sents
 
+def add_english_sentence_final_punctuation(handparsed_sentences):
+    """
+    Add a period to the end of a sentence with no punct at the end.
+
+    The next-to-last word has SpaceAfter=No added as well.
+
+    Possibly English-specific because of the xpos.  Could be upgraded
+    to handle multiple languages by passing in the xpos as an argument
+    """
+    new_sents = []
+    for sent in handparsed_sentences:
+        root_id = None
+        max_id = None
+        last_punct = False
+        for line in sent:
+            if line.startswith("#"):
+                continue
+            pieces = line.split("\t")
+            if MWT_OR_COPY_RE.match(pieces[0]):
+                continue
+            if pieces[6] == '0':
+                root_id = pieces[0]
+            max_id = int(pieces[0])
+            last_punct = pieces[3] == 'PUNCT'
+        if not last_punct:
+            new_sent = list(sent)
+            pieces = new_sent[-1].split("\t")
+            pieces[-1] = add_space_after_no(pieces[-1])
+            new_sent[-1] = "\t".join(pieces)
+            new_sent.append("%d\t.\t.\tPUNCT\t.\t_\t%s\tpunct\t%s:punct\t_" % (max_id+1, root_id, root_id))
+            new_sents.append(new_sent)
+        else:
+            new_sents.append(sent)
+    return new_sents
+
+
 def build_extra_combined_english_dataset(paths, dataset):
     """
     Extra sentences we don't want augmented
@@ -851,7 +887,9 @@ def build_extra_combined_english_dataset(paths, dataset):
     sents = []
     if dataset == 'train':
         handparsed_path = os.path.join(handparsed_dir, "english-handparsed", "english.conll")
-        sents.extend(read_sentences_from_conllu(handparsed_path))
+        handparsed_sentences = read_sentences_from_conllu(handparsed_path)
+        handparsed_sentences = add_english_sentence_final_punctuation(handparsed_sentences)
+        sents.extend(handparsed_sentences)
         print("Loaded %d sentences from %s" % (len(sents), handparsed_path))
     return sents
 
