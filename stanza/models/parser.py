@@ -44,7 +44,7 @@ def build_argparse():
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
-    parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
+    parser.add_argument('--no_gold_labels', dest='gold_labels', action='store_false', help="Don't score the eval file - perhaps it has no gold labels, for example.  Cannot be used at training time")
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
@@ -205,9 +205,8 @@ def train(args):
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
-    # pred and gold path
+    # pred path
     system_pred_file = args['output_file']
-    gold_file = args['gold_file']
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
@@ -270,7 +269,7 @@ def train(args):
 
                 dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
                 CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
-                _, _, dev_score = scorer.score(system_pred_file, gold_file)
+                _, _, dev_score = scorer.score(system_pred_file, args['eval_file'])
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
                 logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(trainer.global_step, train_loss, dev_score))
@@ -307,7 +306,7 @@ def train(args):
                     dev_preds = predict_dataset(trainer, dev_batch)
                     dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
                     CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
-                    _, _, dev_score = scorer.score(system_pred_file, gold_file)
+                    _, _, dev_score = scorer.score(system_pred_file, args['eval_file'])
                     logger.info("Reloaded model with dev score %.4f", dev_score)
 
                     is_second_stage = True
@@ -357,7 +356,6 @@ def train(args):
 def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
-    gold_file = args['gold_file']
 
     model_file = model_file_name(args)
     # load pretrained vectors if needed
@@ -387,11 +385,11 @@ def evaluate(args):
     batch.doc.set([HEAD, DEPREL], [y for x in preds for y in x])
     CoNLL.write_doc2conll(batch.doc, system_pred_file)
 
-    if gold_file is not None:
-        gold_doc = CoNLL.conll2doc(input_file=gold_file)
+    if args['gold_labels']:
+        gold_doc = CoNLL.conll2doc(input_file=args['eval_file'])
 
         scorer.score_named_dependencies(batch.doc, gold_doc)
-        _, _, score = scorer.score(system_pred_file, gold_file)
+        _, _, score = scorer.score(system_pred_file, args['eval_file'])
 
         logger.info("Parser score:")
         logger.info("{} {:.2f}".format(args['shorthand'], score*100))

@@ -97,7 +97,6 @@ class TestParser:
         args = ["--wordvec_pretrain_file", wordvec_pretrain_file,
                 "--train_file", train_file,
                 "--eval_file", dev_file,
-                "--gold_file", dev_file,
                 "--output_file", pred_file,
                 "--log_step", "10",
                 "--eval_interval", "20",
