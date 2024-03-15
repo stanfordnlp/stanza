@@ -51,6 +51,10 @@ def run_treebank(mode, paths, treebank, short_name,
     test_in_file   = f"{depparse_dir}/{short_name}.test.in.conllu"
     test_pred_file = temp_output_file if temp_output_file else f"{depparse_dir}/{short_name}.test.pred.conllu"
 
+    eval_file = None
+    if '--eval_file' in extra_args:
+        eval_file = extra_args[extra_args.index('--eval_file') + 1]
+
     charlm_args = build_depparse_charlm_args(short_language, dataset, command_args.charlm)
 
     bert_args = choose_transformer(short_language, command_args, extra_args)
@@ -73,9 +77,8 @@ def run_treebank(mode, paths, treebank, short_name,
 
         train_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
                       "--train_file", train_file,
-                      "--eval_file", dev_in_file,
+                      "--eval_file", eval_file if eval_file else dev_in_file,
                       "--output_file", dev_pred_file,
-                      "--gold_file", dev_in_file,
                       "--batch_size", batch_size,
                       "--lang", short_language,
                       "--shorthand", short_name,
@@ -87,9 +90,8 @@ def run_treebank(mode, paths, treebank, short_name,
 
     if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
         dev_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
-                    "--eval_file", dev_in_file,
+                    "--eval_file", eval_file if eval_file else dev_in_file,
                     "--output_file", dev_pred_file,
-                    "--gold_file", dev_in_file,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
@@ -98,14 +100,16 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running dev depparse for {} with args {}".format(treebank, dev_args))
         parser.main(dev_args)
 
-        results = common.run_eval_script_depparse(dev_in_file, dev_pred_file)
-        logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
+        if '--no_gold_labels' not in extra_args:
+            results = common.run_eval_script_depparse(eval_file if eval_file else dev_in_file, dev_pred_file)
+            logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
+        if not temp_output_file:
+            logger.info("Output saved to %s", dev_pred_file)
 
     if mode == Mode.SCORE_TEST:
         test_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
-                     "--eval_file", test_in_file,
+                     "--eval_file", eval_file if eval_file else test_in_file,
                      "--output_file", test_pred_file,
-                     "--gold_file", test_in_file,
                      "--lang", short_language,
                      "--shorthand", short_name,
                      "--mode", "predict"]
@@ -114,8 +118,11 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running test depparse for {} with args {}".format(treebank, test_args))
         parser.main(test_args)
 
-        results = common.run_eval_script_depparse(test_in_file, test_pred_file)
-        logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
+        if '--no_gold_labels' not in extra_args:
+            results = common.run_eval_script_depparse(eval_file if eval_file else test_in_file, test_pred_file)
+            logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
+        if not temp_output_file:
+            logger.info("Output saved to %s", test_pred_file)
 
 
 def main():
