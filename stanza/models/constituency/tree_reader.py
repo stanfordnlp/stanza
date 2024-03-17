@@ -207,7 +207,9 @@ def read_token_iterator(token_iterator, broken_ok, tree_callback):
             if next_tree is None:
                 raise ValueError("Tree reader somehow created a None tree!  Line number %d" % token_iterator.line_num)
             if tree_callback is not None:
-                tree_callback(next_tree)
+                transformed = tree_callback(next_tree)
+                if transformed is not None:
+                    trees.append(transformed)
             else:
                 trees.append(next_tree)
             token = next(token_iterator, None)
@@ -216,8 +218,7 @@ def read_token_iterator(token_iterator, broken_ok, tree_callback):
         else:
             raise ValueError("Tree document had text between trees!  Line number %d" % token_iterator.line_num)
 
-    if tree_callback is None:
-        return trees
+    return trees
 
 
 def read_trees(text, broken_ok=False, tree_callback=None, use_tqdm=True):
