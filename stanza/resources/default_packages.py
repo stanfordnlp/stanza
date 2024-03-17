@@ -472,8 +472,13 @@ TRANSFORMERS = {
     # test: 2022-04-27 21:21:59 INFO: de_germeval2014 86.95
     #
     # dbmdz/bert-base-german-cased
-    # dev:  2022-04-27 22:24:59 INFO: de_germeval2014 88.22
-    # test: 2022-04-27 22:25:27 INFO: de_germeval2014 87.80
+    # dev:  2022-04-27 22:24:59 INFO: de_germeval2014 88.27
+    # test: 2022-04-27 22:25:27 INFO: de_germeval2014 87.47
+    #
+    # another option:
+    # german-nlp-group/electra-base-german-uncased
+    # dev:  de_germeval2014 88.60
+    # test: de_germeval2014 87.09
     "de": "dbmdz/bert-base-german-cased",
 
     # experiments on various forms of roberta & electra
@@ -744,7 +749,9 @@ TRANSFORMER_NICKNAMES = {
     "vesteinn/ScandiBERT": "scandibert",
 
     # de
-    "dbmdz/bert-base-german-cased": "bert",
+    "bert-base-german-cased": "bert-base-german-cased",
+    "dbmdz/bert-base-german-cased": "dbmdz-bert-german-cased",
+    "german-nlp-group/electra-base-german-uncased": "german-nlp-electra",
 
     # en
     "bert-base-multilingual-cased": "mbert",
