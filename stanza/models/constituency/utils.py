@@ -115,6 +115,8 @@ def retag_trees(trees, pipelines, xpos=True):
 
             for tree_idx, (tree, tags) in enumerate(zip(chunk, tag_lists)):
                 try:
+                    if any(tag is None for tag in tags):
+                        raise RuntimeError("Tagged tree #{} with a None tag!\n{}\n{}".format(tree_idx, tree, tags))
                     new_tree = replace_tags(tree, tags)
                     new_trees.append(new_tree)
                     pbar.update(1)

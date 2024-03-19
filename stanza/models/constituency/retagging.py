@@ -23,6 +23,7 @@ tlogger = logging.getLogger('stanza.constituency.trainer')
 # so instead we use upos to avoid unknown tag errors
 RETAG_METHOD = {
     "da": "upos",   # the DDT has no xpos tags anyway
+    "de": "upos",   # DE GSD is also missing a few punctuation tags
     "es": "upos",   # AnCora has half-finished xpos tags
     "id": "upos",   # GSD is missing a few punctuation tags - fixed in 2.12, though
     "it": "upos",
