@@ -467,6 +467,8 @@ TRANSFORMERS = {
     # As of April 2022, the bert models available have a weird
     # tokenizer issue where soft hyphen causes it to crash.
     # We attempt to compensate for that in the dev branch
+    #
+    # NER scores
     # bert-base-german-cased
     # dev:  2022-04-27 21:21:31 INFO: de_germeval2014 87.59
     # test: 2022-04-27 21:21:59 INFO: de_germeval2014 86.95
@@ -475,10 +477,15 @@ TRANSFORMERS = {
     # dev:  2022-04-27 22:24:59 INFO: de_germeval2014 88.27
     # test: 2022-04-27 22:25:27 INFO: de_germeval2014 87.47
     #
-    # another option:
     # german-nlp-group/electra-base-german-uncased
     # dev:  de_germeval2014 88.60
     # test: de_germeval2014 87.09
+    #
+    # constituency scores w/ peft, March 2024 model, in-order
+    #    model             dev     test
+    #   bert-base         95.72   94.05
+    #   dbmdz/bert        95.32   93.33
+    #   german/electra    95.24   93.24
     "de": "dbmdz/bert-base-german-cased",
 
     # experiments on various forms of roberta & electra
