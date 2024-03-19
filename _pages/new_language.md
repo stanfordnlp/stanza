@@ -149,8 +149,18 @@ At last, you can load the models via
 
 ```
 import stanza
-pipeline = stanza.Pipeline("th", dir="/home/username/thai_resources")
+pipeline = stanza.Pipeline("th", dir="/home/username/thai_resources", download_method=None)
 ```
+
+If this is a completely new-to-Stanza language as opposed to a
+language with partial coverage, you will need to tell Stanza this is
+on purpose and not a typo:
+
+```
+import stanza
+pipeline = stanza.Pipeline("th", dir="/home/username/thai_resources", download_method=None, allow_unknown_language=True)
+```
+
 
 [There are several options for configuring a new pipeline and its use of resources](https://stanfordnlp.github.io/stanza/pipeline.html)
 You can see the existing `resources.json` for examples of how to build
