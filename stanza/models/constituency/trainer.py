@@ -24,7 +24,7 @@ from torch import nn
 
 from stanza.models.common import pretrain
 from stanza.models.common import utils
-from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain, FoundationCache
+from stanza.models.common.foundation_cache import load_bert, load_bert_copy, load_charlm, load_pretrain, FoundationCache
 from stanza.models.common.large_margin_loss import LargeMarginInSoftmaxLoss
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
@@ -153,7 +153,14 @@ class Trainer:
         model_type = params['model_type']
         if model_type == 'LSTM':
             pt = Trainer.find_and_load_pretrain(saved_args, foundation_cache)
-            if saved_args['bert_finetune'] or saved_args['stage1_bert_finetune'] or any(x.startswith("bert_model.") for x in params['model'].keys()):
+            if saved_args.get('use_peft', False):
+                # if loading a peft model, we first load the base transformer
+                # the conparse trainer code wraps the transformer in peft
+                # after creating the conparser with the peft wrapper,
+                # we *then* load the weights
+                bert_model, bert_tokenizer = load_bert_copy(saved_args.get('bert_model', None), foundation_cache)
+                bert_saved = True
+            elif saved_args['bert_finetune'] or saved_args['stage1_bert_finetune'] or any(x.startswith("bert_model.") for x in params['model'].keys()):
                 # if bert_finetune is True, don't use the cached model!
                 # otherwise, other uses of the cached model will be ruined
                 bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None))
