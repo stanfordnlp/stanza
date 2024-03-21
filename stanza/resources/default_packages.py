@@ -493,7 +493,7 @@ TRANSFORMERS = {
     #   bert-base         88.72   85.40
     #   dbmdz/bert        88.70   85.14
     #   german/electra    89.21   86.06
-    "de": "dbmdz/bert-base-german-cased",
+    "de": "german-nlp-group/electra-base-german-uncased",
 
     # experiments on various forms of roberta & electra
     #  https://huggingface.co/roberta-base
