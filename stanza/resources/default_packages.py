@@ -392,6 +392,7 @@ default_sentiment = {
 # also, a few languages (very few, currently) have constituency parser models
 default_constituency = {
     "da": "arboretum_charlm",
+    "de": "spmrl_charlm",
     "en": "ptb3-revised_charlm",
     "es": "combined_charlm",
     "id": "icon_charlm",
