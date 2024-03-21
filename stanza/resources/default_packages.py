@@ -14,6 +14,8 @@ PACKAGES = "packages"
 # default treebank for languages
 default_treebanks = {
     "af":      "afribooms",
+    # currently not publicly released!  sent to us from the group developing this resource
+    "ang":     "nerthus",
     "ar":      "padt",
     "be":      "hse",
     "bg":      "btb",
@@ -120,6 +122,7 @@ no_pretrain_languages = set([
 # we will eventually do this for all of the pretrains
 specific_default_pretrains = {
     "af":      "fasttextwiki",
+    "ang":     "nerthus",
     "ar":      "conll17",
     "be":      "fasttextwiki",
     "bg":      "conll17",
@@ -271,6 +274,7 @@ ner_pretrains = {
 # default charlms for languages
 default_charlms = {
     "af": "oscar",
+    "ang": "nerthus1024",
     "ar": "ccwiki",
     "bg": "conll17",
     "da": "oscar",
