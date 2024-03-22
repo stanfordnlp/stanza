@@ -475,12 +475,14 @@ TRANSFORMERS = {
     #
     # NER scores
     #     model                                       dev      text
+    # xlm-roberta-large                              86.56    85.23
     # bert-base-german-cased                         87.59    86.95
     # dbmdz/bert-base-german-cased                   88.27    87.47
     # german-nlp-group/electra-base-german-uncased   88.60    87.09
     #
     # constituency scores w/ peft, March 2024 model, in-order
     #    model             dev     test
+    #   xlm-roberta-large 95.86   94.46    (!!!)
     #   bert-base         95.24   93.24
     #   dbmdz/bert        95.32   93.33
     #   german/electra    95.72   94.05
@@ -488,6 +490,7 @@ TRANSFORMERS = {
     # POS scores
     #    model             dev     test
     #   None              88.65   87.28
+    #   xlm-roberta-large 89.21   88.11
     #   bert-base         89.52   88.42
     #   dbmdz/bert        89.67   88.54
     #   german/electra    89.98   88.66
@@ -495,6 +498,7 @@ TRANSFORMERS = {
     # depparse scores, LAS
     #    model             dev     test
     #   None              87.76   84.37
+    #   xlm-roberta-large 89.00   85.79
     #   bert-base         88.72   85.40
     #   dbmdz/bert        88.70   85.14
     #   german/electra    89.21   86.06
