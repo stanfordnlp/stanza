@@ -804,7 +804,7 @@ TRANSFORMER_NICKNAMES = {
     "imvladikon/alephbertgimmel-base-512" : "alephbertgimmel",
 
     # hy
-    "xlm-roberta-base": "roberta",
+    "xlm-roberta-base": "xlm-roberta-base",
 
     # id
     "indolem/indobert-base-uncased":         "indobert",
