@@ -324,7 +324,7 @@ class Pipeline:
                         model_path = e.filename
                     model_dir, model_name = os.path.split(model_path)
                     lang_dir = os.path.dirname(model_dir)
-                    if not os.path.exists(lang_dir):
+                    if lang_dir and not os.path.exists(lang_dir):
                         # model files for this language can't be found in the expected directory
                         raise LanguageNotDownloadedError(lang, lang_dir, model_path) from e
                     if processor_name not in resources[lang]:
