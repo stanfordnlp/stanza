@@ -482,6 +482,7 @@ TRANSFORMERS = {
     #
     # constituency scores w/ peft, March 2024 model, in-order
     #    model             dev     test
+    #   xlm-roberta-base  95.17   93.34
     #   xlm-roberta-large 95.86   94.46    (!!!)
     #   bert-base         95.24   93.24
     #   dbmdz/bert        95.32   93.33
