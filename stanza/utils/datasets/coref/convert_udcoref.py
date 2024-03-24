@@ -195,7 +195,7 @@ def process_documents(docs):
 
 SECTION_NAMES = ["train", "dev"]
 # , "test"
-SHORT_NAME = "corefud_concat_v1_0"
+SHORT_NAME = "corefud_concat_short_v1_0"
 LANGUAGE = "multi"
 CONCAT = True
 
@@ -229,7 +229,6 @@ def main():
 
 if __name__ == '__main__':
     main()
-main()
 
 # docs = CoNLL.conll2multi_docs("./en_gum-corefud-dev.conllu", return_doc_ids=True)
 # docs[0][1]
