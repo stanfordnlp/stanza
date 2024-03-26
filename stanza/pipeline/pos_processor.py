@@ -67,10 +67,13 @@ class POSProcessor(UDProcessor):
         return values
 
     def process(self, document):
+        # currently, POS models are saved w/o the batch_maximum_tokens flag
+        maximum_tokens = self.config.get('batch_maximum_tokens', 5000)
+
         dataset = Dataset(
             document, self.config, self.pretrain, vocab=self.vocab, evaluation=True,
             sort_during_eval=True)
-        batch = iter(dataset.to_loader(batch_size=self.config['batch_size']))
+        batch = iter(dataset.to_length_limited_loader(batch_size=self.config['batch_size'], maximum_tokens=maximum_tokens))
         preds = []
 
         idx = []
