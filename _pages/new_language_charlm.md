@@ -17,8 +17,8 @@ For adding a new languages, we provide scripts to automate large parts of the pr
   * There is a script in the dev branch, [`stanza.utils.charlm.dump_oscar`](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/charlm/dump_oscar.py), which should help exporting Oscar data from HuggingFace to the charlm
 * If the data you gathered was from the conll17 shared task, we provide a script to turn it into txt files.  Run ```python3 -m stanza.utils.charlm.conll17_to_text ~/extern_data/finnish/conll17/Finnish/```  This will convert conllu or conllu.xz files to txt and put them in the same directory.
 * Run ```python3 -m stanza.utils.charlm.make_lm_data extern_data/charlm_raw extern_data/charlm```  This will convert text files in the `charlm_raw` directory to a suitable dataset in `extern_data/charlm`.  You may need to adjust your paths.
-* Forward: ```python3 -m stanza.models.charlm --train_dir extern_data/charlm/fi/conll17/train --eval_file extern_data/charlm/fi/conll17/dev.txt.xz --direction forward --lang fi --shorthand fi_conll17  --mode train```
-* Backward: ```python3 -m stanza.models.charlm --train_dir extern_data/charlm/fi/conll17/train --eval_file extern_data/charlm/fi/conll17/dev.txt.xz --direction backward --lang fi --shorthand fi_conll17  --mode train```
+* Forward: ```python3 -m stanza.models.charlm --train_dir extern_data/charlm/fi/conll17/train --eval_file extern_data/charlm/fi/conll17/dev.txt.xz --direction forward --shorthand fi_conll17  --mode train```
+* Backward: ```python3 -m stanza.models.charlm --train_dir extern_data/charlm/fi/conll17/train --eval_file extern_data/charlm/fi/conll17/dev.txt.xz --direction backward --shorthand fi_conll17  --mode train```
 * This will take days or weeks to fully train.
 
 For most languages, the current defaults are sufficient, but for some languages the learning rate is too aggressive and leads to NaNs in the training process.  For example, for Finnish, we used the following parameters: `--lr0 10`
@@ -106,8 +106,8 @@ python3 -m stanza.utils.charlm.make_lm_data $CHARLM_RAW_DIR $CHARLM_DIR --langs 
 You can now run the charlm.  This will take days.  Remember to update the language!
 
 ```bash
-python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction forward --lang bn --shorthand bn_oscar --mode train > bn_forward.out 2>&1 &
-python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction backward --lang bn --shorthand bn_oscar --mode train > bn_backward.out 2>&1 &
+python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction forward --shorthand bn_oscar --mode train > bn_forward.out 2>&1 &
+python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction backward --shorthand bn_oscar --mode train > bn_backward.out 2>&1 &
 ```
 
 You can tell when the model has converged and is no longer improving by looking for the eval scores:
@@ -119,8 +119,8 @@ grep "eval checkpoint" bn_*.out
 Alternatively, you can tie it in to wandb (requires Stanza 1.4.1 or later) by signing in to wandb and adding `wandb_name` to the original command line:
 
 ```bash
-python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction forward --lang bn --shorthand bn_oscar --mode train --wandb_name bn_oscar_forward_charlm > bn_forward.out 2>&1 &
-python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction backward --lang bn --shorthand bn_oscar --mode train --wandb_name bn_oscar_backward_charlm > bn_backward.out 2>&1 &
+python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction forward --shorthand bn_oscar --mode train --wandb_name bn_oscar_forward_charlm > bn_forward.out 2>&1 &
+python3 -m stanza.models.charlm --train_dir $CHARLM_DIR/bn/oscar/train --eval_file $CHARLM_DIR/bn/oscar/dev.txt.xz --direction backward --shorthand bn_oscar --mode train --wandb_name bn_oscar_backward_charlm > bn_backward.out 2>&1 &
 ```
 
 Once it has converged satisfactorily, you can copy the models to the
