@@ -3,6 +3,7 @@ from functools import lru_cache
 import json
 import os
 import re
+import glob
 
 import stanza
 
@@ -13,6 +14,8 @@ from stanza.utils.get_tqdm import get_tqdm
 from stanza.utils.conll import CoNLL
 
 tqdm = get_tqdm()
+IS_UDCOREF_FORMAT = True
+UDCOREF_ADDN = 0 if not IS_UDCOREF_FORMAT else 1
 
 # TODO: move this to a utility module and try it on other languages
 class DynamicDepth():
@@ -123,12 +126,17 @@ def process_documents(docs):
                 for j in i:
                     # this is the beginning of a reference
                     if j[0] == "(":
-                        refdict[j[1:]].append(indx)
-                        last_ref = j[1:]
+                        refdict[j[1+UDCOREF_ADDN:]].append(indx)
+                        last_ref = j[1+UDCOREF_ADDN:]
                     # at the end of a reference, if we got exxxxx, that ends
                     # a particular refereenc; otherwise, it ends the last reference
-                    elif j[-1] == ")" and j[:-1].isnumeric():
-                        final_refs[j[:-1]].append((refdict[j[:-1]].pop(-1), indx))
+                    elif j[-1] == ")" and j[UDCOREF_ADDN:-1].isnumeric():
+                        if (not UDCOREF_ADDN) or j[0] == "e":
+                            try:
+                                final_refs[j[UDCOREF_ADDN:-1]].append((refdict[j[UDCOREF_ADDN:-1]].pop(-1), indx))
+                            except IndexError:
+                                # this is probably zero anaphora
+                                continue
                     elif j[-1] == ")":
                         final_refs[last_ref].append((refdict[last_ref].pop(-1), indx))
                         last_ref = None
@@ -185,16 +193,27 @@ def process_documents(docs):
         processed_section.append(processed)
     return processed_section
 
-SECTION_NAMES = ["train", "dev", "test"]
-SHORT_NAME = "en_gum-ud"
-LANGUAGE = "english"
+SECTION_NAMES = ["train", "dev"]
+# , "test"
+SHORT_NAME = "corefud_concat_short_v1_0"
+LANGUAGE = "multi"
+CONCAT = True
 
 def process_dataset(short_name, conllu_path, coref_output_path):
 
     for section in SECTION_NAMES:
-        load = os.path.join(conllu_path, f"{short_name}-{section}.conllu")
-        print("Processing %s from %s" % (section, load))
-        input_file = CoNLL.conll2multi_docs(load, return_doc_ids=True)
+        if not CONCAT:
+            load = os.path.join(conllu_path, f"{short_name}-{section}.conllu")
+            print("Processing %s from %s" % (section, load))
+            input_file = CoNLL.conll2multi_docs(load, return_doc_ids=True)
+        else:
+            loads = glob.glob(os.path.join(conllu_path, f"*{section}.conllu"))
+            input_file = []
+            for load in loads:
+                print("Ingesting %s from %s" % (section, load))
+                input_file += CoNLL.conll2multi_docs(load, return_doc_ids=True)
+            print("Ingested %d documents" % len(input_file))
+
         converted_section = process_documents(input_file)
 
         output_filename = os.path.join(coref_output_path, "%s.%s.json" % (short_name, section))
