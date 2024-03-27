@@ -42,7 +42,7 @@ def get_subwords_batches(doc: Doc,
 
         length = end - start
         if tok.cls_token == None or tok.sep_token == None:
-            batch = [tok.pad_token] + subwords[start:end] + [tok.eos_token]
+            batch = [tok.eos_token] + subwords[start:end] + [tok.eos_token]
         else:
             batch = [tok.cls_token] + subwords[start:end] + [tok.sep_token]
 
