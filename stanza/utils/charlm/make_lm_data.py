@@ -142,12 +142,12 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress, split_size, 
         test_file = f"{tgt_dir}/test.txt"
         if make_test_file:
             print("--> Creating dev and test files...")
-            shutil.move(f"{train_dir}/{lang}-{dataset_name}-000.txt", dev_file)
-            shutil.move(f"{train_dir}/{lang}-{dataset_name}-001.txt", test_file)
+            shutil.move(f"{train_dir}/{lang}-{dataset_name}-0000.txt", dev_file)
+            shutil.move(f"{train_dir}/{lang}-{dataset_name}-0001.txt", test_file)
             txt_files = [dev_file, test_file] + glob.glob(f'{train_dir}/*.txt')
         else:
             print("--> Creating dev file...")
-            shutil.move(f"{train_dir}/{lang}-{dataset_name}-000.txt", dev_file)
+            shutil.move(f"{train_dir}/{lang}-{dataset_name}-0000.txt", dev_file)
             txt_files = [dev_file] + glob.glob(f'{train_dir}/*.txt')
 
         if compress:
