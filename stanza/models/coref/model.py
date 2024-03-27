@@ -96,6 +96,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             self._build_optimizers()
         self._set_training(False)
         self._coref_criterion = CorefLoss(self.config.bce_loss_weight)
+        self._rough_criterion = CorefLoss(0)
         self._span_criterion = torch.nn.CrossEntropyLoss(reduction="sum")
 
     @property
@@ -133,20 +134,61 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         running_loss = 0.0
         s_correct = 0
         s_total = 0
+        running_rough_prec = 0.0
+        running_rough_recc = 0.0
+
+        running_not_dummy_p = 0.0
+        running_not_dummy_r = 0.0
 
         with conll.open_(self.config, self.epochs_trained, data_split) \
                 as (gold_f, pred_f):
             pbar = tqdm(docs, unit="docs", ncols=0)
             for doc in pbar:
+                # doc 1072 has.... 17771 words?
+                if len(doc["subwords"]) > 5000:
+                    logger.warning(f"EVAL: skipping document with {len(doc['subwords'])} subwords...")
+                    continue
+
                 res = self.run(doc)
 
                 running_loss += self._coref_criterion(res.coref_scores, res.coref_y).item()
+                running_loss += self._rough_criterion(res.rough_scores, res.rough_y).item()
 
                 if res.span_y:
                     pred_starts = res.span_scores[:, :, 0].argmax(dim=1)
                     pred_ends = res.span_scores[:, :, 1].argmax(dim=1)
                     s_correct += ((res.span_y[0] == pred_starts) * (res.span_y[1] == pred_ends)).sum().item()
                     s_total += len(pred_starts)
+
+                topk = res.rough_scores.topk(k=self.config.rough_k).indices
+                captured_any = 0
+                captured_all = 0
+                for i in range(res.rough_y.shape[0]):
+                    if topk[i] in res.rough_y[i].nonzero():
+                        captured_any += 1
+                for i,j in res.rough_y.nonzero():
+                    if j in topk[i]:
+                        captured_all += 1
+                rough_prec = captured_all/(topk.shape[0]*topk.shape[1])
+                running_rough_prec += rough_prec
+
+                # metric: "is overall correct" 
+                rough_recc = captured_all/len(res.rough_y.nonzero())
+                running_rough_recc += rough_recc
+
+                # percentage of coreferent words miscategorized as a dummy
+                not_dummy = (res.coref_y.argmax(dim=1)!=0)
+                tp = sum((res.coref_scores.argmax(dim=1)!=0) & not_dummy)
+                fp = sum((res.coref_scores.argmax(dim=1)!=0) & ~not_dummy)
+                fn = sum((res.coref_scores.argmax(dim=1)==0) & not_dummy)
+
+                running_not_dummy_p += tp/(tp+fp)
+                running_not_dummy_r += tp/(tp+fn)
+
+                # alternative metric: "gave a scorer a shot"
+                # rough_recc = captured_any/topk.shape[0]
+                # running_rough_recc += rough_recc
+
 
                 if word_level_conll:
                     conll.write_conll(doc,
@@ -181,7 +223,16 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     f" f1: {s_lea[0]:.5f},"
                     f" p: {s_lea[1]:.5f},"
                     f" r: {s_lea[2]:<.5f}"
+                    # f" | ROUGH: "
+                    # f" p: {rough_prec:.5f},"
+                    # f" r: {rough_recc:<.5f}"
+
                 )
+
+            logger.info(f"ROUGH: p: {running_rough_prec/len(docs)} | r: {running_rough_recc/len(docs)}")
+            p = running_not_dummy_p/len(docs)
+            r = running_not_dummy_r/len(docs)
+            logger.info(f"NON-DUMMY: p: {p} | r: {r} | f: {(2*p*r)/(p+r)}")
 
         return (running_loss / len(docs), *s_checker.total_lea)
 
@@ -347,8 +398,18 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
         res.coref_y = self._get_ground_truth(
             cluster_ids, top_indices, (top_rough_scores > float("-inf")))
-        res.word_clusters = self._clusterize(doc, res.coref_scores,
-                                             top_indices)
+        ground_truth = self._get_ground_truth(
+                cluster_ids, 
+                torch.arange(0, 
+                    rough_scores.shape[0]).repeat(rough_scores.shape[0],1), 
+                (rough_scores > float("-inf")))[:,1:] # chop away dummy
+        # crop the loss to only where de have something to backprop
+        # i.e. there is an actual coref
+        res.rough_y = ground_truth[ground_truth.sum(dim=1) > 0]
+        res.rough_scores = rough_scores[ground_truth.sum(dim=1) > 0]
+
+        res.word_clusters = self._clusterize(doc, res.coref_scores, top_indices)
+
         res.span_scores, res.span_y = self.sp.get_training_data(doc, words)
 
         if not self.training:
@@ -413,10 +474,16 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 self.log_norms()
             running_c_loss = 0.0
             running_s_loss = 0.0
+            running_r_loss = 0.0
             random.shuffle(docs_ids)
             pbar = tqdm(docs_ids, unit="docs", ncols=0)
             for doc_indx, doc_id in enumerate(pbar):
                 doc = docs[doc_id]
+
+                # doc 1072 has.... 17771 words?
+                if len(doc["subwords"]) > 5000:
+                    logger.warning(f"Skipping {doc_id} with {len(doc['subwords'])} subwords...")
+                    continue
 
                 for optim in self.optimizers.values():
                     optim.zero_grad()
@@ -424,6 +491,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 res = self.run(doc)
 
                 c_loss = self._coref_criterion(res.coref_scores, res.coref_y)
+                if res.rough_y.sum() > 0:
+                    r_loss = self._rough_criterion(res.rough_scores, res.rough_y)
+                else:
+                    r_loss = torch.zeros_like(c_loss)
                 if res.span_y:
                     s_loss = (self._span_criterion(res.span_scores[:, :, 0], res.span_y[0])
                               + self._span_criterion(res.span_scores[:, :, 1], res.span_y[1])) / avg_spans / 2
@@ -432,17 +503,20 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 del res
 
-                (c_loss + s_loss).backward()
+                (c_loss + s_loss + r_loss*0.5).backward()
+
                 running_c_loss += c_loss.item()
                 running_s_loss += s_loss.item()
+                running_r_loss += r_loss.item()
 
                 # log every 50 docs
                 if log and doc_indx % 50 == 0:
                     wandb.log({'train_c_loss': c_loss.item(),
-                               'train_s_loss': s_loss.item()})
+                               'train_s_loss': s_loss.item(),
+                               'train_r_loss': r_loss.item()})
 
 
-                del c_loss, s_loss
+                del c_loss, s_loss, r_loss
 
                 for optim in self.optimizers.values():
                     optim.step()
@@ -454,6 +528,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     f" {doc['document_id']:26}"
                     f" c_loss: {running_c_loss / (pbar.n + 1):<.5f}"
                     f" s_loss: {running_s_loss / (pbar.n + 1):<.5f}"
+                    f" r_loss: {running_r_loss / (pbar.n + 1):<.5f}"
                 )
 
             self.epochs_trained += 1
@@ -635,6 +710,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         y[y == 0] = -1                                 # -1 for non-gold words
         y = utils.add_dummy(y)                         # [n_words, n_cands + 1]
         y = (y == cluster_ids.unsqueeze(1))            # True if coreferent
+        # ((y == cluster_ids.unsqueeze(1))[cluster_ids != 0]).sum(dim=1)
         # For all rows with no gold antecedents setting dummy to True
         y[y.sum(dim=1) == 0, 0] = True
         return y.to(torch.float)

@@ -11,9 +11,17 @@ data_dir = "data/coref"
 save_dir = "saved_models/coref"
 
 # Train, dev and test jsonlines
-train_data = "data/coref/en_gum-ud.train.json"
-dev_data = "data/coref/en_gum-ud.dev.json"
-test_data = "data/coref/en_gum-ud.test.json"
+train_data = "data/coref/en_gum-ud.train.nosgl.json"
+dev_data = "data/coref/en_gum-ud.dev.nosgl.json"
+test_data = "data/coref/en_gum-ud.test.nosgl.json"
+
+#train_data = "data/coref/corefud_concat_short_v1_0.train.json"
+#dev_data = "data/coref/corefud_concat_short_v1_0.dev.json"
+#test_data = "data/coref/corefud_concat_short_v1_0.dev.json"
+
+#train_data = "data/coref/english_train_head.jsonlines"
+#dev_data = "data/coref/english_development_head.jsonlines"
+#test_data = "data/coref/english_test_head.jsonlines"
 
 # do not use the full pairwise encoding scheme
 full_pairwise = false
@@ -46,7 +54,7 @@ sp_embedding_size = 64
 # Controls the number of spans for which anaphoricity can be scores in one
 # batch. Only affects final scoring; mention extraction and rough scoring
 # are less memory intensive, so they are always done in just one batch.
-a_scoring_batch_size = 512
+a_scoring_batch_size = 128
 
 # AnaphoricityScorer FFNN parameters
 hidden_size = 1024
@@ -64,15 +72,15 @@ max_span_len = 64
 
 # Controls how many pairs should be preserved per mention
 # after applying rough scoring.
-rough_k = 124
+rough_k = 50
 
 
 # Lora settings ===================
 
 # LoRA settings
 lora = false
-lora_alpha = 256
 lora_dropout = 0.1
+lora_alpha = 256
 lora_rank = 128
 lora_targets = []
 lora_fully_tune = []
@@ -94,7 +102,7 @@ bert_finetune_begin_epoch = 0.1
 learning_rate = 1e-3
 
 # For how many epochs the training is done
-train_epochs = 75
+train_epochs = 32
 
 # Controls the weight of binary cross entropy loss added to nlml loss
 bce_loss_weight = 0.5
@@ -106,6 +114,9 @@ conll_log_dir = "data/conll_logs"
 # Extra keyword arguments to be passed to bert tokenizers of specified models
 [DEFAULT.tokenizer_kwargs]
     [DEFAULT.tokenizer_kwargs.roberta-large]
+        "add_prefix_space" = true
+
+    [DEFAULT.tokenizer_kwargs.xlm-roberta-large]
         "add_prefix_space" = true
 
     [DEFAULT.tokenizer_kwargs.spanbert-large-cased]
@@ -124,6 +135,15 @@ bert_model = "roberta-large"
 [roberta_lora]
 bert_model = "roberta-large"
 bert_learning_rate = 0.00005
+lora = true
+lora_targets = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_fully_tune = [ "pooler" ]
+
+[xlm_roberta_lora]
+bert_model = "FacebookAI/xlm-roberta-large"
+bert_learning_rate = 0.0001
+lora_alpha = 64
+lora_rank = 32
 lora = true
 lora_targets = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_fully_tune = [ "pooler" ]
@@ -148,7 +168,17 @@ lora_fully_tune = [  ]
 
 [t5_lora]
 bert_model = "google-t5/t5-large"
-bert_learning_rate = 0.00025
+bert_learning_rate = 0.000025
+bert_window_size = 1024
+lora = true
+lora_targets = [ "q", "v", "o", "wi", "wo" ]
+lora_fully_tune = [  ]
+
+[mt5_lora]
+bert_model = "google/mt5-base"
+bert_learning_rate = 0.000025
+lora_alpha = 64
+lora_rank = 32
 lora = true
 lora_targets = [ "q", "v", "o", "wi", "wo" ]
 lora_fully_tune = [  ]
