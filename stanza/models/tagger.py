@@ -195,6 +195,13 @@ def load_training_data(args, pretrain):
     vocab = Dataset.init_vocab(train_docs, args)
     train_data = [Dataset(i, args, pretrain, vocab=vocab, evaluation=False)
                   for i in train_docs]
+    for train_file, td in zip(train_files, train_data):
+        if not td.has_upos:
+            logger.info("No UPOS in %s" % train_file)
+        if not td.has_xpos:
+            logger.info("No XPOS in %s" % train_file)
+        if not td.has_feats:
+            logger.info("No feats in %s" % train_file)
 
     # reject partially tagged upos or xpos documents
     # otherwise, the model will learn to output blanks for some words,
