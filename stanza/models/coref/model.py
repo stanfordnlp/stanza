@@ -241,7 +241,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             r = running_not_dummy_r/len(docs)
             logger.info(f"NON-DUMMY: p: {p:.5f} | r: {r:.5f} | f: {(2*p*r)/(p+r):.5f}")
 
-        return (running_loss / len(docs), *s_checker.total_lea)
+        return (running_loss / len(docs), *s_checker.total_lea, s_checker.bakeoff)
 
     def load_weights(self,
                      path: Optional[str] = None,
@@ -570,6 +570,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             prev_best_f1 = best_f1
             if log:
                 wandb.log({'dev_score': scores[1]})
+                wandb.log({'dev_bakeoff': scores[-1]})
 
             if best_f1 is None or scores[1] > best_f1:
 
