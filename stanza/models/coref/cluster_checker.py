@@ -195,7 +195,7 @@ class ClusterChecker:
         scores = np.zeros((len(gold_clusters), len(clusters)))
         for i in range(len(gold_clusters)):
             for j in range(len(clusters)):
-                scores[i, j] = ClusterChecker.phi4(gold_clusters[i], clusters[j])
+                scores[i, j] = ClusterChecker._phi4(gold_clusters[i], clusters[j])
         matching = linear_assignment(-scores)
         similarity = sum(scores[matching[:, 0], matching[:, 1]])
 
