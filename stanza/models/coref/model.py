@@ -240,6 +240,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             p = running_not_dummy_p/len(docs)
             r = running_not_dummy_r/len(docs)
             logger.info(f"NON-DUMMY: p: {p:.5f} | r: {r:.5f} | f: {(2*p*r)/(p+r):.5f}")
+            logger.info(f"BAKE!: {s_checker.bakeoff:.5f}")
 
         return (running_loss / len(docs), *s_checker.total_lea, s_checker.bakeoff)
 
