@@ -151,6 +151,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 res = self.run(doc)
 
+                if (res.coref_y.argmax(dim=1) == 0).all():
+                    logger.warning(f"EVAL: skipping document with no corefs...")
+                    continue
+
                 running_loss += self._coref_criterion(res.coref_scores, res.coref_y).item()
                 running_loss += self._rough_criterion(res.rough_scores, res.rough_y).item()
 
@@ -160,7 +164,31 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     s_correct += ((res.span_y[0] == pred_starts) * (res.span_y[1] == pred_ends)).sum().item()
                     s_total += len(pred_starts)
 
-                topk = res.rough_scores.topk(k=self.config.rough_k).indices
+
+                if word_level_conll:
+                    conll.write_conll(doc,
+                                      [[(i, i + 1) for i in cluster]
+                                       for cluster in doc["word_clusters"]],
+                                      gold_f)
+                    conll.write_conll(doc,
+                                      [[(i, i + 1) for i in cluster]
+                                       for cluster in res.word_clusters],
+                                      pred_f)
+                else:
+                    conll.write_conll(doc, doc["span_clusters"], gold_f)
+                    conll.write_conll(doc, res.span_clusters, pred_f)
+
+                w_checker.add_predictions(doc["word_clusters"], res.word_clusters)
+                w_lea = w_checker.total_lea
+
+                s_checker.add_predictions(doc["span_clusters"], res.span_clusters)
+                s_lea = s_checker.total_lea
+
+                if len(res.rough_y) == 0:
+                    continue
+
+                topk = res.rough_scores.topk(k=min(self.config.rough_k, 
+                                                   res.rough_scores.shape[1])).indices
                 captured_any = 0
                 captured_all = 0
                 for i in range(res.rough_y.shape[0]):
@@ -189,28 +217,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 # rough_recc = captured_any/topk.shape[0]
                 # running_rough_recc += rough_recc
 
-
-                if word_level_conll:
-                    conll.write_conll(doc,
-                                      [[(i, i + 1) for i in cluster]
-                                       for cluster in doc["word_clusters"]],
-                                      gold_f)
-                    conll.write_conll(doc,
-                                      [[(i, i + 1) for i in cluster]
-                                       for cluster in res.word_clusters],
-                                      pred_f)
-                else:
-                    conll.write_conll(doc, doc["span_clusters"], gold_f)
-                    conll.write_conll(doc, res.span_clusters, pred_f)
-
-                w_checker.add_predictions(doc["word_clusters"], res.word_clusters)
-                w_lea = w_checker.total_lea
-
-                s_checker.add_predictions(doc["span_clusters"], res.span_clusters)
-                s_lea = s_checker.total_lea
-
                 del res
-
                 pbar.set_description(
                     f"{data_split}:"
                     f" | WL: "
@@ -229,10 +236,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 )
 
-            logger.info(f"ROUGH: p: {running_rough_prec/len(docs)} | r: {running_rough_recc/len(docs)}")
+            logger.info(f"ROUGH: p: {running_rough_prec/len(docs):.5f} | r: {running_rough_recc/len(docs):.5f}")
             p = running_not_dummy_p/len(docs)
             r = running_not_dummy_r/len(docs)
-            logger.info(f"NON-DUMMY: p: {p} | r: {r} | f: {(2*p*r)/(p+r)}")
+            logger.info(f"NON-DUMMY: p: {p:.5f} | r: {r:.5f} | f: {(2*p*r)/(p+r):.5f}")
 
         return (running_loss / len(docs), *s_checker.total_lea)
 
@@ -490,7 +497,31 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 res = self.run(doc)
 
-                c_loss = self._coref_criterion(res.coref_scores, res.coref_y)
+                # we want to calculate on equal parts dummy/not dummy
+                # otherwise, we will be overbiasing the model to produce
+                # dummies only
+                # so we first figure out who the dummies are
+                is_dummy = (res.coref_y.argmax(dim=1) == 0)
+                dummy_indicies = is_dummy.nonzero().squeeze(1)
+                non_dummy_indicies = (~is_dummy).nonzero().squeeze(1)
+                # we track the count of non-dummies
+                non_dummy_count = sum(~is_dummy)
+                # 
+                # shuffle the dummy indicies and then take
+                # equal parts as non dummy
+                dummy_indicies = is_dummy.nonzero().squeeze(1)
+                dummy_indicies = dummy_indicies[torch.randperm(dummy_indicies.size(0))[:int(non_dummy_count*self.config.dummy_mix)]]
+
+                # get the indicies to actually calcuclate
+                ref_indicies = torch.cat([non_dummy_indicies, dummy_indicies])
+
+                if len(ref_indicies) != 0:
+                    c_loss = self._coref_criterion(res.coref_scores[ref_indicies], res.coref_y[ref_indicies])
+                else:
+                    c_loss = self._coref_criterion(res.coref_scores, res.coref_y)
+
+                if torch.isnan(c_loss).any():
+                    breakpoint()
                 if res.rough_y.sum() > 0:
                     r_loss = self._rough_criterion(res.rough_scores, res.rough_y)
                 else:

@@ -51,7 +51,7 @@ class AnaphoricityScorer(torch.nn.Module):
 
         # [batch_size, n_ants]
         scores = self._ffnn(pair_matrix)
-        scores = utils.add_dummy(scores+top_rough_scores_batch.detach(), eps=True)
+        scores = utils.add_dummy(scores+top_rough_scores_batch, eps=True)
 
         return scores
 
