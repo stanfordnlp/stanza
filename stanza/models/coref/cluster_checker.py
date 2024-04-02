@@ -187,7 +187,7 @@ class ClusterChecker:
         """ see https://github.com/ufal/corefud-scorer/blob/main/coval/eval/evaluator.py """
 
         try:
-            from scipy.optimize import linear_sum_assignment as linear_assignment
+            from scipy.optimize import linear_sum_assignment
         except ImportError:
             raise ImportError("To perform CEAF scoring, please install scipy via `pip install scipy` for the Kuhn-Munkres linear assignment scheme.")
 
@@ -196,8 +196,8 @@ class ClusterChecker:
         for i in range(len(gold_clusters)):
             for j in range(len(clusters)):
                 scores[i, j] = ClusterChecker._phi4(gold_clusters[i], clusters[j])
-        matching = linear_assignment(-scores)
-        similarity = sum(scores[matching[:, 0], matching[:, 1]])
+        row_ind, col_ind = linear_sum_assignment(-scores)
+        similarity = scores[row_ind, col_ind].sum()
 
         # precision, recall
         return similarity/len(clusters), similarity/len(gold_clusters)
