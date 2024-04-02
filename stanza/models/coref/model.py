@@ -27,12 +27,89 @@ from stanza.models.coref.tokenizer_customization import TOKENIZER_FILTERS, TOKEN
 from stanza.models.coref.utils import GraphNode
 from stanza.models.coref.word_encoder import WordEncoder
 
+from torch.utils.data import Dataset
+from functools import lru_cache, wraps
+import weakref
+
+def partial_self_lru(maxsize=1024):
+    "self is not hashable to be memoized, so we need to cache a pointer to self"
+
+    def decorator(f):
+
+        @lru_cache(maxsize, False)
+        def _func_deref_memoized(self_ptr, *args):
+            # this will panic if self is not allocated, but
+            # hopefully it always is when the method is caled
+            return f(self_ptr(), *args)
+
+        @wraps(f)
+        def wrapper(self, *args):
+            # this make the function call its memoized version, which can now
+            # hash the pointer to self now so it can be successfully
+            # memoized
+            return _func_deref_memoized(weakref.ref(self), *args)
+
+        return wrapper
+
+    return decorator
+
+   
+
 from peft import LoraConfig, get_peft_model, get_peft_model_state_dict, set_peft_model_state_dict
 
 from stanza.utils.get_tqdm import get_tqdm   # type: ignore
 tqdm = get_tqdm()
 
 logger = logging.getLogger('stanza')
+
+class CorefDataset(Dataset):
+
+    def __init__(self, path, config, tokenizer):
+        self.config = config
+        self.tokenizer = tokenizer
+
+        self.__filter_func = TOKENIZER_FILTERS.get(self.config.bert_model,
+                                                   lambda _: True)
+        self.__token_map = TOKENIZER_MAPS.get(self.config.bert_model, {})
+
+        try:
+            with open(path, encoding="utf-8") as fin:
+                data_f = json.load(fin)
+        except json.decoder.JSONDecodeError:
+            # read the old jsonlines format if necessary
+            with open(path, encoding="utf-8") as fin:
+                text = "[" + ",\n".join(fin) + "]"
+            data_f = json.loads(text)
+        logger.info("Loaded %d docs from %s", len(data_f), path)
+        self.__raw = data_f
+        self.__avg_span = sum(len(doc["head2span"]) for doc in self.__raw) / len(self.__raw)
+
+    @property
+    def avg_span(self):
+        return self.__avg_span
+
+    @partial_self_lru()
+    def __getitem__(self, x):
+        doc = self.__raw[x]
+        doc["span_clusters"] = [[tuple(mention) for mention in cluster]
+                            for cluster in doc["span_clusters"]]
+        word2subword = []
+        subwords = []
+        word_id = []
+        for i, word in enumerate(doc["cased_words"]):
+            tokenized_word = self.__token_map.get(word, self.tokenizer.tokenize(word))
+            tokenized_word = list(filter(self.__filter_func, tokenized_word))
+            word2subword.append((len(subwords), len(subwords) + len(tokenized_word)))
+            subwords.extend(tokenized_word)
+            word_id.extend([i] * len(tokenized_word))
+        doc["word2subword"] = word2subword
+        doc["subwords"] = subwords
+        doc["word_id"] = word_id
+
+        return doc
+
+    def __len__(self):
+        return len(self.__raw)
 
 class CorefModel:  # pylint: disable=too-many-instance-attributes
     """Combines all coref modules together to find coreferent spans.
@@ -88,8 +165,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                                             modules_to_save=self.config.lora_fully_tune,
                                             bias="none")
 
-            self.bert = get_peft_model(self.bert, self.__peft_config)
             self.bert.train()
+            self.bert.gradient_checkpointing_enable()
+            self.bert = get_peft_model(self.bert, self.__peft_config)
             self.trainable["bert"] = self.bert
 
         if build_optimizers:
@@ -151,6 +229,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 res = self.run(doc)
 
+                if (res.coref_y.argmax(dim=1) == 0).all():
+                    logger.warning(f"EVAL: skipping document with no corefs...")
+                    continue
+
                 running_loss += self._coref_criterion(res.coref_scores, res.coref_y).item()
                 running_loss += self._rough_criterion(res.rough_scores, res.rough_y).item()
 
@@ -160,7 +242,31 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     s_correct += ((res.span_y[0] == pred_starts) * (res.span_y[1] == pred_ends)).sum().item()
                     s_total += len(pred_starts)
 
-                topk = res.rough_scores.topk(k=self.config.rough_k).indices
+
+                if word_level_conll:
+                    conll.write_conll(doc,
+                                      [[(i, i + 1) for i in cluster]
+                                       for cluster in doc["word_clusters"]],
+                                      gold_f)
+                    conll.write_conll(doc,
+                                      [[(i, i + 1) for i in cluster]
+                                       for cluster in res.word_clusters],
+                                      pred_f)
+                else:
+                    conll.write_conll(doc, doc["span_clusters"], gold_f)
+                    conll.write_conll(doc, res.span_clusters, pred_f)
+
+                w_checker.add_predictions(doc["word_clusters"], res.word_clusters)
+                w_lea = w_checker.total_lea
+
+                s_checker.add_predictions(doc["span_clusters"], res.span_clusters)
+                s_lea = s_checker.total_lea
+
+                if len(res.rough_y) == 0:
+                    continue
+
+                topk = res.rough_scores.topk(k=min(self.config.rough_k, 
+                                                   res.rough_scores.shape[1])).indices
                 captured_any = 0
                 captured_all = 0
                 for i in range(res.rough_y.shape[0]):
@@ -189,28 +295,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 # rough_recc = captured_any/topk.shape[0]
                 # running_rough_recc += rough_recc
 
-
-                if word_level_conll:
-                    conll.write_conll(doc,
-                                      [[(i, i + 1) for i in cluster]
-                                       for cluster in doc["word_clusters"]],
-                                      gold_f)
-                    conll.write_conll(doc,
-                                      [[(i, i + 1) for i in cluster]
-                                       for cluster in res.word_clusters],
-                                      pred_f)
-                else:
-                    conll.write_conll(doc, doc["span_clusters"], gold_f)
-                    conll.write_conll(doc, res.span_clusters, pred_f)
-
-                w_checker.add_predictions(doc["word_clusters"], res.word_clusters)
-                w_lea = w_checker.total_lea
-
-                s_checker.add_predictions(doc["span_clusters"], res.span_clusters)
-                s_lea = s_checker.total_lea
-
                 del res
-
                 pbar.set_description(
                     f"{data_split}:"
                     f" | WL: "
@@ -229,12 +314,13 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 )
 
-            logger.info(f"ROUGH: p: {running_rough_prec/len(docs)} | r: {running_rough_recc/len(docs)}")
+            logger.info(f"ROUGH: p: {running_rough_prec/len(docs):.5f} | r: {running_rough_recc/len(docs):.5f}")
             p = running_not_dummy_p/len(docs)
             r = running_not_dummy_r/len(docs)
-            logger.info(f"NON-DUMMY: p: {p} | r: {r} | f: {(2*p*r)/(p+r)}")
+            logger.info(f"NON-DUMMY: p: {p:.5f} | r: {r:.5f} | f: {(2*p*r)/(p+r):.5f}")
+            logger.info(f"BAKE!: {w_checker.bakeoff:.5f}")
 
-        return (running_loss / len(docs), *s_checker.total_lea)
+        return (running_loss / len(docs), *s_checker.total_lea, s_checker.bakeoff)
 
     def load_weights(self,
                      path: Optional[str] = None,
@@ -385,11 +471,12 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
             # a_scores_batch    [batch_size, n_ants]
             a_scores_batch = self.a_scorer(
-                all_mentions=words, mentions_batch=words_batch,
-                pw_batch=pw_batch, top_indices_batch=top_indices_batch,
-                top_rough_scores_batch=top_rough_scores_batch
+                top_mentions=words[top_indices_batch], mentions_batch=words_batch,
+                pw_batch=pw_batch, top_rough_scores_batch=top_rough_scores_batch
             )
             a_scores_lst.append(a_scores_batch)
+            # del pw_batch, words_batch, top_indices_batch, top_rough_scores_batch
+            # torch.cuda.empty_cache()
 
         res = CorefResult()
 
@@ -463,9 +550,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                          self.a_scorer, self.we,
                          self.rough_scorer, self.sp), log_freq=4, log="all", log_graph=True)
 
-        docs = list(self._get_docs(self.config.train_data))
+        docs = self._get_docs(self.config.train_data)
         docs_ids = list(range(len(docs)))
-        avg_spans = sum(len(doc["head2span"]) for doc in docs) / len(docs)
+        avg_spans = docs.avg_span
 
         best_f1 = None
         for epoch in range(self.epochs_trained, self.config.train_epochs):
@@ -482,15 +569,39 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 # doc 1072 has.... 17771 words?
                 if len(doc["subwords"]) > 5000:
-                    logger.warning(f"Skipping {doc_id} with {len(doc['subwords'])} subwords...")
-                    continue
+                    logger.warning(f"Get hyped, {doc_id} with {len(doc['subwords'])} subwords... ")
+                    # continue
 
                 for optim in self.optimizers.values():
                     optim.zero_grad()
 
                 res = self.run(doc)
 
-                c_loss = self._coref_criterion(res.coref_scores, res.coref_y)
+                # we want to calculate on equal parts dummy/not dummy
+                # otherwise, we will be overbiasing the model to produce
+                # dummies only
+                # so we first figure out who the dummies are
+                is_dummy = (res.coref_y.argmax(dim=1) == 0)
+                dummy_indicies = is_dummy.nonzero().squeeze(1)
+                non_dummy_indicies = (~is_dummy).nonzero().squeeze(1)
+                # we track the count of non-dummies
+                non_dummy_count = sum(~is_dummy)
+                # 
+                # shuffle the dummy indicies and then take
+                # equal parts as non dummy
+                dummy_indicies = is_dummy.nonzero().squeeze(1)
+                dummy_indicies = dummy_indicies[torch.randperm(dummy_indicies.size(0))[:int(non_dummy_count*self.config.dummy_mix)]]
+
+                # get the indicies to actually calcuclate
+                ref_indicies = torch.cat([non_dummy_indicies, dummy_indicies])
+
+                if len(ref_indicies) != 0:
+                    c_loss = self._coref_criterion(res.coref_scores[ref_indicies], res.coref_y[ref_indicies])
+                else:
+                    c_loss = self._coref_criterion(res.coref_scores, res.coref_y)
+
+                if torch.isnan(c_loss).any():
+                    breakpoint()
                 if res.rough_y.sum() > 0:
                     r_loss = self._rough_criterion(res.rough_scores, res.rough_y)
                 else:
@@ -503,7 +614,12 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 del res
 
-                (c_loss + s_loss + r_loss*0.5).backward()
+                loss = c_loss + s_loss
+                if self.config.supervise_rough:
+                    loss += r_loss*0.5
+                loss.backward()
+                # breakpoint()
+                # self.bert.encoder.layer[0].attention.self.query.lora_A.default.weight.grad
 
                 running_c_loss += c_loss.item()
                 running_s_loss += s_loss.item()
@@ -536,6 +652,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             prev_best_f1 = best_f1
             if log:
                 wandb.log({'dev_score': scores[1]})
+                wandb.log({'dev_bakeoff': scores[-1]})
 
             if best_f1 is None or scores[1] > best_f1:
 
@@ -562,38 +679,46 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     # ========================================================= Private methods
 
     def _bertify(self, doc: Doc) -> torch.Tensor:
-        subwords_batches = bert.get_subwords_batches(doc, self.config,
-                                                     self.tokenizer)
+        all_batches = bert.get_subwords_batches(doc, self.config, self.tokenizer)
 
-        special_tokens = np.array([self.tokenizer.cls_token_id,
-                                   self.tokenizer.sep_token_id,
-                                   self.tokenizer.pad_token_id,
-                                   self.tokenizer.eos_token_id])
-        subword_mask = ~(np.isin(subwords_batches, special_tokens))
+        # collect results
+        result = []
 
-        subwords_batches_tensor = torch.tensor(subwords_batches,
-                                               device=self.config.device,
-                                               dtype=torch.long)
-        subword_mask_tensor = torch.tensor(subword_mask,
-                                           device=self.config.device)
+        # we index the batches two at a time to prevent oom
+        for i in range(0, all_batches.shape[0], 2):
+            subwords_batches = all_batches[i:i+2]
 
-        # Obtain bert output for selected batches only
-        attention_mask = (subwords_batches != self.tokenizer.pad_token_id)
-        if "t5" in self.config.bert_model:
-            out = self.bert.encoder(
-                    input_ids=subwords_batches_tensor,
-                    attention_mask=torch.tensor(
-                        attention_mask, device=self.config.device))
-        else:
-            out = self.bert(
-                    subwords_batches_tensor,
-                    attention_mask=torch.tensor(
-                        attention_mask, device=self.config.device))
+            special_tokens = np.array([self.tokenizer.cls_token_id,
+                                       self.tokenizer.sep_token_id,
+                                       self.tokenizer.pad_token_id,
+                                       self.tokenizer.eos_token_id])
+            subword_mask = ~(np.isin(subwords_batches, special_tokens))
 
-        out = out['last_hidden_state']
+            subwords_batches_tensor = torch.tensor(subwords_batches,
+                                                   device=self.config.device,
+                                                   dtype=torch.long)
+            subword_mask_tensor = torch.tensor(subword_mask,
+                                               device=self.config.device)
 
-        # [n_subwords, bert_emb]
-        return out[subword_mask_tensor]
+            # Obtain bert output for selected batches only
+            attention_mask = (subwords_batches != self.tokenizer.pad_token_id)
+            if "t5" in self.config.bert_model:
+                out = self.bert.encoder(
+                        input_ids=subwords_batches_tensor,
+                        attention_mask=torch.tensor(
+                            attention_mask, device=self.config.device))
+            else:
+                out = self.bert(
+                        subwords_batches_tensor,
+                        attention_mask=torch.tensor(
+                            attention_mask, device=self.config.device))
+
+            out = out['last_hidden_state']
+            # [n_subwords, bert_emb]
+            result.append(out[subword_mask_tensor])
+
+        # stack returns and return
+        return torch.cat(result)
 
     def _build_model(self):
         self.bert, self.tokenizer = bert.load_bert(self.config)
@@ -685,7 +810,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
     def _get_docs(self, path: str) -> List[Doc]:
         if path not in self._docs:
-            self._docs[path] = self._tokenize_docs(path)
+            self._docs[path] = CorefDataset(path, self.config, self.tokenizer)
         return self._docs[path]
 
     @staticmethod
@@ -732,38 +857,3 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         for module in self.trainable.values():
             module.train(self._training)
 
-    def _tokenize_docs(self, path: str) -> List[Doc]:
-        logger.debug(f"Tokenizing documents at {path}...", flush=True)
-        out: List[Doc] = []
-        filter_func = TOKENIZER_FILTERS.get(self.config.bert_model,
-                                            lambda _: True)
-        token_map = TOKENIZER_MAPS.get(self.config.bert_model, {})
-        try:
-            with open(path, encoding="utf-8") as fin:
-                data_f = json.load(fin)
-        except json.decoder.JSONDecodeError:
-            # read the old jsonlines format if necessary
-            with open(path, encoding="utf-8") as fin:
-                text = "[" + ",\n".join(fin) + "]"
-            data_f = json.loads(text)
-        logger.info("Loaded %d docs from %s", len(data_f), path)
-        for doc in data_f:
-            doc["span_clusters"] = [[tuple(mention) for mention in cluster]
-                               for cluster in doc["span_clusters"]]
-            word2subword = []
-            subwords = []
-            word_id = []
-            for i, word in enumerate(doc["cased_words"]):
-                tokenized_word = (token_map[word]
-                                  if word in token_map
-                                  else self.tokenizer.tokenize(word))
-                tokenized_word = list(filter(filter_func, tokenized_word))
-                word2subword.append((len(subwords), len(subwords) + len(tokenized_word)))
-                subwords.extend(tokenized_word)
-                word_id.extend([i] * len(tokenized_word))
-            doc["word2subword"] = word2subword
-            doc["subwords"] = subwords
-            doc["word_id"] = word_id
-            out.append(doc)
-        logger.debug("Tokenization OK", flush=True)
-        return out

@@ -26,10 +26,10 @@ class AnaphoricityScorer(torch.nn.Module):
         self.out = torch.nn.Linear(hidden_size, out_features=1)
 
     def forward(self, *,  # type: ignore  # pylint: disable=arguments-differ  #35566 in pytorch
-                all_mentions: torch.Tensor,
+                top_mentions: torch.Tensor,
                 mentions_batch: torch.Tensor,
                 pw_batch: torch.Tensor,
-                top_indices_batch: torch.Tensor,
+                # top_indices_batch: torch.Tensor,
                 top_rough_scores_batch: torch.Tensor,
                 ) -> torch.Tensor:
         """ Builds a pairwise matrix, scores the pairs and returns the scores.
@@ -45,13 +45,15 @@ class AnaphoricityScorer(torch.nn.Module):
             torch.Tensor [batch_size, n_ants + 1]
                 anaphoricity scores for the pairs + a dummy column
         """
+        # t = torch.cuda.get_device_properties(0).total_memory
+        # a = torch.cuda.memory_allocated(0)
+        # print((t-a)*1e-9)
         # [batch_size, n_ants, pair_emb]
-        pair_matrix = self._get_pair_matrix(
-            all_mentions, mentions_batch, pw_batch, top_indices_batch)
+        pair_matrix = self._get_pair_matrix(mentions_batch, pw_batch, top_mentions)
 
         # [batch_size, n_ants]
         scores = self._ffnn(pair_matrix)
-        scores = utils.add_dummy(scores+top_rough_scores_batch.detach(), eps=True)
+        scores = utils.add_dummy(scores+top_rough_scores_batch, eps=True)
 
         return scores
 
@@ -69,11 +71,9 @@ class AnaphoricityScorer(torch.nn.Module):
         return x.squeeze(2)
 
     @staticmethod
-    def _get_pair_matrix(all_mentions: torch.Tensor,
-                         mentions_batch: torch.Tensor,
+    def _get_pair_matrix(mentions_batch: torch.Tensor,
                          pw_batch: torch.Tensor,
-                         top_indices_batch: torch.Tensor,
-                         ) -> torch.Tensor:
+                         top_mentions: torch.Tensor) -> torch.Tensor:
         """
         Builds the matrix used as input for AnaphoricityScorer.
 
@@ -97,7 +97,7 @@ class AnaphoricityScorer(torch.nn.Module):
         n_ants = pw_batch.shape[1]
 
         a_mentions = mentions_batch.unsqueeze(1).expand(-1, n_ants, emb_size)
-        b_mentions = all_mentions[top_indices_batch]
+        b_mentions = top_mentions
         similarity = a_mentions * b_mentions
 
         out = torch.cat((a_mentions, b_mentions, similarity, pw_batch), dim=2)

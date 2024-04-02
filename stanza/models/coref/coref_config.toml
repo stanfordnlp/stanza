@@ -11,13 +11,21 @@ data_dir = "data/coref"
 save_dir = "saved_models/coref"
 
 # Train, dev and test jsonlines
-train_data = "data/coref/en_gum-ud.train.nosgl.json"
-dev_data = "data/coref/en_gum-ud.dev.nosgl.json"
-test_data = "data/coref/en_gum-ud.test.nosgl.json"
+#train_data = "data/coref/huge.json"
+#dev_data = "data/coref/huge.json"
+#test_data = "data/coref/huge.json"
+
+#train_data = "data/coref/en_gum-ud.train.nosgl.json"
+#dev_data = "data/coref/en_gum-ud.dev.nosgl.json"
+#test_data = "data/coref/en_gum-ud.test.nosgl.json"
 
 #train_data = "data/coref/corefud_concat_short_v1_0.train.json"
 #dev_data = "data/coref/corefud_concat_short_v1_0.dev.json"
 #test_data = "data/coref/corefud_concat_short_v1_0.dev.json"
+
+train_data = "data/coref/corefud_concat_v1_0.train.json"
+dev_data = "data/coref/corefud_concat_v1_0.dev.json"
+test_data = "data/coref/corefud_concat_v1_0.dev.json"
 
 #train_data = "data/coref/english_train_head.jsonlines"
 #dev_data = "data/coref/english_development_head.jsonlines"
@@ -42,6 +50,11 @@ bert_model = "bert-large-cased"
 # Must be less than or equal to 512
 bert_window_size = 512
 
+# should be >=1, how many dummies to track loss per non dummy
+dummy_mix = 5.0
+
+# whether to directly supervise rough scorer
+supervise_rough = false
 
 # General model settings =============
 
@@ -96,10 +109,10 @@ dropout_rate = 0.3
 
 # Bert learning rate (only used if bert_finetune is set)
 bert_learning_rate = 1e-6
-bert_finetune_begin_epoch = 0.1
+bert_finetune_begin_epoch = 0.5
 
 # Task learning rate
-learning_rate = 1e-3
+learning_rate = 3e-4
 
 # For how many epochs the training is done
 train_epochs = 32
@@ -141,9 +154,7 @@ lora_fully_tune = [ "pooler" ]
 
 [xlm_roberta_lora]
 bert_model = "FacebookAI/xlm-roberta-large"
-bert_learning_rate = 0.0001
-lora_alpha = 64
-lora_rank = 32
+bert_learning_rate = 0.000025
 lora = true
 lora_targets = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_fully_tune = [ "pooler" ]
