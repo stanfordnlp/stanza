@@ -62,4 +62,5 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
     log_norms: bool
 
     dummy_mix: float # should be >=1, how many dummies to track loss per non dummy
+    supervise_rough: bool
 

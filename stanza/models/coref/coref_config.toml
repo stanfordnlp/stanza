@@ -15,9 +15,13 @@ save_dir = "saved_models/coref"
 #dev_data = "data/coref/en_gum-ud.dev.nosgl.json"
 #test_data = "data/coref/en_gum-ud.test.nosgl.json"
 
-train_data = "data/coref/corefud_concat_short_v1_0.train.json"
-dev_data = "data/coref/corefud_concat_short_v1_0.dev.json"
-test_data = "data/coref/corefud_concat_short_v1_0.dev.json"
+#train_data = "data/coref/corefud_concat_short_v1_0.train.json"
+#dev_data = "data/coref/corefud_concat_short_v1_0.dev.json"
+#test_data = "data/coref/corefud_concat_short_v1_0.dev.json"
+
+train_data = "data/coref/corefud_concat_v1_0.train.json"
+dev_data = "data/coref/corefud_concat_v1_0.dev.json"
+test_data = "data/coref/corefud_concat_v1_0.dev.json"
 
 #train_data = "data/coref/english_train_head.jsonlines"
 #dev_data = "data/coref/english_development_head.jsonlines"
@@ -43,8 +47,10 @@ bert_model = "bert-large-cased"
 bert_window_size = 512
 
 # should be >=1, how many dummies to track loss per non dummy
-dummy_mix = 2.0
+dummy_mix = 5.0
 
+# whether to directly supervise rough scorer
+supervise_rough = true
 
 # General model settings =============
 
@@ -105,7 +111,7 @@ bert_finetune_begin_epoch = 0.5
 learning_rate = 3e-4
 
 # For how many epochs the training is done
-train_epochs = 32
+train_epochs = 8
 
 # Controls the weight of binary cross entropy loss added to nlml loss
 bce_loss_weight = 0.5

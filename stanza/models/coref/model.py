@@ -534,7 +534,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 del res
 
-                (c_loss + s_loss + r_loss*0.5).backward()
+                loss = c_loss + s_loss
+                if self.config.supervise_rough:
+                    loss += r_loss*0.5
+                loss.backward()
 
                 running_c_loss += c_loss.item()
                 running_s_loss += s_loss.item()
