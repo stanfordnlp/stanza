@@ -154,8 +154,8 @@ class ClusterChecker:
                     deduped.append(i)
             # the "partitions" will then be size of the deduped list
             p_k = len(deduped)
-            top += (len(S) - p_k)
-            bottom += (len(S) - 1)
+            top += (S - p_k)
+            bottom += (S - 1)
 
         return top/bottom
 
