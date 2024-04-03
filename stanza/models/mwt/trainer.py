@@ -79,16 +79,10 @@ class Trainer(BaseTrainer):
             # TODO we should be able to do all this with numpy or something similar
             pred_tokens = []
             for pred_seq, text in zip(pred_seqs, orig_text):
-                if sum(1 for x in pred_seq if x != ' ') == len(text):
-                    new_prediction = []
-                    text_idx = 0
-                    for pred_idx, pred_char in enumerate(pred_seq):
-                        if pred_char == ' ':
-                            new_prediction.append(pred_char)
-                        else:
-                            new_prediction.append(text[text_idx])
-                            text_idx += 1
-                    pred_tokens.append("".join(new_prediction))
+                pred_seq = np.array(list(pred_seq))
+                if sum(pred_seq != ' ') == len(text):
+                    pred_seq[pred_seq != ' '] = list(text)
+                    pred_tokens.append("".join(pred_seq))
                 else:
                     pred_tokens.append("".join(pred_seq))
         else:
