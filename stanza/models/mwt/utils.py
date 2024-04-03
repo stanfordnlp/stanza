@@ -4,6 +4,19 @@ from stanza.models.common import doc
 from stanza.models.tokenization.data import TokenizationDataset
 from stanza.models.tokenization.utils import predict, decode_predictions
 
+def mwts_composed_of_words(doc):
+    """
+    Return True/False if the MWTs in the doc are all exactly composed of the text in their words
+    """
+    for sent_idx, sentence in enumerate(doc.sentences):
+        for token_idx, token in enumerate(sentence.tokens):
+            if len(token.words) > 1:
+                expected = "".join(x.text for x in token.words)
+                if token.text != expected:
+                    return False
+    return True
+
+
 def resplit_mwt(tokens, pipeline, keep_tokens=True):
     """
     Uses the tokenize processor and the mwt processor in the pipeline to resplit tokens into MWT
