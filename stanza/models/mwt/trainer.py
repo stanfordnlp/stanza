@@ -21,8 +21,9 @@ logger = logging.getLogger('stanza')
 def unpack_batch(batch, device):
     """ Unpack a batch from the data loader. """
     inputs = [b.to(device) if b is not None else None for b in batch[:4]]
-    orig_idx = batch[4]
-    return inputs, orig_idx
+    orig_text = batch[4]
+    orig_idx = batch[5]
+    return inputs, orig_text, orig_idx
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
@@ -42,7 +43,10 @@ class Trainer(BaseTrainer):
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
-        inputs, orig_idx = unpack_batch(batch, device)
+        # ignore the original text when training
+        # can try to learn the correct values, even if we eventually
+        # copy directly from the original text
+        inputs, _, orig_idx = unpack_batch(batch, device)
         src, src_mask, tgt_in, tgt_out = inputs
 
         if eval:
@@ -63,7 +67,7 @@ class Trainer(BaseTrainer):
 
     def predict(self, batch, unsort=True):
         device = next(self.model.parameters()).device
-        inputs, orig_idx = unpack_batch(batch, device)
+        inputs, orig_text, orig_idx = unpack_batch(batch, device)
         src, src_mask, tgt, tgt_mask = inputs
 
         self.model.eval()
