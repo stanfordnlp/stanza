@@ -75,7 +75,24 @@ class Trainer(BaseTrainer):
         preds, _ = self.model.predict(src, src_mask, self.args['beam_size'])
         pred_seqs = [self.vocab.unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
-        pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
+        if self.args.get('force_exact_pieces', False):
+            # TODO we should be able to do all this with numpy or something similar
+            pred_tokens = []
+            for pred_seq, text in zip(pred_seqs, orig_text):
+                if sum(1 for x in pred_seq if x != ' ') == len(text):
+                    new_prediction = []
+                    text_idx = 0
+                    for pred_idx, pred_char in enumerate(pred_seq):
+                        if pred_char == ' ':
+                            new_prediction.append(pred_char)
+                        else:
+                            new_prediction.append(text[text_idx])
+                            text_idx += 1
+                    pred_tokens.append("".join(new_prediction))
+                else:
+                    pred_tokens.append("".join(pred_seq))
+        else:
+            pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
         if unsort:
             pred_tokens = utils.unsort(pred_tokens, orig_idx)
         return pred_tokens
