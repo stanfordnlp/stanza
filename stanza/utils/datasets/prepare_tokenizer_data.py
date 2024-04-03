@@ -142,7 +142,7 @@ def main(args):
         print('MWTs:', mwts)
     else:
         with open(args.mwt_output, 'w') as f:
-            json.dump(list(mwts.items()), f)
+            json.dump(list(mwts.items()), f, indent=2)
 
         status_line = status_line + '{} unique MWTs found in data.  MWTs written to {}'.format(len(mwts), args.mwt_output)
         print(status_line)
