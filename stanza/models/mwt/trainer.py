@@ -111,16 +111,39 @@ class Trainer(BaseTrainer):
             seen.add(w)
         return
 
+    def dict_expansion(self, word):
+        """
+        Check the expansion dictionary for the word along with a couple common lowercasings of the word
+
+        (Leadingcase and UPPERCASE)
+        """
+        expansion = self.expansion_dict.get(word)
+        if expansion is not None:
+            return expansion
+
+        if word.isupper():
+            expansion = self.expansion_dict.get(word.lower())
+            if expansion is not None:
+                return expansion.upper()
+
+        if word[0].isupper() and word[1:].islower():
+            expansion = self.expansion_dict.get(word.lower())
+            if expansion is not None:
+                return expansion[0].upper() + expansion[1:]
+
+        # could build a truecasing model of some kind to handle cRaZyCaSe...
+        # but that's probably too much effort
+        return None
+
     def predict_dict(self, words):
         """ Predict a list of expansions given words. """
         expansions = []
         for w in words:
-            if w in self.expansion_dict:
-                expansions += [self.expansion_dict[w]]
-            elif w.lower() in self.expansion_dict:
-                expansions += [self.expansion_dict[w.lower()]]
+            expansion = self.dict_expansion(w)
+            if expansion is not None:
+                expansions.append(expansion)
             else:
-                expansions += [w]
+                expansions.append(w)
         return expansions
 
     def ensemble(self, cands, other_preds):
@@ -128,12 +151,11 @@ class Trainer(BaseTrainer):
         expansions = []
         assert len(cands) == len(other_preds)
         for c, pred in zip(cands, other_preds):
-            if c in self.expansion_dict:
-                expansions += [self.expansion_dict[c]]
-            elif c.lower() in self.expansion_dict:
-                expansions += [self.expansion_dict[c.lower()]]
+            expansion = self.dict_expansion(c)
+            if expansion is not None:
+                expansions.append(expansion)
             else:
-                expansions += [pred]
+                expansions.append(pred)
         return expansions
 
     def save(self, filename):
