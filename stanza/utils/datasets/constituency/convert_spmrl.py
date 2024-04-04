@@ -7,6 +7,12 @@ from stanza.utils.default_paths import get_default_paths
 SHARDS = ("train", "dev", "test")
 
 def add_root(tree):
+    if tree.label.startswith("NN"):
+        tree = Tree("NP", tree)
+    if tree.label.startswith("NE"):
+        tree = Tree("PN", tree)
+    elif tree.label.startswith("XY"):
+        tree = Tree("VROOT", tree)
     return Tree("ROOT", tree)
 
 def convert_spmrl(input_directory, output_directory, short_name):
