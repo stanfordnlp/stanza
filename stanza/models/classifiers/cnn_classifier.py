@@ -96,6 +96,7 @@ class CNNClassifier(BaseClassifier):
                                       elmo_projection = args.elmo_projection,
                                       bert_model = args.bert_model,
                                       bert_finetune = bert_finetune,
+                                      bert_hidden_layers = getattr(args, 'bert_hidden_layers', None),
                                       force_bert_saved = force_bert_saved,
 
                                       use_peft = use_peft,
@@ -217,6 +218,20 @@ class CNNClassifier(BaseClassifier):
                 total_embedding_dim = total_embedding_dim + elmo_dim
 
         if bert_model is not None:
+            if self.config.bert_hidden_layers:
+                # The average will be offset by 1/N so that the default zeros
+                # repressents an average of the N layers
+                if self.config.bert_hidden_layers > bert_model.config.num_hidden_layers:
+                    # limit ourselves to the number of layers actually available
+                    # note that we can +1 because of the initial embedding layer
+                    self.config.bert_hidden_layers = bert_model.config.num_hidden_layers + 1
+                self.bert_layer_mix = nn.Linear(self.config.bert_hidden_layers, 1, bias=False)
+                nn.init.zeros_(self.bert_layer_mix.weight)
+            else:
+                # an average of layers 2, 3, 4 will be used
+                # (for historic reasons)
+                self.bert_layer_mix = None
+
             if bert_tokenizer is None:
                 raise ValueError("Cannot have a bert model without a tokenizer")
             self.bert_dim = self.bert_model.config.hidden_size
@@ -313,7 +328,15 @@ class CNNClassifier(BaseClassifier):
         return char_inputs
 
     def extract_bert_embeddings(self, inputs, max_phrase_len, begin_paddings, device):
-        bert_embeddings = extract_bert_embeddings(self.config.bert_model, self.bert_tokenizer, self.bert_model, inputs, device, keep_endpoints=False, detach=not self.config.bert_finetune)
+        bert_embeddings = extract_bert_embeddings(self.config.bert_model, self.bert_tokenizer, self.bert_model, inputs, device,
+                                                  keep_endpoints=False,
+                                                  num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
+                                                  detach=not self.config.bert_finetune)
+        if self.bert_layer_mix is not None:
+            # add the average so that the default behavior is to
+            # take an average of the N layers, and anything else
+            # other than that needs to be learned
+            bert_embeddings = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in bert_embeddings]
         bert_inputs = torch.zeros((len(inputs), max_phrase_len, bert_embeddings[0].shape[-1]), device=device)
         for idx, rep in enumerate(bert_embeddings):
             start = begin_paddings[idx]
