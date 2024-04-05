@@ -175,6 +175,19 @@ class TestClassifier:
         assert saved_model['params']['config'].force_bert_saved
         assert any(x.startswith("bert_model") for x in saved_model['params']['model'].keys())
 
+    def test_finetune_bert_layers(self, tmp_path, fake_embeddings, train_file, dev_file):
+        """
+        Test on a tiny Bert WITH finetuning, which hopefully does not take up too much disk space or memory, using 2 layers
+        """
+        bert_model = "hf-internal-testing/tiny-bert"
+
+        trainer, save_filename = self.run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20", "--bert_model", bert_model, "--bert_finetune", "--bert_hidden_layers", "2"])
+        assert os.path.exists(save_filename)
+        saved_model = torch.load(save_filename, lambda storage, loc: storage)
+        # after finetuning the bert model, make sure that the save file DOES contain parts of the transformer
+        assert saved_model['params']['config'].force_bert_saved
+        assert any(x.startswith("bert_model") for x in saved_model['params']['model'].keys())
+
     def test_finetune_peft(self, tmp_path, fake_embeddings, train_file, dev_file):
         """
         Test on a tiny Bert with PEFT finetuning
