@@ -17,7 +17,6 @@ from stanza.models.classifiers.utils import ExtraVectors, ModelType, build_outpu
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
 from stanza.models.common.foundation_cache import load_bert
-from stanza.models.common.peft_config import build_peft_wrapper
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 
 """
@@ -133,7 +132,6 @@ class CNNClassifier(BaseClassifier):
                 raise ValueError("Got a forward charlm as a backward charlm!")
 
         if self.config.use_peft:
-            bert_model = build_peft_wrapper(bert_model, vars(self.config), tlogger)
             # we use a peft-specific pathway for saving peft weights
             self.add_unsaved_module('bert_model', bert_model)
             self.bert_model.train()
@@ -536,7 +534,7 @@ class CNNClassifier(BaseClassifier):
         if self.config.use_peft:
             # Hide import so that peft dependency is optional
             from peft import get_peft_model_state_dict
-            params["bert_lora"] = get_peft_model_state_dict(self.bert_model)
+            params["bert_lora"] = get_peft_model_state_dict(self.bert_model, adapter_name="sentiment")
         return params
 
     def preprocess_data(self, sentences):
