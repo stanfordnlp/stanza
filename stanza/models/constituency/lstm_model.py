@@ -38,7 +38,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.maxout_linear import MaxoutLinear
-from stanza.models.common.utils import unsort
+from stanza.models.common.utils import attach_bert_model, unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
 from stanza.models.constituency.label_attention import LabelAttentionModule
@@ -351,20 +351,9 @@ class LSTMModel(BaseModel, nn.Module):
         # we set up the bert AFTER building word_start and word_end
         # so that we can use the charlm endpoint values rather than
         # try to train our own
-        self.force_bert_saved = force_bert_saved
-        if self.args.get('use_peft', False):
-            # we use a peft-specific pathway for saving peft weights
-            self.add_unsaved_module('bert_model', bert_model)
-            self.bert_model.train()
-        elif self.args['bert_finetune'] or self.args['stage1_bert_finetune'] or force_bert_saved:
-            self.bert_model = bert_model
-        elif bert_model is not None:
-            self.add_unsaved_module('bert_model', bert_model)
-            for _, parameter in bert_model.named_parameters():
-                parameter.requires_grad = False
-        else:
-            self.bert_model = None
-        self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
+        self.force_bert_saved = force_bert_saved or self.args['bert_finetune'] or self.args['stage1_bert_finetune']
+        attach_bert_model(self, bert_model, bert_tokenizer, self.args.get('use_peft', False), self.force_bert_saved)
+
         if bert_model is not None:
             if bert_tokenizer is None:
                 raise ValueError("Cannot have a bert model without a tokenizer")

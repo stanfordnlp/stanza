@@ -786,3 +786,17 @@ def log_norms(model):
         lines.append(line_format % line)
     logger.info("\n".join(lines))
 
+def attach_bert_model(model, bert_model, bert_tokenizer, use_peft, force_bert_saved):
+    if use_peft:
+        # we use a peft-specific pathway for saving peft weights
+        model.add_unsaved_module('bert_model', bert_model)
+        model.bert_model.train()
+    elif force_bert_saved:
+        model.bert_model = bert_model
+    elif bert_model is not None:
+        model.add_unsaved_module('bert_model', bert_model)
+        for _, parameter in bert_model.named_parameters():
+            parameter.requires_grad = False
+    else:
+        model.bert_model = None
+    model.add_unsaved_module('bert_tokenizer', bert_tokenizer)
