@@ -17,6 +17,7 @@ from stanza.models.classifiers.utils import ExtraVectors, ModelType, build_outpu
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
 from stanza.models.common.foundation_cache import load_bert
+from stanza.models.common.utils import attach_bert_model
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 
 """
@@ -131,15 +132,7 @@ class CNNClassifier(BaseClassifier):
             if charmodel_backward.is_forward_lm:
                 raise ValueError("Got a forward charlm as a backward charlm!")
 
-        if self.config.use_peft:
-            # we use a peft-specific pathway for saving peft weights
-            self.add_unsaved_module('bert_model', bert_model)
-            self.bert_model.train()
-        elif force_bert_saved:
-            self.bert_model = bert_model
-        else:
-            self.add_unsaved_module('bert_model', bert_model)
-        self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
+        attach_bert_model(self, bert_model, bert_tokenizer, self.config.use_peft, force_bert_saved)
 
         # The Pretrain has PAD and UNK already (indices 0 and 1), but we
         # possibly want to train UNK while freezing the rest of the embedding
