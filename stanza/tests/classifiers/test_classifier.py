@@ -263,3 +263,55 @@ class TestClassifier:
         # anything correct
         pipeline = stanza.Pipeline("en", download_method=None, model_dir=TEST_MODELS_DIR, processors="tokenize,sentiment", sentiment_model_path=save_filename, sentiment_pretrain_path=str(fake_embeddings))
         doc = pipeline("This is a test")
+
+    def test_finetune_peft_restart(self, tmp_path, fake_embeddings, train_file, dev_file):
+        """
+        Test that if we restart training on a peft model, the peft weights change
+        """
+        bert_model = "hf-internal-testing/tiny-bert"
+
+        trainer, save_file, checkpoint_file = self.run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20", "--bert_model", bert_model, "--bert_finetune", "--use_peft", "--lora_modules_to_save", "pooler", "--save_intermediate_models"])
+
+        assert os.path.exists(save_file)
+        saved_model = torch.load(save_file, lambda storage, loc: storage)
+        assert any(x.find(".encoder.") >= 0 for x in saved_model['params']['bert_lora'])
+
+
+        trainer, save_file, checkpoint_file = self.run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20", "--bert_model", bert_model, "--bert_finetune", "--use_peft", "--lora_modules_to_save", "pooler", "--save_intermediate_models", "--max_epochs", "5"], checkpoint_file=checkpoint_file)
+
+        save_path = os.path.split(save_file)[0]
+
+        initial_model_file = glob.glob(os.path.join(save_path, "*E0000*"))
+        assert len(initial_model_file) == 1
+        initial_model_file = initial_model_file[0]
+        initial_model = torch.load(initial_model_file, lambda storage, loc: storage)
+
+        second_model_file = glob.glob(os.path.join(save_path, "*E0002*"))
+        assert len(second_model_file) == 1
+        second_model_file = second_model_file[0]
+        second_model = torch.load(second_model_file, lambda storage, loc: storage)
+
+        final_model_file = glob.glob(os.path.join(save_path, "*E0005*"))
+        assert len(final_model_file) == 1
+        final_model_file = final_model_file[0]
+        final_model = torch.load(final_model_file, lambda storage, loc: storage)
+
+        # params in initial_model & second_model start with "base_model.model."
+        # whereas params in final_model start directly with "encoder" or "pooler"
+        initial_lora = initial_model['params']['bert_lora']
+        second_lora = second_model['params']['bert_lora']
+        final_lora = final_model['params']['bert_lora']
+        for side in ("_A.", "_B."):
+            for layer in (".0.", ".1."):
+                initial_params = sorted([x for x in initial_lora if x.find(".encoder.") > 0 and x.find(side) > 0 and x.find(layer) > 0])
+                second_params = sorted([x for x in second_lora if x.find(".encoder.") > 0 and x.find(side) > 0 and x.find(layer) > 0])
+                final_params = sorted([x for x in final_lora if x.startswith("encoder.") > 0 and x.find(side) > 0 and x.find(layer) > 0])
+                assert len(initial_params) > 0
+                assert len(initial_params) == len(second_params)
+                assert len(initial_params) == len(final_params)
+                for x, y in zip(second_params, final_params):
+                    assert x.endswith(y)
+                    if side != "_A.":  # the A tensors don't move very much, if at all
+                        assert not torch.allclose(initial_lora.get(x), second_lora.get(x))
+                        assert not torch.allclose(second_lora.get(x), final_lora.get(y))
+

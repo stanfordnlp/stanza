@@ -14,6 +14,7 @@ import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.constituency_classifier as constituency_classifier
 from stanza.models.classifiers.utils import ModelType
 from stanza.models.common.foundation_cache import load_bert, load_bert_copy, load_charlm, load_pretrain
+from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.common.pretrain import Pretrain
 from stanza.models.common.utils import get_split_optimizer
 from stanza.models.constituency.tree_embedding import TreeEmbedding
@@ -118,6 +119,7 @@ class Trainer:
                 # after creating the CNNClassifier with the peft wrapper,
                 # we *then* load the weights
                 bert_model, bert_tokenizer = load_bert_copy(bert_model, foundation_cache)
+                bert_model = load_peft_wrapper(bert_model, model_params['bert_lora'], vars(model_params['config']), logger, "sentiment")
             elif force_bert_saved:
                 bert_model, bert_tokenizer = load_bert(bert_model)
             else:
@@ -147,15 +149,6 @@ class Trainer:
         else:
             raise ValueError("Unknown model type {}".format(model_type))
         model.load_state_dict(model_params['model'], strict=False)
-        if use_peft:
-            # hide import so that the peft dependency is optional
-            from peft import set_peft_model_state_dict
-            # we do the peft loading after the rest of the model
-            # loading - there seems to be something in the
-            # load_state_dict which clobbers the peft scores
-            # otherwise.  probably we should be filtering those from
-            # the model files to keep the size smaller
-            set_peft_model_state_dict(model.bert_model, model_params['bert_lora'])
         model = model.to(args.device)
 
         logger.debug("-- MODEL CONFIG --")
@@ -217,6 +210,10 @@ class Trainer:
             charmodel_forward = load_charlm(args.charlm_forward_file)
             charmodel_backward = load_charlm(args.charlm_backward_file)
             bert_model, bert_tokenizer = load_bert(args.bert_model)
+
+            use_peft = getattr(args, "use_peft", False)
+            if use_peft:
+                bert_model = build_peft_wrapper(bert_model, vars(args), logger, adapter_name="sentiment")
 
             extra_vocab = data.dataset_vocab(train_set)
             force_bert_saved = args.bert_finetune
