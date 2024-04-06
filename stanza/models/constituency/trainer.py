@@ -26,6 +26,7 @@ from stanza.models.common import pretrain
 from stanza.models.common import utils
 from stanza.models.common.foundation_cache import load_bert, load_bert_copy, load_charlm, load_pretrain, FoundationCache, NoTransformerFoundationCache
 from stanza.models.common.large_margin_loss import LargeMarginInSoftmaxLoss
+from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
@@ -79,7 +80,7 @@ class Trainer:
         if self.model.args.get('use_peft', False):
             # Hide import so that peft dependency is optional
             from peft import get_peft_model_state_dict
-            checkpoint["bert_lora"] = get_peft_model_state_dict(self.model.bert_model)
+            checkpoint["bert_lora"] = get_peft_model_state_dict(self.model.bert_model, adapter_name="constituency")
         if save_optimizer and self.optimizer is not None:
             checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
             checkpoint['scheduler_state_dict'] = self.scheduler.state_dict()
@@ -134,7 +135,7 @@ class Trainer:
             return load_charlm(charlm_file, foundation_cache)
 
     @staticmethod
-    def model_from_params(params, args, foundation_cache=None):
+    def model_from_params(params, peft_params, args, foundation_cache=None):
         """
         Build a new model just from the saved params and some extra args
 
@@ -146,6 +147,7 @@ class Trainer:
         # reloaded from disk
         if args is None: args = {}
         update_args = copy.deepcopy(args)
+        # TODO: pop all the peft args as well
         update_args.pop("bert_hidden_layers", None)
         update_args.pop("constituency_composition", None)
         update_args.pop("constituent_stack", None)
@@ -177,10 +179,9 @@ class Trainer:
             pt = Trainer.find_and_load_pretrain(saved_args, foundation_cache)
             if saved_args.get('use_peft', False):
                 # if loading a peft model, we first load the base transformer
-                # the conparse trainer code wraps the transformer in peft
-                # after creating the conparser with the peft wrapper,
-                # we *then* load the weights
+                # then we load the weights using the saved weights in the file
                 bert_model, bert_tokenizer = load_bert_copy(saved_args.get('bert_model', None), foundation_cache)
+                bert_model = load_peft_wrapper(bert_model, peft_params, saved_args, logger, "constituency")
                 bert_saved = True
             elif saved_args['bert_finetune'] or saved_args['stage1_bert_finetune'] or any(x.startswith("bert_model.") for x in params['model'].keys()):
                 # if bert_finetune is True, don't use the cached model!
@@ -235,11 +236,7 @@ class Trainer:
         logger.debug("Loaded model from %s", filename)
 
         params = checkpoint['params']
-        model = Trainer.model_from_params(params, args, foundation_cache)
-        if model.args.get('use_peft', False):
-            # hide import so that the peft dependency is optional
-            from peft import set_peft_model_state_dict
-            set_peft_model_state_dict(model.bert_model, checkpoint['bert_lora'])
+        model = Trainer.model_from_params(params, checkpoint.get('bert_lora', None), args, foundation_cache)
 
         epochs_trained = checkpoint['epochs_trained']
         batches_trained = checkpoint.get('batches_trained', 0)
@@ -487,7 +484,10 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
             temp_args['lattn_d_proj'] = 0
             args = temp_args
 
-        if args['bert_finetune'] or args['stage1_bert_finetune']:
+        if args['use_peft']:
+            bert_model, bert_tokenizer = load_bert_copy(args['bert_model'], foundation_cache)
+            bert_model = build_peft_wrapper(bert_model, temp_args, tlogger, adapter_name="constituency")
+        elif args['bert_finetune'] or args['stage1_bert_finetune']:
             bert_model, bert_tokenizer = load_bert(args['bert_model'])
         else:
             bert_model, bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
@@ -798,7 +798,11 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             pt = foundation_cache.load_pretrain(args['wordvec_pretrain_file'])
             forward_charlm = foundation_cache.load_charlm(args['charlm_forward_file'])
             backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
-            bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
+            if args['use_peft']:
+                bert_model, bert_tokenizer = foundation_cache.load_bert_copy(args['bert_model'])
+                bert_model = build_peft_wrapper(bert_model, temp_args, tlogger, adapter_name="constituency")
+            else:
+                bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
             new_model = LSTMModel(pt,
                                   forward_charlm,
                                   backward_charlm,
