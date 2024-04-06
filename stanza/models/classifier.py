@@ -511,6 +511,10 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
         current_lr = opt.param_groups[0]['lr']
         logger.info("optimizer %s learning rate: %s", opt_name, current_lr)
 
+    # if this is a brand new training run, and we're saving all intermediate models, save the start model as well
+    if args.save_intermediate_models and trainer.epochs_trained == 0:
+        intermediate_file = intermediate_name(model_file, trainer.epochs_trained, args.dev_eval_scoring, 0.0)
+        trainer.save(intermediate_file, save_optimizer=False)
     for trainer.epochs_trained in range(trainer.epochs_trained, args.max_epochs):
         running_loss = 0.0
         epoch_loss = 0.0
