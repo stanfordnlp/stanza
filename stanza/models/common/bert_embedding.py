@@ -404,6 +404,9 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     if "xlnet" in model_name:
         return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
 
+    return extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+
+def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach):
     data = fix_blank_tokens(tokenizer, data)
 
     #add add_prefix_space = True for RoBerTa-- error if not
