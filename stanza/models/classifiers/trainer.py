@@ -142,6 +142,7 @@ class Trainer:
                 'charlm_forward_file': args.charlm_forward_file,
                 'charlm_backward_file': args.charlm_backward_file,
             }
+            # TODO: integrate with peft for the constituency version
             tree_embedding = TreeEmbedding.model_from_params(model_params['tree_embedding'], pretrain_args, foundation_cache)
             model = constituency_classifier.ConstituencyClassifier(tree_embedding=tree_embedding,
                                                                    labels=model_params['labels'],

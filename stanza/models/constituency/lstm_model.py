@@ -38,7 +38,6 @@ from torch.nn.utils.rnn import pack_padded_sequence
 
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.maxout_linear import MaxoutLinear
-from stanza.models.common.peft_config import build_peft_wrapper
 from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
@@ -354,7 +353,6 @@ class LSTMModel(BaseModel, nn.Module):
         # try to train our own
         self.force_bert_saved = force_bert_saved
         if self.args.get('use_peft', False):
-            bert_model = build_peft_wrapper(bert_model, self.args, tlogger)
             # we use a peft-specific pathway for saving peft weights
             self.add_unsaved_module('bert_model', bert_model)
             self.bert_model.train()
@@ -616,7 +614,10 @@ class LSTMModel(BaseModel, nn.Module):
                 new_values[..., :copy_size] = other_parameter.data[..., :copy_size]
                 my_parameter.data.copy_(new_values)
             else:
-                self.get_parameter(name).data.copy_(other_parameter.data)
+                try:
+                    self.get_parameter(name).data.copy_(other_parameter.data)
+                except AttributeError as e:
+                    raise AttributeError("Could not process %s" % name) from e
 
     def build_output_layers(self, num_output_layers, final_layer_size, maxout_k):
         """
