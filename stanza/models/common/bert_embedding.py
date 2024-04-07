@@ -427,13 +427,22 @@ def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_end
 
     return processed
 
-def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers=None, detach=True):
+def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers=None, detach=True, peft_name=None):
     """
     Extract transformer embeddings using a generic roberta extraction
 
     data: list of list of string (the text tokens)
     num_layers: how many to return.  If None, the average of -2, -3, -4 is returned
     """
+    # TODO: can maybe cache this value for a model and save some time
+    # TODO: too bad it isn't thread safe, but then again, who does?
+    if peft_name is None:
+        if model._hf_peft_config_loaded:
+            model.disable_adapters()
+    else:
+        model.enable_adapters()
+        model.set_adapter(peft_name)
+
     if model_name.startswith("vinai/phobert"):
         return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
 

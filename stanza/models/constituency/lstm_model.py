@@ -211,7 +211,7 @@ class ConstituencyComposition(Enum):
     UNTIED_KEY            = 10
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, force_bert_saved, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
+    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, force_bert_saved, peft_name, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
         """
         pretrain: a Pretrain object
         transitions: a list of all possible transitions which will be
@@ -353,6 +353,7 @@ class LSTMModel(BaseModel, nn.Module):
         # try to train our own
         self.force_bert_saved = force_bert_saved or self.args['bert_finetune'] or self.args['stage1_bert_finetune']
         attach_bert_model(self, bert_model, bert_tokenizer, self.args.get('use_peft', False), self.force_bert_saved)
+        self.peft_name = peft_name
 
         if bert_model is not None:
             if bert_tokenizer is None:
@@ -751,7 +752,8 @@ class LSTMModel(BaseModel, nn.Module):
             bert_embeddings = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, all_word_labels, device,
                                                       keep_endpoints=self.sentence_boundary_vectors is not SentenceBoundary.NONE,
                                                       num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
-                                                      detach=not self.args['bert_finetune'] and not self.args['stage1_bert_finetune'])
+                                                      detach=not self.args['bert_finetune'] and not self.args['stage1_bert_finetune'],
+                                                      peft_name=self.peft_name)
             if self.bert_layer_mix is not None:
                 # add the average so that the default behavior is to
                 # take an average of the N layers, and anything else
