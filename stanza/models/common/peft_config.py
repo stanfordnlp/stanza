@@ -80,12 +80,24 @@ def build_peft_wrapper(bert_model, args, logger, adapter_name="default"):
     from peft import get_peft_model
     peft_config = build_peft_config(args, logger)
 
-    bert_model = get_peft_model(bert_model, peft_config, adapter_name=adapter_name)
-    return bert_model
+    pefted = get_peft_model(bert_model, peft_config, adapter_name=adapter_name)
+    # apparently get_peft_model doesn't actually mark that
+    # peft configs are loaded, making it impossible to turn off (or on)
+    # the peft adapter later
+    bert_model._hf_peft_config_loaded = True
+    pefted._hf_peft_config_loaded = True
+    pefted.set_adapter(adapter_name)
+    return pefted
 
 def load_peft_wrapper(bert_model, lora_params, args, logger, adapter_name):
     peft_config = build_peft_config(args, logger)
 
-    bert_model.load_adapter(adapter_name=adapter_name, peft_config=peft_config, adapter_state_dict=lora_params)
+    try:
+        bert_model.load_adapter(adapter_name=adapter_name, peft_config=peft_config, adapter_state_dict=lora_params)
+    except ValueError:
+        from peft import set_peft_model_state_dict
+        # this can happen if the adapter already exists...
+        # in that case, try setting the adapter weights?
+        set_peft_model_state_dict(bert_model, lora_params, adapter_name=adapter_name)
     bert_model.set_adapter(adapter_name)
     return bert_model

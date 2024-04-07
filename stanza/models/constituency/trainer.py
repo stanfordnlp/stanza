@@ -24,7 +24,7 @@ from torch import nn
 
 from stanza.models.common import pretrain
 from stanza.models.common import utils
-from stanza.models.common.foundation_cache import load_bert, load_bert_copy, load_charlm, load_pretrain, FoundationCache, NoTransformerFoundationCache
+from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, load_charlm, load_pretrain, FoundationCache, NoTransformerFoundationCache
 from stanza.models.common.large_margin_loss import LargeMarginInSoftmaxLoss
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.constituency import parse_transitions
@@ -80,7 +80,7 @@ class Trainer:
         if self.model.args.get('use_peft', False):
             # Hide import so that peft dependency is optional
             from peft import get_peft_model_state_dict
-            checkpoint["bert_lora"] = get_peft_model_state_dict(self.model.bert_model, adapter_name="constituency")
+            checkpoint["bert_lora"] = get_peft_model_state_dict(self.model.bert_model, adapter_name=self.model.peft_name)
         if save_optimizer and self.optimizer is not None:
             checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
             checkpoint['scheduler_state_dict'] = self.scheduler.state_dict()
@@ -135,7 +135,7 @@ class Trainer:
             return load_charlm(charlm_file, foundation_cache)
 
     @staticmethod
-    def model_from_params(params, peft_params, args, foundation_cache=None):
+    def model_from_params(params, peft_params, args, foundation_cache=None, peft_name=None):
         """
         Build a new model just from the saved params and some extra args
 
@@ -180,8 +180,11 @@ class Trainer:
             if saved_args.get('use_peft', False):
                 # if loading a peft model, we first load the base transformer
                 # then we load the weights using the saved weights in the file
-                bert_model, bert_tokenizer = load_bert_copy(saved_args.get('bert_model', None), foundation_cache)
-                bert_model = load_peft_wrapper(bert_model, peft_params, saved_args, logger, "constituency")
+                if peft_name is None:
+                    bert_model, bert_tokenizer, peft_name = load_bert_with_peft(saved_args.get('bert_model', None), "constituency", foundation_cache)
+                else:
+                    bert_model, bert_tokenizer = load_bert(saved_args.get('bert_model', None), foundation_cache)
+                bert_model = load_peft_wrapper(bert_model, peft_params, saved_args, logger, peft_name)
                 bert_saved = True
             elif saved_args['bert_finetune'] or saved_args['stage1_bert_finetune'] or any(x.startswith("bert_model.") for x in params['model'].keys()):
                 # if bert_finetune is True, don't use the cached model!
@@ -199,6 +202,7 @@ class Trainer:
                               bert_model=bert_model,
                               bert_tokenizer=bert_tokenizer,
                               force_bert_saved=bert_saved,
+                              peft_name=peft_name,
                               transitions=params['transitions'],
                               constituents=params['constituents'],
                               tags=params['tags'],
@@ -217,7 +221,7 @@ class Trainer:
         return model
 
     @staticmethod
-    def load(filename, args=None, load_optimizer=False, foundation_cache=None):
+    def load(filename, args=None, load_optimizer=False, foundation_cache=None, peft_name=None):
         """
         Load back a model and possibly its optimizer.
         """
@@ -236,7 +240,7 @@ class Trainer:
         logger.debug("Loaded model from %s", filename)
 
         params = checkpoint['params']
-        model = Trainer.model_from_params(params, checkpoint.get('bert_lora', None), args, foundation_cache)
+        model = Trainer.model_from_params(params, checkpoint.get('bert_lora', None), args, foundation_cache, peft_name)
 
         epochs_trained = checkpoint['epochs_trained']
         batches_trained = checkpoint.get('batches_trained', 0)
@@ -458,6 +462,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
                           trainer.model.bert_model,
                           trainer.model.bert_tokenizer,
                           trainer.model.force_bert_saved,
+                          trainer.model.peft_name,
                           trainer.model.transitions,
                           trainer.model.constituents,
                           trainer.model.tags,
@@ -484,9 +489,11 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
             temp_args['lattn_d_proj'] = 0
             args = temp_args
 
+        peft_name = None
         if args['use_peft']:
+            peft_name = "constituency"
             bert_model, bert_tokenizer = load_bert(args['bert_model'])
-            bert_model = build_peft_wrapper(bert_model, temp_args, tlogger, adapter_name="constituency")
+            bert_model = build_peft_wrapper(bert_model, temp_args, tlogger, adapter_name=peft_name)
         elif args['bert_finetune'] or args['stage1_bert_finetune']:
             bert_model, bert_tokenizer = load_bert(args['bert_model'])
         else:
@@ -497,6 +504,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
                           bert_model,
                           bert_tokenizer,
                           False,
+                          peft_name,
                           train_transitions,
                           train_constituents,
                           tags,
@@ -812,6 +820,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
                                   model.bert_model,
                                   model.bert_tokenizer,
                                   model.force_bert_saved,
+                                  model.peft_name,
                                   model.transitions,
                                   model.constituents,
                                   model.tags,

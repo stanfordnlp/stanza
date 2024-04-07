@@ -13,7 +13,7 @@ import stanza.models.classifiers.data as data
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.constituency_classifier as constituency_classifier
 from stanza.models.classifiers.utils import ModelType
-from stanza.models.common.foundation_cache import load_bert, load_bert_copy, load_charlm, load_pretrain
+from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, load_charlm, load_pretrain
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.common.pretrain import Pretrain
 from stanza.models.common.utils import get_split_optimizer
@@ -113,13 +113,14 @@ class Trainer:
             # TODO: can get rid of the getattr after rebuilding all models
             use_peft = getattr(model_params['config'], 'use_peft', False)
             force_bert_saved = getattr(model_params['config'], 'force_bert_saved', False)
+            peft_name = None
             if use_peft:
                 # if loading a peft model, we first load the base transformer
                 # the CNNClassifier code wraps the transformer in peft
                 # after creating the CNNClassifier with the peft wrapper,
                 # we *then* load the weights
-                bert_model, bert_tokenizer = load_bert_copy(bert_model, foundation_cache)
-                bert_model = load_peft_wrapper(bert_model, model_params['bert_lora'], vars(model_params['config']), logger, "sentiment")
+                bert_model, bert_tokenizer, peft_name = load_bert_with_peft(bert_model, "classifier", foundation_cache)
+                bert_model = load_peft_wrapper(bert_model, model_params['bert_lora'], vars(model_params['config']), logger, peft_name)
             elif force_bert_saved:
                 bert_model, bert_tokenizer = load_bert(bert_model)
             else:
@@ -133,6 +134,7 @@ class Trainer:
                                                  bert_model=bert_model,
                                                  bert_tokenizer=bert_tokenizer,
                                                  force_bert_saved=force_bert_saved,
+                                                 peft_name=peft_name,
                                                  args=model_params['config'])
         elif model_type == ModelType.CONSTITUENCY:
             # the constituency version doesn't have a peft feature yet
@@ -210,11 +212,13 @@ class Trainer:
             elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
             charmodel_forward = load_charlm(args.charlm_forward_file)
             charmodel_backward = load_charlm(args.charlm_backward_file)
+            peft_name = None
             bert_model, bert_tokenizer = load_bert(args.bert_model)
 
             use_peft = getattr(args, "use_peft", False)
             if use_peft:
-                bert_model = build_peft_wrapper(bert_model, vars(args), logger, adapter_name="sentiment")
+                peft_name = "sentiment"
+                bert_model = build_peft_wrapper(bert_model, vars(args), logger, adapter_name=peft_name)
 
             extra_vocab = data.dataset_vocab(train_set)
             force_bert_saved = args.bert_finetune
@@ -227,6 +231,7 @@ class Trainer:
                                                  bert_model=bert_model,
                                                  bert_tokenizer=bert_tokenizer,
                                                  force_bert_saved=force_bert_saved,
+                                                 peft_name=peft_name,
                                                  args=args)
             model = model.to(args.device)
         elif args.model_type == ModelType.CONSTITUENCY:

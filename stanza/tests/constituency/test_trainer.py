@@ -216,7 +216,8 @@ class TestTrainer:
 
         # check that the model can be loaded back
         assert os.path.exists(args['save_name'])
-        tr = trainer.Trainer.load(args['save_name'], load_optimizer=True, foundation_cache=retag_pipeline.foundation_cache)
+        peft_name = trained_model.model.peft_name
+        tr = trainer.Trainer.load(args['save_name'], load_optimizer=True, foundation_cache=retag_pipeline.foundation_cache, peft_name=trained_model.model.peft_name)
         assert tr.optimizer is not None
         assert tr.scheduler is not None
         assert tr.epochs_trained >= 1
@@ -224,7 +225,7 @@ class TestTrainer:
             if p.requires_grad:
                 assert p._backward_hooks is None
 
-        tr = trainer.Trainer.load(args['checkpoint_save_name'], load_optimizer=True, foundation_cache=retag_pipeline.foundation_cache)
+        tr = trainer.Trainer.load(args['checkpoint_save_name'], load_optimizer=True, foundation_cache=retag_pipeline.foundation_cache, peft_name=trained_model.model.peft_name)
         assert tr.optimizer is not None
         assert tr.scheduler is not None
         assert tr.epochs_trained == num_epochs
@@ -232,7 +233,7 @@ class TestTrainer:
         for i in range(1, num_epochs+1):
             model_name = each_name % i
             assert os.path.exists(model_name)
-            tr = trainer.Trainer.load(model_name, load_optimizer=True, foundation_cache=retag_pipeline.foundation_cache)
+            tr = trainer.Trainer.load(model_name, load_optimizer=True, foundation_cache=retag_pipeline.foundation_cache, peft_name=trained_model.model.peft_name)
             assert tr.epochs_trained == i
             assert tr.batches_trained == (4 * i if use_silver else 2 * i)
 

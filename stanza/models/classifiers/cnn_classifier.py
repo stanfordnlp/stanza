@@ -54,7 +54,7 @@ tlogger = logging.getLogger('stanza.classifiers.trainer')
 
 class CNNClassifier(BaseClassifier):
     def __init__(self, pretrain, extra_vocab, labels,
-                 charmodel_forward, charmodel_backward, elmo_model, bert_model, bert_tokenizer, force_bert_saved,
+                 charmodel_forward, charmodel_backward, elmo_model, bert_model, bert_tokenizer, force_bert_saved, peft_name,
                  args):
         """
         pretrain is a pretrained word embedding.  should have .emb and .vocab
@@ -77,6 +77,9 @@ class CNNClassifier(BaseClassifier):
         use_peft = getattr(args, "use_peft", False)
         force_bert_saved = force_bert_saved or bert_finetune
         logger.debug("bert_finetune %s / force_bert_saved %s", bert_finetune, force_bert_saved)
+
+        # this may change when loaded in a new Pipeline, so it's not part of the config
+        self.peft_name = peft_name
 
         # we build a separate config out of the args so that we can easily save it in torch
         self.config = SimpleNamespace(filter_channels = args.filter_channels,
@@ -322,7 +325,8 @@ class CNNClassifier(BaseClassifier):
         bert_embeddings = extract_bert_embeddings(self.config.bert_model, self.bert_tokenizer, self.bert_model, inputs, device,
                                                   keep_endpoints=False,
                                                   num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
-                                                  detach=not self.config.bert_finetune)
+                                                  detach=not self.config.bert_finetune,
+                                                  peft_name=self.peft_name)
         if self.bert_layer_mix is not None:
             # add the average so that the default behavior is to
             # take an average of the N layers, and anything else
@@ -527,7 +531,7 @@ class CNNClassifier(BaseClassifier):
         if self.config.use_peft:
             # Hide import so that peft dependency is optional
             from peft import get_peft_model_state_dict
-            params["bert_lora"] = get_peft_model_state_dict(self.bert_model, adapter_name="sentiment")
+            params["bert_lora"] = get_peft_model_state_dict(self.bert_model, adapter_name=self.peft_name)
         return params
 
     def preprocess_data(self, sentences):
