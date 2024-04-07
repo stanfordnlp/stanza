@@ -485,7 +485,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
             args = temp_args
 
         if args['use_peft']:
-            bert_model, bert_tokenizer = load_bert_copy(args['bert_model'], foundation_cache)
+            bert_model, bert_tokenizer = load_bert(args['bert_model'])
             bert_model = build_peft_wrapper(bert_model, temp_args, tlogger, adapter_name="constituency")
         elif args['bert_finetune'] or args['stage1_bert_finetune']:
             bert_model, bert_tokenizer = load_bert(args['bert_model'])
@@ -785,7 +785,15 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             temp_args.pop('pattn_num_layers', None)
             temp_args.pop('lattn_d_proj', None)
             # overwriting the old trainer & model will hopefully free memory
-            trainer = Trainer.load(args['save_name'], temp_args, load_optimizer=False, foundation_cache=foundation_cache)
+            # load a new bert, even in PEFT mode, mostly so that the bert model
+            # doesn't collect a whole bunch of PEFTs
+            # for one thing, two PEFTs would mean 2x the optimizer parameters,
+            # messing up saving and loading the optimizer without jumping
+            # through more hoops
+            # loading the trainer w/o the foundation_cache should create
+            # the necessary bert_model and bert_tokenizer, and then we
+            # can reuse those values when building out new LSTMModel
+            trainer = Trainer.load(args['save_name'], temp_args, load_optimizer=False)
             model = trainer.model
             tlogger.info("Finished stage at epoch %d.  Restarting optimizer", epochs_trained)
             tlogger.info("Previous best model was at epoch %d", trainer.epochs_trained)
@@ -798,16 +806,11 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             pt = foundation_cache.load_pretrain(args['wordvec_pretrain_file'])
             forward_charlm = foundation_cache.load_charlm(args['charlm_forward_file'])
             backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
-            if args['use_peft']:
-                bert_model, bert_tokenizer = foundation_cache.load_bert_copy(args['bert_model'])
-                bert_model = build_peft_wrapper(bert_model, temp_args, tlogger, adapter_name="constituency")
-            else:
-                bert_model, bert_tokenizer = foundation_cache.load_bert(args['bert_model'])
             new_model = LSTMModel(pt,
                                   forward_charlm,
                                   backward_charlm,
-                                  bert_model,
-                                  bert_tokenizer,
+                                  model.bert_model,
+                                  model.bert_tokenizer,
                                   model.force_bert_saved,
                                   model.transitions,
                                   model.constituents,
