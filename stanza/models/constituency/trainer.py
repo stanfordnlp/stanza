@@ -256,22 +256,6 @@ class Trainer:
         return Trainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch)
 
 
-def load_pretrain_or_wordvec(args):
-    """
-    Loads a pretrain based on the paths in the arguments
-
-    TODO: put this functionality in the foundation_cache?
-    or maybe do this conversion before trying to load the pretrain?
-    currently this function is not used anywhere
-    """
-    pretrain_file = pretrain.find_pretrain_file(args['wordvec_pretrain_file'], args['save_dir'], args['shorthand'], args['lang'])
-    if os.path.exists(pretrain_file):
-        vec_file = None
-    else:
-        vec_file = args['wordvec_file'] if args['wordvec_file'] else utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
-    pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
-    return pt
-
 def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse, name, root_labels):
     """
     Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
