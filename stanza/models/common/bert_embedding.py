@@ -383,29 +383,6 @@ def build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_lay
     return slices
 
 
-def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers=None, detach=True):
-    """
-    Extract transformer embeddings using a generic roberta extraction
-
-    data: list of list of string (the text tokens)
-    num_layers: how many to return.  If None, the average of -2, -3, -4 is returned
-    """
-    if model_name.startswith("vinai/phobert"):
-        return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
-
-    if 'bart' in model_name:
-        # this should work with "vinai/bartpho-word"
-        # not sure this works with any other Bart
-        return extract_bart_word_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
-
-    if isinstance(data, tuple):
-        data = list(data)
-
-    if "xlnet" in model_name:
-        return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
-
-    return extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
-
 def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach):
     data = fix_blank_tokens(tokenizer, data)
 
@@ -449,3 +426,27 @@ def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_end
         processed.append(new_sent)
 
     return processed
+
+def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers=None, detach=True):
+    """
+    Extract transformer embeddings using a generic roberta extraction
+
+    data: list of list of string (the text tokens)
+    num_layers: how many to return.  If None, the average of -2, -3, -4 is returned
+    """
+    if model_name.startswith("vinai/phobert"):
+        return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+
+    if 'bart' in model_name:
+        # this should work with "vinai/bartpho-word"
+        # not sure this works with any other Bart
+        return extract_bart_word_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+
+    if isinstance(data, tuple):
+        data = list(data)
+
+    if "xlnet" in model_name:
+        return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+
+    return extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+
