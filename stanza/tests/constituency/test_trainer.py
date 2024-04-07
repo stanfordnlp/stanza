@@ -579,11 +579,10 @@ class TestTrainer:
     def test_xlnet_finetune_one_layer(self, wordvec_pretrain_file, tiny_random_xlnet):
         self.one_layer_finetune_transformer_test(wordvec_pretrain_file, tiny_random_xlnet)
 
-    def test_peft_finetune(self, wordvec_pretrain_file):
-        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
-            transformer_name = 'hf-internal-testing/tiny-bert'
-            args = ['--bert_model', transformer_name, '--bert_finetune', '--optim', 'adamw', '--use_peft']
-            args, trained_model = self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
+    def test_peft_finetune(self, tmp_path, wordvec_pretrain_file):
+        transformer_name = 'hf-internal-testing/tiny-bert'
+        args = ['--bert_model', transformer_name, '--bert_finetune', '--optim', 'adamw', '--use_peft']
+        args, trained_model = self.run_train_test(wordvec_pretrain_file, str(tmp_path), extra_args=args)
 
     def test_peft_twostage_finetune(self, wordvec_pretrain_file):
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
