@@ -2,6 +2,7 @@
 Keeps BERT, charlm, word embedings in a cache to save memory
 """
 
+from collections import namedtuple
 from copy import deepcopy
 import logging
 import threading
@@ -11,6 +12,8 @@ from stanza.models.common.char_model import CharacterLanguageModel
 from stanza.models.common.pretrain import Pretrain
 
 logger = logging.getLogger('stanza')
+
+BertRecord = namedtuple('BertRecord', ['model', 'tokenizer', 'peft_ids'])
 
 class FoundationCache:
     def __init__(self, other=None):
@@ -28,21 +31,33 @@ class FoundationCache:
             self.lock = other.lock
 
     def load_bert(self, transformer_name):
+        m, t, _ = self.load_bert_with_peft(transformer_name, None)
+        return m, t
+
+    def load_bert_with_peft(self, transformer_name, peft_name):
         """
         Load a transformer only once
 
         Uses a lock for thread safety
         """
         if transformer_name is None:
-            return None, None
+            return None, None, None
         with self.lock:
             if transformer_name not in self.bert:
                 model, tokenizer = bert_embedding.load_bert(transformer_name)
-                self.bert[transformer_name] = (model, tokenizer)
+                self.bert[transformer_name] = BertRecord(model, tokenizer, {})
             else:
                 logger.debug("Reusing bert %s", transformer_name)
 
-            return self.bert[transformer_name]
+            bert_record = self.bert[transformer_name]
+            if not peft_name:
+                return bert_record.model, bert_record.tokenizer, None
+            if peft_name not in bert_record.peft_ids:
+                bert_record.peft_ids[peft_name] = 0
+            else:
+                bert_record.peft_ids[peft_name] = bert_record.peft_ids[peft_name] + 1
+            peft_name = "%s_%d" % (peft_name, bert_record.peft_ids[peft_name])
+            return bert_record.model, bert_record.tokenizer, peft_name
 
     def load_bert_copy(self, transformer_name):
         """
@@ -56,8 +71,9 @@ class FoundationCache:
             if transformer_name not in self.bert:
                 model, tokenizer = bert_embedding.load_bert(transformer_name)
                 return model, tokenizer
-            model, tokenizer = self.bert[transformer_name]
+            model, tokenizer, _ = self.bert[transformer_name]
             return deepcopy(model), deepcopy(tokenizer)
+
 
     def load_charlm(self, filename):
         if not filename:
@@ -101,6 +117,12 @@ class NoTransformerFoundationCache(FoundationCache):
     def load_bert(self, transformer_name):
         return load_bert(transformer_name)
 
+    def load_bert_with_peft(self, transformer_name, peft_name):
+        return load_bert_with_peft(transformer_name, peft_name)
+
+    def load_bert_copy(self, transformer_name):
+        return load_bert_copy(transformer_name)
+
 def load_bert(model_name, foundation_cache=None):
     """
     Load a bert, possibly using a foundation cache, ignoring the cache if None
@@ -109,6 +131,12 @@ def load_bert(model_name, foundation_cache=None):
         return bert_embedding.load_bert(model_name)
     else:
         return foundation_cache.load_bert(model_name)
+
+def load_bert_with_peft(model_name, peft_name, foundation_cache=None):
+    if foundation_cache is None:
+        m, t = bert_embedding.load_bert(model_name)
+        return m, t, peft_name
+    return foundation_cache.load_bert_with_peft(model_name, peft_name)
 
 def load_bert_copy(model_name, foundation_cache=None):
     """Load a bert, possibly using a foundation cache, and then return a COPY so that mutations such as adapters can be applied
