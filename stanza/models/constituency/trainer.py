@@ -617,41 +617,19 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         optimizer = build_optimizer(args, model, False)
         scheduler = build_scheduler(args, optimizer)
         trainer = Trainer(model, optimizer, scheduler)
-    elif args['multistage']:
-        # run adadelta over the model for half the time with no pattn or lattn
-        # training then switches to a different optimizer for the rest
-        # this works surprisingly well
-        tlogger.info("Warming up model for %d iterations using AdaDelta to train the embeddings", args['epochs'] // 2)
-        temp_args = dict(args)
-        # remove the attention layers for the temporary model
-        temp_args['pattn_num_layers'] = 0
-        temp_args['lattn_d_proj'] = 0
+    else:
+        if args['multistage']:
+            # run adadelta over the model for half the time with no pattn or lattn
+            # training then switches to a different optimizer for the rest
+            # this works surprisingly well
+            tlogger.info("Warming up model for %d iterations using AdaDelta to train the embeddings", args['epochs'] // 2)
+            temp_args = dict(args)
+            # remove the attention layers for the temporary model
+            temp_args['pattn_num_layers'] = 0
+            temp_args['lattn_d_proj'] = 0
+            args = temp_args
 
         if args['bert_finetune'] or args['stage1_bert_finetune']:
-            bert_model, bert_tokenizer = load_bert(args['bert_model'])
-        else:
-            bert_model, bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
-        temp_model = LSTMModel(pt,
-                               forward_charlm,
-                               backward_charlm,
-                               bert_model,
-                               bert_tokenizer,
-                               False,
-                               train_transitions,
-                               train_constituents,
-                               tags,
-                               words,
-                               rare_words,
-                               root_labels,
-                               open_nodes,
-                               unary_limit,
-                               temp_args)
-        temp_model = temp_model.to(args['device'])
-        temp_optim = build_optimizer(temp_args, temp_model, True)
-        scheduler = build_scheduler(temp_args, temp_optim, True)
-        trainer = Trainer(temp_model, temp_optim, scheduler)
-    else:     # TODO: combine with the multistage version?  could make this a single stage
-        if args['bert_finetune']:
             bert_model, bert_tokenizer = load_bert(args['bert_model'])
         else:
             bert_model, bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
@@ -672,8 +650,8 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
                           args)
         model = model.to(args['device'])
 
-        optimizer = build_optimizer(args, model, False)
-        scheduler = build_scheduler(args, optimizer)
+        optimizer = build_optimizer(args, model, build_simple_adadelta=args['multistage'])
+        scheduler = build_scheduler(args, optimizer, first_optimizer=args['multistage'])
 
         trainer = Trainer(model, optimizer, scheduler)
 
