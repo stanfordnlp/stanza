@@ -235,7 +235,10 @@ class Trainer:
             optimizer = build_optimizer(model.args, model, build_simple_adadelta)
 
             if checkpoint.get('optimizer_state_dict', None) is not None:
-                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                try:
+                    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                except ValueError as e:
+                    raise ValueError("Failed to load optimizer from %s" % filename) from e
             else:
                 tlogger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
 
