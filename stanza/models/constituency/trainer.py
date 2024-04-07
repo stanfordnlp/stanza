@@ -88,6 +88,23 @@ class Trainer:
         torch.save(checkpoint, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to %s", filename)
 
+    def log_norms(self):
+        self.model.log_norms()
+
+    @property
+    def transitions(self):
+        return self.model.transitions
+
+    @property
+    def root_labels(self):
+        return self.model.root_labels
+
+    def train(self):
+        return self.model.train()
+
+    def eval(self):
+        return self.model.eval()
+
     @staticmethod
     def find_and_load_pretrain(saved_args, foundation_cache):
         if 'wordvec_pretrain_file' not in saved_args:
@@ -408,7 +425,7 @@ def evaluate(args, model_file, retag_pipeline):
             tlogger.info("Retagging finished")
 
         if args['log_norms']:
-            trainer.model.log_norms()
+            trainer.log_norms()
         f1, kbestF1, _ = run_dev_set(trainer.model, retagged_treebank, treebank, args, evaluator)
         tlogger.info("F1 score on %s: %f", args['eval_file'], f1)
         if kbestF1 is not None:
@@ -840,8 +857,8 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     device = next(model.parameters()).device
     model_loss_function.to(device)
     transition_tensors = {x: torch.tensor(y, requires_grad=False, device=device).unsqueeze(0)
-                          for (y, x) in enumerate(model.transitions)}
-    model.train()
+                          for (y, x) in enumerate(trainer.transitions)}
+    trainer.train()
 
     train_data = compose_train_data(train_trees, train_sequences)
     silver_data = compose_train_data(silver_trees, silver_sequences)
@@ -860,9 +877,9 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
     oracle = None
     if args['transition_scheme'] is TransitionScheme.IN_ORDER:
-        oracle = InOrderOracle(model.root_labels, args['oracle_level'], args['additional_oracle_levels'])
+        oracle = InOrderOracle(trainer.root_labels, args['oracle_level'], args['additional_oracle_levels'])
     elif args['transition_scheme'] is TransitionScheme.TOP_DOWN:
-        oracle = TopDownOracle(model.root_labels, args['oracle_level'], args['additional_oracle_levels'])
+        oracle = TopDownOracle(trainer.root_labels, args['oracle_level'], args['additional_oracle_levels'])
 
     leftover_training_data = []
     leftover_silver_data = []
@@ -875,12 +892,12 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
     # trainer.epochs_trained+1 so that if the trainer gets saved after 1 epoch, the epochs_trained is 1
     for trainer.epochs_trained in range(trainer.epochs_trained+1, args['epochs']+1):
-        model.train()
+        trainer.train()
         tlogger.info("Starting epoch %d", trainer.epochs_trained)
         update_bert_learning_rate(args, trainer.optimizer, trainer.epochs_trained)
 
         if args['log_norms']:
-            model.log_norms()
+            trainer.log_norms()
         leftover_training_data, epoch_data = next_epoch_data(leftover_training_data, train_data, args['epoch_size'])
         leftover_silver_data, epoch_silver_data = next_epoch_data(leftover_silver_data, silver_data, args['silver_epoch_size'])
         epoch_data = epoch_data + epoch_silver_data
