@@ -24,7 +24,7 @@ from torch import nn
 
 from stanza.models.common import pretrain
 from stanza.models.common import utils
-from stanza.models.common.foundation_cache import load_bert, load_bert_copy, load_charlm, load_pretrain, FoundationCache
+from stanza.models.common.foundation_cache import load_bert, load_bert_copy, load_charlm, load_pretrain, FoundationCache, NoTransformerFoundationCache
 from stanza.models.common.large_margin_loss import LargeMarginInSoftmaxLoss
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import parse_tree
@@ -583,7 +583,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
 
     if args['finetune']:
         tlogger.info("Loading model to finetune: %s", model_load_file)
-        trainer = Trainer.load(model_load_file, args, load_optimizer=True, foundation_cache=foundation_cache)
+        trainer = Trainer.load(model_load_file, args, load_optimizer=True, foundation_cache=NoTransformerFoundationCache(foundation_cache))
         # a new finetuning will start with a new epochs_trained count
         trainer.epochs_trained = 0
     elif args['relearn_structure']:
@@ -592,7 +592,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         # remove the pattn & lattn layers unless the saved model had them
         temp_args.pop('pattn_num_layers', None)
         temp_args.pop('lattn_d_proj', None)
-        trainer = Trainer.load(model_load_file, temp_args, load_optimizer=False, foundation_cache=foundation_cache)
+        trainer = Trainer.load(model_load_file, temp_args, load_optimizer=False, foundation_cache=NoTransformerFoundationCache(foundation_cache))
 
         # using the model's current values works for if the new
         # dataset is the same or smaller
