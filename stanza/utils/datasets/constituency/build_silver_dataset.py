@@ -18,7 +18,7 @@ import logging
 from stanza.models.common import utils
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.constituency import retagging
-from stanza.models.constituency import trainer
+from stanza.models.constituency import text_processing
 from stanza.models.constituency.ensemble import Ensemble
 from stanza.utils.get_tqdm import get_tqdm
 
@@ -72,7 +72,7 @@ def main():
     logger.info("Building ensemble #2 out of %s", args['e2'])
     e2 = Ensemble(args['e2'], args, foundation_cache)
 
-    tokenized_sentences = trainer.read_tokenized_file(args['tokenized_file'])
+    tokenized_sentences = text_processing.read_tokenized_file(args['tokenized_file'])
     logger.info("Read %d tokenized sentences", len(tokenized_sentences))
 
     all_models = e1.models + e2.models
@@ -83,9 +83,9 @@ def main():
         for chunk_start in tqdm(range(args['start_tree'], end_tree, chunk_size)):
             chunk = tokenized_sentences[chunk_start:chunk_start+chunk_size]
             logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
-            parsed1 = trainer.parse_tokenized_sentences(args, e1, retag_pipeline, chunk)
+            parsed1 = text_processing.parse_tokenized_sentences(args, e1, retag_pipeline, chunk)
             parsed1 = [x.predictions[0].tree for x in parsed1]
-            parsed2 = trainer.parse_tokenized_sentences(args, e2, retag_pipeline, chunk)
+            parsed2 = text_processing.parse_tokenized_sentences(args, e2, retag_pipeline, chunk)
             parsed2 = [x.predictions[0].tree for x in parsed2]
             matching = [t for t, t2 in zip(parsed1, parsed2) if t == t2]
             logger.info("%d trees matched", len(matching))
