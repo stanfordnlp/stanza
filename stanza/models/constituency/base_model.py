@@ -165,6 +165,7 @@ class BaseModel(ABC):
                 self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY or
                 self._transition_scheme is TransitionScheme.TOP_DOWN_COMPOUND)
 
+    @property
     def reverse_sentence(self):
         """
         Whether or not this model is built to parse backwards
@@ -244,7 +245,7 @@ class BaseModel(ABC):
         if len(state_batch) == 0:
             return state_batch
 
-        gold_sequences = transition_sequence.build_treebank([state.gold_tree for state in state_batch], self.transition_scheme(), self.reverse_sentence())
+        gold_sequences = transition_sequence.build_treebank([state.gold_tree for state in state_batch], self.transition_scheme(), self.reverse_sentence)
         state_batch = [state._replace(gold_sequence=sequence) for state, sequence in zip(state_batch, gold_sequences)]
         return state_batch
 
@@ -312,7 +313,7 @@ class BaseModel(ABC):
             for idx, state in enumerate(state_batch):
                 if state.finished(self):
                     predicted_tree = state.get_tree(self)
-                    if self.reverse_sentence():
+                    if self.reverse_sentence:
                         predicted_tree = predicted_tree.reverse()
                     gold_tree = state.gold_tree
                     treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, state.score)], state if keep_state else None, constituents[batch_indices[idx]] if keep_constituents else None))
@@ -406,7 +407,7 @@ class SimpleModel(BaseModel):
             word_queue =  [None]
             word_queue += [tag_node for tag_node in tagged_words]
             word_queue.append(None)
-            if self.reverse_sentence():
+            if self.reverse_sentence:
                 word_queue.reverse()
             word_queues.append(word_queue)
         return word_queues

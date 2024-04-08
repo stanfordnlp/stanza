@@ -71,15 +71,16 @@ class Ensemble:
                 raise ValueError("Models %s and %s are incompatible: different root_labels" % (filenames[0], filenames[model_idx]))
             if self.models[0].uses_xpos() != model.uses_xpos():
                 raise ValueError("Models %s and %s are incompatible: different uses_xpos" % (filenames[0], filenames[model_idx]))
-            if self.models[0].reverse_sentence() != model.reverse_sentence():
+            if self.models[0].reverse_sentence != model.reverse_sentence:
                 raise ValueError("Models %s and %s are incompatible: different reverse_sentence" % (filenames[0], filenames[model_idx]))
 
-        self._reverse_sentence = self.models[0].reverse_sentence()
+        self._reverse_sentence = self.models[0].reverse_sentence
 
     def eval(self):
         for model in self.models:
             model.eval()
 
+    @property
     def reverse_sentence(self):
         return self._reverse_sentence
 
@@ -189,7 +190,7 @@ class Ensemble:
             for idx, state in enumerate(state_batch[0]):
                 if state.finished(self.models[0]):
                     predicted_tree = state.get_tree(self.models[0])
-                    if self.reverse_sentence():
+                    if self.reverse_sentence:
                         predicted_tree = predicted_tree.reverse()
                     gold_tree = state.gold_tree
                     # TODO: could easily store the score here
