@@ -27,16 +27,14 @@ from stanza.models.common import utils
 from stanza.models.common.foundation_cache import load_bert, load_bert_copy, load_charlm, load_pretrain, FoundationCache, NoTransformerFoundationCache
 from stanza.models.common.large_margin_loss import LargeMarginInSoftmaxLoss
 from stanza.models.constituency import parse_transitions
-from stanza.models.constituency import parse_tree
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
-from stanza.models.constituency.base_model import SimpleModel, UNARY_LIMIT
 from stanza.models.constituency.in_order_oracle import InOrderOracle
 from stanza.models.constituency.lstm_model import LSTMModel, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.top_down_oracle import TopDownOracle
-from stanza.models.constituency.utils import retag_tags, retag_trees, build_optimizer, build_scheduler
+from stanza.models.constituency.utils import retag_tags, retag_trees, build_optimizer, build_scheduler, verify_transitions, get_open_nodes
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
 from stanza.server.parser_eval import EvaluateParser, ParseResult
 from stanza.utils.get_tqdm import get_tqdm
@@ -273,30 +271,6 @@ class Trainer:
         return Trainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch)
 
 
-def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse, name, root_labels):
-    """
-    Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
-    """
-    model = SimpleModel(transition_scheme, unary_limit, reverse, root_labels)
-    tlogger.info("Verifying the transition sequences for %d trees", len(trees))
-
-    data = zip(trees, sequences)
-    if tlogger.getEffectiveLevel() <= logging.INFO:
-        data = tqdm(zip(trees, sequences), total=len(trees))
-
-    for tree_idx, (tree, sequence) in enumerate(data):
-        # TODO: make the SimpleModel have a parse operation?
-        state = model.initial_state_from_gold_trees([tree])[0]
-        for idx, trans in enumerate(sequence):
-            if not trans.is_legal(state, model):
-                raise RuntimeError("Tree {} of {} failed: transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(tree_idx, name, idx, trans, tree, sequence))
-            state = trans.apply(state, model)
-        result = model.get_top_constituent(state.constituents)
-        if reverse:
-            result = result.reverse()
-        if tree != result:
-            raise RuntimeError("Tree {} of {} failed: transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree_idx, name, tree, sequence, result))
-
 def load_model_parse_text(args, model_file, retag_pipeline):
     """
     Load a model, then parse text and write it to stdout or args['predict_file']
@@ -431,18 +405,6 @@ def evaluate(args, model_file, retag_pipeline):
         if kbestF1 is not None:
             tlogger.info("KBest F1 score on %s: %f", args['eval_file'], kbestF1)
 
-def get_open_nodes(trees, args):
-    """
-    Return a list of all open nodes in the given dataset.
-    Depending on the parameters, may be single or compound open transitions.
-    """
-    if args['transition_scheme'] is TransitionScheme.TOP_DOWN_COMPOUND:
-        return parse_tree.Tree.get_compound_constituents(trees)
-    elif args['transition_scheme'] is TransitionScheme.IN_ORDER_COMPOUND:
-        return parse_tree.Tree.get_compound_constituents(trees, separate_root=True)
-    else:
-        return [(x,) for x in parse_tree.Tree.get_unique_constituent_labels(trees)]
-
 def remove_optimizer(args, model_save_file, model_load_file):
     """
     A utility method to remove the optimizer from a save file
@@ -474,13 +436,13 @@ def check_constituents(train_constituents, trees, treebank_name):
     """
     Check that all the constituents in the other dataset are known in the train set
     """
-    constituents = parse_tree.Tree.get_unique_constituent_labels(trees)
+    constituents = Tree.get_unique_constituent_labels(trees)
     for con in constituents:
         if con not in train_constituents:
             first_error = None
             num_errors = 0
             for tree_idx, tree in enumerate(trees):
-                constituents = parse_tree.Tree.get_unique_constituent_labels(tree)
+                constituents = Tree.get_unique_constituent_labels(tree)
                 if con in constituents:
                     num_errors += 1
                     if first_error is None:
@@ -491,7 +453,7 @@ def check_root_labels(root_labels, other_trees, treebank_name):
     """
     Check that all the root states in the other dataset are known in the train set
     """
-    for root_state in parse_tree.Tree.get_root_labels(other_trees):
+    for root_state in Tree.get_root_labels(other_trees):
         if root_state not in root_labels:
             raise RuntimeError("Found root state {} in the {} set which is not a ROOT state in the train set".format(root_state, treebank_name))
 
@@ -499,21 +461,21 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     """
     Builds a Trainer (with model) and the train_sequences and transitions for the given trees.
     """
-    train_constituents = parse_tree.Tree.get_unique_constituent_labels(train_trees)
+    train_constituents = Tree.get_unique_constituent_labels(train_trees)
     tlogger.info("Unique constituents in training set: %s", train_constituents)
     if args['check_valid_states']:
         check_constituents(train_constituents, dev_trees, "dev")
         check_constituents(train_constituents, silver_trees, "silver")
-    constituent_counts = parse_tree.Tree.get_constituent_counts(train_trees)
+    constituent_counts = Tree.get_constituent_counts(train_trees)
     tlogger.info("Constituent node counts: %s", constituent_counts)
 
-    tags = parse_tree.Tree.get_unique_tags(train_trees)
+    tags = Tree.get_unique_tags(train_trees)
     if None in tags:
         raise RuntimeError("Fatal problem: the tagger put None on some of the nodes!")
     tlogger.info("Unique tags in training set: %s", tags)
     # no need to fail for missing tags between train/dev set
     # the model has an unknown tag embedding
-    for tag in parse_tree.Tree.get_unique_tags(dev_trees):
+    for tag in Tree.get_unique_tags(dev_trees):
         if tag not in tags:
             tlogger.info("Found tag in dev set which does not exist in train set: %s  Continuing...", tag)
 
@@ -534,7 +496,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
         # theoretically could just train based on the items in the silver dataset
         parse_transitions.check_transitions(expanded_train_transitions, silver_transitions, "silver")
 
-    root_labels = parse_tree.Tree.get_root_labels(train_trees)
+    root_labels = Tree.get_root_labels(train_trees)
     check_root_labels(root_labels, dev_trees, "dev")
     check_root_labels(root_labels, silver_trees, "silver")
     tlogger.info("Root labels in treebank: %s", root_labels)
@@ -544,18 +506,18 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
 
     # we don't check against the words in the dev set as it is
     # expected there will be some UNK words
-    words = parse_tree.Tree.get_unique_words(train_trees)
-    rare_words = parse_tree.Tree.get_rare_words(train_trees, args['rare_word_threshold'])
+    words = Tree.get_unique_words(train_trees)
+    rare_words = Tree.get_rare_words(train_trees, args['rare_word_threshold'])
     # rare/unknown silver words will just get UNK if they are not already known
     if silver_trees and args['use_silver_words']:
         tlogger.info("Getting silver words to add to the delta embedding")
-        silver_words = parse_tree.Tree.get_common_words(tqdm(silver_trees, postfix='Silver words'), len(words))
+        silver_words = Tree.get_common_words(tqdm(silver_trees, postfix='Silver words'), len(words))
         words = sorted(set(words + silver_words))
 
     # also, it's not actually an error if there is a pattern of
     # compound unary or compound open nodes which doesn't exist in the
     # train set.  it just means we probably won't ever get that right
-    open_nodes = get_open_nodes(train_trees, args)
+    open_nodes = get_open_nodes(train_trees, args['transition_scheme'])
     tlogger.info("Using the following open nodes:\n  %s", "\n  ".join(map(str, open_nodes)))
 
     # at this point we have:

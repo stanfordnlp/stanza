@@ -10,6 +10,9 @@ from torch import optim
 
 from stanza.models.common.doc import TEXT, Document
 from stanza.models.common.utils import get_optimizer
+from stanza.models.constituency.base_model import SimpleModel
+from stanza.models.constituency.parse_transitions import TransitionScheme
+from stanza.models.constituency.parse_tree import Tree
 from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
@@ -269,3 +272,41 @@ def add_predict_output_args(parser):
 def postprocess_predict_output_args(args):
     if len(args['predict_format']) <= 2 or (len(args['predict_format']) <= 3 and args['predict_format'].endswith("Vi")):
         args['predict_format'] = "{:" + args['predict_format'] + "}"
+
+
+def get_open_nodes(trees, transition_scheme):
+    """
+    Return a list of all open nodes in the given dataset.
+    Depending on the parameters, may be single or compound open transitions.
+    """
+    if transition_scheme is TransitionScheme.TOP_DOWN_COMPOUND:
+        return Tree.get_compound_constituents(trees)
+    elif transition_scheme is TransitionScheme.IN_ORDER_COMPOUND:
+        return Tree.get_compound_constituents(trees, separate_root=True)
+    else:
+        return [(x,) for x in Tree.get_unique_constituent_labels(trees)]
+
+
+def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse, name, root_labels):
+    """
+    Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
+    """
+    model = SimpleModel(transition_scheme, unary_limit, reverse, root_labels)
+    tlogger.info("Verifying the transition sequences for %d trees", len(trees))
+
+    data = zip(trees, sequences)
+    if tlogger.getEffectiveLevel() <= logging.INFO:
+        data = tqdm(zip(trees, sequences), total=len(trees))
+
+    for tree_idx, (tree, sequence) in enumerate(data):
+        # TODO: make the SimpleModel have a parse operation?
+        state = model.initial_state_from_gold_trees([tree])[0]
+        for idx, trans in enumerate(sequence):
+            if not trans.is_legal(state, model):
+                raise RuntimeError("Tree {} of {} failed: transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(tree_idx, name, idx, trans, tree, sequence))
+            state = trans.apply(state, model)
+        result = model.get_top_constituent(state.constituents)
+        if reverse:
+            result = result.reverse()
+        if tree != result:
+            raise RuntimeError("Tree {} of {} failed: transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree_idx, name, tree, sequence, result))
