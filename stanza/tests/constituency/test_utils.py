@@ -54,15 +54,15 @@ def test_replace_tags():
     trees = tree_reader.read_trees(text)
 
     new_tags = ["A", "B", "C"]
-    new_tree = utils.replace_tags(trees[0], new_tags)
+    new_tree = trees[0].replace_tags(new_tags)
 
     assert new_tree == tree_reader.read_trees(expected)[0]
 
     with pytest.raises(ValueError):
         new_tags = ["A", "B"]
-        new_tree = utils.replace_tags(trees[0], new_tags)
+        new_tree = trees[0].replace_tags(new_tags)
 
     with pytest.raises(ValueError):
         new_tags = ["A", "B", "C", "D"]
-        new_tree = utils.replace_tags(trees[0], new_tags)
+        new_tree = trees[0].replace_tags(new_tags)
 

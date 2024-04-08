@@ -2,8 +2,7 @@
 Collects a few of the conparser utility methods which don't belong elsewhere
 """
 
-from collections import Counter, deque
-import copy
+from collections import Counter
 import logging
 
 import torch.nn as nn
@@ -37,34 +36,6 @@ tlogger = logging.getLogger('stanza.constituency.trainer')
 #  0.000004.out: 0.9596665982603754
 #  0.000005.out: 0.9591620720706487
 DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 2e-6, "mirror_madgrad": 2e-6 }
-
-def replace_tags(tree, tags):
-    if tree.is_leaf():
-        raise ValueError("Must call replace_tags with non-leaf")
-
-    tag_iterator = iter(tags)
-
-    new_tree = copy.deepcopy(tree)
-    queue = deque()
-    queue.append(new_tree)
-    while len(queue) > 0:
-        next_node = queue.pop()
-        if next_node.is_preterminal():
-            try:
-                label = next(tag_iterator)
-            except StopIteration:
-                raise ValueError("Not enough tags in sentence for given tree")
-            next_node.label = label
-        elif next_node.is_leaf():
-            raise ValueError("Got a badly structured tree: {}".format(tree))
-        else:
-            queue.extend(reversed(next_node.children))
-
-    if any(True for _ in tag_iterator):
-        raise ValueError("Too many tags for the given tree")
-
-    return new_tree
-
 
 def retag_tags(doc, pipelines, xpos):
     """
@@ -117,7 +88,7 @@ def retag_trees(trees, pipelines, xpos=True):
                 try:
                     if any(tag is None for tag in tags):
                         raise RuntimeError("Tagged tree #{} with a None tag!\n{}\n{}".format(tree_idx, tree, tags))
-                    new_tree = replace_tags(tree, tags)
+                    new_tree = tree.replace_tags(tags)
                     new_trees.append(new_tree)
                     pbar.update(1)
                 except ValueError as e:
