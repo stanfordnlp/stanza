@@ -189,7 +189,7 @@ class BaseModel(ABC):
                     raise RuntimeError("Transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(state.num_transitions(), trans, state.gold_tree, state.gold_sequence))
         return None, transitions, None
 
-    def initial_state_from_preterminals(self, preterminal_lists, gold_trees):
+    def initial_state_from_preterminals(self, preterminal_lists, gold_trees, gold_sequences):
         """
         what is passed in should be a list of list of preterminals
         """
@@ -209,18 +209,20 @@ class BaseModel(ABC):
                   for idx, wq in enumerate(word_queues)]
         if gold_trees:
             states = [state._replace(gold_tree=gold_tree) for gold_tree, state in zip(gold_trees, states)]
+        if gold_sequences:
+            states = [state._replace(gold_sequence=gold_sequence) for gold_sequence, state in zip(gold_sequences, states)]
         return states
 
     def initial_state_from_words(self, word_lists):
         preterminal_lists = [[Tree(tag, Tree(word)) for word, tag in words]
                              for words in word_lists]
-        return self.initial_state_from_preterminals(preterminal_lists, gold_trees=None)
+        return self.initial_state_from_preterminals(preterminal_lists, gold_trees=None, gold_sequences=None)
 
     def initial_state_from_gold_trees(self, trees):
         preterminal_lists = [[Tree(pt.label, Tree(pt.children[0].label))
                               for pt in tree.yield_preterminals()]
                              for tree in trees]
-        return self.initial_state_from_preterminals(preterminal_lists, gold_trees=trees)
+        return self.initial_state_from_preterminals(preterminal_lists, gold_trees=trees, gold_sequences=None)
 
     def build_batch_from_trees(self, batch_size, data_iterator):
         """
