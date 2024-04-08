@@ -173,6 +173,7 @@ from stanza.models.constituency import retagging
 from stanza.models.constituency import trainer
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
+from stanza.models.constituency.text_processing import load_model_parse_text
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY, add_predict_output_args, postprocess_predict_output_args
 from stanza.resources.common import DEFAULT_MODEL_DIR
 
@@ -852,7 +853,7 @@ def main(args=None):
     elif args['mode'] == 'predict':
         trainer.evaluate(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'parse_text':
-        trainer.load_model_parse_text(args, model_load_file, retag_pipeline)
+        load_model_parse_text(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'remove_optimizer':
         trainer.remove_optimizer(args, args['save_name'], model_load_file)
 

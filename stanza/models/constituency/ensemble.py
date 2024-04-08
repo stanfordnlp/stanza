@@ -34,7 +34,8 @@ from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import retagging
 from stanza.models.constituency import tree_reader
-from stanza.models.constituency.trainer import Trainer, run_dev_set, parse_text, parse_dir
+from stanza.models.constituency.text_processing import parse_text, parse_dir
+from stanza.models.constituency.trainer import Trainer, run_dev_set
 from stanza.models.constituency.utils import add_predict_output_args, postprocess_predict_output_args, retag_trees
 from stanza.resources.common import DEFAULT_MODEL_DIR
 from stanza.server.parser_eval import EvaluateParser, ParseResult, ScoredTree
