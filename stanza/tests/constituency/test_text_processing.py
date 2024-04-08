@@ -14,6 +14,8 @@ from stanza.models.constituency import text_processing
 from stanza.models.constituency import tree_reader
 from stanza.tests import TEST_MODELS_DIR
 
+pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
+
 @pytest.fixture(scope="module")
 def pipeline():
     return Pipeline(dir=TEST_MODELS_DIR, lang="en", processors="tokenize, pos, constituency", tokenize_pretokenized=True)
