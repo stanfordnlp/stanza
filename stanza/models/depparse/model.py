@@ -41,7 +41,8 @@ class Parser(nn.Module):
             input_size += self.args['word_emb_dim'] * 2
 
         if self.args['tag_emb_dim'] > 0:
-            self.upos_emb = nn.Embedding(len(vocab['upos']), self.args['tag_emb_dim'], padding_idx=0)
+            if self.args.get('use_upos', True):
+                self.upos_emb = nn.Embedding(len(vocab['upos']), self.args['tag_emb_dim'], padding_idx=0)
             if self.args.get('use_xpos', True):
                 if not isinstance(vocab['xpos'], CompositeVocab):
                     self.xpos_emb = nn.Embedding(len(vocab['xpos']), self.args['tag_emb_dim'], padding_idx=0)
@@ -50,7 +51,8 @@ class Parser(nn.Module):
 
                     for l in vocab['xpos'].lens():
                         self.xpos_emb.append(nn.Embedding(l, self.args['tag_emb_dim'], padding_idx=0))
-            input_size += self.args['tag_emb_dim']
+            if self.args.get('use_upos', True) or self.args.get('use_xpos', True):
+                input_size += self.args['tag_emb_dim']
 
             if self.args.get('use_ufeats', True):
                 self.ufeats_emb = nn.ModuleList()
@@ -159,7 +161,10 @@ class Parser(nn.Module):
             inputs += [word_emb, lemma_emb]
 
         if self.args['tag_emb_dim'] > 0:
-            pos_emb = self.upos_emb(upos)
+            if self.args.get('use_upos', True):
+                pos_emb = self.upos_emb(upos)
+            else:
+                pos_emb = 0
 
             if self.args.get('use_xpos', True):
                 if isinstance(self.vocab['xpos'], CompositeVocab):
@@ -167,8 +172,10 @@ class Parser(nn.Module):
                         pos_emb += self.xpos_emb[i](xpos[:, :, i])
                 else:
                     pos_emb += self.xpos_emb(xpos)
-            pos_emb = pack(pos_emb)
-            inputs += [pos_emb]
+
+            if self.args.get('use_upos', True) or self.args.get('use_xpos', True):
+                pos_emb = pack(pos_emb)
+                inputs += [pos_emb]
 
             if self.args.get('use_ufeats', True):
                 feats_emb = 0
