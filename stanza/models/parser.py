@@ -388,6 +388,12 @@ def evaluate(args):
     if args['gold_labels']:
         gold_doc = CoNLL.conll2doc(input_file=args['eval_file'])
 
+        # Check for None ... otherwise an inscrutable error occurs later in the scorer
+        for sent_idx, sentence in enumerate(gold_doc.sentences):
+            for word_idx, word in enumerate(sentence.words):
+                if word.deprel is None:
+                    raise ValueError("Gold document {} has a None at sentence {} word {}\n{:C}".format(args['eval_file'], sent_idx, word_idx, sentence))
+
         scorer.score_named_dependencies(batch.doc, gold_doc)
         _, _, score = scorer.score(system_pred_file, args['eval_file'])
 
