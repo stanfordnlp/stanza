@@ -1034,9 +1034,8 @@ class LSTMModel(BaseModel, nn.Module):
         sequence, even though it has multiple addition pieces of
         information
         """
-        # TreeStack value -> LSTMTreeStack value -> Constituent value
-        constituent_node = constituents.value.value
-        return constituent_node.value
+        # TreeStack value -> LSTMTreeStack value -> Constituent value -> constituent
+        return constituents.value.value.value
 
     def push_transitions(self, transition_stacks, transitions):
         """
@@ -1054,8 +1053,8 @@ class LSTMModel(BaseModel, nn.Module):
         sequence, even though it has multiple addition pieces of
         information
         """
-        transition_node = transitions.value
-        return transition_node.value
+        # TreeStack value -> LSTMTreeStack value -> transition
+        return transitions.value.value
 
     def forward(self, states):
         """
