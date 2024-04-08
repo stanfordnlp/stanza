@@ -89,6 +89,9 @@ class Trainer:
     def log_norms(self):
         self.model.log_norms()
 
+    def log_shapes(self):
+        self.model.log_shapes()
+
     @property
     def transitions(self):
         return self.model.transitions
@@ -96,6 +99,10 @@ class Trainer:
     @property
     def root_labels(self):
         return self.model.root_labels
+
+    @property
+    def device(self):
+        return next(self.model.parameters()).device
 
     def train(self):
         return self.model.train()
@@ -299,7 +306,7 @@ def evaluate(args, model_file, retag_pipeline):
         trainer = Trainer.load(model_file, args=load_args, foundation_cache=foundation_cache)
 
         if args['log_shapes']:
-            trainer.model.log_shapes()
+            trainer.log_shapes()
 
         treebank = tree_reader.read_treebank(args['eval_file'])
         tlogger.info("Read %d trees for evaluation", len(treebank))
@@ -617,7 +624,7 @@ def train(args, model_load_file, retag_pipeline):
         trainer, train_sequences, silver_sequences, train_transitions = build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, model_load_file)
 
         if args['log_shapes']:
-            model.log_shapes()
+            trainer.log_shapes()
         trainer = iterate_training(args, trainer, train_trees, train_sequences, train_transitions, dev_trees, silver_trees, silver_sequences, foundation_cache, evaluator)
 
     if args['wandb']:
@@ -739,7 +746,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     else:
         raise ValueError("Unexpected loss term: %s" % args['loss'])
 
-    device = next(model.parameters()).device
+    device = trainer.device
     model_loss_function.to(device)
     transition_tensors = {x: torch.tensor(y, requires_grad=False, device=device).unsqueeze(0)
                           for (y, x) in enumerate(trainer.transitions)}
@@ -793,7 +800,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         # print statistics
         # by now we've forgotten about the original tags on the trees,
         # but it doesn't matter for hill climbing
-        f1, _, _ = run_dev_set(model, dev_trees, dev_trees, args, evaluator)
+        f1, _, _ = run_dev_set(trainer.model, dev_trees, dev_trees, args, evaluator)
         if f1 > trainer.best_f1 or (trainer.best_epoch == 0 and trainer.best_f1 == 0.0):
             # best_epoch == 0 to force a save of an initial model
             # useful for tests which expect something, even when a
