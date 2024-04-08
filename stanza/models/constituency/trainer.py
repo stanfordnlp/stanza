@@ -939,10 +939,9 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
     """
     # now we add the state to the trees in the batch
     # the state is built as a bulk operation
-    initial_states = model.initial_state_from_preterminals([x.preterminals for x in training_batch], [x.tree for x in training_batch])
-    initial_states = [state._replace(gold_sequence=sequence)
-                      for (tree, sequence, _), state in zip(training_batch, initial_states)]
-    current_batch = initial_states
+    current_batch = model.initial_state_from_preterminals([x.preterminals for x in training_batch],
+                                                          [x.tree for x in training_batch],
+                                                          [x.gold_sequence for x in training_batch])
 
     transitions_correct = Counter()
     transitions_incorrect = Counter()
