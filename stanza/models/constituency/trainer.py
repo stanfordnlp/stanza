@@ -771,6 +771,16 @@ def compose_train_data(trees, sequences):
     return data
 
 def next_epoch_data(leftover_training_data, train_data, epoch_size):
+    """
+    Return the next epoch_size trees from the training data, starting
+    with leftover data from the previous epoch if there is any
+
+    The training loop generally operates on a fixed number of trees,
+    rather than going through all the trees in the training set
+    exactly once, and keeping the leftover training data via this
+    function ensures that each tree in the training set is touched
+    once before beginning to iterate again.
+    """
     if not train_data:
         return [], []
 
