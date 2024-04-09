@@ -16,7 +16,7 @@ import torch
 
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, load_charlm, load_pretrain, NoTransformerFoundationCache
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
-from stanza.models.constituency.base_trainer import BaseTrainer
+from stanza.models.constituency.base_trainer import BaseTrainer, ModelType
 from stanza.models.constituency.lstm_model import LSTMModel
 from stanza.models.constituency.utils import build_optimizer, build_scheduler
 # TODO: could put find_wordvec_pretrain, choose_charlm, etc in a more central place if it becomes widely used
@@ -47,6 +47,10 @@ class Trainer(BaseTrainer):
             from peft import get_peft_model_state_dict
             return get_peft_model_state_dict(self.model.bert_model, adapter_name=self.model.peft_name)
         return None
+
+    @property
+    def model_type(self):
+        return ModelType.LSTM
 
     @staticmethod
     def find_and_load_pretrain(saved_args, foundation_cache):
