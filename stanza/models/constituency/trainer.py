@@ -43,8 +43,10 @@ class Trainer(BaseTrainer):
 
     def get_peft_params(self):
         # Hide import so that peft dependency is optional
-        from peft import get_peft_model_state_dict
-        return get_peft_model_state_dict(self.model.bert_model, adapter_name=self.model.peft_name)
+        if self.model.args.get('use_peft', False):
+            from peft import get_peft_model_state_dict
+            return get_peft_model_state_dict(self.model.bert_model, adapter_name=self.model.peft_name)
+        return None
 
     @staticmethod
     def find_and_load_pretrain(saved_args, foundation_cache):
