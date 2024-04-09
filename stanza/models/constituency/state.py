@@ -89,3 +89,9 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
     def __str__(self):
         return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.word_queue), str(self.transitions), str(self.constituents))
 
+class MultiState(namedtuple('MultiState', ['states', 'gold_tree', 'gold_sequence', 'score'])):
+    def finished(self, ensemble):
+        return self.states[0].finished(ensemble.models[0])
+
+    def get_tree(self, ensemble):
+        return self.states[0].get_tree(ensemble.models[0])
