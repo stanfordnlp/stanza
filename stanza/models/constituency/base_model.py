@@ -26,8 +26,9 @@ import torch
 from stanza.models.common import utils
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import transition_sequence
-from stanza.models.constituency.parse_transitions import State, TransitionScheme, CloseConstituent
+from stanza.models.constituency.parse_transitions import TransitionScheme, CloseConstituent
 from stanza.models.constituency.parse_tree import Tree
+from stanza.models.constituency.state import State
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.server.parser_eval import ParseResult, ScoredTree
 
