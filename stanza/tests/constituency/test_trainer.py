@@ -15,6 +15,7 @@ from stanza.models.common.bert_embedding import load_bert, load_tokenizer
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.common.utils import set_random_seed
 from stanza.models.constituency import lstm_model
+from stanza.models.constituency import parser_training
 from stanza.models.constituency import trainer
 from stanza.models.constituency import tree_reader
 from stanza.tests import *
@@ -68,7 +69,7 @@ def build_trainer(wordvec_pretrain_file, *args, treebank=TREEBANK):
     # might be None, unless we're testing loading an existing model
     model_load_name = args['load_name']
 
-    model, _, _, _ = trainer.build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, model_load_name)
+    model, _, _, _ = parser_training.build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, model_load_name)
     assert isinstance(model.model, lstm_model.LSTMModel)
     return model
 
@@ -205,7 +206,7 @@ class TestTrainer:
         if not exists_ok:
             assert not os.path.exists(args['save_name'])
         retag_pipeline = Pipeline(lang="en", processors="tokenize, pos", tokenize_pretokenized=True, dir=TEST_MODELS_DIR, foundation_cache=foundation_cache)
-        trained_model = trainer.train(args, None, [retag_pipeline])
+        trained_model = parser_training.train(args, None, [retag_pipeline])
         # check that hooks are in the model if expected
         for p in trained_model.model.parameters():
             if p.requires_grad:
