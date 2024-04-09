@@ -682,12 +682,12 @@ class LSTMModel(BaseModel, nn.Module):
         return lines
 
     def log_norms(self):
-        lines = ["NORMS FOR MODEL PARAMTERS"]
+        lines = ["NORMS FOR MODEL PARAMETERS"]
         lines.extend(self.get_norms())
         logger.info("\n".join(lines))
 
     def log_shapes(self):
-        lines = ["NORMS FOR MODEL PARAMTERS"]
+        lines = ["NORMS FOR MODEL PARAMETERS"]
         for name, param in self.named_parameters():
             if param.requires_grad:
                 lines.append("{} {}".format(name, param.shape))
