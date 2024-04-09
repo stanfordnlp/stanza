@@ -31,7 +31,6 @@ import torch
 
 from stanza.models.common import utils
 from stanza.models.common.foundation_cache import FoundationCache
-from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import retagging
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.state import MultiState
@@ -157,7 +156,7 @@ class Ensemble:
         new_states = []
 
         states = list(zip(*[x.states for x in state_batch]))
-        states = [parse_transitions.bulk_apply(x, y, transitions, fail=fail) for x, y in zip(self.models, states)]
+        states = [x.bulk_apply(y, transitions, fail=fail) for x, y in zip(self.models, states)]
         states = list(zip(*states))
         state_batch = [x._replace(states=y) for x, y in zip(state_batch, states)]
         return state_batch

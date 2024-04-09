@@ -1017,7 +1017,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
 
         if len(current_batch) > 0:
             # bulk update states - significantly faster
-            current_batch = parse_transitions.bulk_apply(model, new_batch, update_transitions, fail=True)
+            current_batch = model.bulk_apply(new_batch, update_transitions, fail=True)
 
     errors = torch.cat(all_errors)
     answers = torch.cat(all_answers)
