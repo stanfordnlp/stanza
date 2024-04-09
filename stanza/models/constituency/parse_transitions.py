@@ -85,7 +85,7 @@ class Transition(ABC):
         convenience method to call bulk_apply, which is significantly
         faster than single operations for an NN based model
         """
-        update = bulk_apply(model, [state], [self])
+        update = model.bulk_apply([state], [self])
         return update[0]
 
     @abstractmethod
@@ -585,78 +585,3 @@ def check_transitions(train_transitions, other_transitions, treebank_name):
             unknown_transitions.add(trans)
     if len(unknown_transitions) > 0:
         logger.warning("Found transitions where the components are all valid transitions, but the complete transition is unknown: %s", sorted(unknown_transitions))
-
-def bulk_apply(model, state_batch, transitions, fail=False):
-    """
-    Apply the given list of Transitions to the given list of States, using the model as a reference
-
-    model: SimpleModel, LSTMModel, or any other form of model
-    state_batch: list of States
-    transitions: list of transitions, one per state
-    fail: throw an exception on a failed transition, as opposed to skipping the tree
-    """
-    remove = set()
-
-    word_positions = []
-    constituents = []
-    new_constituents = []
-    callbacks = defaultdict(list)
-
-    for idx, (tree, transition) in enumerate(zip(state_batch, transitions)):
-        if not transition:
-            error = "Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
-            if fail:
-                raise ValueError(error)
-            else:
-                logger.error(error)
-                remove.add(idx)
-                continue
-
-        if tree.num_transitions() >= len(tree.word_queue) * 20:
-            # too many transitions
-            # x20 is somewhat empirically chosen based on certain
-            # treebanks having deep unary structures, especially early
-            # on when the model is fumbling around
-            if tree.gold_tree:
-                error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
-            else:
-                error = "Went infinite!:\nFinal state:\n{}".format(tree.to_string(model))
-            if fail:
-                raise ValueError(error)
-            else:
-                logger.error(error)
-                remove.add(idx)
-                continue
-
-        wq, c, nc, callback = transition.update_state(tree, model)
-
-        word_positions.append(wq)
-        constituents.append(c)
-        new_constituents.append(nc)
-        if callback:
-            # not `idx` in case something was removed
-            callbacks[callback].append(len(new_constituents)-1)
-
-    for key, idxs in callbacks.items():
-        data = [new_constituents[x] for x in idxs]
-        callback_constituents = key.build_constituents(model, data)
-        for idx, constituent in zip(idxs, callback_constituents):
-            new_constituents[idx] = constituent
-
-    state_batch = [tree for idx, tree in enumerate(state_batch) if idx not in remove]
-    transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
-
-    if len(state_batch) == 0:
-        return state_batch
-
-    new_transitions = model.push_transitions([tree.transitions for tree in state_batch], transitions)
-    new_constituents = model.push_constituents(constituents, new_constituents)
-
-    state_batch = [state._replace(num_opens=state.num_opens + transition.delta_opens(),
-                                 word_position=word_position,
-                                 transitions=transition_stack,
-                                 constituents=constituents)
-                  for (state, transition, word_position, transition_stack, constituents)
-                  in zip(state_batch, transitions, word_positions, new_transitions, new_constituents)]
-
-    return state_batch

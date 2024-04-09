@@ -24,7 +24,6 @@ import logging
 import torch
 
 from stanza.models.common import utils
-from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency.parse_transitions import TransitionScheme, CloseConstituent
 from stanza.models.constituency.parse_tree import Tree
@@ -302,7 +301,7 @@ class BaseModel(ABC):
             pred_scores, transitions, scores = transition_choice(state_batch)
             if keep_scores and scores is not None:
                 state_batch = [state._replace(score=state.score + score) for state, score in zip(state_batch, scores)]
-            state_batch = parse_transitions.bulk_apply(self, state_batch, transitions)
+            state_batch = self.bulk_apply(state_batch, transitions)
 
             if keep_constituents:
                 for t_idx, transition in enumerate(transitions):
@@ -389,6 +388,81 @@ class BaseModel(ABC):
 
         results = [t.predictions[0].tree for t in treebank]
         return results
+
+    def bulk_apply(self, state_batch, transitions, fail=False):
+        """
+        Apply the given list of Transitions to the given list of States, using the model as a reference
+
+        model: SimpleModel, LSTMModel, or any other form of model
+        state_batch: list of States
+        transitions: list of transitions, one per state
+        fail: throw an exception on a failed transition, as opposed to skipping the tree
+        """
+        remove = set()
+
+        word_positions = []
+        constituents = []
+        new_constituents = []
+        callbacks = defaultdict(list)
+
+        for idx, (tree, transition) in enumerate(zip(state_batch, transitions)):
+            if not transition:
+                error = "Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(self))
+                if fail:
+                    raise ValueError(error)
+                else:
+                    logger.error(error)
+                    remove.add(idx)
+                    continue
+
+            if tree.num_transitions() >= len(tree.word_queue) * 20:
+                # too many transitions
+                # x20 is somewhat empirically chosen based on certain
+                # treebanks having deep unary structures, especially early
+                # on when the model is fumbling around
+                if tree.gold_tree:
+                    error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(self))
+                else:
+                    error = "Went infinite!:\nFinal state:\n{}".format(tree.to_string(self))
+                if fail:
+                    raise ValueError(error)
+                else:
+                    logger.error(error)
+                    remove.add(idx)
+                    continue
+
+            wq, c, nc, callback = transition.update_state(tree, self)
+
+            word_positions.append(wq)
+            constituents.append(c)
+            new_constituents.append(nc)
+            if callback:
+                # not `idx` in case something was removed
+                callbacks[callback].append(len(new_constituents)-1)
+
+        for key, idxs in callbacks.items():
+            data = [new_constituents[x] for x in idxs]
+            callback_constituents = key.build_constituents(self, data)
+            for idx, constituent in zip(idxs, callback_constituents):
+                new_constituents[idx] = constituent
+
+        state_batch = [tree for idx, tree in enumerate(state_batch) if idx not in remove]
+        transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
+
+        if len(state_batch) == 0:
+            return state_batch
+
+        new_transitions = self.push_transitions([tree.transitions for tree in state_batch], transitions)
+        new_constituents = self.push_constituents(constituents, new_constituents)
+
+        state_batch = [state._replace(num_opens=state.num_opens + transition.delta_opens(),
+                                     word_position=word_position,
+                                     transitions=transition_stack,
+                                     constituents=constituents)
+                      for (state, transition, word_position, transition_stack, constituents)
+                      in zip(state_batch, transitions, word_positions, new_transitions, new_constituents)]
+
+        return state_batch
 
 class SimpleModel(BaseModel):
     """
