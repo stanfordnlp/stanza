@@ -34,6 +34,10 @@ from stanza.models.common import utils
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.constituency import retagging
 from stanza.models.constituency import tree_reader
+# TODO: move run_dev_set elsewhere or move its usage in this file elsewhere
+# same with parse_text & parse_dir
+# otherwise there will be circular imports
+from stanza.models.constituency.base_trainer import BaseTrainer
 from stanza.models.constituency.parser_training import run_dev_set
 from stanza.models.constituency.state import MultiState
 from stanza.models.constituency.text_processing import parse_text, parse_dir
@@ -113,6 +117,9 @@ class Ensemble(nn.Module):
             if param.requires_grad:
                 lines.append("{} {}".format(name, param.shape))
         logger.info("\n".join(lines))
+
+    def get_params(self):
+        return [x.get_params() for x in self.models]
 
     def build_batch_from_tagged_words(self, batch_size, data_iterator):
         """
@@ -258,6 +265,33 @@ class Ensemble(nn.Module):
     def parse_sentences_no_grad(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False, keep_scores=False):
         with torch.no_grad():
             return self.parse_sentences(data_iterator, build_batch_fn, batch_size, transition_choice, keep_state, keep_constituents, keep_scores)
+
+class EnsembleTrainer(BaseTrainer):
+    """
+    Stores a list of constituency models, useful for combining their results into one stronger model
+    """
+    def __init__(self, ensemble, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0):
+        super().__init__(ensemble, optimizer, scheduler, epochs_trained, batches_trained, best_f1, best_epoch)
+
+    @staticmethod
+    def from_files(filenames, args, foundation_cache=None):
+        ensemble = Ensemble(filenames, args, foundation_cache)
+        return EnsembleTrainer(ensemble)
+
+    def get_peft_params(self):
+        params = []
+        for model in self.model.models:
+            if model.args.get('use_peft', False):
+                from peft import get_peft_model_state_dict
+                params.append(get_peft_model_state_dict(model.bert_model, adapter_name=model.peft_name))
+            else:
+                params.append(None)
+
+        return params
+
+    # TODO:
+    # model_from_params(params, peft_params, args, foundation_cache=None, peft_name=None):
+
 
 DEFAULT_EVAL = {
     "en": "en_wsj_dev.mrg",
