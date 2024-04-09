@@ -34,6 +34,7 @@ from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import retagging
 from stanza.models.constituency import tree_reader
+from stanza.models.constituency.state import MultiState
 from stanza.models.constituency.text_processing import parse_text, parse_dir
 from stanza.models.constituency.trainer import Trainer, run_dev_set
 from stanza.models.constituency.utils import add_predict_output_args, postprocess_predict_output_args, retag_trees
@@ -103,6 +104,7 @@ class Ensemble:
         if len(state_batch) > 0:
             state_batch = [model.initial_state_from_words(state_batch) for model in self.models]
             state_batch = list(zip(*state_batch))
+            state_batch = [MultiState(states, None, None, 0.0) for states in state_batch]
         return state_batch
 
     def build_batch_from_trees(self, batch_size, data_iterator):
@@ -119,10 +121,11 @@ class Ensemble:
         if len(state_batch) > 0:
             state_batch = [model.initial_state_from_gold_trees(state_batch) for model in self.models]
             state_batch = list(zip(*state_batch))
+            state_batch = [MultiState(states, None, None, 0.0) for states in state_batch]
         return state_batch
 
     def predict(self, states, is_legal=True):
-        states = list(zip(*states))
+        states = list(zip(*[x.states for x in states]))
         predictions = [model.forward(state_batch) for model, state_batch in zip(self.models, states)]
         predictions = torch.stack(predictions)
         predictions = torch.sum(predictions, dim=0)
@@ -149,6 +152,15 @@ class Ensemble:
                         scores[idx] = None
 
         return predictions, pred_trans, scores.squeeze(1)
+
+    def bulk_apply(self, state_batch, transitions):
+        new_states = []
+
+        states = list(zip(*[x.states for x in state_batch]))
+        states = [parse_transitions.bulk_apply(x, y, transitions) for x, y in zip(self.models, states)]
+        states = list(zip(*states))
+        state_batch = [x._replace(states=y) for x, y in zip(state_batch, states)]
+        return state_batch
 
     def parse_sentences(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False, keep_scores=False):
         """
@@ -180,19 +192,17 @@ class Ensemble:
             constituents = defaultdict(list)
 
         while len(state_batch) > 0:
-            #print(batch_indices)
             pred_scores, transitions, scores = transition_choice(state_batch)
             # num models lists of batch size states
-            state_batch = list(zip(*state_batch))
-            state_batch = [parse_transitions.bulk_apply(model, states, transitions) for model, states in zip(self.models, state_batch)]
+            state_batch = self.bulk_apply(state_batch, transitions)
 
             remove = set()
-            for idx, state in enumerate(state_batch[0]):
-                if state.finished(self.models[0]):
-                    predicted_tree = state.get_tree(self.models[0])
+            for idx, states in enumerate(state_batch):
+                if states.finished(self):
+                    predicted_tree = states.get_tree(self)
                     if self.reverse_sentence:
                         predicted_tree = predicted_tree.reverse()
-                    gold_tree = state.gold_tree
+                    gold_tree = states.gold_tree
                     # TODO: could easily store the score here
                     # not sure what it means to store the state,
                     # since each model is tracking its own state
@@ -200,11 +210,7 @@ class Ensemble:
                     treebank_indices.append(batch_indices[idx])
                     remove.add(idx)
 
-            # batch size lists of num models tuples
-            state_batch = list(zip(*state_batch))
-
             if len(remove) > 0:
-                # remove a whole tuple of states at once
                 state_batch = [state for idx, state in enumerate(state_batch) if idx not in remove]
                 batch_indices = [batch_idx for idx, batch_idx in enumerate(batch_indices) if idx not in remove]
 
