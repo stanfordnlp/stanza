@@ -19,7 +19,7 @@ pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 def pipeline():
     return Pipeline(dir=TEST_MODELS_DIR, lang="en", processors="tokenize, pos, constituency", tokenize_pretokenized=True)
 
-def test_ensemble(pipeline):
+def test_ensemble_inference(pipeline):
     # test the ensemble by reusing the same parser multiple times
     con_processor = pipeline.processors["constituency"]
     model = con_processor._model
