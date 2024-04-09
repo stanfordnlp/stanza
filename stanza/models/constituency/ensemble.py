@@ -153,11 +153,11 @@ class Ensemble:
 
         return predictions, pred_trans, scores.squeeze(1)
 
-    def bulk_apply(self, state_batch, transitions):
+    def bulk_apply(self, state_batch, transitions, fail=False):
         new_states = []
 
         states = list(zip(*[x.states for x in state_batch]))
-        states = [parse_transitions.bulk_apply(x, y, transitions) for x, y in zip(self.models, states)]
+        states = [parse_transitions.bulk_apply(x, y, transitions, fail=fail) for x, y in zip(self.models, states)]
         states = list(zip(*states))
         state_batch = [x._replace(states=y) for x, y in zip(state_batch, states)]
         return state_batch
