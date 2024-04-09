@@ -721,8 +721,6 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         add the errors to the list of things to backprop
         advance the parsing state for each of the trees
     """
-    model = trainer.model
-
     # Somewhat unusual, but possibly related to the extreme variability in length of trees
     # Various experiments generally show about 0.5 F1 loss on various
     # datasets when using 'mean' instead of 'sum' for reduction
@@ -823,7 +821,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             wandb.log({'epoch_loss': epoch_stats.epoch_loss, 'dev_score': f1}, step=trainer.epochs_trained)
             if args['wandb_norm_regex']:
                 watch_regex = re.compile(args['wandb_norm_regex'])
-                for n, p in model.named_parameters():
+                for n, p in trainer.model.named_parameters():
                     if watch_regex.search(n):
                         wandb.log({n: torch.linalg.norm(p)})
 
@@ -836,7 +834,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             stage_pattn_layers, stage_uses_lattn = multistage_splits[epochs_trained]
 
             # when loading the model, let the saved model determine whether it has pattn or lattn
-            temp_args = copy.deepcopy(model.args)
+            temp_args = copy.deepcopy(trainer.model.args)
             temp_args.pop('pattn_num_layers', None)
             temp_args.pop('lattn_d_proj', None)
             # overwriting the old trainer & model will hopefully free memory
@@ -876,7 +874,6 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             scheduler = build_scheduler(temp_args, optimizer)
             trainer = Trainer(new_model, optimizer, scheduler, epochs_trained, batches_trained, trainer.best_f1, trainer.best_epoch)
             add_grad_clipping(trainer, args['grad_clipping'])
-            model = new_model
 
         # checkpoint needs to be saved AFTER rebuilding the optimizer
         # so that assumptions about the optimizer in the checkpoint
@@ -894,14 +891,13 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
     interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
     random.shuffle(interval_starts)
 
-    model = trainer.model
     optimizer = trainer.optimizer
 
     epoch_stats = EpochStats(0.0, Counter(), Counter(), Counter(), 0, 0)
 
     for batch_idx, interval_start in enumerate(tqdm(interval_starts, postfix="Epoch %d" % epoch)):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
-        batch_stats = train_model_one_batch(epoch, batch_idx, model, batch, transition_tensors, process_outputs, model_loss_function, oracle, args)
+        batch_stats = train_model_one_batch(epoch, batch_idx, trainer.model, batch, transition_tensors, process_outputs, model_loss_function, oracle, args)
         trainer.batches_trained += 1
 
         # Early in the training, some trees will be degenerate in a
@@ -1029,7 +1025,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
         matched = False
         tlogger.info("Watching %s   ... epoch %d batch %d", args['watch_regex'], epoch, batch_idx)
         watch_regex = re.compile(args['watch_regex'])
-        for n, p in model.named_parameters():
+        for n, p in trainer.model.named_parameters():
             if watch_regex.search(n):
                 matched = True
                 if p.requires_grad and p.grad is not None:
