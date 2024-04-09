@@ -37,7 +37,7 @@ from stanza.models.constituency import tree_reader
 # TODO: move run_dev_set elsewhere or move its usage in this file elsewhere
 # same with parse_text & parse_dir
 # otherwise there will be circular imports
-from stanza.models.constituency.base_trainer import BaseTrainer
+from stanza.models.constituency.base_trainer import BaseTrainer, ModelType
 from stanza.models.constituency.parser_training import run_dev_set
 from stanza.models.constituency.state import MultiState
 from stanza.models.constituency.text_processing import parse_text, parse_dir
@@ -288,6 +288,10 @@ class EnsembleTrainer(BaseTrainer):
                 params.append(None)
 
         return params
+
+    @property
+    def model_type(self):
+        return ModelType.ENSEMBLE
 
     # TODO:
     # model_from_params(params, peft_params, args, foundation_cache=None, peft_name=None):

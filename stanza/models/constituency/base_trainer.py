@@ -1,3 +1,4 @@
+from enum import Enum
 import logging
 import os
 
@@ -6,6 +7,10 @@ import torch
 from stanza.models.constituency.utils import build_optimizer, build_scheduler
 
 logger = logging.getLogger('stanza')
+
+class ModelType(Enum):
+    LSTM               = 1
+    ENSEMBLE           = 2
 
 class BaseTrainer:
     def __init__(self, model, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0):
@@ -20,7 +25,6 @@ class BaseTrainer:
         self.best_epoch = best_epoch
 
     def save(self, filename, save_optimizer=True):
-        # TODO: save the type in the checkpoint so we know which to load later
         params = self.model.get_params()
         checkpoint = {
             'params': params,
@@ -28,6 +32,7 @@ class BaseTrainer:
             'batches_trained': self.batches_trained,
             'best_f1': self.best_f1,
             'best_epoch': self.best_epoch,
+            'model_type': self.model_type,
         }
         checkpoint["bert_lora"] = self.get_peft_params()
         if save_optimizer and self.optimizer is not None:
