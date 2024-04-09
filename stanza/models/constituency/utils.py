@@ -310,3 +310,45 @@ def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse
             result = result.reverse()
         if tree != result:
             raise RuntimeError("Tree {} of {} failed: transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree_idx, name, tree, sequence, result))
+
+def check_constituents(train_constituents, trees, treebank_name):
+    """
+    Check that all the constituents in the other dataset are known in the train set
+    """
+    constituents = Tree.get_unique_constituent_labels(trees)
+    for con in constituents:
+        if con not in train_constituents:
+            first_error = None
+            num_errors = 0
+            for tree_idx, tree in enumerate(trees):
+                constituents = Tree.get_unique_constituent_labels(tree)
+                if con in constituents:
+                    num_errors += 1
+                    if first_error is None:
+                        first_error = tree_idx
+            raise RuntimeError("Found constituent label {} in the {} set which don't exist in the train set.  This constituent label occured in {} trees, with the first tree index at {} counting from 1\nThe error tree (which may have POS tags changed from the retagger and may be missing functional tags or empty nodes) is:\n{:P}".format(con, treebank_name, num_errors, (first_error+1), trees[first_error]))
+
+def check_root_labels(root_labels, other_trees, treebank_name):
+    """
+    Check that all the root states in the other dataset are known in the train set
+    """
+    for root_state in Tree.get_root_labels(other_trees):
+        if root_state not in root_labels:
+            raise RuntimeError("Found root state {} in the {} set which is not a ROOT state in the train set".format(root_state, treebank_name))
+
+def remove_duplicate_trees(trees, treebank_name):
+    """
+    Filter duplicates from the given dataset
+    """
+    new_trees = []
+    known_trees = set()
+    for tree in trees:
+        tree_str = "{}".format(tree)
+        if tree_str in known_trees:
+            continue
+        known_trees.add(tree_str)
+        new_trees.append(tree)
+    if len(new_trees) < len(trees):
+        tlogger.info("Filtered %d duplicates from %s dataset", (len(trees) - len(new_trees)), treebank_name)
+    return new_trees
+
