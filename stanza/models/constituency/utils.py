@@ -352,3 +352,17 @@ def remove_duplicate_trees(trees, treebank_name):
         tlogger.info("Filtered %d duplicates from %s dataset", (len(trees) - len(new_trees)), treebank_name)
     return new_trees
 
+def remove_singleton_trees(trees):
+    """
+    remove trees which are just a root and a single word
+
+    TODO: remove these trees in the conversion instead of here
+    """
+    new_trees = [x for x in trees if
+                 len(x.children) > 1 or
+                 (len(x.children) == 1 and len(x.children[0].children) > 1) or
+                 (len(x.children) == 1 and len(x.children[0].children) == 1 and len(x.children[0].children[0].children) >= 1)]
+    if len(trees) - len(new_trees) > 0:
+        tlogger.info("Eliminated %d trees with missing structure", (len(trees) - len(new_trees)))
+    return new_trees
+

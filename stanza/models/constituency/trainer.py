@@ -34,7 +34,7 @@ from stanza.models.constituency.lstm_model import LSTMModel, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.top_down_oracle import TopDownOracle
-from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler, verify_transitions, get_open_nodes, check_constituents, check_root_labels, remove_duplicate_trees
+from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler, verify_transitions, get_open_nodes, check_constituents, check_root_labels, remove_duplicate_trees, remove_singleton_trees
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
 from stanza.server.parser_eval import EvaluateParser, ParseResult
 from stanza.utils.get_tqdm import get_tqdm
@@ -518,18 +518,6 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
 
     return trainer, train_sequences, silver_sequences, train_transitions
 
-def remove_no_tags(trees):
-    """
-    TODO: remove these trees in the conversion instead of here
-    """
-    new_trees = [x for x in trees if
-                 len(x.children) > 1 or
-                 (len(x.children) == 1 and len(x.children[0].children) > 1) or
-                 (len(x.children) == 1 and len(x.children[0].children) == 1 and len(x.children[0].children[0].children) >= 1)]
-    if len(trees) - len(new_trees) > 0:
-        tlogger.info("Eliminated %d trees with missing structure", (len(trees) - len(new_trees)))
-    return new_trees
-
 def train(args, model_load_file, retag_pipeline):
     """
     Build a model, train it using the requested train & dev files
@@ -559,7 +547,7 @@ def train(args, model_load_file, retag_pipeline):
         train_trees = tree_reader.read_treebank(args['train_file'])
         tlogger.info("Read %d trees for the training set", len(train_trees))
         train_trees = remove_duplicate_trees(train_trees, "train")
-        train_trees = remove_no_tags(train_trees)
+        train_trees = remove_singleton_trees(train_trees)
 
         dev_trees = tree_reader.read_treebank(args['eval_file'])
         tlogger.info("Read %d trees for the dev set", len(dev_trees))
