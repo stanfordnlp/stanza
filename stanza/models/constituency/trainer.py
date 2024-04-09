@@ -34,7 +34,7 @@ from stanza.models.constituency.lstm_model import LSTMModel, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.top_down_oracle import TopDownOracle
-from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler, verify_transitions, get_open_nodes
+from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler, verify_transitions, get_open_nodes, check_constituents, check_root_labels, remove_duplicate_trees
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY
 from stanza.server.parser_eval import EvaluateParser, ParseResult
 from stanza.utils.get_tqdm import get_tqdm
@@ -352,31 +352,6 @@ def add_grad_clipping(trainer, grad_clipping):
             if p.requires_grad:
                 p.register_hook(lambda grad: torch.clamp(grad, -grad_clipping, grad_clipping))
 
-def check_constituents(train_constituents, trees, treebank_name):
-    """
-    Check that all the constituents in the other dataset are known in the train set
-    """
-    constituents = Tree.get_unique_constituent_labels(trees)
-    for con in constituents:
-        if con not in train_constituents:
-            first_error = None
-            num_errors = 0
-            for tree_idx, tree in enumerate(trees):
-                constituents = Tree.get_unique_constituent_labels(tree)
-                if con in constituents:
-                    num_errors += 1
-                    if first_error is None:
-                        first_error = tree_idx
-            raise RuntimeError("Found constituent label {} in the {} set which don't exist in the train set.  This constituent label occured in {} trees, with the first tree index at {} counting from 1\nThe error tree (which may have POS tags changed from the retagger and may be missing functional tags or empty nodes) is:\n{:P}".format(con, treebank_name, num_errors, (first_error+1), trees[first_error]))
-
-def check_root_labels(root_labels, other_trees, treebank_name):
-    """
-    Check that all the root states in the other dataset are known in the train set
-    """
-    for root_state in Tree.get_root_labels(other_trees):
-        if root_state not in root_labels:
-            raise RuntimeError("Found root state {} in the {} set which is not a ROOT state in the train set".format(root_state, treebank_name))
-
 def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, model_load_file):
     """
     Builds a Trainer (with model) and the train_sequences and transitions for the given trees.
@@ -543,22 +518,6 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
 
     return trainer, train_sequences, silver_sequences, train_transitions
 
-def remove_duplicates(trees, dataset):
-    """
-    Filter duplicates from the given dataset
-    """
-    new_trees = []
-    known_trees = set()
-    for tree in trees:
-        tree_str = "{}".format(tree)
-        if tree_str in known_trees:
-            continue
-        known_trees.add(tree_str)
-        new_trees.append(tree)
-    if len(new_trees) < len(trees):
-        tlogger.info("Filtered %d duplicates from %s dataset", (len(trees) - len(new_trees)), dataset)
-    return new_trees
-
 def remove_no_tags(trees):
     """
     TODO: remove these trees in the conversion instead of here
@@ -599,19 +558,19 @@ def train(args, model_load_file, retag_pipeline):
 
         train_trees = tree_reader.read_treebank(args['train_file'])
         tlogger.info("Read %d trees for the training set", len(train_trees))
-        train_trees = remove_duplicates(train_trees, "train")
+        train_trees = remove_duplicate_trees(train_trees, "train")
         train_trees = remove_no_tags(train_trees)
 
         dev_trees = tree_reader.read_treebank(args['eval_file'])
         tlogger.info("Read %d trees for the dev set", len(dev_trees))
-        dev_trees = remove_duplicates(dev_trees, "dev")
+        dev_trees = remove_duplicate_trees(dev_trees, "dev")
 
         silver_trees = []
         if args['silver_file']:
             silver_trees = tree_reader.read_treebank(args['silver_file'])
             tlogger.info("Read %d trees for the silver training set", len(silver_trees))
             if args['silver_remove_duplicates']:
-                silver_trees = remove_duplicates(silver_trees, "silver")
+                silver_trees = remove_duplicate_trees(silver_trees, "silver")
 
         if retag_pipeline is not None:
             tlogger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
