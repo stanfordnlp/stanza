@@ -29,8 +29,7 @@ class BaseTrainer:
             'best_f1': self.best_f1,
             'best_epoch': self.best_epoch,
         }
-        if self.model.args.get('use_peft', False):
-            checkpoint["bert_lora"] = self.get_peft_params()
+        checkpoint["bert_lora"] = self.get_peft_params()
         if save_optimizer and self.optimizer is not None:
             checkpoint['optimizer_state_dict'] = self.optimizer.state_dict()
             checkpoint['scheduler_state_dict'] = self.scheduler.state_dict()
