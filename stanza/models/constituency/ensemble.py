@@ -28,6 +28,7 @@ import logging
 import os
 
 import torch
+import torch.nn as nn
 
 from stanza.models.common import utils
 from stanza.models.common.foundation_cache import FoundationCache
@@ -44,7 +45,7 @@ from stanza.utils.default_paths import get_default_paths
 
 logger = logging.getLogger('stanza.constituency.trainer')
 
-class Ensemble:
+class Ensemble(nn.Module):
     def __init__(self, filenames, args, foundation_cache=None):
         """
         Loads each model in filenames
@@ -53,13 +54,15 @@ class Ensemble:
         as the expectation is the models will reuse modules
         such as pretrain, charlm, bert
         """
+        super().__init__()
+
         if foundation_cache is None:
             foundation_cache = FoundationCache()
 
         if isinstance(filenames, str):
             filenames = [filenames]
         logger.info("Models used for ensemble:\n  %s", "\n  ".join(filenames))
-        self.models = [Trainer.load(filename, args, load_optimizer=False, foundation_cache=foundation_cache).model for filename in filenames]
+        self.models = nn.ModuleList([Trainer.load(filename, args, load_optimizer=False, foundation_cache=foundation_cache).model for filename in filenames])
 
         for model_idx, model in enumerate(self.models):
             if self.models[0].transition_scheme() != model.transition_scheme():
@@ -77,9 +80,18 @@ class Ensemble:
 
         self._reverse_sentence = self.models[0].reverse_sentence
 
-    def eval(self):
-        for model in self.models:
-            model.eval()
+
+    @property
+    def transitions(self):
+        return self.models[0].transitions
+
+    @property
+    def root_labels(self):
+        return self.models[0].root_labels
+
+    @property
+    def device(self):
+        return next(self.parameters()).device
 
     @property
     def reverse_sentence(self):
@@ -87,6 +99,20 @@ class Ensemble:
 
     def uses_xpos(self):
         return self.models[0].uses_xpos()
+
+    def log_norms(self):
+        lines = ["NORMS FOR MODEL PARAMETERS"]
+        for model_idx, model in enumerate(self.models):
+            lines.append("  ---- MODEL %d ----" % model_idx)
+            lines.extend(model.get_norms())
+        logger.info("\n".join(lines))
+
+    def log_shapes(self):
+        lines = ["NORMS FOR MODEL PARAMETERS"]
+        for name, param in self.named_parameters():
+            if param.requires_grad:
+                lines.append("{} {}".format(name, param.shape))
+        logger.info("\n".join(lines))
 
     def build_batch_from_tagged_words(self, batch_size, data_iterator):
         """
