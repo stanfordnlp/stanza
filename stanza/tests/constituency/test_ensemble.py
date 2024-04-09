@@ -7,7 +7,7 @@ This just reuses one model several times - that should still check the main loop
 import pytest
 
 from stanza import Pipeline
-from stanza.models.constituency.ensemble import Ensemble
+from stanza.models.constituency.ensemble import Ensemble, EnsembleTrainer
 from stanza.models.constituency.text_processing import parse_tokenized_sentences
 
 from stanza.tests import TEST_MODELS_DIR
@@ -42,3 +42,20 @@ def test_ensemble_inference(pipeline):
     expected = ["(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT a) (NN test)))))",
                 "(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT another) (NN test)))))"]
     assert result == expected
+
+def test_ensemble_save(tmp_path, pipeline):
+    # test the ensemble by reusing the same parser multiple times
+    con_processor = pipeline.processors["constituency"]
+    model = con_processor._model
+    args = dict(model.args)
+    foundation_cache = pipeline.foundation_cache
+
+    model_path = con_processor._config['model_path']
+    # reuse the same model 3 times just to make sure the code paths are working
+    filenames = [model_path, model_path, model_path]
+
+    ensemble = EnsembleTrainer.from_files(filenames, args, foundation_cache)
+    save_path = tmp_path / "ensemble.pt"
+
+    ensemble.save(save_path)
+    print(save_path)
