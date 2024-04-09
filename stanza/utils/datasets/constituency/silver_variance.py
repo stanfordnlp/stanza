@@ -21,7 +21,8 @@ from stanza.models.common import utils
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.constituency import retagging
 from stanza.models.constituency import tree_reader
-from stanza.models.constituency.trainer import Trainer, run_dev_set
+from stanza.models.constituency.parser_training import run_dev_set
+from stanza.models.constituency.trainer import Trainer
 from stanza.models.constituency.utils import retag_trees
 from stanza.server.parser_eval import EvaluateParser
 from stanza.utils.get_tqdm import get_tqdm
