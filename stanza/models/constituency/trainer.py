@@ -278,6 +278,108 @@ class Trainer:
 
         return Trainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch)
 
+    @staticmethod
+    def build_trainer(args, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, foundation_cache, model_load_file):
+        # TODO: turn finetune, relearn_structure, multistage into an enum?
+        # finetune just means continue learning, so checkpoint is sufficient
+        # relearn_structure is essentially a one stage multistage
+        # multistage with a checkpoint will have the proper optimizer for that epoch
+        # and no special learning mode means we are training a new model and should continue
+        if args['checkpoint'] and args['checkpoint_save_name'] and os.path.exists(args['checkpoint_save_name']):
+            tlogger.info("Found checkpoint to continue training: %s", args['checkpoint_save_name'])
+            trainer = Trainer.load(args['checkpoint_save_name'], args, load_optimizer=True, foundation_cache=foundation_cache)
+            return trainer
+
+        # in the 'finetune' case, this will preload the models into foundation_cache,
+        # so the effort is not wasted
+        pt = foundation_cache.load_pretrain(args['wordvec_pretrain_file'])
+        forward_charlm = foundation_cache.load_charlm(args['charlm_forward_file'])
+        backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
+
+        if args['finetune']:
+            tlogger.info("Loading model to finetune: %s", model_load_file)
+            trainer = Trainer.load(model_load_file, args, load_optimizer=True, foundation_cache=NoTransformerFoundationCache(foundation_cache))
+            # a new finetuning will start with a new epochs_trained count
+            trainer.epochs_trained = 0
+            return trainer
+
+        if args['relearn_structure']:
+            tlogger.info("Loading model to continue training with new structure from %s", model_load_file)
+            temp_args = dict(args)
+            # remove the pattn & lattn layers unless the saved model had them
+            temp_args.pop('pattn_num_layers', None)
+            temp_args.pop('lattn_d_proj', None)
+            trainer = Trainer.load(model_load_file, temp_args, load_optimizer=False, foundation_cache=NoTransformerFoundationCache(foundation_cache))
+
+            # using the model's current values works for if the new
+            # dataset is the same or smaller
+            # TODO: handle a larger dataset as well
+            model = LSTMModel(pt,
+                              forward_charlm,
+                              backward_charlm,
+                              trainer.model.bert_model,
+                              trainer.model.bert_tokenizer,
+                              trainer.model.force_bert_saved,
+                              trainer.model.peft_name,
+                              trainer.model.transitions,
+                              trainer.model.constituents,
+                              trainer.model.tags,
+                              trainer.model.delta_words,
+                              trainer.model.rare_words,
+                              trainer.model.root_labels,
+                              trainer.model.constituent_opens,
+                              trainer.model.unary_limit(),
+                              args)
+            model = model.to(args['device'])
+            model.copy_with_new_structure(trainer.model)
+            optimizer = build_optimizer(args, model, False)
+            scheduler = build_scheduler(args, optimizer)
+            trainer = Trainer(model, optimizer, scheduler)
+            return trainer
+
+        if args['multistage']:
+            # run adadelta over the model for half the time with no pattn or lattn
+            # training then switches to a different optimizer for the rest
+            # this works surprisingly well
+            tlogger.info("Warming up model for %d iterations using AdaDelta to train the embeddings", args['epochs'] // 2)
+            temp_args = dict(args)
+            # remove the attention layers for the temporary model
+            temp_args['pattn_num_layers'] = 0
+            temp_args['lattn_d_proj'] = 0
+            args = temp_args
+
+        peft_name = None
+        if args['use_peft']:
+            peft_name = "constituency"
+            bert_model, bert_tokenizer = load_bert(args['bert_model'])
+            bert_model = build_peft_wrapper(bert_model, temp_args, tlogger, adapter_name=peft_name)
+        elif args['bert_finetune'] or args['stage1_bert_finetune']:
+            bert_model, bert_tokenizer = load_bert(args['bert_model'])
+        else:
+            bert_model, bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
+        model = LSTMModel(pt,
+                          forward_charlm,
+                          backward_charlm,
+                          bert_model,
+                          bert_tokenizer,
+                          False,
+                          peft_name,
+                          train_transitions,
+                          train_constituents,
+                          tags,
+                          words,
+                          rare_words,
+                          root_labels,
+                          open_nodes,
+                          unary_limit,
+                          args)
+        model = model.to(args['device'])
+
+        optimizer = build_optimizer(args, model, build_simple_adadelta=args['multistage'])
+        scheduler = build_scheduler(args, optimizer, first_optimizer=args['multistage'])
+
+        trainer = Trainer(model, optimizer, scheduler)
+        return trainer
 
 def evaluate(args, model_file, retag_pipeline):
     """
@@ -422,107 +524,12 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     # train_trees, dev_trees
     # lists of transitions, internal nodes, and root states the parser needs to be aware of
 
-    # in the 'finetune' case, this will preload the models into foundation_cache
-    pt = foundation_cache.load_pretrain(args['wordvec_pretrain_file'])
-    forward_charlm = foundation_cache.load_charlm(args['charlm_forward_file'])
-    backward_charlm = foundation_cache.load_charlm(args['charlm_backward_file'])
-
-    trainer = None
-    if args['checkpoint'] and args['checkpoint_save_name'] and os.path.exists(args['checkpoint_save_name']):
-        tlogger.info("Found checkpoint to continue training: %s", args['checkpoint_save_name'])
-        trainer = Trainer.load(args['checkpoint_save_name'], args, load_optimizer=True, foundation_cache=foundation_cache)
-        # grad clipping is not saved with the rest of the model
-        add_grad_clipping(trainer, args['grad_clipping'])
-
-        # TODO: turn finetune, relearn_structure, multistage into an enum?
-        # finetune just means continue learning, so checkpoint is sufficient
-        # relearn_structure is essentially a one stage multistage
-        # multistage with a checkpoint will have the proper optimizer for that epoch
-        # and no special learning mode means we are training a new model and should continue
-        return trainer, train_sequences, silver_sequences, train_transitions
-
-    if args['finetune']:
-        tlogger.info("Loading model to finetune: %s", model_load_file)
-        trainer = Trainer.load(model_load_file, args, load_optimizer=True, foundation_cache=NoTransformerFoundationCache(foundation_cache))
-        # a new finetuning will start with a new epochs_trained count
-        trainer.epochs_trained = 0
-    elif args['relearn_structure']:
-        tlogger.info("Loading model to continue training with new structure from %s", model_load_file)
-        temp_args = dict(args)
-        # remove the pattn & lattn layers unless the saved model had them
-        temp_args.pop('pattn_num_layers', None)
-        temp_args.pop('lattn_d_proj', None)
-        trainer = Trainer.load(model_load_file, temp_args, load_optimizer=False, foundation_cache=NoTransformerFoundationCache(foundation_cache))
-
-        # using the model's current values works for if the new
-        # dataset is the same or smaller
-        # TODO: handle a larger dataset as well
-        model = LSTMModel(pt,
-                          forward_charlm,
-                          backward_charlm,
-                          trainer.model.bert_model,
-                          trainer.model.bert_tokenizer,
-                          trainer.model.force_bert_saved,
-                          trainer.model.peft_name,
-                          trainer.model.transitions,
-                          trainer.model.constituents,
-                          trainer.model.tags,
-                          trainer.model.delta_words,
-                          trainer.model.rare_words,
-                          trainer.model.root_labels,
-                          trainer.model.constituent_opens,
-                          trainer.model.unary_limit(),
-                          args)
-        model = model.to(args['device'])
-        model.copy_with_new_structure(trainer.model)
-        optimizer = build_optimizer(args, model, False)
-        scheduler = build_scheduler(args, optimizer)
-        trainer = Trainer(model, optimizer, scheduler)
-    else:
-        if args['multistage']:
-            # run adadelta over the model for half the time with no pattn or lattn
-            # training then switches to a different optimizer for the rest
-            # this works surprisingly well
-            tlogger.info("Warming up model for %d iterations using AdaDelta to train the embeddings", args['epochs'] // 2)
-            temp_args = dict(args)
-            # remove the attention layers for the temporary model
-            temp_args['pattn_num_layers'] = 0
-            temp_args['lattn_d_proj'] = 0
-            args = temp_args
-
-        peft_name = None
-        if args['use_peft']:
-            peft_name = "constituency"
-            bert_model, bert_tokenizer = load_bert(args['bert_model'])
-            bert_model = build_peft_wrapper(bert_model, temp_args, tlogger, adapter_name=peft_name)
-        elif args['bert_finetune'] or args['stage1_bert_finetune']:
-            bert_model, bert_tokenizer = load_bert(args['bert_model'])
-        else:
-            bert_model, bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
-        model = LSTMModel(pt,
-                          forward_charlm,
-                          backward_charlm,
-                          bert_model,
-                          bert_tokenizer,
-                          False,
-                          peft_name,
-                          train_transitions,
-                          train_constituents,
-                          tags,
-                          words,
-                          rare_words,
-                          root_labels,
-                          open_nodes,
-                          unary_limit,
-                          args)
-        model = model.to(args['device'])
-
-        optimizer = build_optimizer(args, model, build_simple_adadelta=args['multistage'])
-        scheduler = build_scheduler(args, optimizer, first_optimizer=args['multistage'])
-
-        trainer = Trainer(model, optimizer, scheduler)
+    trainer = Trainer.build_trainer(args, train_transitions, train_constituents, tags, words, rare_words, root_labels, open_nodes, unary_limit, foundation_cache, model_load_file)
 
     tlogger.info("Number of words in the training set found in the embedding: %d out of %d", trainer.model.num_words_known(words), len(words))
+    # grad clipping is not saved with the rest of the model,
+    # so even in the case of a model we saved,
+    # we now have to add the grad clipping
     add_grad_clipping(trainer, args['grad_clipping'])
 
     return trainer, train_sequences, silver_sequences, train_transitions
