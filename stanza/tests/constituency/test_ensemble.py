@@ -19,6 +19,16 @@ pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 def pipeline():
     return Pipeline(dir=TEST_MODELS_DIR, lang="en", processors="tokenize, pos, constituency", tokenize_pretokenized=True)
 
+def check_basic_predictions(trees):
+    predictions = [x.predictions for x in trees]
+    assert len(predictions) == 2
+    assert all(len(x) == 1 for x in predictions)
+    trees = [x[0].tree for x in predictions]
+    result = ["{}".format(tree) for tree in trees]
+    expected = ["(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT a) (NN test)))))",
+                "(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT another) (NN test)))))"]
+    assert result == expected
+
 def test_ensemble_inference(pipeline):
     # test the ensemble by reusing the same parser multiple times
     con_processor = pipeline.processors["constituency"]
@@ -30,18 +40,11 @@ def test_ensemble_inference(pipeline):
     # reuse the same model 3 times just to make sure the code paths are working
     filenames = [model_path, model_path, model_path]
 
-    ensemble = Ensemble(filenames, args, foundation_cache)
+    ensemble = EnsembleTrainer.from_files(args, filenames, foundation_cache=foundation_cache)
+    ensemble = ensemble.model
     sentences = [["This", "is", "a", "test"], ["This", "is", "another", "test"]]
     trees = parse_tokenized_sentences(args, ensemble, [pipeline], sentences)
-
-    predictions = [x.predictions for x in trees]
-    assert len(predictions) == 2
-    assert all(len(x) == 1 for x in predictions)
-    trees = [x[0].tree for x in predictions]
-    result = ["{}".format(tree) for tree in trees]
-    expected = ["(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT a) (NN test)))))",
-                "(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT another) (NN test)))))"]
-    assert result == expected
+    check_basic_predictions(trees)
 
 def test_ensemble_save(tmp_path, pipeline):
     # test the ensemble by reusing the same parser multiple times
@@ -54,8 +57,28 @@ def test_ensemble_save(tmp_path, pipeline):
     # reuse the same model 3 times just to make sure the code paths are working
     filenames = [model_path, model_path, model_path]
 
-    ensemble = EnsembleTrainer.from_files(filenames, args, foundation_cache)
+    ensemble = EnsembleTrainer.from_files(args, filenames, foundation_cache=foundation_cache)
     save_path = tmp_path / "ensemble.pt"
 
     ensemble.save(save_path)
-    print(save_path)
+
+def test_ensemble_save_load(tmp_path, pipeline):
+    # test the ensemble by reusing the same parser multiple times
+    con_processor = pipeline.processors["constituency"]
+    model = con_processor._model
+    args = dict(model.args)
+    foundation_cache = pipeline.foundation_cache
+
+    model_path = con_processor._config['model_path']
+    # reuse the same model 3 times just to make sure the code paths are working
+    filenames = [model_path, model_path, model_path]
+
+    ensemble = EnsembleTrainer.from_files(args, filenames, foundation_cache=foundation_cache)
+    save_path = tmp_path / "ensemble.pt"
+
+    ensemble.save(save_path)
+
+    ensemble = EnsembleTrainer.load(save_path, args, foundation_cache=foundation_cache)
+    sentences = [["This", "is", "a", "test"], ["This", "is", "another", "test"]]
+    trees = parse_tokenized_sentences(args, ensemble.model, [pipeline], sentences)
+    check_basic_predictions(trees)
