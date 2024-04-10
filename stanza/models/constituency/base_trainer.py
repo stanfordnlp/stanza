@@ -132,14 +132,13 @@ class BaseTrainer:
             optimizer = None
             scheduler = None
 
-        logger.debug("-- MODEL CONFIG --")
-        for k in model.args.keys():
-            logger.debug("  --%s: %s", k, model.args[k])
-
         if checkpoint['model_type'] == ModelType.LSTM:
+            logger.debug("-- MODEL CONFIG --")
+            for k in model.args.keys():
+                logger.debug("  --%s: %s", k, model.args[k])
             return Trainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch)
         elif checkpoint['model_type'] == ModelType.ENSEMBLE:
-            return EnsembleTrainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch)
+            return EnsembleTrainer(ensemble=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch)
         else:
             raise ValueError("Unexpected model type: %s" % checkpoint['model_type'])
 
