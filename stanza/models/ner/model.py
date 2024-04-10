@@ -74,7 +74,7 @@ class NERTagger(nn.Module):
         if self.args.get('bert_model', None):
             if args.get('bert_hidden_layers', False):
                 # The average will be offset by 1/N so that the default zeros
-                # repressents an average of the N layers
+                # represents an average of the N layers
                 self.bert_layer_mix = nn.Linear(args['bert_hidden_layers'], 1, bias=False)
                 nn.init.zeros_(self.bert_layer_mix.weight)
             else:
