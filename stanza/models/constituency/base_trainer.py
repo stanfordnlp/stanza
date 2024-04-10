@@ -73,6 +73,7 @@ class BaseTrainer:
         Load back a model and possibly its optimizer.
         """
         # hide the import here to avoid circular imports
+        from stanza.models.constituency.ensemble import EnsembleTrainer
         from stanza.models.constituency.trainer import Trainer
 
         if not os.path.exists(filename):
@@ -90,7 +91,16 @@ class BaseTrainer:
         logger.debug("Loaded model from %s", filename)
 
         params = checkpoint['params']
-        model = Trainer.model_from_params(params, checkpoint.get('bert_lora', None), args, foundation_cache, peft_name)
+
+        if 'model_type' not in checkpoint:
+            # old models will have this trait
+            checkpoint['model_type'] = ModelType.LSTM
+        if checkpoint['model_type'] == ModelType.LSTM:
+            model = Trainer.model_from_params(params, checkpoint.get('bert_lora', None), args, foundation_cache, peft_name)
+        elif checkpoint['model_type'] == ModelType.ENSEMBLE:
+            model = EnsembleTrainer.model_from_params(params, checkpoint.get('bert_lora', None), args, foundation_cache, peft_name)
+        else:
+            raise ValueError("Unexpected model type: %s" % checkpoint['model_type'])
 
         epochs_trained = checkpoint['epochs_trained']
         batches_trained = checkpoint.get('batches_trained', 0)
@@ -126,5 +136,10 @@ class BaseTrainer:
         for k in model.args.keys():
             logger.debug("  --%s: %s", k, model.args[k])
 
-        return Trainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch)
+        if checkpoint['model_type'] == ModelType.LSTM:
+            return Trainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch)
+        elif checkpoint['model_type'] == ModelType.ENSEMBLE:
+            return EnsembleTrainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch)
+        else:
+            raise ValueError("Unexpected model type: %s" % checkpoint['model_type'])
 
