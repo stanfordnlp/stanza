@@ -7,6 +7,8 @@ This just reuses one model several times - that should still check the main loop
 import pytest
 
 from stanza import Pipeline
+from stanza.models.constituency import text_processing
+from stanza.models.constituency import tree_reader
 from stanza.models.constituency.ensemble import Ensemble, EnsembleTrainer
 from stanza.models.constituency.text_processing import parse_tokenized_sentences
 
@@ -80,3 +82,22 @@ def test_ensemble_save_load(pipeline, saved_ensemble):
     sentences = [["This", "is", "a", "test"], ["This", "is", "another", "test"]]
     trees = parse_tokenized_sentences(args, ensemble.model, [pipeline], sentences)
     check_basic_predictions(trees)
+
+def test_parse_text(tmp_path, pipeline, saved_ensemble):
+    _, model_path, args, foundation_cache = saved_ensemble
+
+    raw_file = str(tmp_path / "test_input.txt")
+    with open(raw_file, "w") as fout:
+        fout.write("This is a test\nThis is another test\n")
+    output_file = str(tmp_path / "test_output.txt")
+
+    args = dict(args)
+    args['tokenized_file'] = raw_file
+    args['predict_file'] = output_file
+
+    text_processing.load_model_parse_text(args, model_path, [pipeline])
+    trees = tree_reader.read_treebank(output_file)
+    trees = ["{}".format(x) for x in trees]
+    expected_trees = ["(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT a) (NN test)))))",
+                      "(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT another) (NN test)))))"]
+    assert trees == expected_trees
