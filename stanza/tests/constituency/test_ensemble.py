@@ -101,3 +101,10 @@ def test_parse_text(tmp_path, pipeline, saved_ensemble):
     expected_trees = ["(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT a) (NN test)))))",
                       "(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT another) (NN test)))))"]
     assert trees == expected_trees
+
+def test_pipeline(saved_ensemble):
+    _, model_path, _, foundation_cache = saved_ensemble
+    nlp = Pipeline("en", processors="tokenize,pos,constituency", constituency_model_path=str(model_path), foundation_cache=foundation_cache, download_method=None)
+    doc = nlp("This is a test")
+    tree = "{}".format(doc.sentences[0].constituency)
+    assert tree == "(ROOT (S (NP (DT This)) (VP (VBZ is) (NP (DT a) (NN test)))))"
