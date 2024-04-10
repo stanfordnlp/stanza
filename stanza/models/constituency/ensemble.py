@@ -50,7 +50,7 @@ from stanza.utils.default_paths import get_default_paths
 logger = logging.getLogger('stanza.constituency.trainer')
 
 class Ensemble(nn.Module):
-    def __init__(self, filenames, args, foundation_cache=None):
+    def __init__(self, args, filenames=None, models=None, foundation_cache=None):
         """
         Loads each model in filenames
 
@@ -60,13 +60,18 @@ class Ensemble(nn.Module):
         """
         super().__init__()
 
-        if foundation_cache is None:
-            foundation_cache = FoundationCache()
+        if filenames:
+            if foundation_cache is None:
+                foundation_cache = FoundationCache()
 
-        if isinstance(filenames, str):
-            filenames = [filenames]
-        logger.info("Models used for ensemble:\n  %s", "\n  ".join(filenames))
-        self.models = nn.ModuleList([Trainer.load(filename, args, load_optimizer=False, foundation_cache=foundation_cache).model for filename in filenames])
+            if isinstance(filenames, str):
+                filenames = [filenames]
+            logger.info("Models used for ensemble:\n  %s", "\n  ".join(filenames))
+            models = [Trainer.load(filename, args, load_optimizer=False, foundation_cache=foundation_cache).model for filename in filenames]
+        elif not models:
+            raise ValueError("filenames and models both not set!")
+
+        self.models = nn.ModuleList(models)
 
         for model_idx, model in enumerate(self.models):
             if self.models[0].transition_scheme() != model.transition_scheme():
@@ -274,8 +279,9 @@ class EnsembleTrainer(BaseTrainer):
         super().__init__(ensemble, optimizer, scheduler, epochs_trained, batches_trained, best_f1, best_epoch)
 
     @staticmethod
-    def from_files(filenames, args, foundation_cache=None):
-        ensemble = Ensemble(filenames, args, foundation_cache)
+    def from_files(args, filenames, foundation_cache=None):
+        ensemble = Ensemble(args, filenames, foundation_cache=foundation_cache)
+        ensemble = ensemble.to(args.get('device', None))
         return EnsembleTrainer(ensemble)
 
     def get_peft_params(self):
@@ -293,9 +299,24 @@ class EnsembleTrainer(BaseTrainer):
     def model_type(self):
         return ModelType.ENSEMBLE
 
-    # TODO:
-    # model_from_params(params, peft_params, args, foundation_cache=None, peft_name=None):
+    @staticmethod
+    def model_from_params(params, peft_params, args, foundation_cache=None, peft_name=None):
+        # TODO: fill in peft_name
+        if peft_params is None:
+            peft_params = [None] * len(params)
+        if peft_name is None:
+            peft_name = [None] * len(params)
 
+        if len(params) != len(peft_params):
+            raise ValueError("Model file had params length %d and peft params length %d" % (len(params), len(peft_params)))
+        if len(params) != len(peft_name):
+            raise ValueError("Model file had params length %d and peft name length %d" % (len(params), len(peft_name)))
+
+        models = [Trainer.model_from_params(model_param, peft_param, args, foundation_cache, peft_name=pname)
+                  for model_param, peft_param, pname in zip(params, peft_params, peft_name)]
+        ensemble = Ensemble(args, models=models)
+        ensemble = ensemble.to(args.get('device', None))
+        return ensemble
 
 DEFAULT_EVAL = {
     "en": "en_wsj_dev.mrg",
@@ -344,7 +365,7 @@ def main():
     retag_pipeline = retagging.build_retag_pipeline(args)
     foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
 
-    ensemble = Ensemble(args['models'], args, foundation_cache)
+    ensemble = Ensemble(args, args['models'], foundation_cache)
     ensemble.eval()
 
     if args['mode'] == 'predict':
