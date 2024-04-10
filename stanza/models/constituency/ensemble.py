@@ -200,6 +200,29 @@ class Ensemble(nn.Module):
         state_batch = [x._replace(states=y) for x, y in zip(state_batch, states)]
         return state_batch
 
+    def parse_tagged_words(self, words, batch_size):
+        """
+        This parses tagged words and returns a list of trees.
+
+        `parse_tagged_words` is useful at Pipeline time -
+          it takes words & tags and processes that into trees.
+
+        The tagged words should be represented:
+          one list per sentence
+            each sentence is a list of (word, tag)
+        The return value is a list of ParseTree objects
+
+        TODO: this really ought to be refactored with base_model
+        """
+        logger.debug("Processing %d sentences", len(words))
+        self.eval()
+
+        sentence_iterator = iter(words)
+        treebank = self.parse_sentences_no_grad(sentence_iterator, self.build_batch_from_tagged_words, batch_size, self.predict, keep_state=False, keep_constituents=False)
+
+        results = [t.predictions[0].tree for t in treebank]
+        return results
+
     def parse_sentences(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False, keep_scores=False):
         """
         Repeat transitions to build a list of trees from the input batches.
