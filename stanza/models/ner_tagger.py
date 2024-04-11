@@ -330,9 +330,6 @@ def train(args):
                 duration = time.time() - start_time
                 logger.info(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,
                                               max_steps, loss, duration, current_lr))
-                if args['log_norms']:
-                    trainer.model.log_norms()
-
             if global_step % args['eval_interval'] == 0:
                 # eval on dev
                 logger.info("Evaluating on dev set...")
@@ -362,6 +359,9 @@ def train(args):
                 if scheduler is not None:
                     scheduler.step(dev_score)
             
+                if args['log_norms']:
+                    trainer.model.log_norms()
+
             # check stopping
             current_lr = trainer.optimizer.param_groups[0]['lr']
             if (global_step - last_best_step) >= args['max_steps_no_improve'] or global_step >= args['max_steps'] or current_lr <= args['min_lr']:
@@ -423,6 +423,10 @@ def evaluate(args):
     model_file = model_file_name(args)
 
     loaded_args, trainer, vocab = load_model(args, model_file)
+
+    if args['log_norms']:
+        trainer.model.log_norms()
+
     logger.debug("Loaded model for eval from %s", model_file)
     logger.debug("Using the %d tagset for evaluation", loaded_args['predict_tagset'])
 
