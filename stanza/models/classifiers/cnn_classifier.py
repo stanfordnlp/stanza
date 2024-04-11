@@ -16,7 +16,6 @@ from stanza.models.classifiers.data import SentimentDatum
 from stanza.models.classifiers.utils import ExtraVectors, ModelType, build_output_layers
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
-from stanza.models.common.foundation_cache import load_bert
 from stanza.models.common.utils import attach_bert_model
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 
