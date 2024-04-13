@@ -13,7 +13,8 @@ from stanza.models.ner.utils import process_tags, normalize_empty_tags
 logger = logging.getLogger('stanza')
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False, preprocess_tags=True, bert_tokenizer=None, scheme=None):
+    def __init__(self, doc, batch_size, args, pretrain=None, vocab=None, evaluation=False, preprocess_tags=True, bert_tokenizer=None, scheme=None, max_batch_words=None):
+        self.max_batch_words = max_batch_words
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -188,6 +189,18 @@ class DataLoader:
         self.data = self.chunk_batches(data)
 
     def chunk_batches(self, data):
-        data = [data[i:i+self.batch_size] for i in range(0, len(data), self.batch_size)]
-        return data
-
+        if self.max_batch_words is None:
+            return [data[i:i+self.batch_size] for i in range(0, len(data), self.batch_size)]
+        batches = []
+        next_batch = []
+        for item in data:
+            next_batch.append(item)
+            if len(next_batch) >= self.batch_size:
+                batches.append(next_batch)
+                next_batch = []
+            if sum(len(x[0]) for x in next_batch) >= self.max_batch_words:
+                batches.append(next_batch)
+                next_batch = []
+        if len(next_batch) > 0:
+            batches.append(next_batch)
+        return batches
