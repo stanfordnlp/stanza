@@ -6,6 +6,10 @@ from typing import Hashable, List, Tuple
 from stanza.models.coref.const import EPSILON
 import numpy as np
 
+import logging
+
+logger = logging.getLogger('stanza')
+
 
 class ClusterChecker:
     """ Collects information on gold and predicted clusters across documents.
@@ -45,6 +49,10 @@ class ClusterChecker:
         Returns:
             LEA score for the document as a tuple of (f1, precision, recall)
         """
+
+        # if len(gold_clusters) == 0:
+            # breakpoint()
+
         self._num_preds += 1
         
         recall, r_weight = ClusterChecker._lea(gold_clusters, pred_clusters)
@@ -156,8 +164,12 @@ class ClusterChecker:
             p_k = len(deduped)
             top += (S - p_k)
             bottom += (S - 1)
-
-        return top/bottom
+        
+        try:
+            return top/bottom
+        except ZeroDivisionError:
+            logger.warning("Got a zero division error because the model predicted no spans!")
+            return 0 # +inf technically
 
     @staticmethod
     def _b3(key: List[List[Hashable]],
@@ -176,7 +188,13 @@ class ClusterChecker:
             for res_entity in response_clusters:
                 top += (len(entity.intersection(res_entity))**2)/len(entity)
 
-        return top/bottom
+        try:
+            return top/bottom
+        except ZeroDivisionError:
+            logger.warning("Got a zero division error because the model predicted no spans!")
+            return 0 # +inf technically
+
+
 
     @staticmethod
     def _phi4(c1, c2):

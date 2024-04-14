@@ -88,8 +88,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                                             modules_to_save=self.config.lora_fully_tune,
                                             bias="none")
 
-            self.bert = get_peft_model(self.bert, self.__peft_config)
             self.bert.train()
+            self.bert.gradient_checkpointing_enable()
+            self.bert = get_peft_model(self.bert, self.__peft_config)
             self.trainable["bert"] = self.bert
 
         if build_optimizers:
@@ -240,7 +241,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             p = running_not_dummy_p/len(docs)
             r = running_not_dummy_r/len(docs)
             logger.info(f"NON-DUMMY: p: {p:.5f} | r: {r:.5f} | f: {(2*p*r)/(p+r):.5f}")
-            logger.info(f"BAKE!: {s_checker.bakeoff:.5f}")
+            logger.info(f"BAKE!: {w_checker.bakeoff:.5f}")
 
         return (running_loss / len(docs), *s_checker.total_lea, s_checker.bakeoff)
 
@@ -393,11 +394,12 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
             # a_scores_batch    [batch_size, n_ants]
             a_scores_batch = self.a_scorer(
-                all_mentions=words, mentions_batch=words_batch,
-                pw_batch=pw_batch, top_indices_batch=top_indices_batch,
-                top_rough_scores_batch=top_rough_scores_batch
+                top_mentions=words[top_indices_batch], mentions_batch=words_batch,
+                pw_batch=pw_batch, top_rough_scores_batch=top_rough_scores_batch
             )
             a_scores_lst.append(a_scores_batch)
+            # del pw_batch, words_batch, top_indices_batch, top_rough_scores_batch
+            # torch.cuda.empty_cache()
 
         res = CorefResult()
 
@@ -490,8 +492,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 # doc 1072 has.... 17771 words?
                 if len(doc["subwords"]) > 5000:
-                    logger.warning(f"Skipping {doc_id} with {len(doc['subwords'])} subwords...")
-                    continue
+                    logger.warning(f"Get hyped, {doc_id} with {len(doc['subwords'])} subwords... ")
+                    # continue
 
                 for optim in self.optimizers.values():
                     optim.zero_grad()
@@ -539,6 +541,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 if self.config.supervise_rough:
                     loss += r_loss*0.5
                 loss.backward()
+                # breakpoint()
+                # self.bert.encoder.layer[0].attention.self.query.lora_A.default.weight.grad
 
                 running_c_loss += c_loss.item()
                 running_s_loss += s_loss.item()
@@ -598,38 +602,46 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     # ========================================================= Private methods
 
     def _bertify(self, doc: Doc) -> torch.Tensor:
-        subwords_batches = bert.get_subwords_batches(doc, self.config,
-                                                     self.tokenizer)
+        all_batches = bert.get_subwords_batches(doc, self.config, self.tokenizer)
 
-        special_tokens = np.array([self.tokenizer.cls_token_id,
-                                   self.tokenizer.sep_token_id,
-                                   self.tokenizer.pad_token_id,
-                                   self.tokenizer.eos_token_id])
-        subword_mask = ~(np.isin(subwords_batches, special_tokens))
+        # collect results
+        result = []
 
-        subwords_batches_tensor = torch.tensor(subwords_batches,
-                                               device=self.config.device,
-                                               dtype=torch.long)
-        subword_mask_tensor = torch.tensor(subword_mask,
-                                           device=self.config.device)
+        # we index the batches two at a time to prevent oom
+        for i in range(0, all_batches.shape[0], 2):
+            subwords_batches = all_batches[i:i+2]
 
-        # Obtain bert output for selected batches only
-        attention_mask = (subwords_batches != self.tokenizer.pad_token_id)
-        if "t5" in self.config.bert_model:
-            out = self.bert.encoder(
-                    input_ids=subwords_batches_tensor,
-                    attention_mask=torch.tensor(
-                        attention_mask, device=self.config.device))
-        else:
-            out = self.bert(
-                    subwords_batches_tensor,
-                    attention_mask=torch.tensor(
-                        attention_mask, device=self.config.device))
+            special_tokens = np.array([self.tokenizer.cls_token_id,
+                                       self.tokenizer.sep_token_id,
+                                       self.tokenizer.pad_token_id,
+                                       self.tokenizer.eos_token_id])
+            subword_mask = ~(np.isin(subwords_batches, special_tokens))
 
-        out = out['last_hidden_state']
+            subwords_batches_tensor = torch.tensor(subwords_batches,
+                                                   device=self.config.device,
+                                                   dtype=torch.long)
+            subword_mask_tensor = torch.tensor(subword_mask,
+                                               device=self.config.device)
 
-        # [n_subwords, bert_emb]
-        return out[subword_mask_tensor]
+            # Obtain bert output for selected batches only
+            attention_mask = (subwords_batches != self.tokenizer.pad_token_id)
+            if "t5" in self.config.bert_model:
+                out = self.bert.encoder(
+                        input_ids=subwords_batches_tensor,
+                        attention_mask=torch.tensor(
+                            attention_mask, device=self.config.device))
+            else:
+                out = self.bert(
+                        subwords_batches_tensor,
+                        attention_mask=torch.tensor(
+                            attention_mask, device=self.config.device))
+
+            out = out['last_hidden_state']
+            # [n_subwords, bert_emb]
+            result.append(out[subword_mask_tensor])
+
+        # stack returns and return
+        return torch.cat(result)
 
     def _build_model(self):
         self.bert, self.tokenizer = bert.load_bert(self.config)
