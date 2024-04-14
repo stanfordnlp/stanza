@@ -424,18 +424,21 @@ def evaluate(args):
     model_file = model_file_name(args)
 
     loaded_args, trainer, vocab = load_model(args, model_file)
+    return evaluate_model(loaded_args, trainer, vocab, args['eval_file'])
 
-    if args['log_norms']:
+def evaluate_model(loaded_args, trainer, vocab, eval_file):
+    if loaded_args['log_norms']:
         trainer.model.log_norms()
 
+    model_file = os.path.join(loaded_args['save_dir'], loaded_args['save_name'])
     logger.debug("Loaded model for eval from %s", model_file)
     logger.debug("Using the %d tagset for evaluation", loaded_args['predict_tagset'])
 
     # load data
-    logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    with open(args['eval_file']) as fin:
+    logger.info("Loading data with batch size {}...".format(loaded_args['batch_size']))
+    with open(eval_file) as fin:
         doc = Document(json.load(fin))
-    batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True, bert_tokenizer=trainer.model.bert_tokenizer)
+    batch = DataLoader(doc, loaded_args['batch_size'], loaded_args, vocab=vocab, evaluation=True, bert_tokenizer=trainer.model.bert_tokenizer)
     bioes_to_bio = loaded_args['train_scheme'] == 'bio' and loaded_args['scheme'] == 'bioes'
     warn_missing_tags(trainer.vocab['tag'], batch.tags, "eval_file", bioes_to_bio=bioes_to_bio)
 
@@ -448,17 +451,17 @@ def evaluate(args):
     # TODO: might still want to add multiple layers of tag evaluation to the scorer
     gold_tags = [[x[trainer.args['predict_tagset']] for x in tags] for tags in gold_tags]
 
-    _, _, score, entity_f1 = scorer.score_by_entity(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
-    _, _, _, confusion = scorer.score_by_token(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
+    _, _, score, entity_f1 = scorer.score_by_entity(preds, gold_tags, ignore_tags=loaded_args['ignore_tag_scores'])
+    _, _, _, confusion = scorer.score_by_token(preds, gold_tags, ignore_tags=loaded_args['ignore_tag_scores'])
     logger.info("Weighted f1 for non-O tokens: %5f", confusion_to_weighted_f1(confusion, exclude=["O"]))
 
-    logger.info("NER tagger score: %s %s %s %.2f", args['shorthand'], model_file, args['eval_file'], score*100)
+    logger.info("NER tagger score: %s %s %s %.2f", loaded_args['shorthand'], model_file, eval_file, score*100)
     entity_f1_lines = ["%s: %.2f" % (x, y*100) for x, y in entity_f1.items()]
     logger.info("NER Entity F1 scores:\n  %s", "\n  ".join(entity_f1_lines))
     logger.info("NER token confusion matrix:\n{}".format(format_confusion(confusion)))
 
-    if args['eval_output_file']:
-        write_ner_results(args['eval_output_file'], batch, preds, trainer.args['predict_tagset'])
+    if loaded_args['eval_output_file']:
+        write_ner_results(loaded_args['eval_output_file'], batch, preds, trainer.args['predict_tagset'])
 
     return confusion
 
@@ -477,8 +480,11 @@ def load_model(args, model_file):
 
     # load config
     for k in args:
-        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand', 'mode', 'scheme']:
+        if k.endswith('_dir') or k.endswith('_file') or k in ['batch_size', 'ignore_tag_scores', 'log_norms', 'mode', 'scheme', 'shorthand']:
             loaded_args[k] = args[k]
+    save_dir, save_name = os.path.split(model_file)
+    args['save_dir'] = save_dir
+    args['save_name'] = save_name
     return loaded_args, trainer, vocab
 
 
