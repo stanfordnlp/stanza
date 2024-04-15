@@ -1,17 +1,21 @@
 """
 Prototype of ensembling N models together on the same dataset
 
-The main process is to run the normal transition sequence, but sum the
-scores for the N models and use that to choose the highest scoring
-transition
+The main inference method is to run the normal transition sequence,
+but sum the scores for the N models and use that to choose the highest
+scoring transition
 
-Currently the code is kind of awkward because it includes a lot of
-duplicated logic in predict() and parse_sentences()
+Example of how to run it to build a silver dataset
+(or just parse a text file in general):
 
-Example of how to run it to build a silver dataset:
-
+# first, use this tool to build a saved ensemble
 python3 stanza/models/constituency/ensemble.py
-  saved_models/constituency/en_wsj_inorder_?.pt
+   saved_models/constituency/wsj_inorder_?.pt
+   --save_name saved_models/constituency/en_ensemble.pt
+
+# then use the ensemble directly as a model in constituency_parser.py
+python3 stanza/models/constituency_parser.py
+   --save_name saved_models/constituency/en_ensemble.pt
    --mode parse_text
    --tokenized_file /nlp/scr/horatio/en_silver/en_split_100
    --predict_file /nlp/scr/horatio/en_silver/en_split_100.inorder.mrg
@@ -32,20 +36,10 @@ import torch.nn as nn
 
 from stanza.models.common import utils
 from stanza.models.common.foundation_cache import FoundationCache
-from stanza.models.constituency import retagging
-from stanza.models.constituency import tree_reader
-# TODO: move run_dev_set elsewhere or move its usage in this file elsewhere
-# same with parse_text & parse_dir
-# otherwise there will be circular imports
 from stanza.models.constituency.base_trainer import BaseTrainer, ModelType
-from stanza.models.constituency.parser_training import run_dev_set
 from stanza.models.constituency.state import MultiState
-from stanza.models.constituency.text_processing import parse_text, parse_dir
 from stanza.models.constituency.trainer import Trainer
-from stanza.models.constituency.utils import add_predict_output_args, postprocess_predict_output_args, retag_trees
-from stanza.resources.common import DEFAULT_MODEL_DIR
-from stanza.server.parser_eval import EvaluateParser, ParseResult, ScoredTree
-from stanza.utils.default_paths import get_default_paths
+from stanza.server.parser_eval import ParseResult, ScoredTree
 
 logger = logging.getLogger('stanza.constituency.trainer')
 
@@ -105,6 +99,11 @@ class Ensemble(nn.Module):
     @property
     def reverse_sentence(self):
         return self._reverse_sentence
+
+    @property
+    def retag_method(self):
+        # TODO: make the method an enum
+        return self.models[0].args['retag_method']
 
     def uses_xpos(self):
         return self.models[0].uses_xpos()
@@ -341,18 +340,8 @@ class EnsembleTrainer(BaseTrainer):
         ensemble = ensemble.to(args.get('device', None))
         return ensemble
 
-DEFAULT_EVAL = {
-    "en": "en_wsj_dev.mrg",
-    "id": "id_icon_dev.mrg",
-    "vi": "vi_vlsp22_dev.mrg",
-}
-
 def parse_args(args=None):
     parser = argparse.ArgumentParser()
-
-    parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--tokenized_file', type=str, default=None, help='Input file of tokenized text for parsing with parse_text.')
-    parser.add_argument('--tokenized_dir', type=str, default=None, help='Input directory of tokenized text for parsing with parse_text.')
 
     parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")
@@ -362,59 +351,20 @@ def parse_args(args=None):
 
     parser.add_argument('--lang', default='en', help='Language to use')
 
-    parser.add_argument('--eval_batch_size', type=int, default=50, help='How many trees to batch when running eval')
     parser.add_argument('models', type=str, nargs='+', default=None, help="Which model(s) to load")
 
-    parser.add_argument('--mode', default='predict', choices=['parse_text', 'predict'])
-    add_predict_output_args(parser)
-
-    retagging.add_retag_args(parser)
+    parser.add_argument('--save_name', type=str, default=None, required=True, help='Where to save the combined ensemble')
 
     args = vars(parser.parse_args())
 
-    retagging.postprocess_args(args)
-    postprocess_predict_output_args(args)
-    args['num_generate'] = 0
-
-    if not args['eval_file'] and args['lang'] in DEFAULT_EVAL:
-        paths = get_default_paths()
-        args['eval_file'] = os.path.join(paths["CONSTITUENCY_DATA_DIR"], DEFAULT_EVAL[args['lang']])
-
     return args
 
-def main():
-    args = parse_args()
-    utils.log_training_args(args, logger, name="ensemble")
-    retag_pipeline = retagging.build_retag_pipeline(args)
-    foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
+def main(args=None):
+    args = parse_args(args)
+    foundation_cache = FoundationCache()
 
-    ensemble = Ensemble(args, args['models'], foundation_cache)
-    ensemble.eval()
-
-    if args['mode'] == 'predict':
-        with EvaluateParser() as evaluator:
-            treebank = tree_reader.read_treebank(args['eval_file'])
-            logger.info("Read %d trees for evaluation", len(treebank))
-
-            if retag_pipeline is not None:
-                logger.info("Retagging trees using the %s tags from the %s package...", args['retag_method'], args['retag_package'])
-                retagged_treebank = retag_trees(treebank, retag_pipeline, args['retag_xpos'])
-                logger.info("Retagging finished")
-
-            f1, kbestF1, _ = run_dev_set(ensemble, retagged_treebank, treebank, args, evaluator)
-            logger.info("F1 score on %s: %f", args['eval_file'], f1)
-            if kbestF1 is not None:
-                logger.info("KBest F1 score on %s: %f", args['eval_file'], kbestF1)
-    elif args['mode'] == 'parse_text':
-        if args['tokenized_dir']:
-            if not args['predict_dir']:
-                raise ValueError("Must specific --predict_dir to go with --tokenized_dir")
-            parse_dir(args, ensemble, retag_pipeline, args['tokenized_dir'], args['predict_dir'])
-        else:
-            parse_text(args, ensemble, retag_pipeline)
-    else:
-        raise ValueError("Unhandled mode %s" % args['mode'])
-
+    ensemble = EnsembleTrainer.from_files(args, args['models'], foundation_cache)
+    ensemble.save(args['save_name'], save_optimizer=False)
 
 if __name__ == "__main__":
     main()
