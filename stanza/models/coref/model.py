@@ -27,7 +27,7 @@ from stanza.models.coref.tokenizer_customization import TOKENIZER_FILTERS, TOKEN
 from stanza.models.coref.utils import GraphNode
 from stanza.models.coref.word_encoder import WordEncoder
 
-from torch.util.data import Dataset
+from torch.utils.data import Dataset
 from functools import lru_cache, wraps
 import weakref
 
@@ -552,7 +552,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
         docs = self._get_docs(self.config.train_data)
         docs_ids = list(range(len(docs)))
-        avg_spans = self.docs.avg_span
+        avg_spans = docs.avg_span
 
         best_f1 = None
         for epoch in range(self.epochs_trained, self.config.train_epochs):

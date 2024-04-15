@@ -15,17 +15,17 @@ save_dir = "saved_models/coref"
 #dev_data = "data/coref/huge.json"
 #test_data = "data/coref/huge.json"
 
-train_data = "data/coref/en_gum-ud.train.nosgl.json"
-dev_data = "data/coref/en_gum-ud.dev.nosgl.json"
-test_data = "data/coref/en_gum-ud.test.nosgl.json"
+#train_data = "data/coref/en_gum-ud.train.nosgl.json"
+#dev_data = "data/coref/en_gum-ud.dev.nosgl.json"
+#test_data = "data/coref/en_gum-ud.test.nosgl.json"
 
 #train_data = "data/coref/corefud_concat_short_v1_0.train.json"
 #dev_data = "data/coref/corefud_concat_short_v1_0.dev.json"
 #test_data = "data/coref/corefud_concat_short_v1_0.dev.json"
 
-#train_data = "data/coref/corefud_concat_v1_0.train.json"
-#dev_data = "data/coref/corefud_concat_v1_0.dev.json"
-#test_data = "data/coref/corefud_concat_v1_0.dev.json"
+train_data = "data/coref/corefud_concat_v1_0.train.json"
+dev_data = "data/coref/corefud_concat_v1_0.dev.json"
+test_data = "data/coref/corefud_concat_v1_0.dev.json"
 
 #train_data = "data/coref/english_train_head.jsonlines"
 #dev_data = "data/coref/english_development_head.jsonlines"
