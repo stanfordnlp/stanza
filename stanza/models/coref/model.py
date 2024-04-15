@@ -27,12 +27,89 @@ from stanza.models.coref.tokenizer_customization import TOKENIZER_FILTERS, TOKEN
 from stanza.models.coref.utils import GraphNode
 from stanza.models.coref.word_encoder import WordEncoder
 
+from torch.util.data import Dataset
+from functools import lru_cache, wraps
+import weakref
+
+def partial_self_lru(maxsize=1024):
+    "self is not hashable to be memoized, so we need to cache a pointer to self"
+
+    def decorator(f):
+
+        @lru_cache(maxsize, False)
+        def _func_deref_memoized(self_ptr, *args):
+            # this will panic if self is not allocated, but
+            # hopefully it always is when the method is caled
+            return f(self_ptr(), *args)
+
+        @wraps(f)
+        def wrapper(self, *args):
+            # this make the function call its memoized version, which can now
+            # hash the pointer to self now so it can be successfully
+            # memoized
+            return _func_deref_memoized(weakref.ref(self), *args)
+
+        return wrapper
+
+    return decorator
+
+   
+
 from peft import LoraConfig, get_peft_model, get_peft_model_state_dict, set_peft_model_state_dict
 
 from stanza.utils.get_tqdm import get_tqdm   # type: ignore
 tqdm = get_tqdm()
 
 logger = logging.getLogger('stanza')
+
+class CorefDataset(Dataset):
+
+    def __init__(self, path, config, tokenizer):
+        self.config = config
+        self.tokenizer = tokenizer
+
+        self.__filter_func = TOKENIZER_FILTERS.get(self.config.bert_model,
+                                                   lambda _: True)
+        self.__token_map = TOKENIZER_MAPS.get(self.config.bert_model, {})
+
+        try:
+            with open(path, encoding="utf-8") as fin:
+                data_f = json.load(fin)
+        except json.decoder.JSONDecodeError:
+            # read the old jsonlines format if necessary
+            with open(path, encoding="utf-8") as fin:
+                text = "[" + ",\n".join(fin) + "]"
+            data_f = json.loads(text)
+        logger.info("Loaded %d docs from %s", len(data_f), path)
+        self.__raw = data_f
+        self.__avg_span = sum(len(doc["head2span"]) for doc in self.__raw) / len(self.__raw)
+
+    @property
+    def avg_span(self):
+        return self.__avg_span
+
+    @partial_self_lru()
+    def __getitem__(self, x):
+        doc = self.__raw[x]
+        doc["span_clusters"] = [[tuple(mention) for mention in cluster]
+                            for cluster in doc["span_clusters"]]
+        word2subword = []
+        subwords = []
+        word_id = []
+        for i, word in enumerate(doc["cased_words"]):
+            tokenized_word = self.__token_map.get(word, self.tokenizer.tokenize(word))
+            tokenized_word = list(filter(self.__filter_func, tokenized_word))
+            word2subword.append((len(subwords), len(subwords) + len(tokenized_word)))
+            subwords.extend(tokenized_word)
+            word_id.extend([i] * len(tokenized_word))
+        doc["word2subword"] = word2subword
+        doc["subwords"] = subwords
+        doc["word_id"] = word_id
+
+        return doc
+
+    def __len__(self):
+        return len(self.__raw)
 
 class CorefModel:  # pylint: disable=too-many-instance-attributes
     """Combines all coref modules together to find coreferent spans.
@@ -473,9 +550,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                          self.a_scorer, self.we,
                          self.rough_scorer, self.sp), log_freq=4, log="all", log_graph=True)
 
-        docs = list(self._get_docs(self.config.train_data))
+        docs = self._get_docs(self.config.train_data)
         docs_ids = list(range(len(docs)))
-        avg_spans = sum(len(doc["head2span"]) for doc in docs) / len(docs)
+        avg_spans = self.docs.avg_span
 
         best_f1 = None
         for epoch in range(self.epochs_trained, self.config.train_epochs):
@@ -733,7 +810,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
     def _get_docs(self, path: str) -> List[Doc]:
         if path not in self._docs:
-            self._docs[path] = self._tokenize_docs(path)
+            self._docs[path] = CorefDataset(path, self.config, self.tokenizer)
         return self._docs[path]
 
     @staticmethod
@@ -780,38 +857,3 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         for module in self.trainable.values():
             module.train(self._training)
 
-    def _tokenize_docs(self, path: str) -> List[Doc]:
-        logger.debug(f"Tokenizing documents at {path}...", flush=True)
-        out: List[Doc] = []
-        filter_func = TOKENIZER_FILTERS.get(self.config.bert_model,
-                                            lambda _: True)
-        token_map = TOKENIZER_MAPS.get(self.config.bert_model, {})
-        try:
-            with open(path, encoding="utf-8") as fin:
-                data_f = json.load(fin)
-        except json.decoder.JSONDecodeError:
-            # read the old jsonlines format if necessary
-            with open(path, encoding="utf-8") as fin:
-                text = "[" + ",\n".join(fin) + "]"
-            data_f = json.loads(text)
-        logger.info("Loaded %d docs from %s", len(data_f), path)
-        for doc in data_f:
-            doc["span_clusters"] = [[tuple(mention) for mention in cluster]
-                               for cluster in doc["span_clusters"]]
-            word2subword = []
-            subwords = []
-            word_id = []
-            for i, word in enumerate(doc["cased_words"]):
-                tokenized_word = (token_map[word]
-                                  if word in token_map
-                                  else self.tokenizer.tokenize(word))
-                tokenized_word = list(filter(filter_func, tokenized_word))
-                word2subword.append((len(subwords), len(subwords) + len(tokenized_word)))
-                subwords.extend(tokenized_word)
-                word_id.extend([i] * len(tokenized_word))
-            doc["word2subword"] = word2subword
-            doc["subwords"] = subwords
-            doc["word_id"] = word_id
-            out.append(doc)
-        logger.debug("Tokenization OK", flush=True)
-        return out
