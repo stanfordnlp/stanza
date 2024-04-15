@@ -77,8 +77,8 @@ def evaluate(args, model_file, retag_pipeline):
 
         retagged_treebank = treebank
         if retag_pipeline is not None:
-            retag_method = trainer.model.args['retag_method']
-            retag_xpos = trainer.model.args['retag_xpos']
+            retag_method = trainer.model.retag_method
+            retag_xpos = retag_method == 'xpos'
             tlogger.info("Retagging trees using the %s tags from the %s package...", retag_method, args['retag_package'])
             retagged_treebank = retag_trees(treebank, retag_pipeline, retag_xpos)
             tlogger.info("Retagging finished")
