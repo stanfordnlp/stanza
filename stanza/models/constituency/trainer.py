@@ -15,7 +15,7 @@ import os
 import torch
 
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, load_charlm, load_pretrain, NoTransformerFoundationCache
-from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
+from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper, pop_peft_args
 from stanza.models.constituency.base_trainer import BaseTrainer, ModelType
 from stanza.models.constituency.lstm_model import LSTMModel
 from stanza.models.constituency.utils import build_optimizer, build_scheduler
@@ -88,8 +88,9 @@ class Trainer(BaseTrainer):
         # reloaded from disk
         if args is None: args = {}
         update_args = copy.deepcopy(args)
-        # TODO: pop all the peft args as well
+        pop_peft_args(update_args)
         update_args.pop("bert_hidden_layers", None)
+        update_args.pop("bert_model", None)
         update_args.pop("constituency_composition", None)
         update_args.pop("constituent_stack", None)
         update_args.pop("num_tree_lstm_layers", None)
