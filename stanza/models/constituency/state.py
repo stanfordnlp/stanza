@@ -95,3 +95,40 @@ class MultiState(namedtuple('MultiState', ['states', 'gold_tree', 'gold_sequence
 
     def get_tree(self, ensemble):
         return self.states[0].get_tree(ensemble.models[0])
+
+    def num_constituents(self):
+        return len(self.states[0].constituents) - 1
+
+    def num_transitions(self):
+        # -1 for the sentinel value
+        return len(self.states[0].transitions) - 1
+
+    @property
+    def num_opens(self):
+        return self.states[0].num_opens
+
+    @property
+    def sentence_length(self):
+        return self.states[0].sentence_length
+
+    def empty_word_queue(self):
+        return self.states[0].empty_word_queue()
+
+    def empty_transitions(self):
+        return self.states[0].empty_transitions()
+
+    @property
+    def constituents(self):
+        # warning! if there is information in the constituents such as
+        # the embedding of the constituent, this will only contain the
+        # first such embedding
+        # the other models' constituent states won't be returned
+        return self.states[0].constituents
+
+    @property
+    def transitions(self):
+        # warning! if there is information in the transitions such as
+        # the embedding of the transition, this will only contain the
+        # first such embedding
+        # the other models' transition states won't be returned
+        return self.states[0].transitions
