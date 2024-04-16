@@ -30,6 +30,22 @@ def add_peft_args(parser):
 
     parser.add_argument('--use_peft', default=False, action='store_true', help="Finetune Bert using peft")
 
+def pop_peft_args(args):
+    """
+    Pop all of the peft-related arguments from a given dict
+
+    Useful for making sure a model loaded from disk is recreated with
+    the right shapes, for example
+    """
+    args.pop("lora_rank", None)
+    args.pop("lora_alpha", None)
+    args.pop("lora_dropout", None)
+    args.pop("lora_target_modules", None)
+    args.pop("lora_modules_to_save", None)
+
+    args.pop("use_peft", None)
+
+
 def resolve_peft_args(args, logger, check_bert_finetune=True):
     if not hasattr(args, 'bert_model'):
         return
