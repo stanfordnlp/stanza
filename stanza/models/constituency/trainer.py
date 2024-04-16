@@ -312,6 +312,7 @@ def evaluate(args, model_file, retag_pipeline):
         treebank = tree_reader.read_treebank(args['eval_file'])
         tlogger.info("Read %d trees for evaluation", len(treebank))
 
+        retagged_treebank = treebank
         if retag_pipeline is not None:
             retag_method = trainer.model.args['retag_method']
             retag_xpos = trainer.model.args['retag_xpos']
