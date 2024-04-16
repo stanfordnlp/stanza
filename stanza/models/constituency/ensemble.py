@@ -28,6 +28,7 @@ then take the trees which match from the files
 
 
 import argparse
+import copy
 import logging
 import os
 
@@ -39,6 +40,7 @@ from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.constituency.base_trainer import BaseTrainer, ModelType
 from stanza.models.constituency.state import MultiState
 from stanza.models.constituency.trainer import Trainer
+from stanza.models.constituency.utils import build_optimizer, build_scheduler
 from stanza.server.parser_eval import ParseResult, ScoredTree
 
 logger = logging.getLogger('stanza.constituency.trainer')
@@ -96,6 +98,21 @@ class Ensemble(nn.Module):
     def device(self):
         return next(self.parameters()).device
 
+    def unary_limit(self):
+        """
+        Limit on the number of consecutive unary transitions
+        """
+        return min(m.unary_limit() for m in self.models)
+
+    def transition_scheme(self):
+        return self.models[0].transition_scheme()
+
+    def has_unary_transitions(self):
+        return self.models[0].has_unary_transitions()
+
+    def is_top_down(self):
+        return self.models[0].is_top_down()
+
     @property
     def reverse_sentence(self):
         return self._reverse_sentence
@@ -107,6 +124,12 @@ class Ensemble(nn.Module):
 
     def uses_xpos(self):
         return self.models[0].uses_xpos()
+
+    def get_top_constituent(self, constituents):
+        return self.models[0].get_top_constituent(constituents)
+
+    def get_top_transition(self, transitions):
+        return self.models[0].get_top_transition(transitions)
 
     def log_norms(self):
         lines = ["NORMS FOR MODEL PARAMETERS"]
@@ -124,6 +147,13 @@ class Ensemble(nn.Module):
 
     def get_params(self):
         return [x.get_params() for x in self.models]
+
+    def initial_state_from_preterminals(self, preterminal_lists, gold_trees, gold_sequences):
+        state_batch = [model.initial_state_from_preterminals(preterminal_lists, gold_trees, gold_sequences) for model in self.models]
+        state_batch = list(zip(*state_batch))
+        state_batch = [MultiState(states, gold_tree, gold_sequence, 0.0)
+                       for states, gold_tree, gold_sequence in zip(state_batch, gold_trees, gold_sequences)]
+        return state_batch
 
     def build_batch_from_tagged_words(self, batch_size, data_iterator):
         """
@@ -320,6 +350,47 @@ class EnsembleTrainer(BaseTrainer):
     @property
     def model_type(self):
         return ModelType.ENSEMBLE
+
+    def log_num_words_known(self, words):
+        nwk = [m.num_words_known(words) for m in self.model.models]
+        if all(x == nwk[0] for x in nwk):
+            logger.info("Number of words in the training set known to each sub-model: %d out of %d", nwk[0], len(words))
+        else:
+            logger.info("Number of words in the training set known to the sub-models:\n  %s" % "\n  ".join(["%d/%d" % (x, len(words)) for x in nwk]))
+
+    @staticmethod
+    def build_optimizer(args, model, first_optimizer):
+        def fake_named_parameters():
+            for n, p in model.named_parameters():
+                if not n.startswith("models."):
+                    yield n, p
+
+        # TODO: there has to be a cleaner way to do this, like maybe a "keep" callback
+        # TODO: if we finetune the underlying models, we will want a series of optimizers
+        # so that they can have a different learning rate from the ensemble's fields
+        fake_model = copy.copy(model)
+        fake_model.named_parameters = fake_named_parameters
+        optimizer = build_optimizer(args, fake_model, first_optimizer)
+        return optimizer
+
+    @staticmethod
+    def load_optimizer(model, checkpoint, first_optimizer, filename):
+        optimizer = EnsembleTrainer.build_optimizer(model.models[0].args, model, first_optimizer)
+        if checkpoint.get('optimizer_state_dict', None) is not None:
+            try:
+                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            except ValueError as e:
+                raise ValueError("Failed to load optimizer from %s" % filename) from e
+        else:
+            logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
+        return optimizer
+
+    @staticmethod
+    def load_scheduler(model, optimizer, checkpoint, first_optimizer):
+        scheduler = build_scheduler(model.models[0].args, optimizer, first_optimizer=first_optimizer)
+        if 'scheduler_state_dict' in checkpoint:
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        return scheduler
 
     @staticmethod
     def model_from_params(params, peft_params, args, foundation_cache=None, peft_name=None):

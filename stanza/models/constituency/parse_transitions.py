@@ -156,7 +156,7 @@ class Shift(Transition):
                     # in both cases, Shift is legal
                     # Note that the corresponding problem of shifting after the ROOT-S
                     # has been closed to just ROOT is handled in CloseConstituent
-                    if len(trans.label) == 1 and trans.top_label in model.get_root_labels():
+                    if len(trans.label) == 1 and trans.top_label in model.root_labels:
                         # don't shift a word at the very start of a parse
                         # we want there to be an extra layer below ROOT
                         return False
@@ -228,7 +228,7 @@ class CompoundUnary(Transition):
         if model.transition_scheme() is not TransitionScheme.TOP_DOWN_UNARY:
             return True
 
-        is_root = self.label[0] in model.get_root_labels()
+        is_root = self.label[0] in model.root_labels
         if not state.empty_word_queue() or not state.has_one_constituent():
             return not is_root
         else:
@@ -326,7 +326,7 @@ class OpenConstituent(Transition):
             # root open transitions
             if not model.has_unary_transitions():
                 # TODO: maybe cache this value if this is an expensive operation
-                is_root = self.top_label in model.get_root_labels()
+                is_root = self.top_label in model.root_labels
                 if is_root:
                     return state.empty_transitions()
                 else:
@@ -354,7 +354,7 @@ class OpenConstituent(Transition):
             # therefore ROOT can only occur via Open after everything
             # else has been pushed and processed
             # there are no further restrictions
-            is_root = self.top_label in model.get_root_labels()
+            is_root = self.top_label in model.root_labels
             if is_root:
                 # can't make a root node if it will be in the middle of the parse
                 # can't make a root node if there's still words to eat

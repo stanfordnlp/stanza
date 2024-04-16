@@ -75,6 +75,9 @@ class Trainer(BaseTrainer):
             charlm_file = find_charlm_file(direction, language, charlm)
             return load_charlm(charlm_file, foundation_cache)
 
+    def log_num_words_known(self, words):
+        tlogger.info("Number of words in the training set found in the embedding: %d out of %d", self.model.num_words_known(words), len(words))
+
     @staticmethod
     def load_optimizer(model, checkpoint, first_optimizer, filename):
         optimizer = build_optimizer(model.args, model, first_optimizer)
