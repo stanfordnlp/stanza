@@ -4,8 +4,6 @@ import os
 
 import torch
 
-from stanza.models.constituency.utils import build_optimizer, build_scheduler
-
 logger = logging.getLogger('stanza')
 
 class ModelType(Enum):
@@ -124,18 +122,8 @@ class BaseTrainer:
         first_optimizer = checkpoint['first_optimizer']
 
         if load_optimizer:
-            optimizer = build_optimizer(model.args, model, first_optimizer)
-            if checkpoint.get('optimizer_state_dict', None) is not None:
-                try:
-                    optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
-                except ValueError as e:
-                    raise ValueError("Failed to load optimizer from %s" % filename) from e
-            else:
-                logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
-
-            scheduler = build_scheduler(model.args, optimizer, first_optimizer=first_optimizer)
-            if 'scheduler_state_dict' in checkpoint:
-                scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            optimizer = clazz.load_optimizer(model, checkpoint, first_optimizer, filename)
+            scheduler = clazz.load_scheduler(model, optimizer, checkpoint, first_optimizer)
         else:
             optimizer = None
             scheduler = None
