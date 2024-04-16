@@ -32,8 +32,8 @@ class Trainer(BaseTrainer):
 
     Not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
     """
-    def __init__(self, model, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0):
-        super().__init__(model, optimizer, scheduler, epochs_trained, batches_trained, best_f1, best_epoch)
+    def __init__(self, model, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0, first_optimizer=False):
+        super().__init__(model, optimizer, scheduler, epochs_trained, batches_trained, best_f1, best_epoch, first_optimizer)
 
     def save(self, filename, save_optimizer=True):
         """
@@ -262,5 +262,5 @@ class Trainer(BaseTrainer):
         optimizer = build_optimizer(args, model, build_simple_adadelta=args['multistage'])
         scheduler = build_scheduler(args, optimizer, first_optimizer=args['multistage'])
 
-        trainer = Trainer(model, optimizer, scheduler)
+        trainer = Trainer(model, optimizer, scheduler, first_optimizer=args['multistage'])
         return trainer

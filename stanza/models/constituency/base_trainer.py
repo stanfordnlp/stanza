@@ -13,7 +13,7 @@ class ModelType(Enum):
     ENSEMBLE           = 2
 
 class BaseTrainer:
-    def __init__(self, model, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0):
+    def __init__(self, model, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0, first_optimizer=False):
         self.model = model
         self.optimizer = optimizer
         self.scheduler = scheduler
@@ -23,6 +23,7 @@ class BaseTrainer:
         self.batches_trained = batches_trained
         self.best_f1 = best_f1
         self.best_epoch = best_epoch
+        self.first_optimizer = first_optimizer
 
     def save(self, filename, save_optimizer=True):
         params = self.model.get_params()
@@ -33,6 +34,7 @@ class BaseTrainer:
             'best_f1': self.best_f1,
             'best_epoch': self.best_epoch,
             'model_type': self.model_type,
+            'first_optimizer': self.first_optimizer,
         }
         checkpoint["bert_lora"] = self.get_peft_params()
         if save_optimizer and self.optimizer is not None:
@@ -108,16 +110,21 @@ class BaseTrainer:
         best_f1 = checkpoint['best_f1']
         best_epoch = checkpoint['best_epoch']
 
-        if load_optimizer:
+        if 'first_optimizer' not in checkpoint:
+            # this will only apply to old (LSTM) Trainers
+            # EnsembleTrainers will always have this value saved
+            # so here we can compensate by looking at the old training statistics...
             # we use params['config'] here instead of model.args
             # because the args might have a different training
             # mechanism, but in order to reload the optimizer, we need
             # to match the optimizer we build with the one that was
             # used at training time
             build_simple_adadelta = params['config']['multistage'] and epochs_trained < params['config']['epochs'] // 2
-            logger.debug("Model loaded was built with multistage %s  epochs_trained %d out of total epochs %d  Building initial Adadelta optimizer: %s", params['config']['multistage'], epochs_trained, params['config']['epochs'], build_simple_adadelta)
-            optimizer = build_optimizer(model.args, model, build_simple_adadelta)
+            checkpoint['first_optimizer'] = build_simple_adadelta
+        first_optimizer = checkpoint['first_optimizer']
 
+        if load_optimizer:
+            optimizer = build_optimizer(model.args, model, first_optimizer)
             if checkpoint.get('optimizer_state_dict', None) is not None:
                 try:
                     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
@@ -126,7 +133,7 @@ class BaseTrainer:
             else:
                 logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
 
-            scheduler = build_scheduler(model.args, optimizer, first_optimizer=build_simple_adadelta)
+            scheduler = build_scheduler(model.args, optimizer, first_optimizer=first_optimizer)
             if 'scheduler_state_dict' in checkpoint:
                 scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         else:
@@ -137,9 +144,9 @@ class BaseTrainer:
             logger.debug("-- MODEL CONFIG --")
             for k in model.args.keys():
                 logger.debug("  --%s: %s", k, model.args[k])
-            return Trainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch)
+            return Trainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch, first_optimizer=first_optimizer)
         elif checkpoint['model_type'] == ModelType.ENSEMBLE:
-            return EnsembleTrainer(ensemble=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch)
+            return EnsembleTrainer(ensemble=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch, first_optimizer=first_optimizer)
         else:
             raise ValueError("Unexpected model type: %s" % checkpoint['model_type'])
 
