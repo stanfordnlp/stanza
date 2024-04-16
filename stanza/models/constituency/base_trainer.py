@@ -96,11 +96,12 @@ class BaseTrainer:
             # old models will have this trait
             checkpoint['model_type'] = ModelType.LSTM
         if checkpoint['model_type'] == ModelType.LSTM:
-            model = Trainer.model_from_params(params, checkpoint.get('bert_lora', None), args, foundation_cache, peft_name)
+            clazz = Trainer
         elif checkpoint['model_type'] == ModelType.ENSEMBLE:
-            model = EnsembleTrainer.model_from_params(params, checkpoint.get('bert_lora', None), args, foundation_cache, peft_name)
+            clazz = EnsembleTrainer
         else:
             raise ValueError("Unexpected model type: %s" % checkpoint['model_type'])
+        model = clazz.model_from_params(params, checkpoint.get('bert_lora', None), args, foundation_cache, peft_name)
 
         epochs_trained = checkpoint['epochs_trained']
         batches_trained = checkpoint.get('batches_trained', 0)
