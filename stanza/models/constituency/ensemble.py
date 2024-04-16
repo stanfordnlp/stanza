@@ -85,6 +85,8 @@ class Ensemble(nn.Module):
 
         self._reverse_sentence = self.models[0].reverse_sentence
 
+        logger.debug("Number of models in the Ensemble: %d", len(self.models))
+        self.register_parameter('weighted_sum', torch.nn.Parameter(torch.zeros(len(self.models), len(self.transitions), requires_grad=True)))
 
     @property
     def transitions(self):
@@ -133,6 +135,11 @@ class Ensemble(nn.Module):
 
     def log_norms(self):
         lines = ["NORMS FOR MODEL PARAMETERS"]
+        for name, param in self.named_parameters():
+            if param.requires_grad and not name.startswith("models."):
+                zeros = torch.sum(param.abs() < 0.000001).item()
+                norm = "%.6g" % torch.norm(param).item()
+                lines.append("%s %s %d %d" % (name, norm, zeros, param.nelement()))
         for model_idx, model in enumerate(self.models):
             lines.append("  ---- MODEL %d ----" % model_idx)
             lines.extend(model.get_norms())
@@ -146,7 +153,13 @@ class Ensemble(nn.Module):
         logger.info("\n".join(lines))
 
     def get_params(self):
-        return [x.get_params() for x in self.models]
+        model_state = self.state_dict()
+        # don't save the children in the base params
+        model_state = {k: v for k, v in model_state.items() if not k.startswith("models.")}
+        return {
+            "base_params": model_state,
+            "children_params": [x.get_params() for x in self.models]
+        }
 
     def initial_state_from_preterminals(self, preterminal_lists, gold_trees, gold_sequences):
         state_batch = [model.initial_state_from_preterminals(preterminal_lists, gold_trees, gold_sequences) for model in self.models]
@@ -194,8 +207,12 @@ class Ensemble(nn.Module):
     def predict(self, states, is_legal=True):
         states = list(zip(*[x.states for x in states]))
         predictions = [model.forward(state_batch) for model, state_batch in zip(self.models, states)]
-        predictions = torch.stack(predictions)
-        predictions = torch.sum(predictions, dim=0)
+
+        # batch X num transitions X num models
+        predictions = torch.stack(predictions, dim=2)
+
+        flat_predictions = torch.einsum("BTM,MT->BT", predictions, self.weighted_sum)
+        predictions = torch.sum(predictions, dim=2) + flat_predictions
 
         model = self.models[0]
 
@@ -394,20 +411,25 @@ class EnsembleTrainer(BaseTrainer):
 
     @staticmethod
     def model_from_params(params, peft_params, args, foundation_cache=None, peft_name=None):
+        # TODO: no need for the if/else once the models are rebuilt
+        children_params = params["children_params"] if isinstance(params, dict) else params
+        base_params = params["base_params"] if isinstance(params, dict) else {}
+
         # TODO: fill in peft_name
         if peft_params is None:
-            peft_params = [None] * len(params)
+            peft_params = [None] * len(children_params)
         if peft_name is None:
-            peft_name = [None] * len(params)
+            peft_name = [None] * len(children_params)
 
-        if len(params) != len(peft_params):
+        if len(children_params) != len(peft_params):
             raise ValueError("Model file had params length %d and peft params length %d" % (len(params), len(peft_params)))
-        if len(params) != len(peft_name):
+        if len(children_params) != len(peft_name):
             raise ValueError("Model file had params length %d and peft name length %d" % (len(params), len(peft_name)))
 
         models = [Trainer.model_from_params(model_param, peft_param, args, foundation_cache, peft_name=pname)
-                  for model_param, peft_param, pname in zip(params, peft_params, peft_name)]
+                  for model_param, peft_param, pname in zip(children_params, peft_params, peft_name)]
         ensemble = Ensemble(args, models=models)
+        ensemble.load_state_dict(base_params, strict=False)
         ensemble = ensemble.to(args.get('device', None))
         return ensemble
 
