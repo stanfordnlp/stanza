@@ -76,6 +76,25 @@ class Trainer(BaseTrainer):
             return load_charlm(charlm_file, foundation_cache)
 
     @staticmethod
+    def load_optimizer(model, checkpoint, first_optimizer, filename):
+        optimizer = build_optimizer(model.args, model, first_optimizer)
+        if checkpoint.get('optimizer_state_dict', None) is not None:
+            try:
+                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+            except ValueError as e:
+                raise ValueError("Failed to load optimizer from %s" % filename) from e
+        else:
+            logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
+        return optimizer
+
+    @staticmethod
+    def load_scheduler(model, optimizer, checkpoint, first_optimizer):
+        scheduler = build_scheduler(model.args, optimizer, first_optimizer=first_optimizer)
+        if 'scheduler_state_dict' in checkpoint:
+            scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        return scheduler
+
+    @staticmethod
     def model_from_params(params, peft_params, args, foundation_cache=None, peft_name=None):
         """
         Build a new model just from the saved params and some extra args
