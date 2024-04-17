@@ -27,6 +27,7 @@ jobs:
           pwd
           pip install -e .
           pip install -e .[test]
+          pip install -e .[transformers]
           # set up for tests
           echo "Running stanza test set up..."
           rm -rf $STANZA_TEST_HOME

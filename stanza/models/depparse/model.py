@@ -12,13 +12,15 @@ from stanza.models.common.biaffine import DeepBiaffineScorer
 from stanza.models.common.foundation_cache import load_bert, load_charlm
 from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
+from stanza.models.common.peft_config import build_peft_wrapper
 from stanza.models.common.vocab import CompositeVocab
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
+from stanza.models.common import utils
 
 logger = logging.getLogger('stanza')
 
 class Parser(nn.Module):
-    def __init__(self, args, vocab, emb_matrix=None, share_hid=False, foundation_cache=None):
+    def __init__(self, args, vocab, emb_matrix=None, share_hid=False, foundation_cache=None, force_bert_saved=False):
         super().__init__()
 
         self.vocab = vocab
@@ -39,22 +41,26 @@ class Parser(nn.Module):
             input_size += self.args['word_emb_dim'] * 2
 
         if self.args['tag_emb_dim'] > 0:
-            self.upos_emb = nn.Embedding(len(vocab['upos']), self.args['tag_emb_dim'], padding_idx=0)
+            if self.args.get('use_upos', True):
+                self.upos_emb = nn.Embedding(len(vocab['upos']), self.args['tag_emb_dim'], padding_idx=0)
+            if self.args.get('use_xpos', True):
+                if not isinstance(vocab['xpos'], CompositeVocab):
+                    self.xpos_emb = nn.Embedding(len(vocab['xpos']), self.args['tag_emb_dim'], padding_idx=0)
+                else:
+                    self.xpos_emb = nn.ModuleList()
 
-            if not isinstance(vocab['xpos'], CompositeVocab):
-                self.xpos_emb = nn.Embedding(len(vocab['xpos']), self.args['tag_emb_dim'], padding_idx=0)
-            else:
-                self.xpos_emb = nn.ModuleList()
+                    for l in vocab['xpos'].lens():
+                        self.xpos_emb.append(nn.Embedding(l, self.args['tag_emb_dim'], padding_idx=0))
+            if self.args.get('use_upos', True) or self.args.get('use_xpos', True):
+                input_size += self.args['tag_emb_dim']
 
-                for l in vocab['xpos'].lens():
-                    self.xpos_emb.append(nn.Embedding(l, self.args['tag_emb_dim'], padding_idx=0))
+            if self.args.get('use_ufeats', True):
+                self.ufeats_emb = nn.ModuleList()
 
-            self.ufeats_emb = nn.ModuleList()
+                for l in vocab['feats'].lens():
+                    self.ufeats_emb.append(nn.Embedding(l, self.args['tag_emb_dim'], padding_idx=0))
 
-            for l in vocab['feats'].lens():
-                self.ufeats_emb.append(nn.Embedding(l, self.args['tag_emb_dim'], padding_idx=0))
-
-            input_size += self.args['tag_emb_dim'] * 2
+                input_size += self.args['tag_emb_dim']
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('charlm', None):
@@ -82,7 +88,14 @@ class Parser(nn.Module):
                 # an average of layers 2, 3, 4 will be used
                 # (for historic reasons)
                 self.bert_layer_mix = None
-            if self.args.get('bert_finetune', False):
+            if self.args.get('use_peft', False):
+                bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
+                bert_model = build_peft_wrapper(bert_model, self.args, logger)
+                # we use a peft-specific pathway for saving peft weights
+                add_unsaved_module('bert_model', bert_model)
+                add_unsaved_module('bert_tokenizer', bert_tokenizer)
+                self.bert_model.train()
+            elif self.args.get('bert_finetune', False) or force_bert_saved:
                 bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
                 self.bert_model = bert_model
                 add_unsaved_module('bert_tokenizer', bert_tokenizer)
@@ -123,7 +136,10 @@ class Parser(nn.Module):
         self.drop = nn.Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
 
-    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+    def log_norms(self):
+        utils.log_norms(self)
+
+    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, detach=True):
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
 
@@ -145,21 +161,29 @@ class Parser(nn.Module):
             inputs += [word_emb, lemma_emb]
 
         if self.args['tag_emb_dim'] > 0:
-            pos_emb = self.upos_emb(upos)
-
-            if isinstance(self.vocab['xpos'], CompositeVocab):
-                for i in range(len(self.vocab['xpos'])):
-                    pos_emb += self.xpos_emb[i](xpos[:, :, i])
+            if self.args.get('use_upos', True):
+                pos_emb = self.upos_emb(upos)
             else:
-                pos_emb += self.xpos_emb(xpos)
-            pos_emb = pack(pos_emb)
+                pos_emb = 0
 
-            feats_emb = 0
-            for i in range(len(self.vocab['feats'])):
-                feats_emb += self.ufeats_emb[i](ufeats[:, :, i])
-            feats_emb = pack(feats_emb)
+            if self.args.get('use_xpos', True):
+                if isinstance(self.vocab['xpos'], CompositeVocab):
+                    for i in range(len(self.vocab['xpos'])):
+                        pos_emb += self.xpos_emb[i](xpos[:, :, i])
+                else:
+                    pos_emb += self.xpos_emb(xpos)
 
-            inputs += [pos_emb, feats_emb]
+            if self.args.get('use_upos', True) or self.args.get('use_xpos', True):
+                pos_emb = pack(pos_emb)
+                inputs += [pos_emb]
+
+            if self.args.get('use_ufeats', True):
+                feats_emb = 0
+                for i in range(len(self.vocab['feats'])):
+                    feats_emb += self.ufeats_emb[i](ufeats[:, :, i])
+                feats_emb = pack(feats_emb)
+
+                inputs += [pos_emb]
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('charlm', None):
@@ -177,9 +201,10 @@ class Parser(nn.Module):
 
         if self.bert_model is not None:
             device = next(self.parameters()).device
+            detach = detach or not self.args.get('bert_finetune', False) or not self.training
             processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=True,
                                                      num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
-                                                     detach=not self.args.get('bert_finetune', False))
+                                                     detach=detach)
             if self.bert_layer_mix is not None:
                 # add the average so that the default behavior is to
                 # take an average of the N layers, and anything else

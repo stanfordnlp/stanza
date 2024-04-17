@@ -14,22 +14,21 @@ from stanza.models.common.dropout import WordDropout, LockedDropout
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanza.models.common.crf import CRFLoss
 from stanza.models.common.foundation_cache import load_bert
+from stanza.models.common.utils import attach_bert_model
 from stanza.models.common.vocab import PAD_ID, UNK_ID, EMPTY_ID
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 
 logger = logging.getLogger('stanza')
 
+# this gets created in two places in trainer
+# in both places, pass in the bert model & tokenizer
 class NERTagger(nn.Module):
-    def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, force_bert_saved=False):
+    def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
         super().__init__()
 
         self.vocab = vocab
         self.args = args
         self.unsaved_modules = []
-
-        def add_unsaved_module(name, module):
-            self.unsaved_modules += [name]
-            setattr(self, name, module)
 
         # input layers
         input_size = 0
@@ -45,7 +44,7 @@ class NERTagger(nn.Module):
                 # if emb_finetune is off
                 # or if the delta embedding is present
                 # then we won't fine tune the original embedding
-                add_unsaved_module('word_emb', word_emb)
+                self.add_unsaved_module('word_emb', word_emb)
                 self.word_emb.weight.detach_()
             else:
                 self.word_emb = word_emb
@@ -68,30 +67,22 @@ class NERTagger(nn.Module):
 
             input_size += self.args['word_emb_dim']
 
-        # TODO: this, pos, depparse should all be refactored
+        self.peft_name = peft_name
+        attach_bert_model(self, bert_model, bert_tokenizer, self.args.get('use_peft', False), force_bert_saved)
         # FIXME: possibly pos and depparse are all losing a finetuned transformer if loaded & saved
         # (the force_bert_saved option here handles that)
         if self.args.get('bert_model', None):
-            # first we load the transformer model and possibly turn off its requires_grad parameters ...
-            if self.args.get('bert_finetune', False):
-                bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
+            # TODO: refactor bert_hidden_layers between the different models
+            if args.get('bert_hidden_layers', False):
+                # The average will be offset by 1/N so that the default zeros
+                # represents an average of the N layers
+                self.bert_layer_mix = nn.Linear(args['bert_hidden_layers'], 1, bias=False)
+                nn.init.zeros_(self.bert_layer_mix.weight)
             else:
-                bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
-                for n, p in bert_model.named_parameters():
-                    p.requires_grad = False
-            # then we attach it to the NER model
-            # if force_bert_saved is True, that probably indicates the save file had a transformer in it
-            # thus we need to save it again in the future to avoid losing it when resaving
-            if self.args.get('bert_finetune', False) or force_bert_saved:
-                self.bert_model = bert_model
-                add_unsaved_module('bert_tokenizer', bert_tokenizer)
-            else:
-                add_unsaved_module('bert_model', bert_model)
-                add_unsaved_module('bert_tokenizer', bert_tokenizer)
+                # an average of layers 2, 3, 4 will be used
+                # (for historic reasons)
+                self.bert_layer_mix = None
             input_size += self.bert_model.config.hidden_size
-        else:
-            self.bert_model = None
-            self.bert_tokenizer = None
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args['charlm']:
@@ -99,8 +90,8 @@ class NERTagger(nn.Module):
                     raise ForwardCharlmNotFoundError('Could not find forward character model: {}  Please specify with --charlm_forward_file'.format(args['charlm_forward_file']), args['charlm_forward_file'])
                 if args['charlm_backward_file'] is None or not os.path.exists(args['charlm_backward_file']):
                     raise BackwardCharlmNotFoundError('Could not find backward character model: {}  Please specify with --charlm_backward_file'.format(args['charlm_backward_file']), args['charlm_backward_file'])
-                add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(args['charlm_forward_file'], finetune=False))
-                add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(args['charlm_backward_file'], finetune=False))
+                self.add_unsaved_module('charmodel_forward', CharacterLanguageModel.load(args['charlm_forward_file'], finetune=False))
+                self.add_unsaved_module('charmodel_backward', CharacterLanguageModel.load(args['charlm_backward_file'], finetune=False))
                 input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
             else:
                 self.charmodel = CharacterModel(args, vocab, bidirectional=True, attention=False)
@@ -146,6 +137,10 @@ class NERTagger(nn.Module):
         assert emb_matrix.size() == (vocab_size, dim), \
             "Input embedding matrix must match size: {} x {}, found {}".format(vocab_size, dim, emb_matrix.size())
         self.word_emb.weight.data.copy_(emb_matrix)
+
+    def add_unsaved_module(self, name, module):
+        self.unsaved_modules += [name]
+        setattr(self, name, module)
 
     def log_norms(self):
         lines = ["NORMS FOR MODEL PARAMTERS"]
@@ -198,7 +193,13 @@ class NERTagger(nn.Module):
         if self.bert_model is not None:
             device = next(self.parameters()).device
             processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, device, keep_endpoints=False,
-                                                     detach=not self.args.get('bert_finetune', False))
+                                                     num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
+                                                     detach=not self.args.get('bert_finetune', False),
+                                                     peft_name=self.peft_name)
+            if self.bert_layer_mix is not None:
+                # use a linear layer to weighted average the embedding dynamically
+                processed_bert = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in processed_bert]
+
             processed_bert = pad_sequence(processed_bert, batch_first=True)
             inputs += [pack(processed_bert)]
 

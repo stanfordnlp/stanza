@@ -31,7 +31,7 @@ def get_tqdm():
         from tqdm import tqdm
         return tqdm
 
-    if sys.stderr is not None and sys.stderr.isatty():
+    if sys.stderr is not None and hasattr(sys.stderr, "isatty") and sys.stderr.isatty():
         from tqdm import tqdm
         return tqdm
 

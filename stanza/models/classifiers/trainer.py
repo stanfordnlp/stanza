@@ -13,8 +13,10 @@ import stanza.models.classifiers.data as data
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.constituency_classifier as constituency_classifier
 from stanza.models.classifiers.utils import ModelType
-from stanza.models.common.foundation_cache import load_bert, load_charlm, load_pretrain
+from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, load_charlm, load_pretrain
+from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.common.pretrain import Pretrain
+from stanza.models.common.utils import get_split_optimizer
 from stanza.models.constituency.tree_embedding import TreeEmbedding
 
 logger = logging.getLogger('stanza')
@@ -53,7 +55,7 @@ class Trainer:
             'best_score':     self.best_score,
         }
         if save_optimizer and self.optimizer is not None:
-            params['optimizer_state_dict'] = self.optimizer.state_dict()
+            params['optimizer_state_dict'] = {opt_name: opt.state_dict() for opt_name, opt in self.optimizer.items()}
         torch.save(params, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to {}".format(filename))
 
@@ -92,11 +94,37 @@ class Trainer:
         if model_type == ModelType.CNN:
             pretrain = Trainer.load_pretrain(args, foundation_cache)
             elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
-            charmodel_forward = load_charlm(args.charlm_forward_file, foundation_cache)
-            charmodel_backward = load_charlm(args.charlm_backward_file, foundation_cache)
+            # TODO: existing models don't have this attribute, so we
+            # use None as not having a setting.  If the setting is
+            # False, though, we don't load the charlm
+            # We don't want to pass a charlm to a model which doesn't use one
+            has_charlm_forward = getattr(model_params['config'], 'has_charlm_forward', None)
+            if has_charlm_forward != False:
+                charmodel_forward = load_charlm(args.charlm_forward_file, foundation_cache)
+            else:
+                charmodel_forward = None
+            has_charlm_backward = getattr(model_params['config'], 'has_charlm_backward', None)
+            if has_charlm_backward != False:
+                charmodel_backward = load_charlm(args.charlm_backward_file, foundation_cache)
+            else:
+                charmodel_backward = None
 
             bert_model = model_params['config'].bert_model
-            bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
+            # TODO: can get rid of the getattr after rebuilding all models
+            use_peft = getattr(model_params['config'], 'use_peft', False)
+            force_bert_saved = getattr(model_params['config'], 'force_bert_saved', False)
+            peft_name = None
+            if use_peft:
+                # if loading a peft model, we first load the base transformer
+                # the CNNClassifier code wraps the transformer in peft
+                # after creating the CNNClassifier with the peft wrapper,
+                # we *then* load the weights
+                bert_model, bert_tokenizer, peft_name = load_bert_with_peft(bert_model, "classifier", foundation_cache)
+                bert_model = load_peft_wrapper(bert_model, model_params['bert_lora'], vars(model_params['config']), logger, peft_name)
+            elif force_bert_saved:
+                bert_model, bert_tokenizer = load_bert(bert_model)
+            else:
+                bert_model, bert_tokenizer = load_bert(bert_model, foundation_cache)
             model = cnn_classifier.CNNClassifier(pretrain=pretrain,
                                                  extra_vocab=model_params['extra_vocab'],
                                                  labels=model_params['labels'],
@@ -105,13 +133,18 @@ class Trainer:
                                                  elmo_model=elmo_model,
                                                  bert_model=bert_model,
                                                  bert_tokenizer=bert_tokenizer,
+                                                 force_bert_saved=force_bert_saved,
+                                                 peft_name=peft_name,
                                                  args=model_params['config'])
         elif model_type == ModelType.CONSTITUENCY:
+            # the constituency version doesn't have a peft feature yet
+            use_peft = False
             pretrain_args = {
                 'wordvec_pretrain_file': args.wordvec_pretrain_file,
                 'charlm_forward_file': args.charlm_forward_file,
                 'charlm_backward_file': args.charlm_backward_file,
             }
+            # TODO: integrate with peft for the constituency version
             tree_embedding = TreeEmbedding.model_from_params(model_params['tree_embedding'], pretrain_args, foundation_cache)
             model = constituency_classifier.ConstituencyClassifier(tree_embedding=tree_embedding,
                                                                    labels=model_params['labels'],
@@ -132,7 +165,8 @@ class Trainer:
         if load_optimizer:
             optimizer = Trainer.build_optimizer(model, args)
             if checkpoint.get('optimizer_state_dict', None) is not None:
-                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+                for opt_name, opt_state_dict in checkpoint['optimizer_state_dict'].items():
+                    optimizer[opt_name].load_state_dict(opt_state_dict)
             else:
                 logger.info("Attempted to load optimizer to resume training, but optimizer not saved.  Creating new optimizer")
 
@@ -178,9 +212,16 @@ class Trainer:
             elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
             charmodel_forward = load_charlm(args.charlm_forward_file)
             charmodel_backward = load_charlm(args.charlm_backward_file)
+            peft_name = None
             bert_model, bert_tokenizer = load_bert(args.bert_model)
 
+            use_peft = getattr(args, "use_peft", False)
+            if use_peft:
+                peft_name = "sentiment"
+                bert_model = build_peft_wrapper(bert_model, vars(args), logger, adapter_name=peft_name)
+
             extra_vocab = data.dataset_vocab(train_set)
+            force_bert_saved = args.bert_finetune
             model = cnn_classifier.CNNClassifier(pretrain=pretrain,
                                                  extra_vocab=extra_vocab,
                                                  labels=labels,
@@ -189,6 +230,8 @@ class Trainer:
                                                  elmo_model=elmo_model,
                                                  bert_model=bert_model,
                                                  bert_tokenizer=bert_tokenizer,
+                                                 force_bert_saved=force_bert_saved,
+                                                 peft_name=peft_name,
                                                  args=args)
             model = model.to(args.device)
         elif args.model_type == ModelType.CONSTITUENCY:
@@ -226,16 +269,4 @@ class Trainer:
 
     @staticmethod
     def build_optimizer(model, args):
-        if args.optim.lower() == 'sgd':
-            optimizer = optim.SGD(model.parameters(), lr=args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay)
-        elif args.optim.lower() == 'adadelta':
-            optimizer = optim.Adadelta(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay)
-        elif args.optim.lower() == 'madgrad':
-            try:
-                import madgrad
-            except ModuleNotFoundError as e:
-                raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-            optimizer = madgrad.MADGRAD(model.parameters(), lr=args.learning_rate, weight_decay=args.weight_decay, momentum=args.momentum)
-        else:
-            raise ValueError("Unknown optimizer: %s" % args.optim)
-        return optimizer
+        return get_split_optimizer(args.optim.lower(), model, args.learning_rate, momentum=args.momentum, weight_decay=args.weight_decay, bert_learning_rate=args.bert_learning_rate, bert_weight_decay=args.weight_decay * args.bert_weight_decay, is_peft=args.use_peft)

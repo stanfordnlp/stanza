@@ -1,6 +1,6 @@
 from enum import Enum, auto
 
-from stanza.models.constituency.dynamic_oracle import DynamicOracle
+from stanza.models.constituency.dynamic_oracle import advance_past_constituents, DynamicOracle
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent
 
 def fix_wrong_open_root_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
@@ -33,22 +33,6 @@ def fix_wrong_open_unary_chain(gold_transition, pred_transition, gold_sequence, 
                 return gold_sequence[:gold_index] + gold_sequence[cur_index:]
             cur_index = cur_index + 1  # advance to the next Close
 
-    return None
-
-def advance_past_constituents(gold_sequence, cur_index):
-    """
-    Advance cur_index through gold_sequence until we have seen 1 more Close than Open
-
-    The index returned is the index of the Close which occurred after all the stuff
-    """
-    count = 0
-    while cur_index < len(gold_sequence):
-        if isinstance(gold_sequence[cur_index], OpenConstituent):
-            count = count + 1
-        elif isinstance(gold_sequence[cur_index], CloseConstituent):
-            count = count - 1
-            if count == -1: return cur_index
-        cur_index = cur_index + 1
     return None
 
 def find_constituent_end(gold_sequence, cur_index):
@@ -390,6 +374,26 @@ def fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_
 class RepairType(Enum):
     """
     Keep track of which repair is used, if any, on an incorrect transition
+
+    Statistics on English w/ no charlm, no transformer,
+      eg word vectors only, best model as of January 2024
+
+    unambiguous transitions only:
+        oracle scheme          dev      test
+         no oracle            0.9245   0.9226
+          +wrong_open_root    0.9244   0.9224
+          +wrong_unary_chain  0.9243   0.9237
+          +wrong_open_unary   0.9249   0.9223
+          +wrong_open_general 0.9251   0.9215
+          +missed_unary       0.9248   0.9215
+          +open_shift         0.9243   0.9216
+          +open_close         0.9254   0.9217
+          +shift_close        0.9261   0.9238
+          +close_shift_nested 0.9253   0.9250
+
+    So honestly on EN it doesn't look too promising to use the oracle.
+    On VI, though, it seemed to do better.  Need to run more
+    experiments
     """
     def __new__(cls, fn, correct=False):
         """
@@ -490,5 +494,5 @@ class RepairType(Enum):
     UNKNOWN                = None
 
 class InOrderOracle(DynamicOracle):
-    def __init__(self, root_labels, oracle_level):
-        super().__init__(root_labels, oracle_level, RepairType)
+    def __init__(self, root_labels, oracle_level, additional_oracle_levels):
+        super().__init__(root_labels, oracle_level, RepairType, additional_oracle_levels)

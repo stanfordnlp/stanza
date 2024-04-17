@@ -34,8 +34,7 @@ California California
 
 
 def test_identity_lemmatizer():
-    nlp = stanza.Pipeline(**{'processors': 'tokenize,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en',
-                                  'lemma_use_identity': True})
+    nlp = stanza.Pipeline(**{'processors': 'tokenize,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en', 'lemma_use_identity': True}, download_method=None)
     doc = nlp(EN_DOC)
     word_lemma_pairs = []
     for w in doc.iter_words():
@@ -43,7 +42,7 @@ def test_identity_lemmatizer():
     assert EN_DOC_IDENTITY_GOLD == "\n".join(word_lemma_pairs)
 
 def test_full_lemmatizer():
-    nlp = stanza.Pipeline(**{'processors': 'tokenize,pos,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en'})
+    nlp = stanza.Pipeline(**{'processors': 'tokenize,pos,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en'}, download_method=None)
     doc = nlp(EN_DOC)
     word_lemma_pairs = []
     for w in doc.iter_words():
@@ -58,7 +57,7 @@ def find_unknown_word(lemmatizer, base):
     raise RuntimeError("wtf?")
 
 def test_store_results():
-    nlp = stanza.Pipeline(**{'processors': 'tokenize,pos,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en'}, lemma_store_results=True)
+    nlp = stanza.Pipeline(**{'processors': 'tokenize,pos,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en'}, lemma_store_results=True, download_method=None)
     lemmatizer = nlp.processors["lemma"]._trainer
 
     az = find_unknown_word(lemmatizer, "a")
@@ -104,3 +103,33 @@ def test_store_results():
     assert stuff == stuff2
 
     assert az not in lemmatizer.word_dict
+
+def test_caseless_lemmatizer():
+    """
+    Test that setting the lemmatizer as caseless at Pipeline time lowercases the text
+    """
+    nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, download_method=None)
+    # the capital letter here should throw off the lemmatizer & it won't remove the plural
+    # although weirdly the current English model *does* lowercase the A
+    doc = nlp("Here is an Excerpt")
+    assert doc.sentences[0].words[-1].lemma == 'excerpt'
+
+    nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, download_method=None, lemma_caseless=True)
+    # with the model set to lowercasing, the word will be treated as if it were 'antennae'
+    doc = nlp("Here is an Excerpt")
+    assert doc.sentences[0].words[-1].lemma == 'Excerpt'
+
+def test_latin_caseless_lemmatizer():
+    """
+    Test the Latin caseless lemmatizer
+    """
+    nlp = stanza.Pipeline('la', package='ittb', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, download_method=None)
+    lemmatizer = nlp.processors['lemma']
+    assert lemmatizer.config['caseless']
+
+    doc = nlp("Quod Erat Demonstrandum")
+    expected_lemmas = "qui sum demonstro".split()
+    assert len(doc.sentences) == 1
+    assert len(doc.sentences[0].words) == 3
+    for word, expected in zip(doc.sentences[0].words, expected_lemmas):
+        assert word.lemma == expected

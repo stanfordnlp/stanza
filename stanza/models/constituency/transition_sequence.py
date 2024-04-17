@@ -160,7 +160,9 @@ def convert_trees_to_sequences(trees, treebank_name, transition_scheme, reverse=
 
     Converts trees to a list of sequences, then returns the list of known transitions
     """
-    logger.info("Building {} transition sequences".format(treebank_name))
+    if len(trees) == 0:
+        return [], []
+    logger.info("Building %s transition sequences", treebank_name)
     if logger.getEffectiveLevel() <= logging.INFO:
         trees = tqdm(trees)
     sequences = build_treebank(trees, transition_scheme, reverse)

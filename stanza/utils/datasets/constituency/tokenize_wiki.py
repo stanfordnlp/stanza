@@ -10,6 +10,8 @@ Some common issues with the tokenizer are accounted for by discarding those line
 Also, to account for languages such as VI where whitespace occurs within words,
 spaces are replaced with _  This should not cause any confusion, as any line with
 a natural _ in has already been discarded.
+
+for i in `echo A B C D E F G H I J K`; do nlprun "python3 stanza/utils/datasets/constituency/tokenize_wiki.py --output_file /u/nlp/data/constituency-parser/italian/2024_wiki_tokenization/it_wiki_tokenized_B$i.txt --lang it --max_len 120 --input_dir /u/nlp/data/Wikipedia/itwiki/B$i --tokenizer_model saved_models/tokenize/it_combined_tokenizer.pt --download_method None" -o /u/nlp/data/constituency-parser/italian/2024_wiki_tokenization/it_wiki_tokenized_B$i.out; done
 """
 
 import argparse
@@ -47,6 +49,16 @@ def parse_args():
         default=None,
         help='Which bert tokenizer (if any) to use to filter long sentences'
     )
+    parser.add_argument(
+        '--tokenizer_model',
+        default=None,
+        help='Use this model instead of the current Stanza tokenizer for this language'
+    )
+    parser.add_argument(
+        '--download_method',
+        default=None,
+        help='Download pipeline models using this method (defaults to downloading updates from HF)'
+    )
     add_length_args(parser)
     args = parser.parse_args()
     return args
@@ -58,7 +70,12 @@ def main():
     if args.bert_tokenizer:
         tokenizer = load_tokenizer(args.bert_tokenizer)
         print("Max model length: %d" % tokenizer.model_max_length)
-    pipe = stanza.Pipeline(args.lang, processors="tokenize")
+    pipeline_args = {}
+    if args.tokenizer_model:
+        pipeline_args["tokenize_model_path"] = args.tokenizer_model
+    if args.download_method:
+        pipeline_args["download_method"] = args.download_method
+    pipe = stanza.Pipeline(args.lang, processors="tokenize", **pipeline_args)
 
     with open(args.output_file, "w", encoding="utf-8") as fout:
         for filename in tqdm(files):

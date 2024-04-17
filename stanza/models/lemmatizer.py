@@ -78,6 +78,8 @@ def build_argparse():
     parser.add_argument('--save_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_lemmatizer.pt", help="File name to save the model")
 
+    parser.add_argument('--caseless', default=False, action='store_true', help='Lowercase everything first before processing.  This will happen automatically if 100%% of the data is caseless')
+
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
 
@@ -109,6 +111,13 @@ def main(args=None):
         train(args)
     else:
         evaluate(args)
+
+def all_lowercase(doc):
+    for sentence in doc.sentences:
+        for word in sentence.words:
+            if word.text.lower() != word.text:
+                return False
+    return True
 
 def build_model_filename(args):
     embedding = "nocharlm"
@@ -147,12 +156,16 @@ def train(args):
         logger.warning("[Skip training because no training data available...]")
         return
 
+    if not args['caseless'] and all_lowercase(train_doc):
+        logger.info("Building a caseless model, as all of the training data is caseless")
+        args['caseless'] = True
+
     # start training
     # train a dictionary-based lemmatizer
     logger.info("Building lemmatizer in %s", model_file)
     trainer = Trainer(args=args, vocab=vocab, device=args['device'])
     logger.info("[Training dictionary-based lemmatizer...]")
-    trainer.train_dict(train_batch.doc.get([TEXT, UPOS, LEMMA]))
+    trainer.train_dict(train_batch.raw_data())
     logger.info("Evaluating on dev set...")
     dev_preds = trainer.predict_dict(dev_batch.doc.get([TEXT, UPOS]))
     dev_batch.doc.set([LEMMA], dev_preds)

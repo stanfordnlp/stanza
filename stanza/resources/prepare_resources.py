@@ -31,7 +31,7 @@ def parse_args():
     parser.add_argument('--input_dir', type=str, default="/u/nlp/software/stanza/models/current-models-%s" % __resources_version__, help='Input dir for various models.  Defaults to the recommended home on the nlp cluster')
     parser.add_argument('--output_dir', type=str, default="/u/nlp/software/stanza/models/%s" % __resources_version__, help='Output dir for various models.')
     parser.add_argument('--packages_only', action='store_true', default=False, help='Only build the package maps instead of rebuilding everything')
-    parser.add_argument('--lang', type=str, default=None, help='Only process this language.  If left blank, will prepare all languages.  To use this argument, a previous prepared resources with all of the languages is necessary.')
+    parser.add_argument('--lang', type=str, default=None, help='Only process this language or a comma-separated list of languages.  If left blank, will prepare all languages.  To use this argument, a previous prepared resources with all of the languages is necessary.')
     args = parser.parse_args()
     args.input_dir = os.path.abspath(args.input_dir)
     args.output_dir = os.path.abspath(args.output_dir)
@@ -279,7 +279,8 @@ def process_dirs(args):
         # this one language gets overridden
         # if this is not done, and we reuse the old resources,
         # any models which were deleted will still be in the resources
-        resources[args.lang] = {}
+        for lang in args.lang.split(","):
+            resources[lang] = {}
 
     for model_dir in dirs:
         print(f"Processing models in {model_dir}")
@@ -288,7 +289,7 @@ def process_dirs(args):
             if not model.endswith('.pt'): continue
             # get processor
             lang, package, processor = split_model_name(model)
-            if args.lang and lang != args.lang:
+            if args.lang and lang not in args.lang.split(","):
                 continue
 
             # copy file
@@ -338,7 +339,7 @@ def process_default_zips(args):
         if lang not in default_treebanks:
             raise AssertionError(f'{lang} not in default treebanks!!!')
 
-        if args.lang and lang != args.lang:
+        if args.lang and lang not in args.lang.split(","):
             continue
 
         print(f'Preparing default models for language {lang}')
@@ -472,7 +473,7 @@ def get_default_accurate(resources, lang):
 
     transformer = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(lang, None), None)
     if transformer is not None:
-        for processor in 'pos', 'depparse', 'constituency':
+        for processor in ('pos', 'depparse', 'constituency', 'sentiment'):
             update_processor_add_transformer(resources, lang, default_processors, processor, transformer)
 
     optional = get_optional_accurate(resources, lang)
@@ -486,7 +487,7 @@ def get_optional_accurate(resources, lang):
 
     transformer = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(lang, None), None)
     if transformer is not None:
-        for processor in 'pos', 'depparse', 'constituency':
+        for processor in ('pos', 'depparse', 'constituency', 'sentiment'):
             update_processor_add_transformer(resources, lang, optional_processors, processor, transformer)
 
     if lang in optional_coref:
@@ -540,7 +541,7 @@ def process_packages(args):
         if lang not in default_treebanks:
             raise AssertionError(f'{lang} not in default treebanks!!!')
 
-        if args.lang and lang != args.lang:
+        if args.lang and lang not in args.lang.split(","):
             continue
 
         default_processors = get_default_processors(resources, lang)

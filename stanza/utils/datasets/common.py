@@ -55,10 +55,12 @@ def tokenizer_conllu_name(base_dir, short_name, dataset):
     return os.path.join(base_dir, f"{short_name}.{dataset}.gold.conllu")
 
 def prepare_tokenizer_dataset_labels(input_txt, input_conllu, tokenizer_dir, short_name, dataset):
+    labels_filename = f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels"
+    mwt_filename = mwt_name(tokenizer_dir, short_name, dataset)
     prepare_tokenizer_data.main([input_txt,
                                  input_conllu,
-                                 "-o", f"{tokenizer_dir}/{short_name}-ud-{dataset}.toklabels",
-                                 "-m", mwt_name(tokenizer_dir, short_name, dataset)])
+                                 "-o", labels_filename,
+                                 "-m", mwt_filename])
 
 def prepare_tokenizer_treebank_labels(tokenizer_dir, short_name):
     """
@@ -76,6 +78,11 @@ def prepare_tokenizer_treebank_labels(tokenizer_dir, short_name):
             raise
 
 def read_sentences_from_conllu(filename):
+    """
+    Reads a conllu file as a list of list of strings
+
+    Finding a blank line separates the lists
+    """
     sents = []
     cache = []
     with open(filename, encoding="utf-8") as infile:

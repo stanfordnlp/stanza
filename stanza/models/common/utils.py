@@ -164,7 +164,63 @@ def harmonic_mean(a, weights=None):
             return sum(weights) / sum(w/x for x, w in zip(a, weights))
 
 # torch utils
-def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, charlm_learning_rate=0.0):
+def dispatch_optimizer(name, parameters, opt_logger, lr=None, betas=None, eps=None, momentum=None, **extra_args):
+    extra_logging = ""
+    if len(extra_args) > 0:
+        extra_logging = ", " + ", ".join("%s=%s" % (x, y) for x, y in extra_args.items())
+
+    if name == 'amsgrad':
+        opt_logger.debug("Building Adam w/ amsgrad with lr=%f, betas=%s, eps=%f%s", lr, betas, eps, extra_logging)
+        return torch.optim.Adam(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
+    elif name == 'amsgradw':
+        opt_logger.debug("Building AdamW w/ amsgrad with lr=%f, betas=%s, eps=%f%s", lr, betas, eps, extra_logging)
+        return torch.optim.AdamW(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
+    elif name == 'sgd':
+        opt_logger.debug("Building SGD with lr=%f, momentum=%f%s", lr, momentum, extra_logging)
+        return torch.optim.SGD(parameters, lr=lr, momentum=momentum, **extra_args)
+    elif name == 'adagrad':
+        opt_logger.debug("Building Adagrad with lr=%f%s", lr, extra_logging)
+        return torch.optim.Adagrad(parameters, lr=lr, **extra_args)
+    elif name == 'adam':
+        opt_logger.debug("Building Adam with lr=%f, betas=%s, eps=%f%s", lr, betas, eps, extra_logging)
+        return torch.optim.Adam(parameters, lr=lr, betas=betas, eps=eps, **extra_args)
+    elif name == 'adamw':
+        opt_logger.debug("Building AdamW with lr=%f, betas=%s, eps=%f%s", lr, betas, eps, extra_logging)
+        return torch.optim.AdamW(parameters, lr=lr, betas=betas, eps=eps, **extra_args)
+    elif name == 'adamax':
+        opt_logger.debug("Building Adamax%s", extra_logging)
+        return torch.optim.Adamax(parameters, **extra_args) # use default lr
+    elif name == 'adadelta':
+        opt_logger.debug("Building Adadelta with lr=%f%s", lr, extra_logging)
+        return torch.optim.Adadelta(parameters, lr=lr, **extra_args)
+    elif name == 'adabelief':
+        try:
+            from adabelief_pytorch import AdaBelief
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError("Could not create adabelief optimizer.  Perhaps the adabelief-pytorch package is not installed") from e
+        opt_logger.debug("Building AdaBelief with lr=%f, eps=%f%s", lr, eps, extra_logging)
+        # TODO: add weight_decouple and rectify as extra args?
+        return AdaBelief(parameters, lr=lr, eps=eps, weight_decouple=True, rectify=True, **extra_args)
+    elif name == 'madgrad':
+        try:
+            import madgrad
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
+        opt_logger.debug("Building MADGRAD with lr=%f, momentum=%f%s", lr, momentum, extra_logging)
+        return madgrad.MADGRAD(parameters, lr=lr, momentum=momentum, **extra_args)
+    elif name == 'mirror_madgrad':
+        try:
+            import madgrad
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError("Could not create mirror_madgrad optimizer.  Perhaps the madgrad package is not installed") from e
+        opt_logger.debug("Building MirrorMADGRAD with lr=%f, momentum=%f%s", lr, momentum, extra_logging)
+        return madgrad.MirrorMADGRAD(parameters, lr=lr, momentum=momentum, **extra_args)
+    else:
+        raise ValueError("Unsupported optimizer: {}".format(name))
+
+
+def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, bert_weight_decay=None, charlm_learning_rate=0.0, is_peft=False, bert_finetune_layers=None, opt_logger=None):
+    opt_logger = opt_logger if opt_logger is not None else logger
     base_parameters = [p for n, p in model.named_parameters()
                        if p.requires_grad and not n.startswith("bert_model.")
                        and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
@@ -175,37 +231,81 @@ def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, wei
     if len(charlm_parameters) > 0 and charlm_learning_rate > 0:
         parameters.append({'param_group_name': 'charlm', 'params': charlm_parameters, 'lr': lr * charlm_learning_rate})
 
-    bert_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
-    if len(bert_parameters) > 0 and bert_learning_rate > 0:
-        parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': lr * bert_learning_rate})
+    if not is_peft:
+        bert_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
+
+        # bert_finetune_layers limits the bert finetuning to the *last* N layers of the model
+        if len(bert_parameters) > 0 and bert_finetune_layers is not None:
+            num_layers = model.bert_model.config.num_hidden_layers
+            start_layer = num_layers - bert_finetune_layers
+            bert_parameters = []
+            for layer_num in range(start_layer, num_layers):
+                bert_parameters.extend([param for name, param in model.named_parameters()
+                                        if param.requires_grad and name.startswith("bert_model.") and "layer.%d." % layer_num in name])
+
+        if len(bert_parameters) > 0 and bert_learning_rate > 0:
+            opt_logger.debug("Finetuning %d bert parameters with LR %s and WD %s", len(bert_parameters), lr * bert_learning_rate, bert_weight_decay)
+            parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': lr * bert_learning_rate})
+            if bert_weight_decay is not None:
+                parameters[-1]['weight_decay'] = bert_weight_decay
+    else:
+        # some optimizers seem to train some even with a learning rate of 0...
+        if bert_learning_rate > 0:
+            # because PEFT handles what to hand to an optimizer, we don't want to touch that
+            parameters.append({'param_group_name': 'bert', 'params': model.bert_model.parameters(), 'lr': lr * bert_learning_rate})
+            if bert_weight_decay is not None:
+                parameters[-1]['weight_decay'] = bert_weight_decay
 
     extra_args = {}
     if weight_decay is not None:
         extra_args["weight_decay"] = weight_decay
-    if name == 'amsgrad':
-        return torch.optim.Adam(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
-    elif name == 'amsgradw':
-        return torch.optim.AdamW(parameters, amsgrad=True, lr=lr, betas=betas, eps=eps, **extra_args)
-    elif name == 'sgd':
-        return torch.optim.SGD(parameters, lr=lr, momentum=momentum, **extra_args)
-    elif name == 'adagrad':
-        return torch.optim.Adagrad(parameters, lr=lr, **extra_args)
-    elif name == 'adam':
-        return torch.optim.Adam(parameters, lr=lr, betas=betas, eps=eps, **extra_args)
-    elif name == 'adamw':
-        return torch.optim.AdamW(parameters, lr=lr, betas=betas, eps=eps, **extra_args)
-    elif name == 'adamax':
-        return torch.optim.Adamax(parameters, **extra_args) # use default lr
-    elif name == 'adadelta':
-        return torch.optim.Adadelta(parameters, lr=lr, **extra_args)
-    elif name == 'madgrad':
-        try:
-            import madgrad
-        except ModuleNotFoundError as e:
-            raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-        return madgrad.MADGRAD(parameters, lr=lr, momentum=momentum, **extra_args)
+
+    return dispatch_optimizer(name, parameters, opt_logger=opt_logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
+
+def get_split_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, weight_decay=None, bert_learning_rate=0.0, bert_weight_decay=None, charlm_learning_rate=0.0, is_peft=False, bert_finetune_layers=None):
+    """Same as `get_optimizer`, but splits the optimizer for Bert into a seperate optimizer"""
+    base_parameters = [p for n, p in model.named_parameters()
+                       if p.requires_grad and not n.startswith("bert_model.")
+                       and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
+    parameters = [{'param_group_name': 'base', 'params': base_parameters}]
+
+    charlm_parameters = [p for n, p in model.named_parameters()
+                         if p.requires_grad and (n.startswith("charmodel_forward.") or n.startswith("charmodel_backward."))]
+    if len(charlm_parameters) > 0 and charlm_learning_rate > 0:
+        parameters.append({'param_group_name': 'charlm', 'params': charlm_parameters, 'lr': lr * charlm_learning_rate})
+
+    bert_parameters = None
+    if not is_peft:
+        trainable_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
+
+        # bert_finetune_layers limits the bert finetuning to the *last* N layers of the model
+        if len(trainable_parameters) > 0 and bert_finetune_layers is not None:
+            num_layers = model.bert_model.config.num_hidden_layers
+            start_layer = num_layers - bert_finetune_layers
+            trainable_parameters = []
+            for layer_num in range(start_layer, num_layers):
+                trainable_parameters.extend([param for name, param in model.named_parameters()
+                                             if param.requires_grad and name.startswith("bert_model.") and "layer.%d." % layer_num in name])
+
+        if len(trainable_parameters) > 0:
+            bert_parameters = [{'param_group_name': 'bert', 'params': trainable_parameters, 'lr': lr * bert_learning_rate}]
     else:
-        raise ValueError("Unsupported optimizer: {}".format(name))
+        # because PEFT handles what to hand to an optimizer, we don't want to touch that
+        bert_parameters = [{'param_group_name': 'bert', 'params': model.bert_model.parameters(), 'lr': lr * bert_learning_rate}]
+
+    extra_args = {}
+    if weight_decay is not None:
+        extra_args["weight_decay"] = weight_decay
+
+    optimizers = {
+        "general_optimizer": dispatch_optimizer(name, parameters, opt_logger=logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
+    }
+    if bert_parameters is not None and bert_learning_rate > 0.0:
+        if bert_weight_decay is not None:
+            extra_args['weight_decay'] = bert_weight_decay
+        optimizers["bert_optimizer"] = dispatch_optimizer(name, bert_parameters, opt_logger=logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
+    return optimizers
+
 
 def change_lr(optimizer, new_lr):
     for param_group in optimizer.param_groups:
@@ -496,7 +596,7 @@ def embedding_name(args):
 
     return embedding
 
-def standard_model_file_name(args, model_type):
+def standard_model_file_name(args, model_type, **kwargs):
     """
     Returns a model file name based on some common args found in the various models.
 
@@ -516,18 +616,35 @@ def standard_model_file_name(args, model_type):
         if "bert_learning_rate" in args:
             transformer_lr = "{}".format(args["bert_learning_rate"])
 
+    use_peft = "nopeft"
+    if args.get("bert_finetune", False) and args.get("use_peft", False):
+        use_peft = "peft"
+
+    bert_finetuning = ""
+    if args.get("bert_finetune", False):
+        if args.get("use_peft", False):
+            bert_finetuning = "peft"
+        else:
+            bert_finetuning = "ft"
+
     seed = args.get('seed', None)
     if seed is None:
         seed = ""
     else:
         seed = str(seed)
 
-    model_file = args['save_name'].format(shorthand=args['shorthand'],
-                                          batch_size=args['batch_size'],
-                                          embedding=embedding,
-                                          finetune=finetune,
-                                          seed=seed,
-                                          transformer_lr=transformer_lr)
+    format_args = {
+        "batch_size":      args['batch_size'],
+        "bert_finetuning": bert_finetuning,
+        "embedding":       embedding,
+        "finetune":        finetune,
+        "peft":            use_peft,
+        "seed":            seed,
+        "shorthand":       args['shorthand'],
+        "transformer_lr":  transformer_lr,
+    }
+    format_args.update(**kwargs)
+    model_file = args['save_name'].format(**format_args)
     model_file = re.sub("_+", "_", model_file)
 
     model_dir = os.path.split(model_file)[0]
@@ -536,14 +653,7 @@ def standard_model_file_name(args, model_type):
         return model_file
     return os.path.join(args['save_dir'], model_file)
 
-def space_after_to_misc(space):
-    """
-    Convert whitespace back to the escaped format - either SpaceAfter=No or SpacesAfter=...
-    """
-    if not space:
-        return "SpaceAfter=No"
-    if space == " ":
-        return ""
+def escape_misc_space(space):
     spaces = []
     for char in space:
         if char == ' ':
@@ -562,8 +672,80 @@ def space_after_to_misc(space):
             spaces.append('\\u00A0')
         else:
             spaces.append(char)
-    space_after = "".join(spaces)
-    return "SpacesAfter=%s" % space_after
+    escaped_space = "".join(spaces)
+    return escaped_space
+
+def unescape_misc_space(misc_space):
+    spaces = []
+    pos = 0
+    while pos < len(misc_space):
+        if misc_space[pos:pos+2] == '\\s':
+            spaces.append(' ')
+            pos += 2
+        elif misc_space[pos:pos+2] == '\\t':
+            spaces.append('\t')
+            pos += 2
+        elif misc_space[pos:pos+2] == '\\r':
+            spaces.append('\r')
+            pos += 2
+        elif misc_space[pos:pos+2] == '\\n':
+            spaces.append('\n')
+            pos += 2
+        elif misc_space[pos:pos+2] == '\\p':
+            spaces.append('|')
+            pos += 2
+        elif misc_space[pos:pos+2] == '\\\\':
+            spaces.append('\\')
+            pos += 2
+        elif misc_space[pos:pos+6] == '\\u00A0':
+            spaces.append(' ')
+            pos += 6
+        else:
+            spaces.append(misc_space[pos])
+            pos += 1
+    unescaped_space = "".join(spaces)
+    return unescaped_space
+
+def space_before_to_misc(space):
+    """
+    Convert whitespace to SpacesBefore specifically for the start of a document.
+
+    In general, UD datasets do not have both SpacesAfter on a token and SpacesBefore on the next token.
+
+    The space(s) are only marked on one of the tokens.
+
+    Only at the very beginning of a document is it necessary to mark what spaces occurred before the actual text,
+    and the default assumption is that there is no space if there is no SpacesBefore annotation.
+    """
+    if not space:
+        return ""
+    escaped_space = escape_misc_space(space)
+    return "SpacesBefore=%s" % escaped_space
+
+def space_after_to_misc(space):
+    """
+    Convert whitespace back to the escaped format - either SpaceAfter=No or SpacesAfter=...
+    """
+    if not space:
+        return "SpaceAfter=No"
+    if space == " ":
+        return ""
+    escaped_space = escape_misc_space(space)
+    return "SpacesAfter=%s" % escaped_space
+
+def misc_to_space_before(misc):
+    """
+    Find any SpacesBefore annotation in the MISC column and turn it into a space value
+    """
+    if not misc:
+        return ""
+    pieces = misc.split("|")
+    for piece in pieces:
+        if not piece.lower().startswith("spacesbefore="):
+            continue
+        misc_space = piece.split("=", maxsplit=1)[1]
+        return unescape_misc_space(misc_space)
+    return ""
 
 def misc_to_space_after(misc):
     """
@@ -573,8 +755,6 @@ def misc_to_space_after(misc):
 
     We compensate for some treebanks using SpaceAfter=\n instead of SpacesAfter=\n
     On the way back, though, those annotations will be turned into SpacesAfter
-
-    # TODO: some treebanks also have SpacesBefore on the first token, and we should honor that
     """
     if not misc:
         return " "
@@ -590,33 +770,33 @@ def misc_to_space_after(misc):
     for piece in pieces:
         if piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter="):
             misc_space = piece.split("=", maxsplit=1)[1]
-            spaces = []
-            pos = 0
-            while pos < len(misc_space):
-                if misc_space[pos:pos+2] == '\\s':
-                    spaces.append(' ')
-                    pos += 2
-                elif misc_space[pos:pos+2] == '\\t':
-                    spaces.append('\t')
-                    pos += 2
-                elif misc_space[pos:pos+2] == '\\r':
-                    spaces.append('\r')
-                    pos += 2
-                elif misc_space[pos:pos+2] == '\\n':
-                    spaces.append('\n')
-                    pos += 2
-                elif misc_space[pos:pos+2] == '\\p':
-                    spaces.append('|')
-                    pos += 2
-                elif misc_space[pos:pos+2] == '\\\\':
-                    spaces.append('\\')
-                    pos += 2
-                elif misc_space[pos:pos+6] == '\\u00A0':
-                    spaces.append(' ')
-                    pos += 6
-                else:
-                    spaces.append(misc_space[pos])
-                    pos += 1
-            space_after = "".join(spaces)
-            return space_after
+            return unescape_misc_space(misc_space)
     return " "
+
+def log_norms(model):
+    lines = ["NORMS FOR MODEL PARAMTERS"]
+    pieces = []
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            pieces.append((name, "%.6g" % torch.norm(param).item(), "%d" % param.numel()))
+    name_len = max(len(x[0]) for x in pieces)
+    norm_len = max(len(x[1]) for x in pieces)
+    line_format = "  %-" + str(name_len) + "s   %" + str(norm_len) + "s     %s"
+    for line in pieces:
+        lines.append(line_format % line)
+    logger.info("\n".join(lines))
+
+def attach_bert_model(model, bert_model, bert_tokenizer, use_peft, force_bert_saved):
+    if use_peft:
+        # we use a peft-specific pathway for saving peft weights
+        model.add_unsaved_module('bert_model', bert_model)
+        model.bert_model.train()
+    elif force_bert_saved:
+        model.bert_model = bert_model
+    elif bert_model is not None:
+        model.add_unsaved_module('bert_model', bert_model)
+        for _, parameter in bert_model.named_parameters():
+            parameter.requires_grad = False
+    else:
+        model.bert_model = None
+    model.add_unsaved_module('bert_tokenizer', bert_tokenizer)

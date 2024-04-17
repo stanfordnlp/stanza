@@ -168,14 +168,17 @@ import torch
 import stanza
 from stanza.models.common import constant
 from stanza.models.common import utils
+from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
 from stanza.models.constituency import retagging
 from stanza.models.constituency import trainer
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
+from stanza.models.constituency.text_processing import load_model_parse_text
 from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY, add_predict_output_args, postprocess_predict_output_args
 from stanza.resources.common import DEFAULT_MODEL_DIR
 
 logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.constituency.trainer')
 
 def build_argparse():
     """
@@ -320,6 +323,8 @@ def build_argparse():
     parser.add_argument('--stage1_bert_finetune', default=None, action='store_true', help="Finetune the bert (or other transformer) during an AdaDelta warmup, even if the second half doesn't use bert_finetune")
     parser.add_argument('--no_stage1_bert_finetune', dest='stage1_bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer) during an AdaDelta warmup, even if the second half doesn't use bert_finetune")
 
+    add_peft_args(parser)
+
     parser.add_argument('--tag_embedding_dim', type=int, default=20, help="Embedding size for a tag.  0 turns off the feature")
     # Smaller values also seem to work
     # For example, after 700 iterations:
@@ -389,6 +394,7 @@ def build_argparse():
     parser.add_argument('--oracle_frequency', type=float, default=0.8, help="How often to use the oracle vs how often to force the correct transition")
     parser.add_argument('--oracle_forced_errors', type=float, default=0.001, help="Occasionally have the model randomly walk through the state space to try to learn how to recover")
     parser.add_argument('--oracle_level', type=int, default=None, help='Restrict oracle transitions to this level or lower.  0 means off.  None means use all oracle transitions.')
+    parser.add_argument('--additional_oracle_levels', type=str, default=None, help='Add some additional experimental oracle transitions.  Basically for A/B testing transitions we expect to be bad.')
 
     # 30 is slightly slower than 50, for example, but seems to train a bit better on WSJ
     # earlier version of the model (less accurate overall) had the following results with adadelta:
@@ -416,8 +422,13 @@ def build_argparse():
     parser.add_argument('--save_dir', type=str, default='saved_models/constituency', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_{finetune}_constituency.pt", help="File name to save the model")
     parser.add_argument('--save_each_name', type=str, default=None, help="Save each model in sequence to this pattern.  Mostly for testing")
+    parser.add_argument('--save_each_start', type=int, default=None, help="When to start saving each model")
+    parser.add_argument('--save_each_frequency', type=int, default=1, help="How frequently to save each model")
+    parser.add_argument('--no_save_each_optimizer', dest='save_each_optimizer', default=True, action='store_false', help="Don't save the optimizer when saving 'each' model")
 
     parser.add_argument('--seed', type=int, default=1234)
+
+    parser.add_argument('--no_check_valid_states', default=True, action='store_false', dest='check_valid_states', help="Don't check the constituents or transitions in the dev set when starting a new parser.  Warning: the parser will never guess unknown constituents")
     utils.add_device_args(parser)
 
     # Numbers are on a VLSP dataset, before adding attn or other improvements
@@ -685,6 +696,7 @@ def build_model_filename(args):
     maybe_finetune = "finetuned" if args['bert_finetune'] or args['stage1_bert_finetune'] else ""
     transformer_finetune_begin = "%d" % args['bert_finetune_begin_epoch'] if args['bert_finetune_begin_epoch'] is not None else ""
     model_save_file = args['save_name'].format(shorthand=args['shorthand'],
+                                               oracle_level=args['oracle_level'],
                                                embedding=embedding,
                                                finetune=maybe_finetune,
                                                transformer_finetune_begin=transformer_finetune_begin,
@@ -703,6 +715,7 @@ def parse_args(args=None):
     parser = build_argparse()
 
     args = parser.parse_args(args=args)
+    resolve_peft_args(args, logger, check_bert_finetune=False)
     if not args.lang and args.shorthand and len(args.shorthand.split("_", maxsplit=1)) == 2:
         args.lang = args.shorthand.split("_")[0]
 
@@ -713,6 +726,9 @@ def parse_args(args=None):
         if not args.multistage:
             # this seemed to work the best when not doing multistage
             args.optim = "adadelta"
+            if args.use_peft and not args.bert_finetune:
+                logger.info("--use_peft set.  setting --bert_finetune as well")
+                args.bert_finetune = True
         elif args.bert_finetune or args.stage1_bert_finetune:
             logger.info("Multistage training is set, optimizer is not chosen, and bert finetuning is active.  Will use AdamW as the second stage optimizer.")
             args.optim = "adamw"
@@ -767,6 +783,22 @@ def parse_args(args=None):
     model_save_file = build_model_filename(args)
     args['save_name'] = model_save_file
 
+    if args['save_each_name']:
+        model_save_each_file = os.path.join(args['save_dir'], args['save_each_name'])
+        try:
+            model_save_each_file % 1
+        except TypeError:
+            # so models.pt -> models_0001.pt, etc
+            pieces = os.path.splitext(model_save_each_file)
+            model_save_each_file = pieces[0] + "_%04d" + pieces[1]
+        args['save_each_name'] = model_save_each_file
+    else:
+        # in the event that there is a start epoch setting,
+        # this will make a reasonable default for the path
+        pieces = os.path.splitext(args['save_name'])
+        model_save_each_file = pieces[0] + "_%04d" + pieces[1]
+        args['save_each_name'] = model_save_each_file
+
     if args['checkpoint']:
         args['checkpoint_save_name'] = utils.checkpoint_name(args['save_dir'], model_save_file, args['checkpoint_save_name'])
 
@@ -784,16 +816,6 @@ def main(args=None):
 
     logger.info("Running constituency parser in %s mode", args['mode'])
     logger.debug("Using device: %s", args['device'])
-
-    model_save_each_file = None
-    if args['save_each_name']:
-        model_save_each_file = os.path.join(args['save_dir'], args['save_each_name'])
-        try:
-            model_save_each_file % 1
-        except TypeError:
-            # so models.pt -> models_0001.pt, etc
-            pieces = os.path.splitext(model_save_each_file)
-            model_save_each_file = pieces[0] + "_%04d" + pieces[1]
 
     model_load_file = args['save_name']
     if args['load_name']:
@@ -819,14 +841,19 @@ def main(args=None):
 
     # TODO: when loading a saved model, we should default to whatever
     # is in the model file for --retag_method, not the default for the language
+    if args['mode'] == 'train':
+        if tlogger.level == logging.NOTSET:
+            tlogger.setLevel(logging.DEBUG)
+            tlogger.debug("Set trainer logging level to DEBUG")
+
     retag_pipeline = retagging.build_retag_pipeline(args)
 
     if args['mode'] == 'train':
-        trainer.train(args, model_load_file, model_save_each_file, retag_pipeline)
+        trainer.train(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'predict':
         trainer.evaluate(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'parse_text':
-        trainer.load_model_parse_text(args, model_load_file, retag_pipeline)
+        load_model_parse_text(args, model_load_file, retag_pipeline)
     elif args['mode'] == 'remove_optimizer':
         trainer.remove_optimizer(args, args['save_name'], model_load_file)
 

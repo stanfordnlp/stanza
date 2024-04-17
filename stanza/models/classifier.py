@@ -16,6 +16,7 @@ from stanza.models.pos.vocab import CharVocab
 import stanza.models.classifiers.data as data
 from stanza.models.classifiers.trainer import Trainer
 from stanza.models.classifiers.utils import WVType, ExtraVectors, ModelType
+from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
 
 from stanza.utils.confusion import format_confusion, confusion_to_accuracy, confusion_to_macro_f1
 
@@ -159,8 +160,7 @@ def build_argparse():
 
     parser.add_argument('--load_name', type=str, default=None, help='Name for loading an existing model')
     parser.add_argument('--save_dir', type=str, default='saved_models/classifier', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default=None, help='Name for saving the model')
-    parser.add_argument('--base_name', type=str, default='sst', help="Base name of the model to use when building a model name from args")
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_{bert_finetuning}_{classifier_type}_classifier.pt", help='Name for saving the model')
 
     parser.add_argument('--checkpoint_save_name', type=str, default=None, help="File name to save the most recent checkpoint")
     parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
@@ -173,7 +173,7 @@ def build_argparse():
     parser.add_argument('--test_file', type=str, default=DEFAULT_TEST, help='Input file(s) to use as the test set.')
     parser.add_argument('--output_predictions', default=False, action='store_true', help='Output predictions when running the test set')
     parser.add_argument('--max_epochs', type=int, default=100)
-    parser.add_argument('--tick', type=int, default=2000)
+    parser.add_argument('--tick', type=int, default=50)
 
     parser.add_argument('--model_type', type=lambda x: ModelType[x.upper()], default=ModelType.CNN,
                         help='Model type to use.  Options: %s' % " ".join(x.name for x in ModelType))
@@ -184,7 +184,8 @@ def build_argparse():
     parser.add_argument('--dropout', default=0.5, type=float, help='Dropout value to use')
 
     parser.add_argument('--batch_size', default=50, type=int, help='Batch size when training')
-    parser.add_argument('--dev_eval_steps', default=100000, type=int, help='Run the dev set after this many train steps.  Set to 0 to only do it once per epoch')
+    parser.add_argument('--batch_single_item', default=200, type=int, help='Items of this size go in their own batch')
+    parser.add_argument('--dev_eval_batches', default=2000, type=int, help='Run the dev set after this many train batches.  Set to 0 to only do it once per epoch')
     parser.add_argument('--dev_eval_scoring', type=lambda x: DevScoring[x.upper()], default=DevScoring.WEIGHTED_F1,
                         help=('Scoring method to use for choosing the best model.  Options: %s' %
                               " ".join(x.name for x in DevScoring)))
@@ -228,6 +229,11 @@ def build_argparse():
 
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
+    parser.add_argument('--bert_finetune', default=False, action='store_true', help="Finetune the Bert model")
+    parser.add_argument('--bert_learning_rate', default=0.01, type=float, help='Scale the learning rate for transformer finetuning by this much')
+    parser.add_argument('--bert_weight_decay', default=0.0001, type=float, help='Scale the weight decay for transformer finetuning by this much')
+    parser.add_argument('--bert_hidden_layers', type=int, default=4, help="How many layers of hidden state to use from the transformer")
+    parser.add_argument('--bert_hidden_layers_original', action='store_const', const=None, dest='bert_hidden_layers', help='Use layers 2,3,4 of the Bert embedding')
 
     parser.add_argument('--bilstm', dest='bilstm', action='store_true', default=True, help="Use a bilstm after the inputs, before the convs.  Using bilstm is about as accurate and significantly faster (because of dim reduction) than going straight to the filters")
     parser.add_argument('--no_bilstm', dest='bilstm', action='store_false', help="Don't use a bilstm after the inputs, before the convs.")
@@ -280,9 +286,20 @@ def build_argparse():
 
     parser.add_argument('--seed', default=None, type=int, help='Random seed for model')
 
+    add_peft_args(parser)
     utils.add_device_args(parser)
 
     return parser
+
+def build_model_filename(args):
+    shape = "FS_%s" % "_".join([str(x) for x in args.filter_sizes])
+    shape = shape + "_C_%d_" % args.filter_channels
+    if args.fc_shapes:
+        shape = shape + "_FC_%s_" % "_".join([str(x) for x in args.fc_shapes])
+
+    model_save_file = utils.standard_model_file_name(vars(args), "classifier", shape=shape, classifier_type=args.model_type.name)
+    logger.info("Expanded save_name: %s", model_save_file)
+    return model_save_file
 
 def parse_args(args=None):
     """
@@ -291,6 +308,7 @@ def parse_args(args=None):
     """
     parser = build_argparse()
     args = parser.parse_args(args)
+    resolve_peft_args(args, tlogger)
 
     if args.wandb_name:
         args.wandb = True
@@ -481,8 +499,6 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
     log_param_sizes(model)
 
     # https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html
-    batch_starts = list(range(0, len(train_set), args.batch_size))
-
     if args.wandb:
         import wandb
         wandb_name = args.wandb_name if args.wandb_name else "%s_classifier" % args.shorthand
@@ -491,41 +507,50 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
         wandb.run.define_metric('macro_f1', summary='max')
         wandb.run.define_metric('epoch_loss', summary='min')
 
+    for opt_name, opt in optimizer.items():
+        current_lr = opt.param_groups[0]['lr']
+        logger.info("optimizer %s learning rate: %s", opt_name, current_lr)
+
+    # if this is a brand new training run, and we're saving all intermediate models, save the start model as well
+    if args.save_intermediate_models and trainer.epochs_trained == 0:
+        intermediate_file = intermediate_name(model_file, trainer.epochs_trained, args.dev_eval_scoring, 0.0)
+        trainer.save(intermediate_file, save_optimizer=False)
     for trainer.epochs_trained in range(trainer.epochs_trained, args.max_epochs):
         running_loss = 0.0
         epoch_loss = 0.0
-        shuffled = data.shuffle_dataset(train_set_by_len)
+        shuffled_batches = data.shuffle_dataset(train_set_by_len, args.batch_size, args.batch_single_item)
 
         model.train()
         logger.info("Starting epoch %d", trainer.epochs_trained)
         if args.log_norms:
             model.log_norms()
 
-        random.shuffle(batch_starts)
-        for batch_num, start_batch in enumerate(batch_starts):
+        for batch_num, batch in enumerate(shuffled_batches):
+            # logger.debug("Batch size %d max len %d" % (len(batch), max(len(x.text) for x in batch)))
             trainer.global_step += 1
-            logger.debug("Starting batch: %d step %d", start_batch, trainer.global_step)
+            logger.debug("Starting batch: %d step %d", batch_num, trainer.global_step)
 
-            batch = shuffled[start_batch:start_batch+args.batch_size]
             batch_labels = torch.stack([label_tensors[x.sentiment] for x in batch])
 
             # zero the parameter gradients
-            optimizer.zero_grad()
+            for opt in optimizer.values():
+                opt.zero_grad()
 
             outputs = model(batch)
             outputs = process_outputs(outputs)
             batch_loss = loss_function(outputs, batch_labels)
             batch_loss.backward()
-            optimizer.step()
+            for opt in optimizer.values():
+                opt.step()
 
             # print statistics
             running_loss += batch_loss.item()
-            if ((batch_num + 1) * args.batch_size) % args.tick < args.batch_size: # print every 2000 items
+            if (batch_num + 1) % args.tick == 0: # print every so many batches
                 train_loss = running_loss / args.tick
-                logger.info('[%d, %5d] Average loss: %.3f', trainer.epochs_trained + 1, (batch_num + 1) * args.batch_size, train_loss)
+                logger.info('[%d, %5d] Average loss: %.3f', trainer.epochs_trained + 1, batch_num + 1, train_loss)
                 if args.wandb:
                     wandb.log({'train_loss': train_loss}, step=trainer.global_step)
-                if args.dev_eval_steps > 0 and ((batch_num + 1) * args.batch_size) % args.dev_eval_steps < args.batch_size:
+                if args.dev_eval_batches > 0 and (batch_num + 1) % args.dev_eval_batches == 0:
                     logger.info('---- Interim analysis ----')
                     dev_score, accuracy, macro_f1 = score_dev_set(model, dev_set, args.dev_eval_scoring)
                     if args.wandb:
@@ -535,6 +560,8 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
                         trainer.save(model_file, save_optimizer=False)
                         logger.info("Saved new best score model!  Accuracy %.5f   Macro F1 %.5f   Epoch %5d   Batch %d" % (accuracy, macro_f1, trainer.epochs_trained+1, batch_num+1))
                     model.train()
+                    if args.log_norms:
+                        trainer.model.log_norms()
                 epoch_loss += running_loss
                 running_loss = 0.0
         # Add any leftover loss to the epoch_loss
@@ -564,14 +591,7 @@ def main(args=None):
 
     utils.ensure_dir(args.save_dir)
 
-    save_name = args.save_name
-    if not(save_name):
-        save_name = args.base_name + "_" + args.shorthand + "_"
-        save_name = save_name + "FS_%s_" % "_".join([str(x) for x in args.filter_sizes])
-        save_name = save_name + "C_%d_" % args.filter_channels
-        if model.config.fc_shapes:
-            save_name = save_name + "FC_%s_" % "_".join([str(x) for x in model.config.fc_shapes])
-        save_name = save_name + "classifier.pt"
+    save_name = build_model_filename(args)
 
     # TODO: maybe the dataset needs to be in a torch data loader in order to
     # make cuda operations faster
@@ -582,11 +602,13 @@ def main(args=None):
         logger.info("Training set has %d labels" % len(data.dataset_labels(train_set)))
         tlogger.setLevel(logging.DEBUG)
 
+        tlogger.info("Saving checkpoints: %s", args.checkpoint)
         if args.checkpoint:
             checkpoint_file = utils.checkpoint_name(args.save_dir, save_name, args.checkpoint_save_name)
+            tlogger.info("Checkpoint filename: %s", checkpoint_file)
     elif not args.load_name:
-        if args.save_name:
-            args.load_name = args.save_name
+        if save_name:
+            args.load_name = save_name
         else:
             raise ValueError("No model provided and not asked to train a model.  This makes no sense")
     else:
@@ -601,8 +623,6 @@ def main(args=None):
 
     trainer.model.log_configuration()
 
-    model_file = os.path.join(args.save_dir, save_name)
-
     if args.train:
         utils.log_training_args(args, logger)
 
@@ -612,7 +632,7 @@ def main(args=None):
         logger.info("Dev set has %d items", len(dev_set))
         data.check_labels(trainer.model.labels, dev_set)
 
-        train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, trainer.model.labels)
+        train_model(trainer, save_name, checkpoint_file, args, train_set, dev_set, trainer.model.labels)
 
     if args.log_norms:
         trainer.model.log_norms()

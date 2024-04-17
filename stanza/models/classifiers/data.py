@@ -129,7 +129,7 @@ def sort_dataset_by_len(dataset, keep_index=False):
             sorted_dataset[len(item.text)].append(item)
     return sorted_dataset
 
-def shuffle_dataset(sorted_dataset):
+def shuffle_dataset(sorted_dataset, batch_size, batch_single_item):
     """
     Given a dataset sorted by len, sorts within each length to make
     chunks of roughly the same size.  Returns all items as a single list.
@@ -139,7 +139,20 @@ def shuffle_dataset(sorted_dataset):
         items = list(sorted_dataset[l])
         random.shuffle(items)
         dataset.extend(items)
-    return dataset
+    batches = []
+    next_batch = []
+    for item in dataset:
+        if batch_single_item > 0 and len(item.text) >= batch_single_item:
+            batches.append([item])
+        else:
+            next_batch.append(item)
+            if len(next_batch) >= batch_size:
+                batches.append(next_batch)
+                next_batch = []
+    if len(next_batch) > 0:
+        batches.append(next_batch)
+    random.shuffle(batches)
+    return batches
 
 
 def check_labels(labels, dataset):

@@ -8,6 +8,7 @@ The main program in this file gives a very short intro to how to use it.
 
 
 import argparse
+from collections import namedtuple
 import copy
 import os
 import re
@@ -22,14 +23,9 @@ from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, D
 
 SSURGEON_JAVA = "edu.stanford.nlp.semgraph.semgrex.ssurgeon.ProcessSsurgeonRequest"
 
-class SsurgeonEdit:
-    def __init__(self, semgrex_pattern, ssurgeon_edits, ssurgeon_id=None, notes=None, language="UniversalEnglish"):
-        # not a named tuple so we can have defaults without requiring a python upgrade
-        self.semgrex_pattern = semgrex_pattern
-        self.ssurgeon_edits = ssurgeon_edits
-        self.ssurgeon_id = ssurgeon_id
-        self.notes = notes
-        self.language = language
+SsurgeonEdit = namedtuple("SsurgeonEdit",
+                          "semgrex_pattern ssurgeon_edits ssurgeon_id notes language",
+                          defaults=[None, None, "UniversalEnglish"])
 
 def parse_ssurgeon_edits(ssurgeon_text):
     ssurgeon_text = ssurgeon_text.strip()
@@ -190,12 +186,7 @@ def convert_response_to_doc(doc, semgrex_response):
                 token_text.append(token.text)
                 if token_idx == len(sentence.tokens) - 1:
                     break
-                token_space_after = misc_to_space_after(token.misc)
-                if token_space_after == ' ':
-                    # in some treebanks, the word might have more interesting
-                    # space after annotations than the token
-                    token_space_after = misc_to_space_after(token.words[-1].misc)
-                token_text.append(token_space_after)
+                token_text.append(token.spaces_after)
 
             sentence_text = "".join(token_text)
 

@@ -24,7 +24,7 @@ class TextTooLongError(ValueError):
 
 
 def update_max_length(model_name, tokenizer):
-    if model_name in ('google/muril-base-cased', 'airesearch/wangchanberta-base-att-spm-uncased', 'camembert/camembert-large'):
+    if model_name in ('google/muril-base-cased', 'google/muril-large-cased', 'airesearch/wangchanberta-base-att-spm-uncased', 'camembert/camembert-large', 'hfl/chinese-electra-180g-large-discriminator'):
         tokenizer.model_max_length = 512
 
 def load_tokenizer(model_name):
@@ -341,28 +341,49 @@ def extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_en
 
     return processed
 
-
-def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers=None, detach=True):
+def build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_layers, detach, device):
     """
-    Extract transformer embeddings using a generic roberta extraction
+    Extract an embedding from the given transformer for a certain attention mask and tokens range
 
-    data: list of list of string (the text tokens)
-    num_layers: how many to return.  If None, the average of -2, -3, -4 is returned
+    In the event that the tokens are longer than the max length
+    supported by the model, the range is split up into overlapping
+    sections and the overlapping pieces are connected.  No idea if
+    this is actually any good, but at least it returns something
+    instead of horribly failing
+
+    TODO: at least two upgrades are very relevant
+      1) cut off some overlap at the end as well
+      2) use this on the phobert, bart, and xln versions as well
     """
-    if model_name.startswith("vinai/phobert"):
-        return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+    if attention_tensor.shape[1] <= tokenizer.model_max_length:
+        features = model(id_tensor, attention_mask=attention_tensor, output_hidden_states=True)
+        features = cloned_feature(features.hidden_states, num_layers, detach)
+        return features
 
-    if 'bart' in model_name:
-        # this should work with "vinai/bartpho-word"
-        # not sure this works with any other Bart
-        return extract_bart_word_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+    slices = []
+    slice_len = max(tokenizer.model_max_length - 20, tokenizer.model_max_length // 2)
+    prefix_len = tokenizer.model_max_length - slice_len
+    if slice_len < 5:
+        raise RuntimeError("Really tiny tokenizer!")
+    remaining_attention = attention_tensor
+    remaining_ids = id_tensor
+    while True:
+        attention_slice = remaining_attention[:, :tokenizer.model_max_length]
+        id_slice = remaining_ids[:, :tokenizer.model_max_length]
+        features = model(id_slice, attention_mask=attention_slice, output_hidden_states=True)
+        features = cloned_feature(features.hidden_states, num_layers, detach)
+        if len(slices) > 0:
+            features = features[:, prefix_len:, :]
+        slices.append(features)
+        if remaining_attention.shape[1] <= tokenizer.model_max_length:
+            break
+        remaining_attention = remaining_attention[:, slice_len:]
+        remaining_ids = id_tensor[:, slice_len:]
+    slices = torch.cat(slices, axis=1)
+    return slices
 
-    if isinstance(data, tuple):
-        data = list(data)
 
-    if "xlnet" in model_name:
-        return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
-
+def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach):
     data = fix_blank_tokens(tokenizer, data)
 
     #add add_prefix_space = True for RoBerTa-- error if not
@@ -378,27 +399,22 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
             list_offsets[idx][offset+1] = pos
         list_offsets[idx][0] = 0
         list_offsets[idx][-1] = list_offsets[idx][-2] + 1
-        #print(list_offsets[idx])
         if any(x is None for x in list_offsets[idx]):
             raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
 
-        if len(offsets) > tokenizer.model_max_length - 2:
-            logger.error("Invalid size, max size: %d, got %d.\nTokens: %s\nTokenized: %s", tokenizer.model_max_length, len(offsets), data[idx], offsets)
-            raise TextTooLongError(len(offsets), tokenizer.model_max_length, idx, " ".join(data[idx]))
+        #if list_offsets[idx][-1] > tokenizer.model_max_length - 1:
+        #    logger.error("Invalid size, max size: %d, got %d.\nTokens: %s\nTokenized: %s", tokenizer.model_max_length, len(offsets), data[idx][:1000], offsets[:1000])
+        #    raise TextTooLongError(len(offsets), tokenizer.model_max_length, idx, " ".join(data[idx]))
 
     features = []
     for i in range(int(math.ceil(len(data)/128))):
+        attention_tensor = torch.tensor(tokenized['attention_mask'][128*i:128*i+128], device=device)
+        id_tensor = torch.tensor(tokenized['input_ids'][128*i:128*i+128], device=device)
         if detach:
             with torch.no_grad():
-                attention_mask = torch.tensor(tokenized['attention_mask'][128*i:128*i+128], device=device)
-                id_tensor = torch.tensor(tokenized['input_ids'][128*i:128*i+128], device=device)
-                feature = model(id_tensor, attention_mask=attention_mask, output_hidden_states=True)
-                features += cloned_feature(feature.hidden_states, num_layers, detach)
+                features += build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_layers, detach, device)
         else:
-            attention_mask = torch.tensor(tokenized['attention_mask'][128*i:128*i+128], device=device)
-            id_tensor = torch.tensor(tokenized['input_ids'][128*i:128*i+128], device=device)
-            feature = model(id_tensor, attention_mask=attention_mask, output_hidden_states=True)
-            features += cloned_feature(feature.hidden_states, num_layers, detach)
+            features += build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_layers, detach, device)
 
     processed = []
     #process the output
@@ -410,3 +426,36 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
         processed.append(new_sent)
 
     return processed
+
+def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers=None, detach=True, peft_name=None):
+    """
+    Extract transformer embeddings using a generic roberta extraction
+
+    data: list of list of string (the text tokens)
+    num_layers: how many to return.  If None, the average of -2, -3, -4 is returned
+    """
+    # TODO: can maybe cache this value for a model and save some time
+    # TODO: too bad it isn't thread safe, but then again, who does?
+    if peft_name is None:
+        if model._hf_peft_config_loaded:
+            model.disable_adapters()
+    else:
+        model.enable_adapters()
+        model.set_adapter(peft_name)
+
+    if model_name.startswith("vinai/phobert"):
+        return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+
+    if 'bart' in model_name:
+        # this should work with "vinai/bartpho-word"
+        # not sure this works with any other Bart
+        return extract_bart_word_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+
+    if isinstance(data, tuple):
+        data = list(data)
+
+    if "xlnet" in model_name:
+        return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+
+    return extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+

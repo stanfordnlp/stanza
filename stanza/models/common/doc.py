@@ -14,6 +14,7 @@ from enum import Enum
 import networkx as nx
 
 from stanza.models.common.stanza_object import StanzaObject
+from stanza.models.common.utils import misc_to_space_after, space_after_to_misc, misc_to_space_before, space_before_to_misc
 from stanza.models.ner.utils import decode_from_bioes
 from stanza.models.constituency import tree_reader
 from stanza.models.coref.coref_chain import CorefMention, CorefChain, CorefAttachment
@@ -81,6 +82,28 @@ class Document(StanzaObject):
         self._coref = []
         if self._text is not None:
             self.build_ents()
+            self.mark_whitespace()
+
+    def mark_whitespace(self):
+        for sentence in self._sentences:
+            # TODO: pairwise, once we move to minimum 3.10
+            for prev_token, next_token in zip(sentence.tokens[:-1], sentence.tokens[1:]):
+                whitespace = self._text[prev_token.end_char:next_token.start_char]
+                prev_token.spaces_after = whitespace
+        for prev_sentence, next_sentence in zip(self._sentences[:-1], self._sentences[1:]):
+            prev_token = prev_sentence.tokens[-1]
+            next_token = next_sentence.tokens[0]
+            whitespace = self._text[prev_token.end_char:next_token.start_char]
+            prev_token.spaces_after = whitespace
+        if len(self._sentences) > 0 and len(self._sentences[-1].tokens) > 0:
+            final_token = self._sentences[-1].tokens[-1]
+            whitespace = self._text[final_token.end_char:]
+            final_token.spaces_after = whitespace
+        if len(self._sentences) > 0 and len(self._sentences[0].tokens) > 0:
+            first_token = self._sentences[0].tokens[0]
+            whitespace = self._text[:first_token.start_char]
+            first_token.spaces_before = whitespace
+
 
     @property
     def lang(self):
@@ -365,6 +388,13 @@ class Document(StanzaObject):
                     word.sent = sentence
                     word.parent = token
                     sentence.words.append(word)
+                if len(token.words) > 1 and token.start_char is not None and token.end_char is not None and "".join(word.text for word in token.words) == token.text:
+                    start_char = token.start_char
+                    for word in token.words:
+                        end_char = start_char + len(word.text)
+                        word.start_char = start_char
+                        word.end_char = end_char
+                        start_char = end_char
 
             if fake_dependencies:
                 sentence.build_fake_dependencies()
@@ -549,6 +579,9 @@ class Sentence(StanzaObject):
                     self.tokens.append(Token(self, entry, words=[new_word]))
                 new_word.parent = self.tokens[-1]
 
+        # put all of the whitespace annotations (if any) on the Tokens instead of the Words
+        for token in self.tokens:
+            token.consolidate_whitespace()
         self.rebuild_dependencies()
 
     def has_enhanced_dependencies(self):
@@ -996,6 +1029,8 @@ class Token(StanzaObject):
         self._end_char = token_entry.get(END_CHAR, None)
         self._sent = sentence
         self._mexp = token_entry.get(MEXP, None)
+        self._spaces_before = ""
+        self._spaces_after = " "
 
         if self._misc is not None:
             init_from_misc(self)
@@ -1039,6 +1074,77 @@ class Token(StanzaObject):
     def misc(self, value):
         """ Set the token's miscellaneousness value. """
         self._misc = value if self._is_null(value) == False else None
+
+    def consolidate_whitespace(self):
+        """
+        Remove whitespace misc annotations from the Words and mark the whitespace on the Tokens
+        """
+        found_after = False
+        found_before = False
+        num_words = len(self.words)
+        for word_idx, word in enumerate(self.words):
+            misc = word.misc
+            if not misc:
+                continue
+            pieces = misc.split("|")
+            if word_idx == 0:
+                if any(piece.startswith("SpacesBefore=") for piece in pieces):
+                    self.spaces_before = misc_to_space_before(misc)
+                    found_before = True
+            else:
+                if any(piece.startswith("SpacesBefore=") for piece in pieces):
+                    warnings.warn("Found a SpacesBefore MISC annotation on a Word that was not the first Word in a Token")
+            if word_idx == num_words - 1:
+                if any(piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter=") for piece in pieces):
+                    self.spaces_after = misc_to_space_after(misc)
+                    found_after = True
+            else:
+                if any(piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter=") for piece in pieces):
+                    unexpected_space_after = misc_to_space_after(misc)
+                    if unexpected_space_after == "":
+                        warnings.warn("Unexpected SpaceAfter=No annotation on a word in the middle of an MWT")
+                    else:
+                        warnings.warn("Unexpected SpacesAfter on a word in the middle on an MWT")
+            pieces = [x for x in pieces if not x.startswith("SpacesAfter=") and not x.startswith("SpaceAfter=") and not x.startswith("SpacesBefore=")]
+            word.misc = "|".join(pieces)
+
+        misc = self.misc
+        if misc:
+            pieces = misc.split("|")
+            if any(piece.startswith("SpacesBefore=") for piece in pieces):
+                spaces_before = misc_to_space_before(misc)
+                if found_before:
+                    if spaces_before != self.spaces_before:
+                        warnings.warn("Found conflicting SpacesBefore on a token and its word!")
+                else:
+                    self.spaces_before = spaces_before
+            if any(piece.startswith("SpaceAfter=") or piece.startswith("SpacesAfter=") for piece in pieces):
+                spaces_after = misc_to_space_after(misc)
+                if found_after:
+                    if spaces_after != self.spaces_after:
+                        warnings.warn("Found conflicting SpaceAfter / SpacesAfter on a token and its word!")
+                else:
+                    self.spaces_after = spaces_after
+            pieces = [x for x in pieces if not x.startswith("SpacesAfter=") and not x.startswith("SpaceAfter=") and not x.startswith("SpacesBefore=")]
+            self.misc = "|".join(pieces)
+
+    @property
+    def spaces_before(self):
+        """ SpacesBefore for the token. Translated from the MISC fields """
+        return self._spaces_before
+
+    @spaces_before.setter
+    def spaces_before(self, value):
+        self._spaces_before = value
+
+    @property
+    def spaces_after(self):
+        """ SpaceAfter or SpacesAfter for the token.  Translated from the MISC field """
+        return self._spaces_after
+
+    @spaces_after.setter
+    def spaces_after(self, value):
+        self._spaces_after = value
 
     @property
     def words(self):
@@ -1116,6 +1222,23 @@ class Token(StanzaObject):
             for field in fields:
                 if getattr(self, field) is not None:
                     token_dict[field] = getattr(self, field)
+            if MISC in fields:
+                spaces_after = self.spaces_after
+                if spaces_after is not None and spaces_after != ' ':
+                    space_misc = space_after_to_misc(spaces_after)
+                    if token_dict.get(MISC):
+                        token_dict[MISC] = token_dict[MISC] + "|" + space_misc
+                    else:
+                        token_dict[MISC] = space_misc
+
+                spaces_before = self.spaces_before
+                if spaces_before is not None and spaces_before != '':
+                    space_misc = space_before_to_misc(spaces_before)
+                    if token_dict.get(MISC):
+                        token_dict[MISC] = token_dict[MISC] + "|" + space_misc
+                    else:
+                        token_dict[MISC] = space_misc
+
             ret.append(token_dict)
         for word in self.words:
             word_dict = word.to_dict()
@@ -1123,6 +1246,22 @@ class Token(StanzaObject):
                 word_dict[NER] = getattr(self, NER)
             if len(self.id) == 1 and MULTI_NER in fields and getattr(self, MULTI_NER) is not None: # propagate MULTI_NER label to Word if it is a single-word token
                 word_dict[MULTI_NER] = getattr(self, MULTI_NER)
+            if len(self.id) == 1 and MISC in fields:
+                spaces_after = self.spaces_after
+                if spaces_after is not None and spaces_after != ' ':
+                    space_misc = space_after_to_misc(spaces_after)
+                    if word_dict.get(MISC):
+                        word_dict[MISC] = word_dict[MISC] + "|" + space_misc
+                    else:
+                        word_dict[MISC] = space_misc
+
+                spaces_before = self.spaces_before
+                if spaces_before is not None and spaces_before != '':
+                    space_misc = space_before_to_misc(spaces_before)
+                    if word_dict.get(MISC):
+                        word_dict[MISC] = word_dict[MISC] + "|" + space_misc
+                    else:
+                        word_dict[MISC] = space_misc
             ret.append(word_dict)
         return ret
 
@@ -1331,10 +1470,18 @@ class Word(StanzaObject):
         """ Access the start character index for this token in the raw text. """
         return self._start_char
 
+    @start_char.setter
+    def start_char(self, value):
+        self._start_char = value
+
     @property
     def end_char(self):
         """ Access the end character index for this token in the raw text. """
         return self._end_char
+
+    @end_char.setter
+    def end_char(self, value):
+        self._end_char = value
 
     @property
     def parent(self):

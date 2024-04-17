@@ -183,6 +183,15 @@ class CharacterLanguageModel(nn.Module):
     def build_char_representation(self, sentences):
         """
         Return values from this charlm for a list of list of words
+
+        input: [[str]]
+          K sentences, each of length Ki (can be different for each sentence)
+        output: [tensor(Ki x dim)]
+          list of tensors, each one with shape Ki by the dim of the character model
+
+        Values are taken from the last character in a word for each word.
+        The words are effectively treated as if they are whitespace separated
+        (which may actually be somewhat inaccurate for languages such as Chinese or for MWT)
         """
         forward = self.is_forward_lm
         vocab = self.char_vocab()

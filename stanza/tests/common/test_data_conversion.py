@@ -499,3 +499,22 @@ def test_read_multiple_doc_ids():
     assert len(docs[1].sentences) == 1
     assert len(docs[2].sentences) == 2
 
+ENGLISH_TEST_SENTENCE = """
+# text = This is a test
+# sent_id = 0
+1	This	this	PRON	DT	Number=Sing|PronType=Dem	4	nsubj	_	start_char=0|end_char=4
+2	is	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	4	cop	_	start_char=5|end_char=7
+3	a	a	DET	DT	Definite=Ind|PronType=Art	4	det	_	start_char=8|end_char=9
+4	test	test	NOUN	NN	Number=Sing	0	root	_	start_char=10|end_char=14|SpaceAfter=No
+""".lstrip()
+
+def test_convert_dict():
+    doc = CoNLL.conll2doc(input_str=ENGLISH_TEST_SENTENCE)
+    converted = CoNLL.convert_dict(doc.to_dict())
+
+    expected = [[['1', 'This', 'this', 'PRON', 'DT', 'Number=Sing|PronType=Dem', '4', 'nsubj', '_', 'start_char=0|end_char=4'],
+                 ['2', 'is', 'be', 'AUX', 'VBZ', 'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin', '4', 'cop', '_', 'start_char=5|end_char=7'],
+                 ['3', 'a', 'a', 'DET', 'DT', 'Definite=Ind|PronType=Art', '4', 'det', '_', 'start_char=8|end_char=9'],
+                 ['4', 'test', 'test', 'NOUN', 'NN', 'Number=Sing', '0', 'root', '_', 'SpaceAfter=No|start_char=10|end_char=14']]]
+
+    assert converted == expected

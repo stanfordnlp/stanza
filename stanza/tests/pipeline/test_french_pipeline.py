@@ -98,7 +98,8 @@ EXPECTED_RESULT = """
       "head": 3,
       "deprel": "obl:mod",
       "start_char": 30,
-      "end_char": 36
+      "end_char": 36,
+      "misc": "SpaceAfter=No"
     },
     {
       "id": 8,
@@ -192,7 +193,8 @@ EXPECTED_RESULT = """
       "head": 17,
       "deprel": "det",
       "start_char": 82,
-      "end_char": 84
+      "end_char": 84,
+      "misc": "SpaceAfter=No"
     },
     {
       "id": 17,
@@ -203,7 +205,8 @@ EXPECTED_RESULT = """
       "head": 14,
       "deprel": "nmod",
       "start_char": 84,
-      "end_char": 92
+      "end_char": 92,
+      "misc": "SpaceAfter=No"
     },
     {
       "id": 18,
@@ -234,7 +237,8 @@ EXPECTED_RESULT = """
       "head": 21,
       "deprel": "det",
       "start_char": 97,
-      "end_char": 99
+      "end_char": 99,
+      "misc": "SpaceAfter=No"
     },
     {
       "id": 21,
@@ -292,7 +296,8 @@ EXPECTED_RESULT = """
       "head": 17,
       "deprel": "conj",
       "start_char": 115,
-      "end_char": 124
+      "end_char": 124,
+      "misc": "SpaceAfter=No"
     },
     {
       "id": 26,
@@ -302,7 +307,8 @@ EXPECTED_RESULT = """
       "head": 11,
       "deprel": "punct",
       "start_char": 124,
-      "end_char": 125
+      "end_char": 125,
+      "misc": "SpaceAfter=No"
     }
   ]
 ]

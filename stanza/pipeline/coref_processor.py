@@ -104,20 +104,40 @@ class CorefProcessor(UDProcessor):
                 continue
             span_cluster = sorted(span_cluster)
 
+            for span in span_cluster:
+                # check there are no sentence crossings before
+                # manipulating the spans, since we will expect it to
+                # be this way for multiple usages of the spans
+                sent_id = sent_ids[span[0]]
+                if sent_ids[span[1]-1] != sent_id:
+                    raise ValueError("The coref model predicted a span that crossed two sentences!  Please send this example to us on our github")
+
             # treat the longest span as the representative
             # break ties using the first one
+            # IF there is the POS processor, and it adds upos tags
+            # to the sentence, ties are broken first by maximum
+            # number of UPOS and then earliest in the document
             max_len = 0
             best_span = None
+            max_propn = 0
             for span_idx, span in enumerate(span_cluster):
-                if span[1] - span[0] > max_len:
+                sent_id = sent_ids[span[0]]
+                sentence = sentences[sent_id]
+                start_word = word_pos[span[0]]
+                end_word = word_pos[span[1]]
+                # very UD specific test for most number of proper nouns in a mention
+                # will do nothing if POS is not active (they will all be None)
+                num_propn = sum(word.pos == 'PROPN' for word in sentence.words[start_word:end_word])
+
+                if ((span[1] - span[0] > max_len) or
+                    span[1] - span[0] == max_len and num_propn > max_propn):
                     max_len = span[1] - span[0]
                     best_span = span_idx
+                    max_propn = num_propn
 
             mentions = []
             for span in span_cluster:
                 sent_id = sent_ids[span[0]]
-                if sent_ids[span[1]] != sent_id:
-                    raise ValueError("The coref model predicted a span that crossed two sentences!  Please send this example to us on our github")
                 start_word = word_pos[span[0]]
                 end_word = word_pos[span[1]]
                 mentions.append(CorefMention(sent_id, start_word, end_word))

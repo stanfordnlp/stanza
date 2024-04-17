@@ -76,7 +76,7 @@ ENGLISH_NBSP_SAMPLE="""
 14	been	be	AUX	VBN	Tense=Past|VerbForm=Part	15	aux:pass	_	_
 15	verified	verify	VERB	VBN	Tense=Past|VerbForm=Part|Voice=Pass	2	ccomp	_	SpaceAfter=No
 16	.	.	PUNCT	.	_	2	punct	_	_
-""".lstrip()
+""".strip()
 
 def test_nbsp_doc():
     """
@@ -85,6 +85,9 @@ def test_nbsp_doc():
     doc = CoNLL.conll2doc(input_str=ENGLISH_NBSP_SAMPLE)
 
     assert doc.sentences[0].text == "Please note that neither the e-mail address nor name of the sender have been verified."
-    assert doc.sentences[0].words[12].misc == "SpacesAfter=\\u00A0"
-    assert misc_to_space_after(doc.sentences[0].words[12].misc) == ' '
+    assert doc.sentences[0].tokens[12].spaces_after == " "
+    assert misc_to_space_after("SpacesAfter=\\u00A0") == ' '
     assert space_after_to_misc(' ') == "SpacesAfter=\\u00A0"
+
+    conllu = "{:C}".format(doc)
+    assert conllu == ENGLISH_NBSP_SAMPLE

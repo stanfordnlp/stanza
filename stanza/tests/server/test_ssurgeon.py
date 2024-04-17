@@ -294,11 +294,11 @@ def test_ssurgeon_blank_values():
 CANTONESE_MISC_WORDS_INPUT = """
 # sent_id = 1
 # text = 你喺度搵乜嘢呀？
-1	你	你	PRON	_	_	3	nsubj	_	SpaceAfter=No|Translit=nei5|Gloss=2SG
-2	喺度	喺度	ADV	_	_	3	advmod	_	SpaceAfter=No|Translit=hai2dou6|Gloss=PROG
+1	你	你	PRON	_	_	3	nsubj	_	Translit=nei5|Gloss=2SG|SpaceAfter=No
+2	喺度	喺度	ADV	_	_	3	advmod	_	Translit=hai2dou6|Gloss=PROG|SpaceAfter=No
 3	搵	搵	VERB	_	_	0	root	_	Translit=wan2|Gloss=find|SpaceAfter=No
-4	乜嘢	乜嘢	PRON	_	_	3	obj	_	SpaceAfter=No|Translit=mat1je5|Gloss=what
-5	呀	呀	PART	_	_	3	discourse:sp	_	SpaceAfter=No|Translit=aa3|Gloss=SFP
+4	乜嘢	乜嘢	PRON	_	_	3	obj	_	Translit=mat1je5|Gloss=what|SpaceAfter=No
+5	呀	呀	PART	_	_	3	discourse:sp	_	Translit=aa3|Gloss=SFP|SpaceAfter=No
 6	？	？	PUNCT	_	_	3	punct	_	SpaceAfter=No
 
 # sent_id = 2
@@ -358,7 +358,7 @@ ITALIAN_MWT_MISC_INPUT = """
 3-4	farepace	_	_	_	_	_	_	_	Players=GonnaPlay|SpaceAfter=No
 3	fare	fare	VERB	V	VerbForm=Inf	0	root	_	_
 4	pace	pace	NOUN	S	Gender=Fem|Number=Sing	3	obj	_	_
-5-6	col	_	_	_	_	_	_	_	SpaceAfter=No|Haters=GonnaHate
+5-6	col	_	_	_	_	_	_	_	Haters=GonnaHate|SpaceAfter=No
 5	con	con	ADP	E	_	7	case	_	_
 6	il	il	DET	RD	Definite=Def|Gender=Masc|Number=Sing|PronType=Art	7	det	_	_
 7	cervello	cervello	NOUN	S	Gender=Masc|Number=Sing	3	obl	_	RandomFeature=foo
@@ -371,6 +371,55 @@ def test_ssurgeon_mwt_misc():
     the RandomFeature=foo is on account of a silly bug in the initial
     version of passing in MWT misc features
     """
-    # currently commented out because the public version of CoreNLP doesn't support it
-    #check_empty_test(ITALIAN_MWT_MISC_INPUT)
+    check_empty_test(ITALIAN_MWT_MISC_INPUT)
 
+SINDHI_ROOT_EXAMPLE = """
+# sent_id = 1
+# text = غلام رهڻ سان ماڻهو منافق ٿئي ٿو .
+1	غلام	غلام	NOUN	NN__اسم	Case=Acc|Gender=Masc|Number=Sing|Person=3	2	compound	_	_
+2	رهڻ	ره	VERB	VB__فعل	Number=Sing	6	advcl	_	_
+3	سان	سان	ADP	IN__حرفِ_جر	Number=Sing	2	mark	_	_
+4	ماڻهو	ماڻهو	NOUN	NN__اسم	Case=Nom|Gender=Masc|Number=Sing|Person=3	6	nsubj	_	_
+5	منافق	منافق	ADJ	JJ__صفت	Case=Acc|Number=Sing|Person=3	6	xcomp	_	_
+6	ٿئي	ٿي	VERB	VB__فعل	Number=Sing	_	_	_	_
+7	ٿو	ٿو	AUX	VB__فعل	Number=Sing	6	aux	_	_
+8	.	.	PUNCT	-__پورو_دم	_	6	punct	_	_
+""".lstrip()
+
+SINDHI_ROOT_EXPECTED = """
+# sent_id = 1
+# text = غلام رهڻ سان ماڻهو منافق ٿئي ٿو .
+1	غلام	غلام	NOUN	NN__اسم	Case=Acc|Gender=Masc|Number=Sing|Person=3	2	compound	_	_
+2	رهڻ	ره	VERB	VB__فعل	Number=Sing	6	advcl	_	_
+3	سان	سان	ADP	IN__حرفِ_جر	Number=Sing	2	mark	_	_
+4	ماڻهو	ماڻهو	NOUN	NN__اسم	Case=Nom|Gender=Masc|Number=Sing|Person=3	6	nsubj	_	_
+5	منافق	منافق	ADJ	JJ__صفت	Case=Acc|Number=Sing|Person=3	6	xcomp	_	_
+6	ٿئي	ٿي	VERB	VB__فعل	Number=Sing	0	root	_	_
+7	ٿو	ٿو	AUX	VB__فعل	Number=Sing	6	aux	_	_
+8	.	.	PUNCT	-__پورو_دم	_	6	punct	_	_
+""".strip()
+
+SINDHI_EDIT = """
+{}=root !< {}
+setRoots root
+"""
+
+def test_ssurgeon_rewrite_sindhi_roots():
+    """
+    A user / contributor sent a dependency file with blank roots
+    """
+    edits = ssurgeon.parse_ssurgeon_edits(SINDHI_EDIT)
+    expected_edits = [ssurgeon.SsurgeonEdit(semgrex_pattern='{}=root !< {}',
+                                            ssurgeon_edits=['setRoots root'],
+                                            ssurgeon_id='1', notes='', language='UniversalEnglish')]
+    assert edits == expected_edits
+
+    blank_dep_doc = CoNLL.conll2doc(input_str=SINDHI_ROOT_EXAMPLE)
+    # test that the conversion will work w/o crashing, such as because of a missing root edge
+    request = ssurgeon.build_request(blank_dep_doc, edits)
+
+    response = ssurgeon.process_doc(blank_dep_doc, edits)
+    updated_doc = ssurgeon.convert_response_to_doc(blank_dep_doc, response)
+
+    result = "{:C}".format(updated_doc)
+    assert result == SINDHI_ROOT_EXPECTED

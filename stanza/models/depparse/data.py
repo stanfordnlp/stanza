@@ -205,6 +205,9 @@ class DataLoader:
         for i in range(self.__len__()):
             yield self.__getitem__(i)
 
+    def set_batch_size(self, batch_size):
+        self.batch_size = batch_size
+
     def reshuffle(self):
         data = [y for x in self.data for y in x]
         self.data = self.chunk_batches(data)

@@ -24,10 +24,10 @@ import logging
 import torch
 
 from stanza.models.common import utils
-from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import transition_sequence
-from stanza.models.constituency.parse_transitions import State, TransitionScheme, CloseConstituent
+from stanza.models.constituency.parse_transitions import TransitionScheme, CloseConstituent
 from stanza.models.constituency.parse_tree import Tree
+from stanza.models.constituency.state import State
 from stanza.models.constituency.tree_stack import TreeStack
 from stanza.server.parser_eval import ParseResult, ScoredTree
 
@@ -46,12 +46,13 @@ class BaseModel(ABC):
     The constructor forwards all unused arguments to other classes in the
     constructor sequence, so put this before other classes such as nn.Module
     """
-    def __init__(self, transition_scheme, unary_limit, reverse_sentence, *args, **kwargs):
+    def __init__(self, transition_scheme, unary_limit, reverse_sentence, root_labels, *args, **kwargs):
         super().__init__(*args, **kwargs)  # forwards all unused arguments
 
         self._transition_scheme = transition_scheme
         self._unary_limit = unary_limit
         self._reverse_sentence = reverse_sentence
+        self.root_labels = sorted(list(root_labels))
 
     @abstractmethod
     def initial_word_queues(self, tagged_word_lists):
@@ -132,8 +133,10 @@ class BaseModel(ABC):
     def get_root_labels(self):
         """
         Return ROOT labels for this model.  Probably ROOT, TOP, or both
+
+        (Danish uses 's', though)
         """
-        return ("ROOT",)
+        return self.root_labels
 
     def unary_limit(self):
         """
@@ -162,6 +165,7 @@ class BaseModel(ABC):
                 self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY or
                 self._transition_scheme is TransitionScheme.TOP_DOWN_COMPOUND)
 
+    @property
     def reverse_sentence(self):
         """
         Whether or not this model is built to parse backwards
@@ -185,7 +189,7 @@ class BaseModel(ABC):
                     raise RuntimeError("Transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(state.num_transitions(), trans, state.gold_tree, state.gold_sequence))
         return None, transitions, None
 
-    def initial_state_from_preterminals(self, preterminal_lists, gold_trees):
+    def initial_state_from_preterminals(self, preterminal_lists, gold_trees, gold_sequences):
         """
         what is passed in should be a list of list of preterminals
         """
@@ -205,18 +209,20 @@ class BaseModel(ABC):
                   for idx, wq in enumerate(word_queues)]
         if gold_trees:
             states = [state._replace(gold_tree=gold_tree) for gold_tree, state in zip(gold_trees, states)]
+        if gold_sequences:
+            states = [state._replace(gold_sequence=gold_sequence) for gold_sequence, state in zip(gold_sequences, states)]
         return states
 
     def initial_state_from_words(self, word_lists):
         preterminal_lists = [[Tree(tag, Tree(word)) for word, tag in words]
                              for words in word_lists]
-        return self.initial_state_from_preterminals(preterminal_lists, gold_trees=None)
+        return self.initial_state_from_preterminals(preterminal_lists, gold_trees=None, gold_sequences=None)
 
     def initial_state_from_gold_trees(self, trees):
         preterminal_lists = [[Tree(pt.label, Tree(pt.children[0].label))
                               for pt in tree.yield_preterminals()]
                              for tree in trees]
-        return self.initial_state_from_preterminals(preterminal_lists, gold_trees=trees)
+        return self.initial_state_from_preterminals(preterminal_lists, gold_trees=trees, gold_sequences=None)
 
     def build_batch_from_trees(self, batch_size, data_iterator):
         """
@@ -241,7 +247,7 @@ class BaseModel(ABC):
         if len(state_batch) == 0:
             return state_batch
 
-        gold_sequences = transition_sequence.build_treebank([state.gold_tree for state in state_batch], self.transition_scheme(), self.reverse_sentence())
+        gold_sequences = transition_sequence.build_treebank([state.gold_tree for state in state_batch], self.transition_scheme(), self.reverse_sentence)
         state_batch = [state._replace(gold_sequence=sequence) for state, sequence in zip(state_batch, gold_sequences)]
         return state_batch
 
@@ -295,7 +301,7 @@ class BaseModel(ABC):
             pred_scores, transitions, scores = transition_choice(state_batch)
             if keep_scores and scores is not None:
                 state_batch = [state._replace(score=state.score + score) for state, score in zip(state_batch, scores)]
-            state_batch = parse_transitions.bulk_apply(self, state_batch, transitions)
+            state_batch = self.bulk_apply(state_batch, transitions)
 
             if keep_constituents:
                 for t_idx, transition in enumerate(transitions):
@@ -309,7 +315,7 @@ class BaseModel(ABC):
             for idx, state in enumerate(state_batch):
                 if state.finished(self):
                     predicted_tree = state.get_tree(self)
-                    if self.reverse_sentence():
+                    if self.reverse_sentence:
                         predicted_tree = predicted_tree.reverse()
                     gold_tree = state.gold_tree
                     treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, state.score)], state if keep_state else None, constituents[batch_indices[idx]] if keep_constituents else None))
@@ -383,6 +389,81 @@ class BaseModel(ABC):
         results = [t.predictions[0].tree for t in treebank]
         return results
 
+    def bulk_apply(self, state_batch, transitions, fail=False):
+        """
+        Apply the given list of Transitions to the given list of States, using the model as a reference
+
+        model: SimpleModel, LSTMModel, or any other form of model
+        state_batch: list of States
+        transitions: list of transitions, one per state
+        fail: throw an exception on a failed transition, as opposed to skipping the tree
+        """
+        remove = set()
+
+        word_positions = []
+        constituents = []
+        new_constituents = []
+        callbacks = defaultdict(list)
+
+        for idx, (tree, transition) in enumerate(zip(state_batch, transitions)):
+            if not transition:
+                error = "Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(self))
+                if fail:
+                    raise ValueError(error)
+                else:
+                    logger.error(error)
+                    remove.add(idx)
+                    continue
+
+            if tree.num_transitions() >= len(tree.word_queue) * 20:
+                # too many transitions
+                # x20 is somewhat empirically chosen based on certain
+                # treebanks having deep unary structures, especially early
+                # on when the model is fumbling around
+                if tree.gold_tree:
+                    error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(self))
+                else:
+                    error = "Went infinite!:\nFinal state:\n{}".format(tree.to_string(self))
+                if fail:
+                    raise ValueError(error)
+                else:
+                    logger.error(error)
+                    remove.add(idx)
+                    continue
+
+            wq, c, nc, callback = transition.update_state(tree, self)
+
+            word_positions.append(wq)
+            constituents.append(c)
+            new_constituents.append(nc)
+            if callback:
+                # not `idx` in case something was removed
+                callbacks[callback].append(len(new_constituents)-1)
+
+        for key, idxs in callbacks.items():
+            data = [new_constituents[x] for x in idxs]
+            callback_constituents = key.build_constituents(self, data)
+            for idx, constituent in zip(idxs, callback_constituents):
+                new_constituents[idx] = constituent
+
+        state_batch = [tree for idx, tree in enumerate(state_batch) if idx not in remove]
+        transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
+
+        if len(state_batch) == 0:
+            return state_batch
+
+        new_transitions = self.push_transitions([tree.transitions for tree in state_batch], transitions)
+        new_constituents = self.push_constituents(constituents, new_constituents)
+
+        state_batch = [state._replace(num_opens=state.num_opens + transition.delta_opens(),
+                                     word_position=word_position,
+                                     transitions=transition_stack,
+                                     constituents=constituents)
+                      for (state, transition, word_position, transition_stack, constituents)
+                      in zip(state_batch, transitions, word_positions, new_transitions, new_constituents)]
+
+        return state_batch
+
 class SimpleModel(BaseModel):
     """
     This model allows pushing and popping with no extra data
@@ -394,8 +475,8 @@ class SimpleModel(BaseModel):
     transitions in situations where the NN state is not relevant,
     as this class will be faster than using the NN
     """
-    def __init__(self, transition_scheme=TransitionScheme.TOP_DOWN_UNARY, unary_limit=UNARY_LIMIT, reverse_sentence=False):
-        super().__init__(transition_scheme=transition_scheme, unary_limit=unary_limit, reverse_sentence=reverse_sentence)
+    def __init__(self, transition_scheme=TransitionScheme.TOP_DOWN_UNARY, unary_limit=UNARY_LIMIT, reverse_sentence=False, root_labels=("ROOT",)):
+        super().__init__(transition_scheme=transition_scheme, unary_limit=unary_limit, reverse_sentence=reverse_sentence, root_labels=root_labels)
 
     def initial_word_queues(self, tagged_word_lists):
         word_queues = []
@@ -403,7 +484,7 @@ class SimpleModel(BaseModel):
             word_queue =  [None]
             word_queue += [tag_node for tag_node in tagged_words]
             word_queue.append(None)
-            if self.reverse_sentence():
+            if self.reverse_sentence:
                 word_queue.reverse()
             word_queues.append(word_queue)
         return word_queues

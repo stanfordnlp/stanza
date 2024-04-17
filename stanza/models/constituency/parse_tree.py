@@ -3,6 +3,7 @@ Tree datastructure
 """
 
 from collections import deque, Counter
+import copy
 from enum import Enum
 from io import StringIO
 import itertools
@@ -18,7 +19,11 @@ OPEN_PAREN = '('
 
 EMPTY_CHILDREN = ()
 
-CONSTITUENT_SPLIT = re.compile("[-=#]")
+# used to split off the functional tags from various treebanks
+# for example, the Icelandic treebank (which we don't currently
+# incorporate) uses * to distinguish 'ADJP', 'ADJP*OC' but we treat
+# those as the same
+CONSTITUENT_SPLIT = re.compile("[-=#*]")
 
 # These words occur in the VLSP dataset.
 # The documentation claims there might be *O*, although those don't
@@ -308,6 +313,8 @@ class Tree(StanzaObject):
         """
         Walks over all of the trees and gets all of the unique constituent names from the trees
         """
+        if isinstance(trees, Tree):
+            trees = [trees]
         constituents = Tree.get_constituent_counts(trees)
         return sorted(set(constituents.keys()))
 
@@ -483,6 +490,34 @@ class Tree(StanzaObject):
         new_tree = recursive_replace_words(self)
         if any(True for _ in word_iterator):
             raise ValueError("Too many words for the given tree")
+        return new_tree
+
+
+    def replace_tags(self, tags):
+        if self.is_leaf():
+            raise ValueError("Must call replace_tags with non-leaf")
+
+        tag_iterator = iter(tags)
+
+        new_tree = copy.deepcopy(self)
+        queue = deque()
+        queue.append(new_tree)
+        while len(queue) > 0:
+            next_node = queue.pop()
+            if next_node.is_preterminal():
+                try:
+                    label = next(tag_iterator)
+                except StopIteration:
+                    raise ValueError("Not enough tags in sentence for given tree")
+                next_node.label = label
+            elif next_node.is_leaf():
+                raise ValueError("Got a badly structured tree: {}".format(self))
+            else:
+                queue.extend(reversed(next_node.children))
+
+        if any(True for _ in tag_iterator):
+            raise ValueError("Too many tags for the given tree")
+
         return new_tree
 
 

@@ -53,7 +53,7 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, postprocess=None
     """
     This utility method copies only the conllu files to the given destination directory.
 
-    Both POS and lemma annotators need this.
+    Both POS, lemma, and depparse annotators need this.
     """
     os.makedirs(dest_dir, exist_ok=True)
 
@@ -79,7 +79,7 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, postprocess=None
         postprocess(tokenizer_dir, "train.gold", dest_dir, "train.in", short_name)
         postprocess(tokenizer_dir, "dev.gold", dest_dir, "dev.in", short_name)
         postprocess(tokenizer_dir, "test.gold", dest_dir, "test.in", short_name)
-        if model_type is not common.ModelType.POS:
+        if model_type is not common.ModelType.POS and model_type is not common.ModelType.DEPPARSE:
             copy_conllu_file(dest_dir, "dev.in", dest_dir, "dev.gold", short_name)
             copy_conllu_file(dest_dir, "test.in", dest_dir, "test.gold", short_name)
 
@@ -843,6 +843,42 @@ def build_combined_english_dataset(paths, model_type, dataset):
 
     return sents
 
+def add_english_sentence_final_punctuation(handparsed_sentences):
+    """
+    Add a period to the end of a sentence with no punct at the end.
+
+    The next-to-last word has SpaceAfter=No added as well.
+
+    Possibly English-specific because of the xpos.  Could be upgraded
+    to handle multiple languages by passing in the xpos as an argument
+    """
+    new_sents = []
+    for sent in handparsed_sentences:
+        root_id = None
+        max_id = None
+        last_punct = False
+        for line in sent:
+            if line.startswith("#"):
+                continue
+            pieces = line.split("\t")
+            if MWT_OR_COPY_RE.match(pieces[0]):
+                continue
+            if pieces[6] == '0':
+                root_id = pieces[0]
+            max_id = int(pieces[0])
+            last_punct = pieces[3] == 'PUNCT'
+        if not last_punct:
+            new_sent = list(sent)
+            pieces = new_sent[-1].split("\t")
+            pieces[-1] = add_space_after_no(pieces[-1])
+            new_sent[-1] = "\t".join(pieces)
+            new_sent.append("%d\t.\t.\tPUNCT\t.\t_\t%s\tpunct\t%s:punct\t_" % (max_id+1, root_id, root_id))
+            new_sents.append(new_sent)
+        else:
+            new_sents.append(sent)
+    return new_sents
+
+
 def build_extra_combined_english_dataset(paths, dataset):
     """
     Extra sentences we don't want augmented
@@ -850,7 +886,11 @@ def build_extra_combined_english_dataset(paths, dataset):
     handparsed_dir = paths["HANDPARSED_DIR"]
     sents = []
     if dataset == 'train':
-        sents.extend(read_sentences_from_conllu(os.path.join(handparsed_dir, "english-handparsed", "english.conll")))
+        handparsed_path = os.path.join(handparsed_dir, "english-handparsed", "english.conll")
+        handparsed_sentences = read_sentences_from_conllu(handparsed_path)
+        handparsed_sentences = add_english_sentence_final_punctuation(handparsed_sentences)
+        sents.extend(handparsed_sentences)
+        print("Loaded %d sentences from %s" % (len(sents), handparsed_path))
     return sents
 
 def build_extra_combined_italian_dataset(paths, dataset):
@@ -864,11 +904,13 @@ def build_extra_combined_italian_dataset(paths, dataset):
     extra_italian = os.path.join(handparsed_dir, "italian-mwt", "italian.mwt")
     if not os.path.exists(extra_italian):
         raise FileNotFoundError("Cannot find the extra dataset 'italian.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
+
     extra_sents = read_sentences_from_conllu(extra_italian)
     for sentence in extra_sents:
         if not sentence[2].endswith("_") or not MWT_RE.match(sentence[2]):
             raise AssertionError("Unexpected format of the italian.mwt file.  Has it already be modified to have SpaceAfter=No everywhere?")
         sentence[2] = sentence[2][:-1] + "SpaceAfter=No"
+    print("Loaded %d sentences from %s" % (len(extra_sents), extra_italian))
     return extra_sents
 
 def replace_semicolons(sentences):

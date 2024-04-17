@@ -30,10 +30,42 @@ ALTERNATE_DATASET = {
     "en_sstplus": "en_sst3roots",
 }
 
+def build_default_args(paths, short_language, dataset, command_args, extra_args):
+    if '--wordvec_pretrain_file' not in extra_args:
+        # will throw an error if the pretrain can't be found
+        wordvec_pretrain = find_wordvec_pretrain(short_language, default_pretrains)
+        wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]
+    else:
+        wordvec_args = []
+
+    charlm = choose_charlm(short_language, dataset, command_args.charlm, default_charlms, {})
+    charlm_args = build_charlm_args(short_language, charlm, base_args=False)
+
+    bert_args = common.choose_transformer(short_language, command_args, extra_args)
+    default_args = wordvec_args + charlm_args + bert_args
+
+    return default_args
+
+def build_model_filename(paths, short_name, command_args, extra_args):
+    short_language, dataset = short_name.split("_", 1)
+
+    default_args = build_default_args(paths, short_language, dataset, command_args, extra_args)
+
+    train_args = ["--shorthand", short_name]
+    train_args = train_args + default_args
+    if command_args.save_name is not None:
+        train_args.extend(["--save_name", command_args.save_name])
+    if command_args.save_dir is not None:
+        train_args.extend(["--save_dir", command_args.save_dir])
+    args = classifier.parse_args(train_args + extra_args)
+    save_name = classifier.build_model_filename(args)
+    return save_name
+
+
 def run_dataset(mode, paths, treebank, short_name,
                 temp_output_file, command_args, extra_args):
     sentiment_dir = paths["SENTIMENT_DATA_DIR"]
-    language, dataset = short_name.split("_", 1)
+    short_language, dataset = short_name.split("_", 1)
 
     train_file = os.path.join(sentiment_dir, f"{short_name}.train.json")
 
@@ -45,24 +77,10 @@ def run_dataset(mode, paths, treebank, short_name,
         if not os.path.exists(filename):
             raise FileNotFoundError("Cannot find %s" % filename)
 
-    if '--wordvec_pretrain_file' not in extra_args:
-        # will throw an error if the pretrain can't be found
-        wordvec_pretrain = find_wordvec_pretrain(language, default_pretrains)
-        wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]
-    else:
-        wordvec_args = []
-
-    charlm = choose_charlm(language, dataset, command_args.charlm, default_charlms, {})
-    charlm_args = build_charlm_args(language, charlm, base_args=False)
-
-    default_args = wordvec_args + charlm_args
-
-    bert_args = common.choose_transformer(language, command_args, extra_args)
-    default_args += bert_args
+    default_args = build_default_args(paths, short_language, dataset, command_args, extra_args)
 
     if mode == Mode.TRAIN:
-        train_args = ['--save_name', "%s_classifier.pt" % short_name,
-                      '--train_file', train_file,
+        train_args = ['--train_file', train_file,
                       '--dev_file', dev_file,
                       '--test_file', test_file,
                       '--shorthand', short_name,
@@ -73,8 +91,7 @@ def run_dataset(mode, paths, treebank, short_name,
         classifier.main(train_args)
 
     if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
-        dev_args = ['--save_name', "%s_classifier.pt" % short_name,
-                    '--no_train',
+        dev_args = ['--no_train',
                     '--test_file', dev_file,
                     '--shorthand', short_name,
                     '--wordvec_type', 'word2vec']   # TODO: chinese is fasttext
@@ -83,8 +100,7 @@ def run_dataset(mode, paths, treebank, short_name,
         classifier.main(dev_args)
 
     if mode == Mode.SCORE_TEST or mode == Mode.TRAIN:
-        test_args = ['--save_name', "%s_classifier.pt" % short_name,
-                     '--no_train',
+        test_args = ['--no_train',
                      '--test_file', test_file,
                      '--shorthand', short_name,
                      '--wordvec_type', 'word2vec']   # TODO: chinese is fasttext
@@ -95,7 +111,7 @@ def run_dataset(mode, paths, treebank, short_name,
 
 
 def main():
-    common.main(run_dataset, "classifier", "classifier", add_sentiment_args, classifier.build_argparse())
+    common.main(run_dataset, "classifier", "classifier", add_sentiment_args, classifier.build_argparse(), build_model_filename=build_model_filename)
 
 if __name__ == "__main__":
     main()

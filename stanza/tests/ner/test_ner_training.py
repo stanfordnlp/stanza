@@ -244,6 +244,18 @@ def test_with_bert_finetune(pretrain_file, tmp_path):
     trainer.save(foo_save_filename)
     assert model_file_has_bert(foo_save_filename)
 
+    # TODO: technically this should still work if we turn off bert finetuning when reloading
     reloaded_trainer = Trainer(args=trainer.args, model_file=foo_save_filename)
     reloaded_trainer.save(bar_save_filename)
     assert model_file_has_bert(bar_save_filename)
+
+def test_with_peft_finetune(pretrain_file, tmp_path):
+    # TODO: check that the peft tensors are moving when training?
+    trainer = run_training(pretrain_file, tmp_path, '--bert_model', 'hf-internal-testing/tiny-bert', '--use_peft')
+    model_file = os.path.join(trainer.args['save_dir'], trainer.args['save_name'])
+    checkpoint = torch.load(model_file, lambda storage, loc: storage)
+    assert 'bert_lora' in checkpoint
+    assert not any(x.startswith("bert_model.") for x in checkpoint['model'].keys())
+
+    # test loading
+    reloaded_trainer = Trainer(args=trainer.args, model_file=model_file)

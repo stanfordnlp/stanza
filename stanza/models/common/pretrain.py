@@ -55,8 +55,10 @@ class Pretrain:
             try:
                 data = torch.load(self.filename, lambda storage, loc: storage)
                 logger.debug("Loaded pretrain from {}".format(self.filename))
+                if not isinstance(data, dict):
+                    raise RuntimeError("File {} exists but is not a stanza pretrain file.  It is not a dict, whereas a Stanza pretrain should have a dict with 'emb' and 'vocab'".format(self.filename))
                 if 'emb' not in data or 'vocab' not in data:
-                    raise RuntimeError("File {} exists but is not a stanza pretrain file".format(self.filename))
+                    raise RuntimeError("File {} exists but is not a stanza pretrain file.  A Stanza pretrain file should have 'emb' and 'vocab' fields in its state dict".format(self.filename))
                 self._vocab, self._emb = PretrainedWordVocab.load_state_dict(data['vocab']), data['emb']
                 return
             except (KeyboardInterrupt, SystemExit):

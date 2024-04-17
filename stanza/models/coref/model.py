@@ -13,6 +13,7 @@ import toml
 import torch
 import transformers     # type: ignore
 
+
 from stanza.models.coref import bert, conll, utils
 from stanza.models.coref.anaphoricity_scorer import AnaphoricityScorer
 from stanza.models.coref.cluster_checker import ClusterChecker
@@ -388,10 +389,19 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         logger.info("\n".join(lines))
 
 
-    def train(self):
+    def train(self, log=False):
         """
         Trains all the trainable blocks in the model using the config provided.
+
+        log: whether or not to log using wandb
         """
+
+        if log:
+            import wandb
+            wandb.watch((self.bert, self.pw,
+                         self.a_scorer, self.we,
+                         self.rough_scorer, self.sp), log_freq=4, log="all", log_graph=True)
+
         docs = list(self._get_docs(self.config.train_data))
         docs_ids = list(range(len(docs)))
         avg_spans = sum(len(doc["head2span"]) for doc in docs) / len(docs)
@@ -405,7 +415,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             running_s_loss = 0.0
             random.shuffle(docs_ids)
             pbar = tqdm(docs_ids, unit="docs", ncols=0)
-            for doc_id in pbar:
+            for doc_indx, doc_id in enumerate(pbar):
                 doc = docs[doc_id]
 
                 for optim in self.optimizers.values():
@@ -426,6 +436,12 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 running_c_loss += c_loss.item()
                 running_s_loss += s_loss.item()
 
+                # log every 50 docs
+                if log and doc_indx % 50 == 0:
+                    wandb.log({'train_c_loss': c_loss.item(),
+                               'train_s_loss': s_loss.item()})
+
+
                 del c_loss, s_loss
 
                 for optim in self.optimizers.values():
@@ -443,7 +459,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             self.epochs_trained += 1
             scores = self.evaluate()
             prev_best_f1 = best_f1
+            if log:
+                wandb.log({'dev_score': scores[1]})
+
             if best_f1 is None or scores[1] > best_f1:
+
                 if best_f1 is None:
                     logger.info("Saving new best model: F1 %.4f", scores[1])
                 else:
@@ -536,7 +556,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             self.schedulers["bert_scheduler"] = torch.optim.lr_scheduler.SequentialLR(
                 self.optimizers["bert_optimizer"],
                 schedulers=[zero_scheduler, warmup_scheduler],
-                milestones=[n_docs * self.config.bert_finetune_begin_epoch])
+                milestones=[start_finetuning])
 
         # Must ensure the same ordering of parameters between launches
         modules = sorted((key, value) for key, value in self.trainable.items()

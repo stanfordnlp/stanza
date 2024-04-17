@@ -5,6 +5,7 @@ import torch
 from collections import namedtuple
 
 from torch.utils.data import DataLoader as DL
+from torch.utils.data.sampler import Sampler
 from torch.nn.utils.rnn import pad_sequence
 
 from stanza.models.common.bert_embedding import filter_data
@@ -67,7 +68,10 @@ class Dataset:
         wordvocab = WordVocab(data, args['shorthand'], cutoff=args['word_cutoff'], lower=True)
         uposvocab = WordVocab(data, args['shorthand'], idx=1)
         xposvocab = xpos_vocab_factory(data, args['shorthand'])
-        featsvocab = FeatureVocab(data, args['shorthand'], idx=3)
+        try:
+            featsvocab = FeatureVocab(data, args['shorthand'], idx=3)
+        except ValueError as e:
+            raise ValueError("Unable to build features vocab.  Please check the Features column of your data for an error which may match the following description.") from e
         vocab = MultiVocab({'char': charvocab,
                             'word': wordvocab,
                             'upos': uposvocab,
@@ -218,6 +222,12 @@ class Dataset:
                   collate_fn=Dataset.__collate_fn,
                   **kwargs)
 
+    def to_length_limited_loader(self, batch_size, maximum_tokens):
+        sampler = LengthLimitedBatchSampler(self, batch_size, maximum_tokens)
+        return DL(self,
+                  collate_fn=Dataset.__collate_fn,
+                  batch_sampler = sampler)
+
     @staticmethod
     def __collate_fn(data):
         """Function used by DataLoader to pack data"""
@@ -279,6 +289,57 @@ class Dataset:
                     if data[sent_idx][tok_idx][feat_idx] is None:
                         data[sent_idx][tok_idx][feat_idx] = '_'
         return data
+
+class LengthLimitedBatchSampler(Sampler):
+    """
+    Batches up the text in batches of batch_size, but cuts off each time a batch reaches maximum_tokens
+
+    Intent is to avoid GPU OOM in situations where one sentence is significantly longer than expected,
+    leaving a batch too large to fit in the GPU
+
+    Sentences which are longer than maximum_tokens by themselves are put in their own batches
+    """
+    def __init__(self, data, batch_size, maximum_tokens):
+        """
+        Precalculate the batches, making it so len and iter just read off the precalculated batches
+        """
+        self.data = data
+        self.batch_size = batch_size
+        self.maximum_tokens = maximum_tokens
+
+        self.batches = []
+        current_batch = []
+        current_length = 0
+
+        for item, item_idx in data:
+            item_len = len(item.word)
+            if maximum_tokens and item_len > maximum_tokens:
+                if len(current_batch) > 0:
+                    self.batches.append(current_batch)
+                    current_batch = []
+                    current_length = 0
+                self.batches.append([item_idx])
+                continue
+            if len(current_batch) + 1 > batch_size or (maximum_tokens and item_len + current_length > maximum_tokens):
+                self.batches.append(current_batch)
+                current_batch = []
+                current_length = 0
+            current_batch.append(item_idx)
+            current_length += item_len
+
+        if len(current_batch) > 0:
+            self.batches.append(current_batch)
+
+    def __len__(self):
+        return len(self.batches)
+
+    def __iter__(self):
+        for batch in self.batches:
+            current_batch = []
+            for idx in batch:
+                current_batch.append(idx)
+            yield current_batch
+
 
 class ShuffledDataset:
     """A wrapper around one or more datasets which shuffles the data in batch_size chunks
