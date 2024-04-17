@@ -6,6 +6,7 @@ from typing import Hashable, List, Tuple
 from stanza.models.coref.const import EPSILON
 import numpy as np
 
+import math
 import logging
 
 logger = logging.getLogger('stanza')
@@ -23,17 +24,16 @@ class ClusterChecker:
         self._num_preds = 0.0
 
         # muc
-        self._fm = 0.0
+        self._mp = 0.0
+        self._mr = 0.0
 
         # b3
-        self._fb = 0.0
+        self._bp = 0.0
+        self._br = 0.0
 
         # ceafe
-        self._fc = 0.0
-
-        # macroavg of F1s (muc, b3, ceafe)
-        self._fmacro = 0.0
-
+        self._cp = 0.0
+        self._cr = 0.0
 
     @staticmethod
     def _f1(p,r):
@@ -58,23 +58,19 @@ class ClusterChecker:
         recall, r_weight = ClusterChecker._lea(gold_clusters, pred_clusters)
         precision, p_weight = ClusterChecker._lea(pred_clusters, gold_clusters)
 
-        muc_recall = ClusterChecker._muc(gold_clusters, pred_clusters)
-        muc_precision = ClusterChecker._muc(pred_clusters, gold_clusters)
+        self._mr +=  ClusterChecker._muc(gold_clusters, pred_clusters)
+        self._mp += ClusterChecker._muc(pred_clusters, gold_clusters)
 
-        self._fm += self._f1(muc_precision, muc_recall)
-
-        b3_recall = ClusterChecker._b3(gold_clusters, pred_clusters)
-        b3_precision = ClusterChecker._b3(pred_clusters, gold_clusters)
-
-        self._fb += self._f1(b3_precision, b3_recall)
+        self._br += ClusterChecker._b3(gold_clusters, pred_clusters)
+        self._bp += ClusterChecker._b3(pred_clusters, gold_clusters)
 
         ceafe_precision, ceafe_recall = ClusterChecker._ceafe(pred_clusters, gold_clusters)
+        if math.isnan(ceafe_precision) and len(gold_clusters) > 0:
+            # because our model predicted no clusters
+            ceafe_precision = 0.0
 
-        self._fc += self._f1(ceafe_precision, ceafe_recall)
-
-        self._fmacro += ((self._f1(muc_precision, muc_recall)+
-                          self._f1(b3_precision, b3_recall) +
-                          self._f1(ceafe_precision, ceafe_recall))/3)
+        self._cp += ceafe_precision
+        self._cr += ceafe_recall
 
         self._r += recall
         self._r_weight += r_weight
@@ -90,14 +86,20 @@ class ClusterChecker:
     @property
     def bakeoff(self):
         """ Get the F1 macroaverage score used by the bakeoff """
-        return self._fmacro / self._num_preds
+        return sum(self.mbc)/3
 
     @property
     def mbc(self):
         """ Get the F1 average score of (muc, b3, ceafe) over docs """
-        return (self._fm/self._num_preds,
-                self._fb/self._num_preds,
-                self._fc/self._num_preds)
+        avg_precisions = [self._mp, self._bp, self._cp]
+        avg_precisions = [i/(self._num_preds + EPSILON) for i in avg_precisions]
+
+        avg_recalls = [self._mr, self._br, self._cr]
+        avg_recalls = [i/(self._num_preds + EPSILON) for i in avg_recalls]
+
+        avg_f1s = [self._f1(p,r) for p,r in zip(avg_precisions, avg_recalls)]
+
+        return avg_f1s
 
     @property
     def total_lea(self):
@@ -168,7 +170,7 @@ class ClusterChecker:
         try:
             return top/bottom
         except ZeroDivisionError:
-            logger.warning("Got a zero division error because the model predicted no spans!")
+            logger.warning("muc got a zero division error because the model predicted no spans!")
             return 0 # +inf technically
 
     @staticmethod
@@ -191,7 +193,7 @@ class ClusterChecker:
         try:
             return top/bottom
         except ZeroDivisionError:
-            logger.warning("Got a zero division error because the model predicted no spans!")
+            logger.warning("b3 got a zero division error because the model predicted no spans!")
             return 0 # +inf technically
 
 
@@ -209,7 +211,7 @@ class ClusterChecker:
         except ImportError:
             raise ImportError("To perform CEAF scoring, please install scipy via `pip install scipy` for the Kuhn-Munkres linear assignment scheme.")
 
-        clusters = [c for c in clusters if len(c) != 1]
+        clusters = [c for c in clusters]
         scores = np.zeros((len(gold_clusters), len(clusters)))
         for i in range(len(gold_clusters)):
             for j in range(len(clusters)):
@@ -218,5 +220,11 @@ class ClusterChecker:
         similarity = scores[row_ind, col_ind].sum()
 
         # precision, recall
-        return similarity/len(clusters), similarity/len(gold_clusters)
+        try:
+            prec = similarity/len(clusters)
+        except ZeroDivisionError:
+            logger.warning("ceafe got a zero division error because the model predicted no spans!")
+            prec = 0
+        recc = similarity/len(gold_clusters)
+        return prec, recc
 

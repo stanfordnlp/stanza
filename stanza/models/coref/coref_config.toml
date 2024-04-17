@@ -15,17 +15,21 @@ save_dir = "saved_models/coref"
 #dev_data = "data/coref/huge.json"
 #test_data = "data/coref/huge.json"
 
-#train_data = "data/coref/en_gum-ud.train.nosgl.json"
-#dev_data = "data/coref/en_gum-ud.dev.nosgl.json"
-#test_data = "data/coref/en_gum-ud.test.nosgl.json"
+# train_data = "data/coref/en_gum-ud.train.nosgl.json"
+# dev_data = "data/coref/en_gum-ud.dev.nosgl.json"
+# test_data = "data/coref/en_gum-ud.test.nosgl.json"
 
-#train_data = "data/coref/corefud_concat_short_v1_0.train.json"
-#dev_data = "data/coref/corefud_concat_short_v1_0.dev.json"
-#test_data = "data/coref/corefud_concat_short_v1_0.dev.json"
+# train_data = "data/coref/corefud_concat_short_v1_0.train.json"
+# dev_data = "data/coref/corefud_concat_short_v1_0.dev.json"
+# test_data = "data/coref/corefud_concat_short_v1_0.dev.json"
 
-train_data = "data/coref/corefud_concat_v1_0.train.json"
-dev_data = "data/coref/corefud_concat_v1_0.dev.json"
-test_data = "data/coref/corefud_concat_v1_0.dev.json"
+#train_data = "data/coref/corefud_concat_v1_0_langid-bal.train.json"
+#dev_data = "data/coref/corefud_concat_v1_0_langid-bal.dev.json"
+#test_data = "data/coref/corefud_concat_v1_0_langid-bal.test.json"
+
+train_data = "data/coref/corefud_concat_v1_0_langid.train.json"
+dev_data = "data/coref/corefud_concat_v1_0_langid.dev.json"
+test_data = "data/coref/corefud_concat_v1_0_langid.dev.json"
 
 #train_data = "data/coref/english_train_head.jsonlines"
 #dev_data = "data/coref/english_development_head.jsonlines"
@@ -74,6 +78,7 @@ hidden_size = 1024
 n_hidden_layers = 1
 
 
+
 # Mention extraction settings ========
 
 # Mention extractor will check spans up to max_span_len words
@@ -93,8 +98,8 @@ rough_k = 50
 # LoRA settings
 lora = false
 lora_dropout = 0.1
-lora_alpha = 256
-lora_rank = 128
+lora_alpha = 128
+lora_rank = 64
 lora_targets = []
 lora_fully_tune = []
 

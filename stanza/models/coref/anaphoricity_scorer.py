@@ -24,6 +24,9 @@ class AnaphoricityScorer(torch.nn.Module):
                            torch.nn.Dropout(config.dropout_rate)])
         self.hidden = torch.nn.Sequential(*layers)
         self.out = torch.nn.Linear(hidden_size, out_features=1)
+        # map to whether or not this is a start of a coref given all the
+        # anticidents
+        self.start_map = torch.nn.Linear(config.rough_k, out_features=1, bias=False)
 
     def forward(self, *,  # type: ignore  # pylint: disable=arguments-differ  #35566 in pytorch
                 top_mentions: torch.Tensor,
@@ -51,11 +54,12 @@ class AnaphoricityScorer(torch.nn.Module):
         # [batch_size, n_ants, pair_emb]
         pair_matrix = self._get_pair_matrix(mentions_batch, pw_batch, top_mentions)
 
-        # [batch_size, n_ants]
-        scores = self._ffnn(pair_matrix)
+        # [batch_size, n_ants] vs [batch_size, 1]
+        # first is coref scores, the second is whether its the start of a coref
+        scores, start = self._ffnn(pair_matrix)
         scores = utils.add_dummy(scores+top_rough_scores_batch, eps=True)
 
-        return scores
+        return torch.cat([start, scores], dim=1)
 
     def _ffnn(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -68,7 +72,10 @@ class AnaphoricityScorer(torch.nn.Module):
             tensor of shape [batch_size, n_ants]
         """
         x = self.out(self.hidden(x))
-        return x.squeeze(2)
+        x = x.squeeze(2)
+        # because sometimes we only have the first 49 anaphoricities
+        start = x @ self.start_map.weight[:,:x.shape[1]].T
+        return x, start
 
     @staticmethod
     def _get_pair_matrix(mentions_batch: torch.Tensor,

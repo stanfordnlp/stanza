@@ -76,7 +76,7 @@ def find_cconj_head(heads, upos, start, end):
 def process_documents(docs):
     processed_section = []
 
-    for idx, (doc, doc_id) in enumerate(tqdm(docs)):
+    for idx, (doc, doc_id, lang) in enumerate(tqdm(docs)):
         # extract the entities
         # get sentence words and lengths
         sentences = [[j.text for j in i.words]
@@ -189,13 +189,14 @@ def process_documents(docs):
             "span_clusters": span_clusters,
             "word_clusters": word_clusters,
             "head2span": head2span,
+            "lang": lang
         }
         processed_section.append(processed)
     return processed_section
 
 SECTION_NAMES = ["train", "dev"]
 # , "test"
-SHORT_NAME = "corefud_concat_short_v1_0"
+SHORT_NAME = "corefud_concat_v1_0_langid"
 LANGUAGE = "multi"
 CONCAT = True
 
@@ -206,12 +207,19 @@ def process_dataset(short_name, conllu_path, coref_output_path):
             load = os.path.join(conllu_path, f"{short_name}-{section}.conllu")
             print("Processing %s from %s" % (section, load))
             input_file = CoNLL.conll2multi_docs(load, return_doc_ids=True)
+            lang = load.split("/")[-1].split("_")[0]
+            input_file = (input_file[0],
+                          input_file[1],
+                          lang)
         else:
             loads = glob.glob(os.path.join(conllu_path, f"*{section}.conllu"))
             input_file = []
             for load in loads:
-                print("Ingesting %s from %s" % (section, load))
-                input_file += CoNLL.conll2multi_docs(load, return_doc_ids=True)
+                lang = load.split("/")[-1].split("_")[0]
+                print("Ingesting %s from %s of lang %s" % (section, load, lang))
+                docs = CoNLL.conll2multi_docs(load, return_doc_ids=True)
+                for i in docs:
+                    input_file.append((i[0], i[1], lang))
             print("Ingested %d documents" % len(input_file))
 
         converted_section = process_documents(input_file)

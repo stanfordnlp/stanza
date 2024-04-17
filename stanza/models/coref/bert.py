@@ -32,6 +32,10 @@ def get_subwords_batches(doc: Doc,
     start, end = 0, 0
 
     while end < len(subwords):
+        # to prevent the case where a batch_size step forward
+        # doesn't capture more than 1 sentence, we will just cut
+        # that sequence
+        prev_end = end
         end = min(end + batch_size, len(subwords))
 
         # Move back till we hit a sentence end
@@ -39,6 +43,11 @@ def get_subwords_batches(doc: Doc,
             sent_id = doc["sent_id"][doc["word_id"][end]]
             while end and doc["sent_id"][doc["word_id"][end - 1]] == sent_id:
                 end -= 1
+
+        # if we ended up at prev end, well, looks like we will
+        # just chop off the sentence
+        if end == prev_end:
+            end = min(end + batch_size, len(subwords))
 
         length = end - start
         if tok.cls_token == None or tok.sep_token == None:

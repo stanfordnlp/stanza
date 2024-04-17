@@ -85,9 +85,20 @@ if __name__ == "__main__":
                                 " Defaults to 'test'."
                                 " Ignored in 'train' mode.")
     argparser.add_argument("--batch-size", type=int,
-                           help="Adjust to override the config value if you're"
-                                " experiencing out-of-memory issues")
-    argparser.add_argument("--warm-start", action="store_true",
+                           help="Adjust to override the config value of anaphoricity "
+                                "batch size if you are experiencing out-of-memory "
+                                "issues")
+    argparser.add_argument("--hidden_size", type=int,
+                           help="Adjust the anaphoricity scorer hidden size")
+    argparser.add_argument("--rough_k", type=int,
+                           help="Adjust the number of dummies to keep")
+    argparser.add_argument("--n_hidden_layers", type=int,
+                           help="Adjust the anaphoricity scorer hidden layers")
+    argparser.add_argument("--dummy_mix", type=float,
+                           help="Adjust the dummy mix")
+    argparser.add_argument("--bert_finetune_begin_epoch", type=float,
+                           help="Adjust the bert finetune begin epoch")
+    argparser.add_argument("--warm_start", action="store_true",
                            help="If set, the training will resume from the"
                                 " last checkpoint saved if any. Ignored in"
                                 " evaluation modes."
@@ -101,10 +112,14 @@ if __name__ == "__main__":
                            help="If set, output word-level conll-formatted"
                                 " files in evaluation modes. Ignored in"
                                 " 'train' mode.")
+    argparser.add_argument("--learning_rate", default=None, type=float,
+                           help="If set, update the learning rate for the model")
     argparser.add_argument("--bert_learning_rate", default=None, type=float,
                            help="If set, update the learning rate for the transformer")
     argparser.add_argument("--save_dir", default=None,
                            help="If set, update the save directory for writing models")
+    argparser.add_argument("--score_lang", default=None,
+                           help="only score a particular language for eval")
     argparser.add_argument("--log_norms", action="store_true", default=None,
                            help="If set, log all of the trainable norms each epoch.  Very noisy!")
     argparser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name', default=False)
@@ -120,10 +135,22 @@ if __name__ == "__main__":
     config = CorefModel._load_config(args.config_file, args.experiment)
     if args.batch_size:
         config.a_scoring_batch_size = args.batch_size
+    if args.hidden_size:
+        config.hidden_size = args.hidden_size
+    if args.n_hidden_layers:
+        config.n_hidden_layers = args.n_hidden_layers
+    if args.learning_rate is not None:
+        config.learning_rate = args.learning_rate
     if args.bert_learning_rate is not None:
         config.bert_learning_rate = args.bert_learning_rate
+    if args.bert_finetune_begin_epoch is not None:
+        config.bert_finetune_begin_epoch = args.bert_finetune_begin_epoch
+    if args.dummy_mix is not None:
+        config.dummy_mix = args.dummy_mix
     if args.save_dir is not None:
         config.save_dir = args.save_dir
+    if args.rough_k is not None:
+        config.rough_k = args.rough_k
     if args.log_norms is not None:
         config.log_norms = args.log_norms
     # if wandb, generate wandb configuration 
@@ -151,5 +178,7 @@ if __name__ == "__main__":
                                               "bert_scheduler", "general_scheduler"},
                                       config_update=config_update)
         results = model.evaluate(data_split=args.data_split,
-                                 word_level_conll=args.word_level)
-        logger.info(results)
+                                 word_level_conll=args.word_level, 
+                                 eval_lang=args.score_lang)
+        # logger.info(("mean loss", "))
+        print("\t".join([str(round(i, 3)) for i in results]))
