@@ -88,7 +88,7 @@ class Trainer(BaseTrainer):
             # 2. Run gradient checkpointing
             # https://github.com/huggingface/peft/issues/742
             if self.args.get("gradient_checkpointing", False) and self.args.get("bert_finetune", False):
-                self.model.bert_model.gradient_checkpointing_enable()
+                self.model.bert_model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
 
 
         # if this wasn't set anywhere, we use a default of the 0th tagset
