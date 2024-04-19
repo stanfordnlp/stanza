@@ -15,8 +15,9 @@ except ImportError:
 
 from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common import utils, loss
-from stanza.models.common.foundation_cache import NoTransformerFoundationCache
+from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, NoTransformerFoundationCache
 from stanza.models.common.chuliu_edmonds import chuliu_edmonds_one_root
+from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.depparse.model import Parser
 from stanza.models.pos.vocab import MultiVocab
 
@@ -59,7 +60,16 @@ class Trainer(BaseTrainer):
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.model = Parser(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None)
+
+            bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
+            peft_name = None
+            if self.args['use_peft']:
+                # fine tune the bert if we're using peft
+                self.args['bert_finetune'] = True
+                peft_name = "depparse"
+                bert_model = build_peft_wrapper(bert_model, self.args, logger, adapter_name=peft_name)
+
+            self.model = Parser(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=self.args['bert_finetune'], peft_name=peft_name)
             self.model = self.model.to(device)
             self.__init_optim()
 
@@ -116,9 +126,7 @@ class Trainer(BaseTrainer):
             self.model.train()
             for opt in self.optimizer.values():
                 opt.zero_grad()
-        # if there is no bert optimizer, we will tell the model to detach bert so it uses less GPU
-        detach = any(x.startswith("bert") or x.startswith("peft") for x in self.optimizer)
-        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, detach=detach)
+        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -165,7 +173,7 @@ class Trainer(BaseTrainer):
         if self.args.get('use_peft', False):
             # Hide import so that peft dependency is optional
             from peft import get_peft_model_state_dict
-            params["bert_lora"] = get_peft_model_state_dict(self.model.bert_model)
+            params["bert_lora"] = get_peft_model_state_dict(self.model.bert_model, adapter_name=self.model.peft_name)
 
         if save_optimizer and self.optimizer is not None:
             params['optimizer_state_dict'] = {k: opt.state_dict() for k, opt in self.optimizer.items()}
@@ -189,29 +197,40 @@ class Trainer(BaseTrainer):
             raise
         self.args = checkpoint['config']
         if args is not None: self.args.update(args)
+
         # preserve old models which were created before transformers were added
         if 'bert_model' not in self.args:
             self.args['bert_model'] = None
+
+        lora_weights = checkpoint.get('bert_lora')
+        if lora_weights:
+            logger.debug("Found peft weights for depparse; loading a peft adapter")
+            self.args["use_peft"] = True
+
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         # load model
         emb_matrix = None
         if self.args['pretrain'] and pretrain is not None: # we use pretrain only if args['pretrain'] == True and pretrain is not None
             emb_matrix = pretrain.emb
-        if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
-            logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
-            foundation_cache = NoTransformerFoundationCache(foundation_cache)
 
-        # if we are set to not finetune bert, but there is an existing
-        # bert in the model, we need to respect that and force it to
-        # be resaved next time the model is saved
-        force_bert_saved = any(x.startswith("bert_model") for x in checkpoint['model'].keys())
-
-        self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, force_bert_saved=force_bert_saved)
-        self.model.load_state_dict(checkpoint['model'], strict=False)
+        # TODO: refactor this common block of code with NER
+        force_bert_saved = False
+        peft_name = None
         if self.args.get('use_peft', False):
-            # hide import so that the peft dependency is optional
-            from peft import set_peft_model_state_dict
-            set_peft_model_state_dict(self.model.bert_model, checkpoint['bert_lora'])
+            force_bert_saved = True
+            bert_model, bert_tokenizer, peft_name = load_bert_with_peft(self.args['bert_model'], "depparse", foundation_cache)
+            bert_model = load_peft_wrapper(bert_model, lora_weights, self.args, logger, peft_name)
+            logger.debug("Loaded peft with name %s", peft_name)
+        else:
+            if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
+                logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
+                foundation_cache = NoTransformerFoundationCache(foundation_cache)
+                force_bert_saved = True
+            bert_model, bert_tokenizer = load_bert(self.args.get('bert_model'), foundation_cache)
+
+        self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
+        self.model.load_state_dict(checkpoint['model'], strict=False)
+
         if device is not None:
             self.model = self.model.to(device)
 
