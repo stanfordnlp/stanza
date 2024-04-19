@@ -9,10 +9,10 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_s
 
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.biaffine import DeepBiaffineScorer
-from stanza.models.common.foundation_cache import load_bert, load_charlm
+from stanza.models.common.foundation_cache import load_charlm
 from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
-from stanza.models.common.peft_config import build_peft_wrapper
+from stanza.models.common.utils import attach_bert_model
 from stanza.models.common.vocab import CompositeVocab
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanza.models.common import utils
@@ -20,17 +20,13 @@ from stanza.models.common import utils
 logger = logging.getLogger('stanza')
 
 class Parser(nn.Module):
-    def __init__(self, args, vocab, emb_matrix=None, share_hid=False, foundation_cache=None, force_bert_saved=False):
+    def __init__(self, args, vocab, emb_matrix=None, share_hid=False, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
         super().__init__()
 
         self.vocab = vocab
         self.args = args
         self.share_hid = share_hid
         self.unsaved_modules = []
-
-        def add_unsaved_module(name, module):
-            self.unsaved_modules += [name]
-            setattr(self, name, module)
 
         # input layers
         input_size = 0
@@ -69,50 +65,32 @@ class Parser(nn.Module):
                 if args['charlm_backward_file'] is None or not os.path.exists(args['charlm_backward_file']):
                     raise FileNotFoundError('Could not find backward character model: {}  Please specify with --charlm_backward_file'.format(args['charlm_backward_file']))
                 logger.debug("Depparse model loading charmodels: %s and %s", args['charlm_forward_file'], args['charlm_backward_file'])
-                add_unsaved_module('charmodel_forward', load_charlm(args['charlm_forward_file'], foundation_cache=foundation_cache))
-                add_unsaved_module('charmodel_backward', load_charlm(args['charlm_backward_file'], foundation_cache=foundation_cache))
+                self.add_unsaved_module('charmodel_forward', load_charlm(args['charlm_forward_file'], foundation_cache=foundation_cache))
+                self.add_unsaved_module('charmodel_backward', load_charlm(args['charlm_backward_file'], foundation_cache=foundation_cache))
                 input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
             else:
                 self.charmodel = CharacterModel(args, vocab)
                 self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
                 input_size += self.args['transformed_dim']
 
-        # TODO: refactor with POS
-        if self.args['bert_model']:
+        self.peft_name = peft_name
+        attach_bert_model(self, bert_model, bert_tokenizer, self.args.get('use_peft', False), force_bert_saved)
+        if self.args.get('bert_model', None):
+            # TODO: refactor bert_hidden_layers between the different models
             if args.get('bert_hidden_layers', False):
                 # The average will be offset by 1/N so that the default zeros
-                # repressents an average of the N layers
+                # represents an average of the N layers
                 self.bert_layer_mix = nn.Linear(args['bert_hidden_layers'], 1, bias=False)
                 nn.init.zeros_(self.bert_layer_mix.weight)
             else:
                 # an average of layers 2, 3, 4 will be used
                 # (for historic reasons)
                 self.bert_layer_mix = None
-            if self.args.get('use_peft', False):
-                bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
-                bert_model = build_peft_wrapper(bert_model, self.args, logger)
-                # we use a peft-specific pathway for saving peft weights
-                add_unsaved_module('bert_model', bert_model)
-                add_unsaved_module('bert_tokenizer', bert_tokenizer)
-                self.bert_model.train()
-            elif self.args.get('bert_finetune', False) or force_bert_saved:
-                bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
-                self.bert_model = bert_model
-                add_unsaved_module('bert_tokenizer', bert_tokenizer)
-            else:
-                bert_model, bert_tokenizer = load_bert(self.args['bert_model'], foundation_cache)
-                for n, p in bert_model.named_parameters():
-                    p.requires_grad = False
-                add_unsaved_module('bert_model', bert_model)
-                add_unsaved_module('bert_tokenizer', bert_tokenizer)
-            input_size += bert_model.config.hidden_size
-        else:
-            self.bert_model = None
-            self.bert_tokenizer = None
+            input_size += self.bert_model.config.hidden_size
 
         if self.args['pretrain']:
             # pretrained embeddings, by default this won't be saved into model file
-            add_unsaved_module('pretrained_emb', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
+            self.add_unsaved_module('pretrained_emb', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
             self.trans_pretrained = nn.Linear(emb_matrix.shape[1], self.args['transformed_dim'], bias=False)
             input_size += self.args['transformed_dim']
 
@@ -136,10 +114,14 @@ class Parser(nn.Module):
         self.drop = nn.Dropout(args['dropout'])
         self.worddrop = WordDropout(args['word_dropout'])
 
+    def add_unsaved_module(self, name, module):
+        self.unsaved_modules += [name]
+        setattr(self, name, module)
+
     def log_norms(self):
         utils.log_norms(self)
 
-    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, detach=True):
+    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
 
@@ -201,16 +183,14 @@ class Parser(nn.Module):
 
         if self.bert_model is not None:
             device = next(self.parameters()).device
-            detach = detach or not self.args.get('bert_finetune', False) or not self.training
             processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=True,
                                                      num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
-                                                     detach=detach)
+                                                     detach=not self.args.get('bert_finetune', False) or not self.training,
+                                                     peft_name=self.peft_name)
             if self.bert_layer_mix is not None:
-                # add the average so that the default behavior is to
-                # take an average of the N layers, and anything else
-                # other than that needs to be learned
-                # TODO: refactor this
+                # use a linear layer to weighted average the embedding dynamically
                 processed_bert = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in processed_bert]
+
             # we are using the first endpoint from the transformer as the "word" for ROOT
             processed_bert = [x[:-1, :] for x in processed_bert]
             processed_bert = pad_sequence(processed_bert, batch_first=True)
