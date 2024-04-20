@@ -197,7 +197,6 @@ def test_update_mwts():
     with tsurgeon.Tsurgeon() as tsurgeon_processor:
         for con_sentence, ud_sentence, expected_tree in zip(con_sentences, ud_train_data.sentences, expected_trees):
             con_tree = convert_it_vit.raw_tree(con_sentence[1])
-            # the moveprune feature requires corenlp 4.5.0 or later
             updated_tree, _ = convert_it_vit.update_mwts_and_special_cases(con_tree, ud_sentence, mwt_map, tsurgeon_processor)
             assert str(updated_tree) == expected_tree
 
