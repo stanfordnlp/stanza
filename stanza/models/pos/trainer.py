@@ -9,7 +9,8 @@ from torch import nn
 
 from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common import utils, loss
-from stanza.models.common.foundation_cache import NoTransformerFoundationCache
+from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, NoTransformerFoundationCache
+from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.pos.model import Tagger
 from stanza.models.pos.vocab import MultiVocab
 
@@ -35,7 +36,17 @@ class Trainer(BaseTrainer):
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.model = Tagger(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, share_hid=args['share_hid'], foundation_cache=foundation_cache)
+
+            bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
+            peft_name = None
+            if self.args['use_peft']:
+                # fine tune the bert if we're using peft
+                self.args['bert_finetune'] = True
+                peft_name = "pos"
+                bert_model = build_peft_wrapper(bert_model, self.args, logger, adapter_name=peft_name)
+
+            self.model = Tagger(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, share_hid=args['share_hid'], foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=self.args['bert_finetune'], peft_name=peft_name)
+
         self.model = self.model.to(device)
         self.optimizers = utils.get_split_optimizer(self.args['optim'], self.model, self.args['lr'], betas=(0.9, self.args['beta2']), eps=1e-6, weight_decay=self.args.get('initial_weight_decay', None), bert_learning_rate=self.args.get('bert_learning_rate', 0.0), is_peft=self.args.get("peft", False))
 
@@ -106,6 +117,11 @@ class Trainer(BaseTrainer):
                 'vocab': self.vocab.state_dict(),
                 'config': self.args
                 }
+        if self.args.get('use_peft', False):
+            # Hide import so that peft dependency is optional
+            from peft import get_peft_model_state_dict
+            params["bert_lora"] = get_peft_model_state_dict(self.model.bert_model, adapter_name=self.model.peft_name)
+
         try:
             torch.save(params, filename, _use_new_zipfile_serialization=False)
             logger.info("Model saved to {}".format(filename))
@@ -126,8 +142,31 @@ class Trainer(BaseTrainer):
             raise
         self.args = checkpoint['config']
         if args is not None: self.args.update(args)
+
+        # preserve old models which were created before transformers were added
         if 'bert_model' not in self.args:
             self.args['bert_model'] = None
+
+        lora_weights = checkpoint.get('bert_lora')
+        if lora_weights:
+            logger.debug("Found peft weights for POS; loading a peft adapter")
+            self.args["use_peft"] = True
+
+        # TODO: refactor this common block of code with NER
+        force_bert_saved = False
+        peft_name = None
+        if self.args.get('use_peft', False):
+            force_bert_saved = True
+            bert_model, bert_tokenizer, peft_name = load_bert_with_peft(self.args['bert_model'], "pos", foundation_cache)
+            bert_model = load_peft_wrapper(bert_model, lora_weights, self.args, logger, peft_name)
+            logger.debug("Loaded peft with name %s", peft_name)
+        else:
+            if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
+                logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
+                foundation_cache = NoTransformerFoundationCache(foundation_cache)
+                force_bert_saved = True
+            bert_model, bert_tokenizer = load_bert(self.args.get('bert_model'), foundation_cache)
+
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         # load model
         emb_matrix = None
@@ -136,5 +175,5 @@ class Trainer(BaseTrainer):
         if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
             logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
             foundation_cache = NoTransformerFoundationCache(foundation_cache)
-        self.model = Tagger(self.args, self.vocab, emb_matrix=emb_matrix, share_hid=self.args['share_hid'], foundation_cache=foundation_cache)
+        self.model = Tagger(self.args, self.vocab, emb_matrix=emb_matrix, share_hid=self.args['share_hid'], foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
         self.model.load_state_dict(checkpoint['model'], strict=False)
