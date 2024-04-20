@@ -161,8 +161,6 @@ class TestCoreNLPClient:
     def test_tregex_trees(self, corenlp_client):
         """
         Test the results of tregex run on trees w/o parsing
-
-        TODO: this needs a CoreNLP more recent than 4.5.1
         """
         trees = tree_reader.read_trees("(ROOT (S (NP (NNP Jennifer)) (VP (VBZ has) (NP (JJ blue) (NN skin)))))   (ROOT (S (NP (PRP I)) (VP (VBP like) (NP (PRP$ her) (NNS antennae)))))")
         pattern = "VP < NP"
