@@ -69,8 +69,6 @@ class NERTagger(nn.Module):
 
         self.peft_name = peft_name
         attach_bert_model(self, bert_model, bert_tokenizer, self.args.get('use_peft', False), force_bert_saved)
-        # FIXME: possibly pos and depparse are all losing a finetuned transformer if loaded & saved
-        # (the force_bert_saved option here handles that)
         if self.args.get('bert_model', None):
             # TODO: refactor bert_hidden_layers between the different models
             if args.get('bert_hidden_layers', False):
