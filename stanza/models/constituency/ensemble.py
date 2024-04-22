@@ -57,6 +57,9 @@ class Ensemble(nn.Module):
         super().__init__()
 
         if filenames:
+            if models:
+                raise ValueError("both filenames and models set when making the Ensemble")
+
             if foundation_cache is None:
                 foundation_cache = FoundationCache()
 
@@ -85,8 +88,24 @@ class Ensemble(nn.Module):
 
         self._reverse_sentence = self.models[0].reverse_sentence
 
+        # submodels are not trained (so far)
+        self.detach_submodels()
+
         logger.debug("Number of models in the Ensemble: %d", len(self.models))
         self.register_parameter('weighted_sum', torch.nn.Parameter(torch.zeros(len(self.models), len(self.transitions), requires_grad=True)))
+
+    def detach_submodels(self):
+        # submodels are not trained (so far)
+        for model in self.models:
+            for _, parameter in model.named_parameters():
+                parameter.requires_grad = False
+
+    def train(self, mode=True):
+        super().train(mode)
+        if mode:
+            # peft has a weird interaction where it turns requires_grad back on
+            # even if it was previously off
+            self.detach_submodels()
 
     @property
     def transitions(self):
@@ -141,8 +160,10 @@ class Ensemble(nn.Module):
                 norm = "%.6g" % torch.norm(param).item()
                 lines.append("%s %s %d %d" % (name, norm, zeros, param.nelement()))
         for model_idx, model in enumerate(self.models):
-            lines.append("  ---- MODEL %d ----" % model_idx)
-            lines.extend(model.get_norms())
+            sublines = model.get_norms()
+            if len(sublines) > 0:
+                lines.append("  ---- MODEL %d ----" % model_idx)
+                lines.extend(sublines)
         logger.info("\n".join(lines))
 
     def log_shapes(self):

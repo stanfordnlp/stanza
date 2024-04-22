@@ -667,14 +667,18 @@ class LSTMModel(BaseModel, nn.Module):
             lines.append("reduce_linear:")
             for c_idx, c_open in enumerate(self.constituent_opens):
                 lines.append("  %s weight %.6g bias %.6g" % (c_open, torch.norm(self.reduce_linear_weight[c_idx]).item(), torch.norm(self.reduce_linear_bias[c_idx]).item()))
-        max_name_len = max(len(name) for name, param in self.named_parameters() if param.requires_grad and name not in skip)
-        max_norm_len = max(len("%.6g" % torch.norm(param).item()) for name, param in self.named_parameters() if param.requires_grad and name not in skip)
+        active_params = [(name, param) for name, param in self.named_parameters() if param.requires_grad and name not in skip]
+        if len(active_params) == 0:
+            return lines
+        print(len(active_params))
+
+        max_name_len = max(len(name) for name, param in active_params)
+        max_norm_len = max(len("%.6g" % torch.norm(param).item()) for name, param in active_params)
         format_string = "%-" + str(max_name_len) + "s   norm %" + str(max_norm_len) + "s  zeros %d / %d"
-        for name, param in self.named_parameters():
-            if param.requires_grad and name not in skip:
-                zeros = torch.sum(param.abs() < 0.000001).item()
-                norm = "%.6g" % torch.norm(param).item()
-                lines.append(format_string % (name, norm, zeros, param.nelement()))
+        for name, param in active_params:
+            zeros = torch.sum(param.abs() < 0.000001).item()
+            norm = "%.6g" % torch.norm(param).item()
+            lines.append(format_string % (name, norm, zeros, param.nelement()))
         return lines
 
     def log_norms(self):
