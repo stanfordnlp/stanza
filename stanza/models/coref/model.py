@@ -166,7 +166,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                                             bias="none")
 
             self.bert.train()
-            self.bert.gradient_checkpointing_enable()
+            # self.bert.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
             self.bert = get_peft_model(self.bert, self.__peft_config)
             self.trainable["bert"] = self.bert
 
@@ -315,9 +315,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 )
 
             logger.info(f"ROUGH: p: {running_rough_prec/len(docs):.5f} | r: {running_rough_recc/len(docs):.5f}")
-            p = running_not_dummy_p/len(docs)
-            r = running_not_dummy_r/len(docs)
-            logger.info(f"NON-DUMMY: p: {p:.5f} | r: {r:.5f} | f: {(2*p*r)/(p+r):.5f}")
+            # p = running_not_dummy_p/len(docs)
+            # r = running_not_dummy_r/len(docs)
+            # logger.info(f"NON-DUMMY: p: {p:.5f} | r: {r:.5f} | f: {(2*p*r)/(p+r):.5f}")
             logger.info(f"BAKE!: {w_checker.bakeoff:.5f}")
 
         return (running_loss / len(docs), *s_checker.total_lea, s_checker.bakeoff)
@@ -489,7 +489,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 cluster_ids, 
                 torch.arange(0, 
                     rough_scores.shape[0]).repeat(rough_scores.shape[0],1), 
-                (rough_scores > float("-inf")))[:,1:] # chop away dummy
+                (rough_scores > float("-inf")))[:,2:] # chop away dummy and start
         # crop the loss to only where de have something to backprop
         # i.e. there is an actual coref
         res.rough_y = ground_truth[ground_truth.sum(dim=1) > 0]
@@ -569,8 +569,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 # doc 1072 has.... 17771 words?
                 if len(doc["subwords"]) > 5000:
-                    logger.warning(f"Get hyped, {doc_id} with {len(doc['subwords'])} subwords... ")
-                    # continue
+                    logger.warning(f"Skipping document {doc_id} with {len(doc['subwords'])} subwords... ")
+                    continue
 
                 for optim in self.optimizers.values():
                     optim.zero_grad()
@@ -784,8 +784,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             )
 
     def _clusterize(self, doc: Doc, scores: torch.Tensor, top_indices: torch.Tensor):
-        antecedents = scores.argmax(dim=1) - 1
+        antecedents = scores.argmax(dim=1) - 2
         not_dummy = antecedents >= 0
+        # TODO
+        is_start = antecedents == 1
         coref_span_heads = torch.arange(0, len(scores), device=not_dummy.device)[not_dummy]
         antecedents = top_indices[coref_span_heads, antecedents[not_dummy]]
 
@@ -834,10 +836,23 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         y = cluster_ids[top_indices] * valid_pair_map  # [n_words, n_ants]
         y[y == 0] = -1                                 # -1 for non-gold words
         y = utils.add_dummy(y)                         # [n_words, n_cands + 1]
+
+        # I apologize for this abuse of everything that's good about PyTorch.
+        # in essence, this line finds the INDEX of FIRST OCCURENCE of each NON-ZERO value
+        # from cluster_ids. We need this information because we use it to mark the
+        # special "is-start-of-ref" marker used to detect singletons.
+        first_coref = (cluster_ids ==
+                       cluster_ids.unique().sort().values[1:].unsqueeze(1)
+                       ).float().topk(k=1, dim=1).indices.squeeze()
         y = (y == cluster_ids.unsqueeze(1))            # True if coreferent
-        # ((y == cluster_ids.unsqueeze(1))[cluster_ids != 0]).sum(dim=1)
         # For all rows with no gold antecedents setting dummy to True
         y[y.sum(dim=1) == 0, 0] = True
+        # add another dummy for firts coref
+        y = utils.add_dummy(y)                         # [n_words, n_cands + 2]
+        # for all rows that's a first coref, setting its dummy to True and unset the
+        # non-coref dummy to false
+        y[first_coref, 0] = True
+        y[first_coref, 1] = False
         return y.to(torch.float)
 
     @staticmethod
