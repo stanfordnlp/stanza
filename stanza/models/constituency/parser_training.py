@@ -149,7 +149,7 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     silver_sequences, silver_transitions = transition_sequence.convert_trees_to_sequences(silver_trees, "silver", args['transition_scheme'], args['reversed'])
 
     tlogger.info("Total unique transitions in train set: %d", len(train_transitions))
-    tlogger.info("Unique transitions in training set: %s", train_transitions)
+    tlogger.info("Unique transitions in training set:\n  %s", "\n  ".join(map(str, train_transitions)))
     expanded_train_transitions = set(train_transitions + [x for trans in train_transitions for x in trans.components()])
     if args['check_valid_states']:
         parse_transitions.check_transitions(expanded_train_transitions, dev_transitions, "dev")
