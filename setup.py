@@ -83,7 +83,7 @@ setup(
         'protobuf>=3.15.0',
         'requests', 
         'networkx',
-        'toml',
+        'tomli',
         'torch>=1.3.0',
         'tqdm',
     ],
