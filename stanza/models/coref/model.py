@@ -581,7 +581,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 # otherwise, we will be overbiasing the model to produce
                 # dummies only
                 # so we first figure out who the dummies are
-                is_dummy = (res.coref_y.argmax(dim=1) == 0)
+                is_dummy = (res.coref_y.argmax(dim=1) == 1)
                 dummy_indicies = is_dummy.nonzero().squeeze(1)
                 non_dummy_indicies = (~is_dummy).nonzero().squeeze(1)
                 # we track the count of non-dummies
@@ -784,10 +784,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             )
 
     def _clusterize(self, doc: Doc, scores: torch.Tensor, top_indices: torch.Tensor):
-        antecedents = scores.argmax(dim=1) - 2
+        antecedents = scores[:,1:].argmax(dim=1) - 1
         not_dummy = antecedents >= 0
-        # TODO
-        is_start = antecedents == 1
+        # set the dummy values to -1, so that they are not coref to themselves
+        is_start = (scores[:, :2].argmax(dim=1) == 0)
         coref_span_heads = torch.arange(0, len(scores), device=not_dummy.device)[not_dummy]
         antecedents = top_indices[coref_span_heads, antecedents[not_dummy]]
 
@@ -795,6 +795,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         for i, j in zip(coref_span_heads.tolist(), antecedents.tolist()):
             nodes[i].link(nodes[j])
             assert nodes[i] is not nodes[j]
+
+        visited = {}
 
         clusters = []
         for node in nodes:
@@ -807,7 +809,16 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     cluster.append(current_node.id)
                     stack.extend(link for link in current_node.links if not link.visited)
                 assert len(cluster) > 1
+                for i in cluster:
+                    visited[i] = True
                 clusters.append(sorted(cluster))
+
+        # go through the is_start nodes; if no clusters contain that node
+        # i.e. visited[i] == False, we add it as a singleton
+        for indx, i in enumerate(is_start):
+            if i and not visited.get(indx, False):
+                clusters.append([indx])
+
         return sorted(clusters)
 
     def _get_docs(self, path: str) -> List[Doc]:
