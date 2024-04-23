@@ -26,7 +26,7 @@ class AnaphoricityScorer(torch.nn.Module):
         self.out = torch.nn.Linear(hidden_size, out_features=1)
         # map to whether or not this is a start of a coref given all the
         # anticidents
-        self.start_map = torch.nn.Linear(config.rough_k, out_features=1)
+        self.start_map = torch.nn.Linear(config.rough_k, out_features=1, bias=False)
 
     def forward(self, *,  # type: ignore  # pylint: disable=arguments-differ  #35566 in pytorch
                 top_mentions: torch.Tensor,
@@ -73,7 +73,8 @@ class AnaphoricityScorer(torch.nn.Module):
         """
         x = self.out(self.hidden(x))
         x = x.squeeze(2)
-        start = self.start_map(x)
+        # because sometimes we only have the first 49 anaphoricities
+        start = x @ self.start_map.weight[:,:x.shape[1]].T
         return x, start
 
     @staticmethod
