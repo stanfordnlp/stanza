@@ -16,11 +16,11 @@ from stanza.models.constituency import retagging
 from stanza.models.depparse import scorer
 from stanza.utils.conll import CoNLL
 
-def score_dependencies(args):
+def score_converted_dependencies(args):
     if args['lang'] != 'en':
         raise ValueError("Converting and scoring dependencies is currently only supported for English")
 
-    constituency_package = 'wsj_bert'
+    constituency_package = args['constituency_package']
     pipeline_args = {'lang': args['lang'],
                      'tokenize_pretokenized': True,
                      'package': {'pos': args['retag_package'], 'depparse': 'converter', 'constituency': constituency_package},
@@ -49,7 +49,8 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--lang', default='en', type=str, help='Language')
-    parser.add_argument('--eval_file', default="extern_data/ud2/ud-treebanks-v2.11/UD_English-EWT/en_ewt-ud-test.conllu", help='Input file for data loader.')
+    parser.add_argument('--eval_file', default="extern_data/ud2/ud-treebanks-v2.13/UD_English-EWT/en_ewt-ud-test.conllu", help='Input file for data loader.')
+    parser.add_argument('--constituency_package', default="ptb3-revised_electra-large", help='Which constituency parser to use for converting')
 
     retagging.add_retag_args(parser)
     args = parser.parse_args()
@@ -57,7 +58,7 @@ def main():
     args = vars(args)
     retagging.postprocess_args(args)
 
-    score_dependencies(args)
+    score_converted_dependencies(args)
 
 if __name__ == '__main__':
     main()
