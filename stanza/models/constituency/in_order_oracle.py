@@ -1,4 +1,4 @@
-from enum import Enum, auto
+from enum import Enum
 
 from stanza.models.constituency.dynamic_oracle import advance_past_constituents, DynamicOracle
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent

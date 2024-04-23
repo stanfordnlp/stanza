@@ -1,4 +1,4 @@
-from enum import Enum, auto
+from enum import Enum
 import random
 
 from stanza.models.constituency.dynamic_oracle import advance_past_constituents, DynamicOracle
