@@ -112,6 +112,8 @@ def fix_wrong_open_general(gold_transition, pred_transition, gold_sequence, gold
     Fix a general wrong open/open transition by accepting the open and continuing
 
     A couple other open/open patterns have already been carved out
+
+    TODO: negative checks for the previous patterns, in case we turn those off
     """
     if gold_transition == pred_transition:
         return None
@@ -439,6 +441,22 @@ class RepairType(Enum):
     # any other open transition we get wrong, which hasn't already
     # been carved out as an exception above, we just accept the
     # incorrect Open and keep going
+    #
+    # TODO: check if there is a way to improve this
+    # it appears to hurt scores simply by existing
+    # explanation: this is wrong logic
+    # Suppose the correct sequence had been
+    #   T1 open(NP) T2 T3 close
+    # Instead we had done
+    #   T1 open(VP) T2 T3 close
+    # We can recover the missing NP!
+    #   T1 open(VP) T2 close open(NP) T3 close
+    # Can also recover it as
+    #   T1 open(VP) T2 T3 close open(NP) close
+    # So this is actually an ambiguous transition
+    # except in the case of
+    #   T1 open(...) T2 close
+    # in this case, a unary transition can fix it
     WRONG_OPEN_GENERAL     = (fix_wrong_open_general,)
 
     # If the gold transition is an Open because it is part of
