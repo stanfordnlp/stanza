@@ -229,7 +229,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 res = self.run(doc)
 
-                if (res.coref_y.argmax(dim=1) == 0).all():
+                if (res.coref_y.argmax(dim=1) == 1).all():
                     logger.warning(f"EVAL: skipping document with no corefs...")
                     continue
 
