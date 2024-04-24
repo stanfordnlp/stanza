@@ -9,7 +9,10 @@ import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 import numpy as np      # type: ignore
-import tomli
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 import torch
 import transformers     # type: ignore
 
@@ -893,7 +896,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     def _load_config(config_path: str,
                      section: str) -> Config:
         with open(config_path, "rb") as fin:
-            config = tomli.load(fin)
+            config = tomllib.load(fin)
         default_section = config["DEFAULT"]
         current_section = config[section]
         unknown_keys = (set(current_section.keys())
