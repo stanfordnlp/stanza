@@ -171,6 +171,14 @@ SPMRL adds several treebanks
   Currently only German is converted, the German version being a
     version of the Tiger Treebank
   python3 -m stanza.utils.datasets.constituency.prepare_con_dataset de_spmrl  
+
+is_icepahc
+  The Icelandic Parsed Historical Corpus (IcePaHC), available at:
+    https://clarin.is/en/resources/icepahc/
+  A simplified/clean version of the IcePaHC treebank is used for the training
+  of the constituency parser, where for example empty phrases (traces and zero
+  subjects) and lemmas have been removed. This version is available at:
+    https://github.com/ingunnjk/IceConParse/tree/main/data 
 """
 
 import argparse
@@ -198,6 +206,7 @@ from stanza.utils.datasets.constituency.convert_starlang import read_starlang
 from stanza.utils.datasets.constituency.utils import SHARDS, write_dataset
 import stanza.utils.datasets.constituency.vtb_convert as vtb_convert
 import stanza.utils.datasets.constituency.vtb_split as vtb_split
+from stanza.utils.datasets.constituency.convert_icepahc import convert_icepahc_treebank
 
 class UnknownDatasetError(ValueError):
     def __init__(self, dataset, text):
@@ -470,6 +479,20 @@ def process_spmrl(paths, dataset_name, *args):
 
     convert_spmrl(input_directory, output_directory, dataset_name)
 
+def process_icepahc(paths, dataset_name, *args):
+    """
+    Processes the Icelandic dataset, IcePaHC
+    """
+    assert dataset_name == 'is_icepahc'
+
+    input_file = os.path.join(paths["CONSTITUENCY_BASE"], "simpleicepahc24.psd")
+    if not os.path.exists(input_file):
+        raise FileNotFoundError("Unable to find input file for IcePaHC. Expected in {}".format(input_file))
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    
+    datasets = convert_icepahc_treebank(input_file)
+    write_dataset(datasets, output_dir, dataset_name)
+
 DATASET_MAPPING = {
     'da_arboretum': process_arboretum,
 
@@ -495,6 +518,8 @@ DATASET_MAPPING = {
 
     'zh-hans_ctb-51':   process_ctb_51,
     'zh-hans_ctb-90':   process_ctb_90,
+
+    'is_icepahc': process_icepahc,
 }
 
 def main(dataset_name, *args):

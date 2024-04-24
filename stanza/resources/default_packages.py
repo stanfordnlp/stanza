@@ -635,6 +635,17 @@ TRANSFORMERS = {
     # xlm-roberta-base : 89.31
     "hy": "xlm-roberta-base",
 
+    # https://huggingface.co/mideind/IceBERT
+    # IceBERT-large is also available:
+    # https://huggingface.co/mideind/IceBERT-large
+    # Constituency F1 scores:
+    # No bert (in-order):             84.40%
+    # IceBERT (top-down):             88.66%
+    # IceBERT (finetuning, top-down): 90.38%
+    # IceBERT-large (top-down):       88.80%
+    # IceBERT-large (ft, top-down):   90.29%
+    "is": "mideind/IceBERT"
+
     # Indonesian POS experiments: dev set of GSD
     # python3 stanza/utils/training/run_pos.py id_gsd --no_bert
     # python3 stanza/utils/training/run_pos.py id_gsd --bert_model ...
@@ -810,6 +821,10 @@ TRANSFORMER_NICKNAMES = {
 
     # hy
     "xlm-roberta-base": "xlm-roberta-base",
+
+    # is
+    "mideind/IceBERT": "icebert",
+    "mideind/IceBERT-large": "icebert-large",
 
     # id
     "indolem/indobert-base-uncased":         "indobert",
