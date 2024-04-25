@@ -601,5 +601,5 @@ class RepairType(Enum):
 
 
 class TopDownOracle(DynamicOracle):
-    def __init__(self, root_labels, oracle_level, additional_oracle_levels):
-        super().__init__(root_labels, oracle_level, RepairType, additional_oracle_levels)
+    def __init__(self, root_labels, oracle_level, additional_oracle_levels, deactivated_oracle_levels):
+        super().__init__(root_labels, oracle_level, RepairType, additional_oracle_levels, deactivated_oracle_levels)

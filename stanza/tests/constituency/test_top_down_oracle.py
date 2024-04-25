@@ -177,7 +177,7 @@ def test_oracle_with_optional_level():
     gold_sequence = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), CloseConstituent(), Shift(), Shift(), CloseConstituent(), CloseConstituent()]
     expected_update = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), Shift(), CloseConstituent(), Shift(), CloseConstituent(), CloseConstituent()]
 
-    oracle = TopDownOracle(ROOT_LABELS, 1, "")
+    oracle = TopDownOracle(ROOT_LABELS, 1, "", "")
     fix, new_sequence = oracle.fix_error(gold_transition=gold_sequence[7],
                                          pred_transition=gold_sequence[8],
                                          gold_sequence=gold_sequence,
@@ -185,7 +185,7 @@ def test_oracle_with_optional_level():
     assert fix is RepairType.UNKNOWN
     assert new_sequence is None
 
-    oracle = TopDownOracle(ROOT_LABELS, 1, "CLOSE_SHIFT_AMBIGUOUS_IMMEDIATE_ERROR")
+    oracle = TopDownOracle(ROOT_LABELS, 1, "CLOSE_SHIFT_AMBIGUOUS_IMMEDIATE_ERROR", "")
     fix, new_sequence = oracle.fix_error(gold_transition=gold_sequence[7],
                                          pred_transition=gold_sequence[8],
                                          gold_sequence=gold_sequence,

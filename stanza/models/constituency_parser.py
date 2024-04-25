@@ -395,6 +395,7 @@ def build_argparse():
     parser.add_argument('--oracle_forced_errors', type=float, default=0.001, help="Occasionally have the model randomly walk through the state space to try to learn how to recover")
     parser.add_argument('--oracle_level', type=int, default=None, help='Restrict oracle transitions to this level or lower.  0 means off.  None means use all oracle transitions.')
     parser.add_argument('--additional_oracle_levels', type=str, default=None, help='Add some additional experimental oracle transitions.  Basically for A/B testing transitions we expect to be bad.')
+    parser.add_argument('--deactivated_oracle_levels', type=str, default=None, help='Temporarily turn off a default oracle level.  Basically for A/B testing transitions we expect to be bad.')
 
     # 30 is slightly slower than 50, for example, but seems to train a bit better on WSJ
     # earlier version of the model (less accurate overall) had the following results with adadelta:
