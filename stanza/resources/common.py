@@ -68,8 +68,13 @@ def get_md5(path):
     """
     Get the MD5 value of a path.
     """
-    with open(path, 'rb') as fin:
-        data = fin.read()
+    try:
+        with open(path, 'rb') as fin:
+            data = fin.read()
+    except OSError as e:
+        if not e.filename:
+            e.filename = path
+        raise
     return hashlib.md5(data).hexdigest()
 
 def unzip(path, filename):
