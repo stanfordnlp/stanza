@@ -17,7 +17,7 @@ def advance_past_constituents(gold_sequence, cur_index):
     return None
 
 class DynamicOracle():
-    def __init__(self, root_labels, oracle_level, repair_types, additional_levels):
+    def __init__(self, root_labels, oracle_level, repair_types, additional_levels, deactivated_levels):
         self.root_labels = root_labels
         # default oracle_level will be the UNKNOWN repair type (which each oracle should have)
         # transitions after that as experimental or ambiguous, not to be used by default
@@ -26,6 +26,9 @@ class DynamicOracle():
         self.additional_levels = set()
         if additional_levels:
             self.additional_levels = set([repair_types[x.upper()] for x in additional_levels.split(",")])
+        self.deactivated_levels = set()
+        if deactivated_levels:
+            self.deactivated_levels = set([repair_types[x.upper()] for x in deactivated_levels.split(",")])
 
     def fix_error(self, gold_transition, pred_transition, gold_sequence, gold_index):
         """
@@ -44,6 +47,8 @@ class DynamicOracle():
             if repair_type.fn is None:
                 continue
             if self.oracle_level is not None and repair_type.value > self.oracle_level and repair_type not in self.additional_levels:
+                continue
+            if repair_type in self.deactivated_levels:
                 continue
             repair = repair_type.fn(gold_transition, pred_transition, gold_sequence, gold_index, self.root_labels)
             if repair is not None:
