@@ -1,6 +1,6 @@
 from enum import Enum
 
-from stanza.models.constituency.dynamic_oracle import advance_past_constituents, DynamicOracle
+from stanza.models.constituency.dynamic_oracle import advance_past_constituents, find_in_order_constituent_end, find_previous_open, DynamicOracle
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent
 
 def fix_wrong_open_root_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
@@ -35,30 +35,6 @@ def fix_wrong_open_unary_chain(gold_transition, pred_transition, gold_sequence, 
 
     return None
 
-def find_constituent_end(gold_sequence, cur_index):
-    """
-    Advance cur_index through gold_sequence until the next block has ended
-
-    This is different from advance_past_constituents in that it will
-    also return when there is a Shift when count == 0.  That way, we
-    return the first block of things we know attach to the left
-    """
-    count = 0
-    saw_shift = False
-    while cur_index < len(gold_sequence):
-        if isinstance(gold_sequence[cur_index], OpenConstituent):
-            count = count + 1
-        elif isinstance(gold_sequence[cur_index], CloseConstituent):
-            count = count - 1
-            if count == -1: return cur_index
-        elif isinstance(gold_sequence[cur_index], Shift):
-            if saw_shift and count == 0:
-                return cur_index
-            else:
-                saw_shift = True
-        cur_index = cur_index + 1
-    return None
-
 def fix_wrong_open_subtrees(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, more_than_two):
     if gold_transition == pred_transition:
         return None
@@ -74,7 +50,7 @@ def fix_wrong_open_subtrees(gold_transition, pred_transition, gold_sequence, gol
     assert not isinstance(gold_sequence[gold_index+1], OpenConstituent)
     assert isinstance(gold_sequence[gold_index+1], Shift)
 
-    block_end = find_constituent_end(gold_sequence, gold_index+1)
+    block_end = find_in_order_constituent_end(gold_sequence, gold_index+1)
     assert block_end is not None
 
     if more_than_two and isinstance(gold_sequence[block_end], CloseConstituent):
@@ -232,24 +208,6 @@ def fix_open_shift(gold_transition, pred_transition, gold_sequence, gold_index, 
     repair = gold_sequence[:gold_index] + gold_sequence[stuff_start:stuff_end] + gold_sequence[cur_index:]
     return repair
 
-def find_previous_open(gold_sequence, cur_index):
-    """
-    Go backwards from cur_index to find the open which opens the previous block of stuff.
-
-    Return None if it can't be found.
-    """
-    count = 0
-    cur_index = cur_index - 1
-    while cur_index >= 0:
-        if isinstance(gold_sequence[cur_index], OpenConstituent):
-            count = count + 1
-            if count > 0:
-                return cur_index
-        elif isinstance(gold_sequence[cur_index], CloseConstituent):
-            count = count - 1
-        cur_index = cur_index - 1
-    return None
-
 def fix_open_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
     """
     Fix an Open replaced with a Close
@@ -390,7 +348,7 @@ def fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_
     if not isinstance(gold_sequence[start_index], Shift):
         return None
 
-    end_index = find_constituent_end(gold_sequence, start_index)
+    end_index = find_in_order_constituent_end(gold_sequence, start_index)
     if end_index is None:
         return None
     # if this *isn't* a close, we don't allow it.
