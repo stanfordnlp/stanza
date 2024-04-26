@@ -16,6 +16,7 @@ from stanza.models.common.large_margin_loss import LargeMarginInSoftmaxLoss
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
+from stanza.models.constituency.in_order_compound_oracle import InOrderCompoundOracle
 from stanza.models.constituency.in_order_oracle import InOrderOracle
 from stanza.models.constituency.lstm_model import LSTMModel
 from stanza.models.constituency.parse_transitions import TransitionScheme
@@ -379,6 +380,8 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     oracle = None
     if args['transition_scheme'] is TransitionScheme.IN_ORDER:
         oracle = InOrderOracle(trainer.root_labels, args['oracle_level'], args['additional_oracle_levels'], args['deactivated_oracle_levels'])
+    elif args['transition_scheme'] is TransitionScheme.IN_ORDER_COMPOUND:
+        oracle = InOrderCompoundOracle(trainer.root_labels, args['oracle_level'], args['additional_oracle_levels'], args['deactivated_oracle_levels'])
     elif args['transition_scheme'] is TransitionScheme.TOP_DOWN:
         oracle = TopDownOracle(trainer.root_labels, args['oracle_level'], args['additional_oracle_levels'], args['deactivated_oracle_levels'])
 
