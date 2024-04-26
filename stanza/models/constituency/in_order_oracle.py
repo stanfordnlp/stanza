@@ -59,6 +59,37 @@ def find_constituent_end(gold_sequence, cur_index):
         cur_index = cur_index + 1
     return None
 
+def fix_wrong_open_subtrees(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, more_than_two):
+    if gold_transition == pred_transition:
+        return None
+
+    if not isinstance(gold_transition, OpenConstituent):
+        return None
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    if isinstance(gold_sequence[gold_index+1], CloseConstituent):
+        # if Close, the gold was a unary
+        return None
+    assert not isinstance(gold_sequence[gold_index+1], OpenConstituent)
+    assert isinstance(gold_sequence[gold_index+1], Shift)
+
+    block_end = find_constituent_end(gold_sequence, gold_index+1)
+    assert block_end is not None
+
+    if more_than_two and isinstance(gold_sequence[block_end], CloseConstituent):
+        return None
+    if not more_than_two and isinstance(gold_sequence[block_end], Shift):
+        return None
+
+    return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index+1:block_end] + [CloseConstituent(), gold_transition] + gold_sequence[block_end:]
+
+def fix_wrong_open_two_subtrees(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    return fix_wrong_open_subtrees(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, more_than_two=False)
+
+def fix_wrong_open_multiple_subtrees(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    return fix_wrong_open_subtrees(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, more_than_two=True)
+
 def advance_past_unaries(gold_sequence, cur_index):
     while cur_index + 2 < len(gold_sequence) and isinstance(gold_sequence[cur_index], OpenConstituent) and isinstance(gold_sequence[cur_index+1], CloseConstituent):
         cur_index += 2
@@ -396,6 +427,11 @@ class RepairType(Enum):
     So honestly on EN it doesn't look too promising to use the oracle.
     On VI, though, it seemed to do better.  Need to run more
     experiments
+
+    Redoing the wrong_open_general, which seemed to hurt test scores:
+          wrong_open_two_subtrees          0.9244   0.9220
+          w/o ambiguous open               0.9261   0.9246
+          w/ ambiguous open_three_subtrees 0.9264   0.9243
     """
     def __new__(cls, fn, correct=False):
         """
@@ -438,26 +474,19 @@ class RepairType(Enum):
     # missed open transition and the close transition
     WRONG_OPEN_STUFF_UNARY = (fix_wrong_open_stuff_unary,)
 
-    # any other open transition we get wrong, which hasn't already
-    # been carved out as an exception above, we just accept the
-    # incorrect Open and keep going
-    #
-    # TODO: check if there is a way to improve this
-    # it appears to hurt scores simply by existing
-    # explanation: this is wrong logic
-    # Suppose the correct sequence had been
-    #   T1 open(NP) T2 T3 close
-    # Instead we had done
-    #   T1 open(VP) T2 T3 close
-    # We can recover the missing NP!
-    #   T1 open(VP) T2 close open(NP) T3 close
-    # Can also recover it as
-    #   T1 open(VP) T2 T3 close open(NP) close
-    # So this is actually an ambiguous transition
-    # except in the case of
-    #   T1 open(...) T2 close
-    # in this case, a unary transition can fix it
-    WRONG_OPEN_GENERAL     = (fix_wrong_open_general,)
+    # If the correct sequence is
+    #   T1 O_x T2 C
+    # and instead we predicted
+    #   T1 O_y ...
+    # this can be fixed with a unary transition after
+    #   T1 O_y T2 C O_x C
+    # note that this is technically ambiguous
+    # could have done
+    #   T1 O_x C O_y T2 C
+    # but doing this should be easier for the parser to detect (untested)
+    # also this way the same code paths can be used for two subtrees
+    # and for multiple subtrees
+    WRONG_OPEN_TWO_SUBTREES = (fix_wrong_open_two_subtrees,)
 
     # If the gold transition is an Open because it is part of
     # a unary transition, and the following transition is a
@@ -508,9 +537,45 @@ class RepairType(Enum):
     # versions to make sure those also fail, though
     # CLOSE_SHIFT_SHIFT      = (fix_close_shift_shift,)
 
+    # Similarly to WRONG_OPEN_TWO_SUBTREES, if the correct sequence is
+    #   T1 O_x T2 T3 C
+    # and instead we predicted
+    #   T1 O_y ...
+    # this can be fixed by closing O_y in any number of places
+    #   T1 O_y T2 C O_x T3 C
+    #   T1 O_y T2 C T3 O_x C
+    # Either solution is a single precision error,
+    # but keeps the O_x subtree correct
+    # This is an ambiguous transition - we can experiment with different fixes
+    WRONG_OPEN_MULTIPLE_SUBTREES = (fix_wrong_open_multiple_subtrees,)
+
     CORRECT                = (None, True)
 
     UNKNOWN                = None
+
+    # any other open transition we get wrong, which hasn't already
+    # been carved out as an exception above, we just accept the
+    # incorrect Open and keep going
+    #
+    # TODO: check if there is a way to improve this
+    # it appears to hurt scores simply by existing
+    # explanation: this is wrong logic
+    # Suppose the correct sequence had been
+    #   T1 open(NP) T2 T3 close
+    # Instead we had done
+    #   T1 open(VP) T2 T3 close
+    # We can recover the missing NP!
+    #   T1 open(VP) T2 close open(NP) T3 close
+    # Can also recover it as
+    #   T1 open(VP) T2 T3 close open(NP) close
+    # So this is actually an ambiguous transition
+    # except in the case of
+    #   T1 open(...) close
+    # In this case, a unary transition can fix make it so we only have
+    # a precision error, not also a recall error
+    # Currently, the approach is to put this after the default fixes
+    # and use the two & more-than-two versions of the fix above
+    WRONG_OPEN_GENERAL     = (fix_wrong_open_general,)
 
 class InOrderOracle(DynamicOracle):
     def __init__(self, root_labels, oracle_level, additional_oracle_levels, deactivated_oracle_levels):
