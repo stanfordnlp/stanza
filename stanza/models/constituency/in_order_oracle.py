@@ -468,6 +468,7 @@ class RepairType(Enum):
     # generally represent a missing bracket which cannot be
     # recovered using the in-order mechanism.  Dropping the
     # missing transition is generally the only fix.
+    # (This means removing the corresponding Close)
     # One could theoretically create a new transition which
     # grabs two constituents, though
     OPEN_SHIFT             = (fix_open_shift,)
