@@ -4,6 +4,7 @@ Collects a few of the conparser utility methods which don't belong elsewhere
 
 from collections import Counter
 import logging
+import warnings
 
 import torch.nn as nn
 from torch import optim
@@ -311,7 +312,7 @@ def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse
         if tree != result:
             raise RuntimeError("Tree {} of {} failed: transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree_idx, name, tree, sequence, result))
 
-def check_constituents(train_constituents, trees, treebank_name):
+def check_constituents(train_constituents, trees, treebank_name, fail=True):
     """
     Check that all the constituents in the other dataset are known in the train set
     """
@@ -326,7 +327,11 @@ def check_constituents(train_constituents, trees, treebank_name):
                     num_errors += 1
                     if first_error is None:
                         first_error = tree_idx
-            raise RuntimeError("Found constituent label {} in the {} set which don't exist in the train set.  This constituent label occured in {} trees, with the first tree index at {} counting from 1\nThe error tree (which may have POS tags changed from the retagger and may be missing functional tags or empty nodes) is:\n{:P}".format(con, treebank_name, num_errors, (first_error+1), trees[first_error]))
+            error = "Found constituent label {} in the {} set which don't exist in the train set.  This constituent label occured in {} trees, with the first tree index at {} counting from 1\nThe error tree (which may have POS tags changed from the retagger and may be missing functional tags or empty nodes) is:\n{:P}".format(con, treebank_name, num_errors, (first_error+1), trees[first_error])
+            if fail:
+                raise RuntimeError()
+            else:
+                warnings.warn(error)
 
 def check_root_labels(root_labels, other_trees, treebank_name):
     """
