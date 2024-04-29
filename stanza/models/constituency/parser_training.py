@@ -125,8 +125,8 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     train_constituents = Tree.get_unique_constituent_labels(train_trees)
     tlogger.info("Unique constituents in training set: %s", train_constituents)
     if args['check_valid_states']:
-        check_constituents(train_constituents, dev_trees, "dev")
-        check_constituents(train_constituents, silver_trees, "silver")
+        check_constituents(train_constituents, dev_trees, "dev", fail=args['strict_check_constituents'])
+        check_constituents(train_constituents, silver_trees, "silver", fail=args['strict_check_constituents'])
     constituent_counts = Tree.get_constituent_counts(train_trees)
     tlogger.info("Constituent node counts: %s", constituent_counts)
 
