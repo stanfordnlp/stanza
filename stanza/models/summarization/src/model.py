@@ -162,9 +162,6 @@ class BaselineSeq2Seq(nn.Module):
         decoder_num_layers = self.model_args.get("decoder_num_layers", encoder_num_layers)
         self.pgen = self.model_args.get("pgen", False)
         self.decoder = BaselineDecoder(self.vocab_size, encoder_hidden_dim, decoder_hidden_dim, self.embedding_dim, decoder_num_layers, self.pgen)
-
-        logging.info(f"VOCAB SIZE: {self.vocab_size}, EMBEDDING_DIM: {self.embedding_dim}")
-        logging.info(f"Input size: {self.input_size}\nHidden dims: {encoder_hidden_dim, decoder_hidden_dim}\nNum Layers:{encoder_num_layers, decoder_num_layers}")
     
 
     def extract_word_embeddings(self, text: List[List[str]]):
