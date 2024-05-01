@@ -8,16 +8,10 @@ training instance gets seen once
 import argparse
 import os
 import random
-import shutil
 
 from stanza.models.constituency import tree_reader
+from stanza.utils.datasets.constituency.utils import copy_dev_test
 from stanza.utils.default_paths import get_default_paths
-
-def copy_dev_test(base_path, input_dataset, output_dataset):
-    shutil.copy2(os.path.join(base_path, "%s_dev.mrg" % input_dataset),
-                 os.path.join(base_path, "%s_dev.mrg" % output_dataset))
-    shutil.copy2(os.path.join(base_path, "%s_test.mrg" % input_dataset),
-                 os.path.join(base_path, "%s_test.mrg" % output_dataset))
 
 def write_trees(base_path, dataset_name, trees):
     output_path = os.path.join(base_path, "%s_train.mrg" % dataset_name)
