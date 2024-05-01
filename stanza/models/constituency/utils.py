@@ -329,7 +329,7 @@ def check_constituents(train_constituents, trees, treebank_name, fail=True):
                         first_error = tree_idx
             error = "Found constituent label {} in the {} set which don't exist in the train set.  This constituent label occured in {} trees, with the first tree index at {} counting from 1\nThe error tree (which may have POS tags changed from the retagger and may be missing functional tags or empty nodes) is:\n{:P}".format(con, treebank_name, num_errors, (first_error+1), trees[first_error])
             if fail:
-                raise RuntimeError()
+                raise RuntimeError(error)
             else:
                 warnings.warn(error)
 
