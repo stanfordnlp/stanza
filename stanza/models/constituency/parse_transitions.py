@@ -16,39 +16,46 @@ from stanza.models.constituency.parse_tree import Tree
 logger = logging.getLogger('stanza')
 
 class TransitionScheme(Enum):
+    def __new__(cls, value, short_name):
+        obj = object.__new__(cls)
+        obj._value_ = value
+        obj.short_name = short_name
+        return obj
+
+
     # top down, so the open transition comes before any constituents
     # score on vi_vlsp22 with 5 different sizes of bert layers,
     # bert tagger, no silver dataset:
     #   0.8171
-    TOP_DOWN           = 1
+    TOP_DOWN           = 1, "top"
     # unary transitions are modeled as one entire transition
     # version that uses one transform per item,
     # score on experiment described above:
     #   0.8157
     # score using one combination step for an entire transition:
     #   0.8178
-    TOP_DOWN_COMPOUND  = 2
+    TOP_DOWN_COMPOUND  = 2, "topc"
     # unary is a separate transition.  doesn't help
     # score on experiment described above:
     #   0.8128
-    TOP_DOWN_UNARY     = 3
+    TOP_DOWN_UNARY     = 3, "topu"
 
     # open transition comes after the first constituent it cares about
     # score on experiment described above:
     #   0.8205
     # note that this is with an oracle, whereas IN_ORDER_COMPOUND does
     # not have a dynamic oracle, so there may be room for improvement
-    IN_ORDER           = 4
+    IN_ORDER           = 4, "in"
 
     # in order, with unaries after preterminals represented as a single
     # transition after the preterminal
     # and unaries elsewhere tied to the rest of the constituent
     # score: 0.8186
-    IN_ORDER_COMPOUND  = 5
+    IN_ORDER_COMPOUND  = 5, "inc"
 
     # in order, with CompoundUnary on both preterminals and internal nodes
     # score: 0.8166
-    IN_ORDER_UNARY     = 6
+    IN_ORDER_UNARY     = 6, "inu"
 
 @functools.total_ordering
 class Transition(ABC):

@@ -703,6 +703,7 @@ def build_model_filename(args):
                                                finetune=maybe_finetune,
                                                transformer_finetune_begin=transformer_finetune_begin,
                                                transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
+                                               tscheme=args['transition_scheme'].short_name,
                                                trans_layers=args['bert_hidden_layers'],
                                                seed=args['seed'])
     model_save_file = re.sub("_+", "_", model_save_file)
