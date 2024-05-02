@@ -108,40 +108,39 @@ class BaselineDecoder(nn.Module):
         
         # Attention is computed using the decoder's current hidden state 'hidden' and all the encoder outputs
         attention_weights = self.attention(encoder_outputs, hidden)
+
         context_vector = torch.bmm(attention_weights.unsqueeze(1), encoder_outputs)
-        context_vector = context_vector.squeeze(1)
+        context_vector = context_vector.squeeze(1)  # (batch size, 2 * encoder hidden dim)
 
         # Here 'hidden' is the current state of the decoder, also known as decoder state
         # 'lstm_output' is the output of the LSTM at the current step, which can sometimes be different from 'hidden'
         # especially when using LSTM cells, since 'lstm_output' may be the output from the top layer of a multi-layer LSTM
-        input = input.unsqueeze(1)
+        input = input.unsqueeze(1)  # (batch size, 1, embedding dim)
         hidden = hidden.unsqueeze(1).transpose(0, 1)
         cell = cell.unsqueeze(1).transpose(0, 1)
 
         lstm_output, (hidden, cell) = self.lstm(input, (hidden, cell))
 
         hidden, cell = hidden.transpose(0, 1), cell.transpose(0, 1)
-        hidden, cell = hidden.squeeze(1), cell.squeeze(1)
-
-        # 'hidden' is now the updated decoder state after processing the current input token
+        hidden, cell = hidden.squeeze(1), cell.squeeze(1)  # 'hidden' is now the updated decoder state after processing the current input token
         # This 'hidden' will be used in the next time step's attention computation
+        # hidden & cell shape (batch size, decoder hidden dim)
 
         p_gen = None
         if self.pgen:
-            p_gen_input = torch.cat((context_vector, hidden.squeeze(0), input.squeeze(0)), dim=1)
-            p_gen = torch.sigmoid(self.p_gen_linear(p_gen_input))
-
+            p_gen_input = torch.cat((context_vector, hidden, input.squeeze(1)), dim=1)  # (batch size, 2 * encoder hidden dim + decoder hidden dim + emb dim)
+            p_gen = torch.sigmoid(self.p_gen_linear(p_gen_input))  # (batch size, 1)
 
         # The paper states that the decoder state (hidden) and the context vector are concatenated
         # before being passed through linear layers to predict the next token.
-        concatenated = torch.cat((hidden.squeeze(0), context_vector.squeeze(0)), dim=1)
+        concatenated = torch.cat((hidden, context_vector), dim=1)
 
         output = self.V(concatenated) 
         output = self.V_prime(output) 
 
         p_vocab = self.softmax(output)
 
-        return p_vocab, hidden.squeeze(0), cell.squeeze(0), attention_weights, p_gen
+        return p_vocab, hidden, cell, attention_weights, p_gen
 
 
 class BaselineSeq2Seq(nn.Module):
