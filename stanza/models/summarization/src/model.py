@@ -181,6 +181,8 @@ class BaselineSeq2Seq(nn.Module):
         Extracts the word embeddings over the input articles in 'text'.
 
         text (List[List[str]]): Tokenized articles of text
+
+        Returns a tensor of the padded embeddings over the inputs. Also returns the input lengths.
         """
         token_ids, input_lengths = [], []
         for article in text:
@@ -190,6 +192,49 @@ class BaselineSeq2Seq(nn.Module):
         padded_inputs = pad_sequence(token_ids, batch_first=True)
         embedded = self.embedding(padded_inputs)
         return embedded, input_lengths
+    
+    
+    def build_extended_vocab_map(self, src: List[List[str]]):
+        """
+        constructs the extended vocabulary map between source document words and their indices
+        
+        for each document, the extended vocabulary is the union of the src document words and the existing vocab
+
+        returns size (batch size, vocab size + num oov words)
+
+
+        Instead of the index tensor being all zeros, which is an issue because for index tensors that don't get
+        filled all the way, you get zero, which can be interpreted as zero index later. 
+
+        As long as the attn mask is computed correctly, it should be okay for the index tensor to be zeroes.
+        If the attn is computed, then out of sequence words get 0 attention.
+        """
+        batch_size = len(src)
+        max_seq_len = max([len(doc) for doc in src])
+        max_oov_words = 0
+
+        index_tensor = torch.zeros(batch_size, max_seq_len, dtype=torch.int64)
+        for batch_idx, document in enumerate(src):
+            num_oov_words = 0
+            doc_indexes = torch.zeros(max_seq_len)
+            for i, word in enumerate(document):
+                vocab_idx = self.ext_vocab_map.get(word.lower()) 
+
+                if vocab_idx is None:
+                    # If we cannot find the current word, we add it to the extended vocab
+                    self.ext_vocab_map[word.lower()] = len(self.ext_vocab_map)  # new slot
+                    num_oov_words += 1
+
+                revised_idx = self.ext_vocab_map.get(word.lower())
+                if revised_idx is None:
+                    raise ValueError(f"Error building extended vocab map, word: {word}")
+                doc_indexes[i] = revised_idx
+
+            index_tensor[batch_idx] = doc_indexes
+            max_oov_words = max(max_oov_words, num_oov_words)
+
+        return index_tensor, max_oov_words
+
 
     def forward(self, text, target, teacher_forcing_ratio=0.5):
         """
