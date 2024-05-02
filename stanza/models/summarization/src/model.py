@@ -71,7 +71,14 @@ class BahdanauAttention(nn.Module):
         # Compute energy scores with bias term
         energy = torch.tanh(self.W_h(encoder_outputs) + self.W_s(decoder_hidden) + self.b_attn)
         attention = self.v(energy).squeeze(2)
-        return F.softmax(attention, dim=1)
+
+        # Generate mask: valid tokens have a hidden state different from zero
+        mask = (encoder_outputs.abs().sum(dim=2) > 0).float()
+
+        # Apply the mask by setting invalid positions to -inf
+        attention = attention.masked_fill(mask == 0, float('-inf'))
+        attention =  F.softmax(attention, dim=1)
+        return attention
 
 
 class BaselineDecoder(nn.Module):
