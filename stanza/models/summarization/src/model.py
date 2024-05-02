@@ -276,7 +276,7 @@ class BaselineSeq2Seq(nn.Module):
             p_vocab, hidden, cell, attn_weights, pgen = self.decoder(input, hidden, cell, encoder_outputs)
 
             # if no pgen, then our final dist is p_vocab. otherwise, calculate the final distribution
-            if self.pgen:   # TODO: figure this section out
+            if self.pgen:   
                 p_vocab_scaled = pgen * p_vocab   # (batch size, vocab size)
                 attn_dist_scaled = (1 - pgen) * attn_weights   # (batch size, seq len)
 
@@ -310,7 +310,7 @@ class BaselineSeq2Seq(nn.Module):
                 p_vocab = final_vocab_dist
 
             # Place predictions in a tensor holding predictions for each token
-            outputs[:, t, :] = p_vocab  # TODO: if pgen active, then this needs to be reshaped
+            outputs[:, t, :] = p_vocab 
 
             # Decide whether to use teacher forcing or not
             teacher_force = torch.rand(1) < teacher_forcing_ratio
