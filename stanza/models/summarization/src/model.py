@@ -12,8 +12,10 @@ from stanza.models.common.foundation_cache import load_pretrain
 
 from stanza.models.summarization.constants import * 
 from typing import List, Tuple
+from copy import deepcopy
 
 logger = logging.getLogger('stanza.lemmaclassifier')
+torch.set_printoptions(threshold=100, edgeitems=5, linewidth=100)
 
 
 """
