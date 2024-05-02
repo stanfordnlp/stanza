@@ -160,6 +160,10 @@ class BaselineSeq2Seq(nn.Module):
         self.embedding = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=False)   # freeze False because 'See et. al.' updates embeddings
         self.vocab_map = {word.replace('\xa0', ' '): i for i, word in enumerate(pt_embedding.vocab)}
 
+        # extended vocab 
+        self.ext_vocab_map = deepcopy(self.vocab_map)
+        self.max_oov_words = 0
+
         self.input_size += self.embedding_dim
 
         encoder_hidden_dim = self.model_args.get("encoder_hidden_dim", DEFAULT_ENCODER_HIDDEN_DIM)
@@ -188,17 +192,26 @@ class BaselineSeq2Seq(nn.Module):
         return embedded, input_lengths
 
     def forward(self, text, target, teacher_forcing_ratio=0.5):
-        batch_size = 2 # TODO later fix 
-        target_len = 11  # TODO later fix
+        """
+        text: (List[List[str]])
+        target: (List[List[str]])
 
-        # Tensor to store decoder outputs
-        outputs = torch.zeros(batch_size, target_len, self.vocab_size)
+        """
+        batch_size = min(len(text), self.batch_size) # TODO later fix 
+
+        index_tensor, max_oov_words = self.build_extended_vocab_map(text)  # (batch size, seq len)
+        self.max_oov_words = max_oov_words
 
         # Get embeddings over the input text
         embedded, input_lengths = self.extract_word_embeddings(text)
 
         # Get embeddings over the target text
         target_embeddings, target_lengths = self.extract_word_embeddings(target)
+        target_len = target_embeddings.shape[1]   # TODO : Ask John how batch processing works with this. should this actually just be a uniform hyperparam like max_dec_steps? If so, how to do padding?
+
+        # Tensor to store decoder outputs
+        effective_vocab_size = self.vocab_size + self.max_oov_words if self.pgen else self.vocab_size
+        outputs = torch.zeros(batch_size, target_len, effective_vocab_size)
 
         packed_input_seqs = pack_padded_sequence(embedded, input_lengths, batch_first=True, enforce_sorted=False)
         # packed_target_seqs = pack_padded_sequence(target_embeddings, target_lengths, batch_first=True, enforce_sorted=False)
@@ -219,33 +232,48 @@ class BaselineSeq2Seq(nn.Module):
 
             # if no pgen, then our final dist is p_vocab. otherwise, calculate the final distribution
             if self.pgen:   # TODO: figure this section out
-                # p_vocab is the vocab distribution which should be shape (vocab_size, )
-                # attn_weights is the attention distribution over the src text  (src_size, )
-                p_vocab_scaled = pgen * p_vocab
-                attn_dist_scaled = (1 - pgen) * attn_weights
+                p_vocab_scaled = pgen * p_vocab   # (batch size, vocab size)
+                attn_dist_scaled = (1 - pgen) * attn_weights   # (batch size, seq len)
+
+
+                """
+                For each word in the sequence, we need to know if it is in the vocabulary or not. 
+                If the word is is in the vocab, then its value in the extended vocabulary distribution 
+                is p_gen * P_vocab(w) + (1 - p_gen) * sum_i a_i^t
+
+                If the word is not in the vocab, then it receives a new index in the extended vocab and 
+                its value is (1 - p_gen) * sum_i a_i^t
+
+                The extended vocab will be shape (batch size, extended vocab size)
+                So for the batches, it will be (batch size, max extended vocab size)
+                We start with zeroes, copy over the scaled P_vocab distribution, and then add where appropriate?
+
+                So, we need a tensor of shape (batch size, seq len) that gives each word's index in the vocab.
+                Once we have the word's index in the vocab, we know which index to add the summation term to.
+                For new words, we create a new index. We also need an extended vocab map.
+                """
+
+                # at this point, assume that we have a tensor where for each batch, the i-th index of the tensor
+                # contains the index of the sequence token in the extended vocab
 
                 # Concatenate some zeros to each vocabulary dist, to hold the probabilities for in-article OOV words
-                extended_vocab_size = self.vocab_size #  TODO must add the number of unknown OOV words to this
+                extended_vocab_size = self.vocab_size + self.max_oov_words 
+                extended_vocab_dist = torch.zeros(batch_size, extended_vocab_size)
+                extended_vocab_dist[:, :self.vocab_size] = p_vocab_scaled  # add the existing distribution to the extended vocab
 
-                extended_vocab_dist = torch.zeros(extended_vocab_size)
-                extended_vocab_dist[: self.vocab_size] = p_vocab_scaled  # add the p_vocab to the fixed vocab
-
-                # Add the attention probabilities (the probability of copying words from the source)
-                # `src_extended_indices` is the tensor with the mapped indices of source words in the extended vocabulary
-                # extended_vocab_dist.scatter_add_(1, src_extended_indices, attn_dist_scaled)
-                # TODO: This extended vocab dist should become the logits for the output
-
+                final_vocab_dist = extended_vocab_dist.scatter_add_(dim=1, index=index_tensor, src=attn_dist_scaled)
+                p_vocab = final_vocab_dist
 
             # Place predictions in a tensor holding predictions for each token
-            outputs[:, t, :] = p_vocab
+            outputs[:, t, :] = p_vocab  # TODO: if pgen active, then this needs to be reshaped
 
             # Decide whether to use teacher forcing or not
             teacher_force = torch.rand(1) < teacher_forcing_ratio
-            
+
             # Get the highest predicted token from our predictions
             top1 = torch.argmax(p_vocab, dim=1)
 
-            # If teacher forcing, use actual next token as next input
-            # If not, use predicted token
-            input = target_embeddings[:, t, :] if teacher_force else self.embedding(top1)
+            # If teacher forcing, use actual next token as next input. If not, use the predicted token.
+            input = target_embeddings[:, t, :] if teacher_force else self.embedding(top1)  # TODO: Bug where if we select top1 to be an OOV word, then we need to have a valid embedding for the word
+
         return outputs
