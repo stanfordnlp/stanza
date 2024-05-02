@@ -96,7 +96,7 @@ class BaselineDecoder(nn.Module):
         self.pgen = use_pgen
 
         if self.pgen:
-            self.p_gen_linear = nn.Linear(encoder_hidden_dim * 2 + decoder_hidden_dim, 1)     # TODO also add emb dim to this layer
+            self.p_gen_linear = nn.Linear(encoder_hidden_dim * 2 + emb_dim + decoder_hidden_dim, 1) 
          
         # Two linear layers as per equation (4) in the paper
         self.V = nn.Linear(encoder_hidden_dim * 2 + decoder_hidden_dim, decoder_hidden_dim)
