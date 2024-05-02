@@ -76,7 +76,7 @@ class Ensemble(nn.Module):
             if self.models[0].transition_scheme() != model.transition_scheme():
                 raise ValueError("Models {} and {} are incompatible.  {} vs {}".format(filenames[0], filenames[model_idx], self.models[0].transition_scheme(), model.transition_scheme()))
             if self.models[0].transitions != model.transitions:
-                raise ValueError("Models %s and %s are incompatible: different transitions" % (filenames[0], filenames[model_idx]))
+                raise ValueError(f"Models {filenames[0]} and {filenames[model_idx]} are incompatible: different transitions\n{filenames[0]}:\n{self.models[0].transitions}\n{filenames[model_idx]}:\n{model.transitions}")
             if self.models[0].constituents != model.constituents:
                 raise ValueError("Models %s and %s are incompatible: different constituents" % (filenames[0], filenames[model_idx]))
             if self.models[0].root_labels != model.root_labels:
