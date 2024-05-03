@@ -273,9 +273,6 @@ class RepairType(Enum):
     # but the correctly replaced transitions are unambiguous
     OPEN_OPEN_THREE_SUBTREES_ERROR         = (fix_open_open_three_subtrees_error,)
 
-    # this is ambiguous, but we can still try the same fix as three_subtrees (see above)
-    OPEN_OPEN_MANY_SUBTREES_ERROR          = (fix_open_open_many_subtrees_error,)
-
     # We were supposed to shift a new item onto the stack,
     # but instead we closed the previous constituent
     # This causes a precision error, but we can avoid the recall error
@@ -314,6 +311,9 @@ class RepairType(Enum):
     # however, what we can do to minimize further errors is
     # to at least reopen the label between X and Y
     OPEN_CLOSE_ERROR                       = (fix_open_close_error,)
+
+    # this is ambiguous, but we can still try the same fix as three_subtrees (see above)
+    OPEN_OPEN_MANY_SUBTREES_ERROR          = (fix_open_open_many_subtrees_error,)
 
     CORRECT                                = (None, True)
 
