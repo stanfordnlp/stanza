@@ -93,6 +93,13 @@ class DynamicOracle():
             if repair_type in self.deactivated_levels:
                 continue
             repair = repair_type.fn(gold_transition, pred_transition, gold_sequence, gold_index, self.root_labels)
+            if repair is None:
+                continue
+
+            if isinstance(repair, tuple) and len(repair) == 2:
+                return repair
+
+            # TODO: could update all of the returns to be tuples of length 2
             if repair is not None:
                 return repair_type, repair
 

@@ -76,7 +76,7 @@ def fix_open_open_two_subtrees_error(gold_transition, pred_transition, gold_sequ
         return None
 
     # no fix is possible, so we just return here
-    return None
+    return RepairType.OPEN_OPEN_TWO_SUBTREES_ERROR, None
 
 def fix_open_open_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, exactly_three):
     if gold_transition == pred_transition:
@@ -273,7 +273,7 @@ class RepairType(Enum):
     # but the correctly replaced transitions are unambiguous
     OPEN_OPEN_THREE_SUBTREES_ERROR         = (fix_open_open_three_subtrees_error,)
 
-    # this is ambiguous, but we can still try the same fix as three_subtrees
+    # this is ambiguous, but we can still try the same fix as three_subtrees (see above)
     OPEN_OPEN_MANY_SUBTREES_ERROR          = (fix_open_open_many_subtrees_error,)
 
     # We were supposed to shift a new item onto the stack,
