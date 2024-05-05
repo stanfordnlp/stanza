@@ -337,6 +337,7 @@ def build_argparse():
     parser.add_argument('--delta_embedding_dim', type=int, default=100, help="Embedding size for a delta embedding")
 
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
+    parser.add_argument('--no_train_remove_duplicates', default=True, action='store_false', dest="train_remove_duplicates", help="Do/don't remove duplicates from the training file.  Could be useful for intentionally reweighting some trees")
     parser.add_argument('--silver_file', type=str, default=None, help='Secondary training file.')
     parser.add_argument('--silver_remove_duplicates', default=False, action='store_true', help="Do/don't remove duplicates from the silver training file.  Could be useful for intentionally reweighting some trees")
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')

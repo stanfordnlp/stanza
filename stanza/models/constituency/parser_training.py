@@ -224,7 +224,8 @@ def train(args, model_load_file, retag_pipeline):
 
         train_trees = tree_reader.read_treebank(args['train_file'])
         tlogger.info("Read %d trees for the training set", len(train_trees))
-        train_trees = remove_duplicate_trees(train_trees, "train")
+        if args['train_remove_duplicates']:
+            train_trees = remove_duplicate_trees(train_trees, "train")
         train_trees = remove_singleton_trees(train_trees)
 
         dev_trees = tree_reader.read_treebank(args['eval_file'])
