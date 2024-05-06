@@ -362,6 +362,55 @@ def fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_
 
     return gold_sequence[:gold_index] + gold_sequence[start_index:end_index] + [CloseConstituent()] + gold_sequence[end_index:]
 
+
+def report_close_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+    if not isinstance(pred_transition, Shift):
+        return None
+
+    return RepairType.OTHER_CLOSE_SHIFT, None
+
+def report_close_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    return RepairType.OTHER_CLOSE_OPEN, None
+
+def report_open_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    if not isinstance(gold_transition, OpenConstituent):
+        return None
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    return RepairType.OTHER_OPEN_OPEN, None
+
+def report_open_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    if not isinstance(gold_transition, OpenConstituent):
+        return None
+    if not isinstance(pred_transition, Shift):
+        return None
+
+    return RepairType.OTHER_OPEN_SHIFT, None
+
+def report_open_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    if not isinstance(gold_transition, OpenConstituent):
+        return None
+    if not isinstance(pred_transition, CloseConstituent):
+        return None
+
+    return RepairType.OTHER_OPEN_CLOSE, None
+
+def report_shift_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    if not isinstance(gold_transition, Shift):
+        return None
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    return RepairType.OTHER_SHIFT_OPEN, None
+
 class RepairType(Enum):
     """
     Keep track of which repair is used, if any, on an incorrect transition
@@ -506,6 +555,18 @@ class RepairType(Enum):
     # but keeps the O_x subtree correct
     # This is an ambiguous transition - we can experiment with different fixes
     WRONG_OPEN_MULTIPLE_SUBTREES = (fix_wrong_open_multiple_subtrees,)
+
+    OTHER_CLOSE_SHIFT            = (report_close_shift,)
+
+    OTHER_CLOSE_OPEN             = (report_close_open,)
+
+    OTHER_OPEN_OPEN              = (report_open_open,)
+
+    OTHER_OPEN_CLOSE             = (report_open_close,)
+
+    OTHER_OPEN_SHIFT             = (report_open_shift,)
+
+    OTHER_SHIFT_OPEN             = (report_shift_open,)
 
     CORRECT                = (None, True)
 
