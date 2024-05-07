@@ -53,15 +53,22 @@ class BaselineEncoder(nn.Module):
 
 
 class BahdanauAttention(nn.Module):
-    def __init__(self, encoder_hidden_dim, decoder_hidden_dim):
+    def __init__(self, encoder_hidden_dim, decoder_hidden_dim, coverage=False):
         super(BahdanauAttention, self).__init__()
+        self.coverage = coverage
         self.W_h = nn.Linear(encoder_hidden_dim * 2, decoder_hidden_dim)
         self.W_s = nn.Linear(decoder_hidden_dim, decoder_hidden_dim)
         self.v = nn.Linear(decoder_hidden_dim, 1, bias=False)
         self.b_attn = nn.Parameter(torch.rand(decoder_hidden_dim))
 
+        self.W_c = None
+        if self.coverage:
+            # self.W_c = nn.Linear(17, decoder_hidden_dim)  # replace 17 with seqlen, or maybe this should be max dec steps
+            # self.W_c = nn.Conv1d(in_channels=1, out_channels=decoder_hidden_dim, kernel_size=1, bias=False)
+            self.W_c = nn.Linear(1, decoder_hidden_dim)
+
     
-    def forward(self, encoder_outputs, decoder_hidden):
+    def forward(self, encoder_outputs, decoder_hidden, coverage_vec=None):
         seq_len = encoder_outputs.shape[1]
         batch_size = encoder_outputs.shape[0]
 
@@ -69,8 +76,41 @@ class BahdanauAttention(nn.Module):
         decoder_hidden = decoder_hidden.unsqueeze(1).repeat(1, seq_len, 1)
 
         # Compute energy scores with bias term
-        energy = torch.tanh(self.W_h(encoder_outputs) + self.W_s(decoder_hidden) + self.b_attn)
+        # print(f"Coverage = {self.coverage}, {coverage_vec.shape}")
+
+        """
+        For a single batch example:
+
+        the energy vector at timestep t, e^t, has shape (sequence length).
+        the i-th element of the energy vector, e_i^t, is a scalar computed with c_i^t, also a scalar.
+        this implies that the coverage vector at timestep t, c^t, has shape (sequence length)
+
+        Therefore, we want to design the w_c term to have size (hidden dim), such that multiplying
+        the two gives us shape (sequence length, hidden dim) which might require unsqueezing the w_c
+        vector along the sequence length direction so that at the i-th hidden state, we have the same w_c.
+        So what we really want is a tensor of shape (hidden dim, sequence length) for the W_c
+
+        We want out (batch size, sequence length, hidden dim). So our input should be shape
+        (batch size, sequence length, sequence length). We need to copy the dim of the coverage vec. 
+
+        
+        """
+        energy = None
+        if self.coverage:
+            print("Entered into here")
+            print(f"Coverage vec shape {coverage_vec.shape}, Decoder hidden shape {decoder_hidden.shape}, {self.b_attn.shape}")
+            # print(f"{self.W_c(coverage_vec.unsqueeze(1)).squeeze(1).transpose(1, 2).shape},{self.W_h(encoder_outputs).shape}, {self.W_s(decoder_hidden).shape}")
+            # energy = torch.tanh(self.W_h(encoder_outputs) + self.W_s(decoder_hidden) + self.W_c(coverage_vec.unsqueeze(1)).squeeze(1).transpose(1, 2) + self.b_attn)
+            print(f"New coverage vec shape {coverage_vec.unsqueeze(-1).shape}, {coverage_vec.unsqueeze(-1)}")
+            energy = torch.tanh(self.W_h(encoder_outputs) + self.W_s(decoder_hidden) + self.W_c(coverage_vec.unsqueeze(-1)) + self.b_attn)
+        else:
+            energy = torch.tanh(self.W_h(encoder_outputs) + self.W_s(decoder_hidden) + self.b_attn)
+
+        print(f"Energy scores shape: {energy.shape}")
+
         attention = self.v(energy).squeeze(2)
+
+        print(f"Attn shape {attention.shape}")
 
         # Generate mask: valid tokens have a hidden state different from zero
         mask = (encoder_outputs.abs().sum(dim=2) > 0).float()
@@ -78,12 +118,15 @@ class BahdanauAttention(nn.Module):
         # Apply the mask by setting invalid positions to -inf
         attention = attention.masked_fill(mask == 0, float('-inf'))
         attention =  F.softmax(attention, dim=1)
-        return attention
+
+        if self.coverage and coverage_vec is not None:
+            coverage_vec = coverage_vec + attention
+        return attention, coverage_vec
 
 
 class BaselineDecoder(nn.Module):
 
-    def __init__(self, output_dim, encoder_hidden_dim, decoder_hidden_dim, emb_dim, num_layers=1, use_pgen=False):
+    def __init__(self, output_dim, encoder_hidden_dim, decoder_hidden_dim, emb_dim, num_layers=1, use_pgen=False, use_coverage=False):
         super(BaselineDecoder, self).__init__()
 
         self.output_dim = output_dim
@@ -91,12 +134,16 @@ class BaselineDecoder(nn.Module):
         self.encoder_hidden_dim = encoder_hidden_dim
 
         self.lstm = nn.LSTM(emb_dim, decoder_hidden_dim, num_layers=num_layers, batch_first=True)   
-        self.attention = BahdanauAttention(encoder_hidden_dim, decoder_hidden_dim)
+        self.attention = BahdanauAttention(encoder_hidden_dim, decoder_hidden_dim, coverage=use_coverage)
                 
         self.pgen = use_pgen
+        self.coverage = use_coverage
 
         if self.pgen:
             self.p_gen_linear = nn.Linear(encoder_hidden_dim * 2 + emb_dim + decoder_hidden_dim, 1) 
+
+        if self.coverage:
+            self.coverage_vec = None
          
         # Two linear layers as per equation (4) in the paper
         self.V = nn.Linear(encoder_hidden_dim * 2 + decoder_hidden_dim, decoder_hidden_dim)
@@ -105,9 +152,25 @@ class BaselineDecoder(nn.Module):
         self.softmax = nn.Softmax(dim=1)  # Softmax layer for the final output
 
     def forward(self, input, hidden, cell, encoder_outputs, src=None):
+
+        """
+        input : (batch size, emb dim)
+        hidden : (batch size, decoder hidden dim)
+        cell : (batch size, decoder hidden dim)
+        encoder_outputs (batch size, seq len, encoder hidden dim)
+        """
+        
+        batch_size = input.shape[0]
+        sequence_length = encoder_outputs.shape[1]  
+        print(f"Using seqlen {sequence_length}")
+        if self.coverage and self.coverage_vec is None:
+            self.coverage_vec = torch.zeros(batch_size, sequence_length)
         
         # Attention is computed using the decoder's current hidden state 'hidden' and all the encoder outputs
-        attention_weights = self.attention(encoder_outputs, hidden)
+        attention_weights, coverage_vec = self.attention(encoder_outputs, hidden, coverage_vec=self.coverage_vec if self.coverage else None)
+        if self.coverage:
+            self.coverage_vec = coverage_vec
+            print(f"Coverage vector: {self.coverage_vec}, {self.coverage_vec.shape}")
 
         context_vector = torch.bmm(attention_weights.unsqueeze(1), encoder_outputs)
         context_vector = context_vector.squeeze(1)  # (batch size, 2 * encoder hidden dim)
@@ -173,7 +236,13 @@ class BaselineSeq2Seq(nn.Module):
         decoder_hidden_dim = self.model_args.get("decoder_hidden_dim", encoder_hidden_dim)   # default value should be same hidden dim as encoder
         decoder_num_layers = self.model_args.get("decoder_num_layers", encoder_num_layers)
         self.pgen = self.model_args.get("pgen", False)
-        self.decoder = BaselineDecoder(self.vocab_size, encoder_hidden_dim, decoder_hidden_dim, self.embedding_dim, decoder_num_layers, self.pgen)
+        self.coverage = self.model_args.get("coverage", False)
+
+        # TODO Remove this after testing.
+        if self.coverage:
+            print(f"Using coverage!")
+
+        self.decoder = BaselineDecoder(self.vocab_size, encoder_hidden_dim, decoder_hidden_dim, self.embedding_dim, decoder_num_layers, self.pgen, self.coverage)
     
 
     def extract_word_embeddings(self, text: List[List[str]]):
@@ -320,5 +389,8 @@ class BaselineSeq2Seq(nn.Module):
 
             # If teacher forcing, use actual next token as next input. If not, use the predicted token.
             input = target_embeddings[:, t, :] if teacher_force else self.embedding(top1)  # TODO: Bug where if we select top1 to be an OOV word, then we need to have a valid embedding for the word
+            # If you get an index out of range in self error, it's because of the bug. Just rerun until you don't get that error.
+            
+            print(f"Executed decoder timestep {t}")
 
         return outputs
