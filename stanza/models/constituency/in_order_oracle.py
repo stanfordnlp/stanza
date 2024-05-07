@@ -362,6 +362,34 @@ def fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_
 
     return gold_sequence[:gold_index] + gold_sequence[start_index:end_index] + [CloseConstituent()] + gold_sequence[end_index:]
 
+def ambiguous_shift_open_unary_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    if not isinstance(gold_transition, Shift):
+        return None
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    return gold_sequence[:gold_index] + [pred_transition, CloseConstituent()] + gold_sequence[gold_index:]
+
+def ambiguous_shift_open_early_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    if not isinstance(gold_transition, Shift):
+        return None
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    # Find when the current block ends,
+    # either via a Shift or a Close
+    end_index = find_in_order_constituent_end(gold_sequence, gold_index)
+    return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:end_index] + [CloseConstituent()] + gold_sequence[end_index:]
+
+def ambiguous_shift_open_late_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    if not isinstance(gold_transition, Shift):
+        return None
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    end_index = advance_past_constituents(gold_sequence, gold_index)
+    return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:end_index] + [CloseConstituent()] + gold_sequence[end_index:]
+
 
 def report_close_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
     if not isinstance(gold_transition, CloseConstituent):
@@ -431,14 +459,15 @@ class RepairType(Enum):
           +shift_close        0.9261   0.9238
           +close_shift_nested 0.9253   0.9250
 
-    So honestly on EN it doesn't look too promising to use the oracle.
-    On VI, though, it seemed to do better.  Need to run more
-    experiments
-
     Redoing the wrong_open_general, which seemed to hurt test scores:
           wrong_open_two_subtrees          0.9244   0.9220
           w/o ambiguous open               0.9261   0.9246
           w/ ambiguous open_three_subtrees 0.9264   0.9243
+
+    Testing three different possible repairs for shift-open:
+          immediate close (unary)          0.9267   0.9246
+          close after first bracket        0.9265   0.9256
+          close after last bracket         0.9264   0.9240
     """
     def __new__(cls, fn, correct=False):
         """
@@ -556,6 +585,24 @@ class RepairType(Enum):
     # This is an ambiguous transition - we can experiment with different fixes
     WRONG_OPEN_MULTIPLE_SUBTREES = (fix_wrong_open_multiple_subtrees,)
 
+    CORRECT                = (None, True)
+
+    UNKNOWN                = None
+
+    # This particular repair effectively turns the shift -> ambiguous open
+    # into a unary transition
+    SHIFT_OPEN_UNARY_CLOSE       = (ambiguous_shift_open_unary_close,)
+
+    # Fix the shift -> ambiguous open by closing after the first constituent
+    # This is an ambiguous solution because it could also be closed either
+    # as a unary transition or with a close at the end of the outer bracket
+    SHIFT_OPEN_EARLY_CLOSE       = (ambiguous_shift_open_early_close,)
+
+    # Fix the shift -> ambiguous open by closing after all constituents
+    # This is an ambiguous solution because it could also be closed either
+    # as a unary transition or with a close at the end of the first constituent
+    SHIFT_OPEN_LATE_CLOSE        = (ambiguous_shift_open_late_close,)
+
     OTHER_CLOSE_SHIFT            = (report_close_shift,)
 
     OTHER_CLOSE_OPEN             = (report_close_open,)
@@ -567,10 +614,6 @@ class RepairType(Enum):
     OTHER_OPEN_SHIFT             = (report_open_shift,)
 
     OTHER_SHIFT_OPEN             = (report_shift_open,)
-
-    CORRECT                = (None, True)
-
-    UNKNOWN                = None
 
     # any other open transition we get wrong, which hasn't already
     # been carved out as an exception above, we just accept the
