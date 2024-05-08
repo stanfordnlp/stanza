@@ -212,7 +212,7 @@ class RepairType(Enum):
      +close_shift:              0.9266  0.9229
      +open_close:               0.9267  0.9256
     """
-    def __new__(cls, fn, correct=False):
+    def __new__(cls, fn, correct=False, debug=False):
         """
         Enumerate values as normal, but also keep a pointer to a function which repairs that kind of error
         """
@@ -221,6 +221,7 @@ class RepairType(Enum):
         obj._value_ = value + 1
         obj.fn = fn
         obj.correct = correct
+        obj.debug = debug
         return obj
 
     def is_correct(self):
