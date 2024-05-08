@@ -469,15 +469,20 @@ class RepairType(Enum):
           close after first bracket        0.9265   0.9256
           close after last bracket         0.9264   0.9240
     """
-    def __new__(cls, fn, correct=False):
+    def __new__(cls, fn, correct=False, debug=False):
         """
         Enumerate values as normal, but also keep a pointer to a function which repairs that kind of error
+
+        correct: this represents a correct transition
+
+        debug: always run this, as it just counts statistics
         """
         value = len(cls.__members__)
         obj = object.__new__(cls)
         obj._value_ = value + 1
         obj.fn = fn
         obj.correct = correct
+        obj.debug = debug
         return obj
 
     def is_correct(self):
@@ -603,17 +608,17 @@ class RepairType(Enum):
     # as a unary transition or with a close at the end of the first constituent
     SHIFT_OPEN_LATE_CLOSE        = (ambiguous_shift_open_late_close,)
 
-    OTHER_CLOSE_SHIFT            = (report_close_shift,)
+    OTHER_CLOSE_SHIFT            = (report_close_shift, False, True)
 
-    OTHER_CLOSE_OPEN             = (report_close_open,)
+    OTHER_CLOSE_OPEN             = (report_close_open, False, True)
 
-    OTHER_OPEN_OPEN              = (report_open_open,)
+    OTHER_OPEN_OPEN              = (report_open_open, False, True)
 
-    OTHER_OPEN_CLOSE             = (report_open_close,)
+    OTHER_OPEN_CLOSE             = (report_open_close, False, True)
 
-    OTHER_OPEN_SHIFT             = (report_open_shift,)
+    OTHER_OPEN_SHIFT             = (report_open_shift, False, True)
 
-    OTHER_SHIFT_OPEN             = (report_shift_open,)
+    OTHER_SHIFT_OPEN             = (report_shift_open, False, True)
 
     # any other open transition we get wrong, which hasn't already
     # been carved out as an exception above, we just accept the

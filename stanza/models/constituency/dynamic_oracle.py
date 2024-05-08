@@ -88,7 +88,7 @@ class DynamicOracle():
         for repair_type in self.repair_types:
             if repair_type.fn is None:
                 continue
-            if self.oracle_level is not None and repair_type.value > self.oracle_level and repair_type not in self.additional_levels:
+            if self.oracle_level is not None and repair_type.value > self.oracle_level and repair_type not in self.additional_levels and not repair_type.debug:
                 continue
             if repair_type in self.deactivated_levels:
                 continue
