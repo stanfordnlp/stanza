@@ -306,6 +306,13 @@ def fix_shift_close(gold_transition, pred_transition, gold_sequence, gold_index,
 def fix_close_shift_nested(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
     """
     Fix a Close X..Open X..Shift pattern where both the Close and Open were skipped.
+
+    Here the pattern we are trying to fix is
+      stuff_A open_X stuff_B *close* open_X shift...
+    replaced with
+      stuff_A open_X stuff_B shift...
+    the missed close & open means a missed recall error for (X A B)
+    whereas the previous open_X can still get the outer bracket
     """
     if not isinstance(gold_transition, CloseConstituent):
         return None
@@ -314,22 +321,27 @@ def fix_close_shift_nested(gold_transition, pred_transition, gold_sequence, gold
 
     if len(gold_sequence) < gold_index + 3:
         return None
+    if not isinstance(gold_sequence[gold_index+1], OpenConstituent):
+        return None
+
+    # handle the sequence:
+    #   stuff_A open_X stuff_B close open_Y close open_X shift
+    open_index = advance_past_unaries(gold_sequence, gold_index+1)
+    if not isinstance(gold_sequence[open_index], OpenConstituent):
+        return None
+    if not isinstance(gold_sequence[open_index+1], Shift):
+        return None
+
     # check that the next operation was to open the same constituent
     # we just closed
     prev_open_index = find_previous_open(gold_sequence, gold_index)
     if prev_open_index is None:
         return None
     prev_open = gold_sequence[prev_open_index]
-    if gold_sequence[gold_index+1] != prev_open:
+    if gold_sequence[open_index] != prev_open:
         return None
 
-    # TODO: here could skip unary transitions
-    # could also look for unary transitions of the same type after a
-    # different constituent was built (more complicated and rare)
-    if not isinstance(gold_sequence[gold_index+2], Shift):
-        return None
-
-    return gold_sequence[:gold_index] + gold_sequence[gold_index+2:]
+    return gold_sequence[:gold_index] + gold_sequence[open_index+1:]
 
 def fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
     """
