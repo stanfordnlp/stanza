@@ -303,6 +303,56 @@ def fix_shift_close(gold_transition, pred_transition, gold_sequence, gold_index,
 
     return gold_sequence[:gold_index] + [pred_transition, prev_open] + gold_sequence[cur_index:]
 
+def fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous, late):
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+    if not isinstance(pred_transition, Shift):
+        return None
+
+    if len(gold_sequence) < gold_index + 3:
+        return None
+    if not isinstance(gold_sequence[gold_index+1], OpenConstituent):
+        return None
+
+    open_index = advance_past_unaries(gold_sequence, gold_index+1)
+    if not isinstance(gold_sequence[open_index], OpenConstituent):
+        return None
+    if not isinstance(gold_sequence[open_index+1], Shift):
+        return None
+
+    # check that the next operation was to open a *different* constituent
+    # from the one we just closed
+    prev_open_index = find_previous_open(gold_sequence, gold_index)
+    if prev_open_index is None:
+        return None
+    prev_open = gold_sequence[prev_open_index]
+    if gold_sequence[open_index] == prev_open:
+        return None
+
+    # check that the following stuff is a single bracket, not multiple brackets
+    end_index = find_in_order_constituent_end(gold_sequence, open_index+1)
+    if ambiguous and isinstance(gold_sequence[end_index], CloseConstituent):
+        return None
+    elif not ambiguous and isinstance(gold_sequence[end_index], Shift):
+        return None
+
+    # if closing at the end of the next blocks,
+    # instead of closing after the first block ends,
+    # we go to the end of the last block
+    if late:
+        end_index = advance_past_constituents(gold_sequence, open_index+1)
+
+    return gold_sequence[:gold_index] + gold_sequence[open_index+1:end_index] + gold_sequence[gold_index:open_index+1] + gold_sequence[end_index:]
+
+def fix_close_shift_unambiguous_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    return fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=False, late=False)
+
+def fix_close_shift_ambiguous_bracket_early(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    return fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=True, late=False)
+
+def fix_close_shift_ambiguous_bracket_late(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    return fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=True, late=True)
+
 def fix_close_shift_nested(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
     """
     Fix a Close X..Open X..Shift pattern where both the Close and Open were skipped.
@@ -576,6 +626,22 @@ class RepairType(Enum):
     # and continue from there.
     CLOSE_SHIFT_NESTED     = (fix_close_shift_nested,)
 
+    # Fix an error where the correct sequence was to Close X, Open Y,
+    # then continue building,
+    # but instead the model did a Shift in place of C_X O_Y
+    # The damage here is a recall error for the missed X and
+    # a precision error for the incorrectly opened X
+    # However, the Y can actually be recovered - whenever we finally
+    # close X, we can then open Y
+    # One form of that is unambiguous, that of
+    #   T_A O_X T_B C O_Y T_C C
+    # with only one subtree after the O_Y
+    # In that case, the Close that would have closed Y
+    # is the only place for the missing close of X
+    # So we can produce the following:
+    #   T_A O_X T_B T_C C O_Y C
+    CLOSE_SHIFT_UNAMBIGUOUS_BRACKET = (fix_close_shift_unambiguous_bracket,)
+
     # If the model is supposed to build a block after a Close
     # operation, attach that block to the piece to the left
     # a couple different variations on this were tried
@@ -605,6 +671,20 @@ class RepairType(Enum):
     CORRECT                = (None, True)
 
     UNKNOWN                = None
+
+    # If a sequence should have gone Close - Open - Shift,
+    # and instead we went Shift,
+    # we need to close the previous bracket
+    # If it is ambiguous
+    # such as Close - Open - Shift - Shift
+    # close the bracket ASAP
+    # eg, Shift - Close - Open - Shift
+    CLOSE_SHIFT_AMBIGUOUS_BRACKET_EARLY = (fix_close_shift_ambiguous_bracket_early,)
+
+    # for Close - Open - Shift - Shift
+    # close the bracket as late as possible
+    # eg, Shift - Shift - Close - Open
+    CLOSE_SHIFT_AMBIGUOUS_BRACKET_LATE = (fix_close_shift_ambiguous_bracket_late,)
 
     # This particular repair effectively turns the shift -> ambiguous open
     # into a unary transition
