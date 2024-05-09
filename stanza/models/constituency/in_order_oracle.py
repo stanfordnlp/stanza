@@ -393,7 +393,7 @@ def fix_close_shift_nested(gold_transition, pred_transition, gold_sequence, gold
 
     return gold_sequence[:gold_index] + gold_sequence[open_index+1:]
 
-def fix_close_shift_shift_unambiguous(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous, late):
     """
     Repair Close/Shift -> Shift by moving the Close to after the next block is created
     """
@@ -413,16 +413,31 @@ def fix_close_shift_shift_unambiguous(gold_transition, pred_transition, gold_seq
     end_index = find_in_order_constituent_end(gold_sequence, start_index)
     if end_index is None:
         return None
-    # if this *isn't* a close, we don't allow it.
+    # if this *isn't* a close, we don't allow it in the unambiguous case
     # that case seems to be ambiguous...
     #   stuff_1 close stuff_2 stuff_3
     # if you would normally start building stuff_3,
     # it is not clear if you want to close at the end of
     # stuff_2 or build stuff_3 instead.
-    if not isinstance(gold_sequence[end_index], CloseConstituent):
+    if ambiguous and isinstance(gold_sequence[end_index], CloseConstituent):
+        return None
+    elif not ambiguous and isinstance(gold_sequence[end_index], Shift):
         return None
 
+    # close at the end of the brackets, rather than once the first bracket is finished
+    if late:
+        end_index = advance_past_constituents(gold_sequence, start_index)
+
     return gold_sequence[:gold_index] + gold_sequence[start_index:end_index] + [CloseConstituent()] + gold_sequence[end_index:]
+
+def fix_close_shift_shift_unambiguous(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    return fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=False, late=False)
+
+def fix_close_shift_shift_ambiguous_early(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    return fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=True, late=False)
+
+def fix_close_shift_shift_ambiguous_late(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+    return fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=True, late=True)
 
 def ambiguous_shift_open_unary_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
     if not isinstance(gold_transition, Shift):
@@ -670,7 +685,25 @@ class RepairType(Enum):
     # lost 0.15 F1 with the exactly one following constituent version
     # it might be worthwhile double checking some of the other
     # versions to make sure those also fail, though
-    CLOSE_SHIFT_SHIFT      = (fix_close_shift_shift_unambiguous,)
+    CLOSE_SHIFT_SHIFT                   = (fix_close_shift_shift_unambiguous,)
+
+    # In the ambiguous close-shift/shift case, this closes the surrounding bracket
+    # (which should have already been closed)
+    # as soon as the next constituent is built
+    # this turns
+    #   (A (B s1 s2) s3 s4)
+    # into
+    #   (A (B s1 s2 s3) s4)
+    CLOSE_SHIFT_SHIFT_AMBIGUOUS_EARLY   = (fix_close_shift_shift_ambiguous_early,)
+
+    # In the ambiguous close-shift/shift case, this closes the surrounding bracket
+    # (which should have already been closed)
+    # when the rest of the constituents in this bracket are built
+    # this turns
+    #   (A (B s1 s2) s3 s4)
+    # into
+    #   (A (B s1 s2 s3 s4))
+    CLOSE_SHIFT_SHIFT_AMBIGUOUS_LATE    = (fix_close_shift_shift_ambiguous_late,)
 
     # If a sequence should have gone Close - Open - Shift,
     # and instead we went Shift,

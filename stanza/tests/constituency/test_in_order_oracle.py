@@ -475,3 +475,48 @@ def test_close_shift_shift(unary_trees, wide_trees):
     gold_sequences = build_treebank(test_trees, TransitionScheme.IN_ORDER)
 
     check_repairs(test_trees, gold_sequences, expected_trees, shift_transition, fix_close_shift_shift_unambiguous)
+
+
+def test_close_shift_shift_early(unary_trees, wide_trees):
+    """
+    Test that close -> shift works when there are multiple blocks shifted after
+
+    Also checks that the single block case is skipped, so as to keep them separate when testing
+
+    A tree with the expected property was specifically added for this test
+    """
+    shift_transition = Shift()
+
+    test_trees = unary_trees + wide_trees
+    gold_sequences = build_treebank(test_trees, TransitionScheme.IN_ORDER)
+
+    expected_trees = [{},
+                      {},
+                      {},
+                      {},
+                      {},
+                      {21: "(ROOT (S (NP (DT These) (NNS studies)) (VP (VBP demonstrate) (SBAR (IN that) (S (NP (NNS mice)) (VP (VBP are) (NP (NP (DT a) (ADJP (JJ practical) (CC and) (JJ powerful) (JJ experimental)) (NN system)) (SBAR (S (VP (TO to) (VP (VB study) (NP (DT the) (NN genetics)))))))))))))"}]
+
+    check_repairs(test_trees, gold_sequences, expected_trees, shift_transition, fix_close_shift_shift_ambiguous_early)
+
+def test_close_shift_shift_late(unary_trees, wide_trees):
+    """
+    Test that close -> shift works when there are multiple blocks shifted after
+
+    Also checks that the single block case is skipped, so as to keep them separate when testing
+
+    A tree with the expected property was specifically added for this test
+    """
+    shift_transition = Shift()
+
+    test_trees = unary_trees + wide_trees
+    gold_sequences = build_treebank(test_trees, TransitionScheme.IN_ORDER)
+
+    expected_trees = [{},
+                      {},
+                      {},
+                      {},
+                      {},
+                      {21: "(ROOT (S (NP (DT These) (NNS studies)) (VP (VBP demonstrate) (SBAR (IN that) (S (NP (NNS mice)) (VP (VBP are) (NP (NP (DT a) (ADJP (JJ practical) (CC and) (JJ powerful) (JJ experimental) (NN system))) (SBAR (S (VP (TO to) (VP (VB study) (NP (DT the) (NN genetics)))))))))))))"}]
+
+    check_repairs(test_trees, gold_sequences, expected_trees, shift_transition, fix_close_shift_shift_ambiguous_late)
