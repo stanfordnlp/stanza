@@ -366,6 +366,62 @@ def test_close_shift_nested(unary_trees, gold_sequences):
                 result_tree = reconstruct_tree(tree, repair[1])
                 assert str(result_tree) == expected[repair[0]]
 
+def check_repairs(trees, gold_sequences, expected_trees, transition, repair_fn):
+    for tree_idx, (gold_tree, gold_sequence, expected) in enumerate(zip(trees, gold_sequences, expected_trees)):
+        repairs = get_repairs(gold_sequence, transition, repair_fn)
+        if expected is not None:
+            assert len(repairs) == len(expected)
+            for repair in repairs:
+                assert repair[0] in expected
+                result_tree = reconstruct_tree(gold_tree, repair[1])
+                assert str(result_tree) == expected[repair[0]]
+        else:
+            print("---------------------")
+            print("{:P}".format(gold_tree))
+            print(gold_sequence)
+            #print(repairs)
+            for repair in repairs:
+                print("---------------------")
+                print(gold_sequence)
+                print(repair[1])
+                result_tree = reconstruct_tree(gold_tree, repair[1])
+                print("{:P}".format(gold_tree))
+                print("{:P}".format(result_tree))
+                print(tree_idx)
+                print(repair[0])
+                print(result_tree)
+
+def test_close_shift_unambiguous(unary_trees, gold_sequences):
+    shift_transition = Shift()
+
+    expected_trees = [{},
+                      {8: "(ROOT (S (NP (NP (RB Not) (PDT all) (DT those)) (SBAR (WHNP (WP who) (S (VP (VBD wrote)))))) (VP (VBP oppose) (NP (DT the) (NNS changes))) (. .)))"},
+                      {},
+                      {2: "(ROOT (S (NP (NNS optimists) (VP (VBP expect) (S (NP (NNP Hong) (NNP Kong)) (VP (TO to) (VP (VB hum) (ADVP (RB along)) (SBAR (RB as) (S (VP (ADVP (IN before))))))))))))",
+                       9: "(ROOT (S (NP (NNS optimists)) (VP (VBP expect) (S (NP (NNP Hong) (NNP Kong) (VP (TO to) (VP (VB hum) (ADVP (RB along)) (SBAR (RB as) (S (VP (ADVP (IN before))))))))))))"}]
+    check_repairs(unary_trees, gold_sequences, expected_trees, shift_transition, fix_close_shift_unambiguous_bracket)
+
+def test_close_shift_ambiguous_early(unary_trees, gold_sequences):
+    shift_transition = Shift()
+
+    expected_trees = [{4: "(ROOT (S (NP (DT A) (NN record) (NN date) (VP (VBZ has) (RB n't) (VP (VBN been) (VP (VBN set))))) (. .)))"},
+                      {16: "(ROOT (S (NP (NP (RB Not) (PDT all) (DT those)) (SBAR (WHNP (WP who)) (S (VP (VBD wrote)))) (VP (VBP oppose) (NP (DT the) (NNS changes)))) (. .)))"},
+                      {2: "(ROOT (S (PRN (S (VP (VB See) (, ,)))) (NP (NP (DT the) (JJ other) (NN rule)) (PP (IN of) (NP (NN thumb))) (PP (IN about) (NP (NN ballooning))))))",
+                       6: "(ROOT (S (PRN (S (VP (VB See))) (, ,)) (NP (NP (DT the) (JJ other) (NN rule)) (PP (IN of) (NP (NN thumb))) (PP (IN about) (NP (NN ballooning))))))"},
+                      {}]
+    check_repairs(unary_trees, gold_sequences, expected_trees, shift_transition, fix_close_shift_ambiguous_bracket_early)
+
+def test_close_shift_ambiguous_late(unary_trees, gold_sequences):
+    shift_transition = Shift()
+
+    expected_trees = [{4: "(ROOT (S (NP (DT A) (NN record) (NN date) (VP (VBZ has) (RB n't) (VP (VBN been) (VP (VBN set)))) (. .))))"},
+                      {16: "(ROOT (S (NP (NP (RB Not) (PDT all) (DT those)) (SBAR (WHNP (WP who)) (S (VP (VBD wrote)))) (VP (VBP oppose) (NP (DT the) (NNS changes))) (. .))))"},
+                      {2: "(ROOT (S (PRN (S (VP (VB See) (, ,) (NP (NP (DT the) (JJ other) (NN rule)) (PP (IN of) (NP (NN thumb))) (PP (IN about) (NP (NN ballooning)))))))))",
+                       6: "(ROOT (S (PRN (S (VP (VB See))) (, ,) (NP (NP (DT the) (JJ other) (NN rule)) (PP (IN of) (NP (NN thumb))) (PP (IN about) (NP (NN ballooning)))))))"},
+                      {}]
+    check_repairs(unary_trees, gold_sequences, expected_trees, shift_transition, fix_close_shift_ambiguous_bracket_late)
+
+
 def test_close_shift_shift(unary_trees):
     """
     Test that close -> shift works when there is a single block shifted after
