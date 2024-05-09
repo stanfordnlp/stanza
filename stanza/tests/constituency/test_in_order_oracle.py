@@ -88,6 +88,32 @@ NOUN_PHRASE_TREE = """
     (NNP Theatre)))
 """
 
+WIDE_NP_TREE = """
+( (S
+    (NP-SBJ (DT These) (NNS studies))
+    (VP (VBP demonstrate)
+      (SBAR (IN that)
+        (S
+          (NP-SBJ (NNS mice))
+          (VP (VBP are)
+            (NP-PRD
+              (NP (DT a)
+                (ADJP (JJ practical)
+                  (CC and)
+                  (JJ powerful))
+                (JJ experimental) (NN system))
+              (SBAR
+                (WHADVP-2 (-NONE- *0*))
+                (S
+                  (NP-SBJ (-NONE- *PRO*))
+                  (VP (TO to)
+                    (VP (VB study)
+                      (NP (DT the) (NN genetics)))))))))))))
+"""
+
+WIDE_TREES = [NOUN_PHRASE_TREE, WIDE_NP_TREE]
+WIDE_TREEBANK = "\n".join(WIDE_TREES)
+
 ROOT_LABELS = ["ROOT"]
 
 def get_repairs(gold_sequence, wrong_transition, repair_fn):
@@ -114,6 +140,14 @@ def unary_trees():
 def gold_sequences(unary_trees):
     gold_sequences = build_treebank(unary_trees, TransitionScheme.IN_ORDER)
     return gold_sequences
+
+@pytest.fixture(scope="module")
+def wide_trees():
+    trees = tree_reader.read_trees(WIDE_TREEBANK)
+    trees = [t.prune_none().simplify_labels() for t in trees]
+    assert len(trees) == len(WIDE_TREES)
+
+    return trees
 
 def test_wrong_open_root(gold_sequences):
     """
@@ -422,7 +456,7 @@ def test_close_shift_ambiguous_late(unary_trees, gold_sequences):
     check_repairs(unary_trees, gold_sequences, expected_trees, shift_transition, fix_close_shift_ambiguous_bracket_late)
 
 
-def test_close_shift_shift(unary_trees):
+def test_close_shift_shift(unary_trees, wide_trees):
     """
     Test that close -> shift works when there is a single block shifted after
 
@@ -434,13 +468,10 @@ def test_close_shift_shift(unary_trees):
                       {24: "(ROOT (S (NP (NP (RB Not) (PDT all) (DT those)) (SBAR (WHNP (WP who)) (S (VP (VBD wrote))))) (VP (VBP oppose) (NP (DT the) (NNS changes)) (. .))))"},
                       {20: "(ROOT (S (PRN (S (VP (VB See)))) (, ,) (NP (NP (DT the) (JJ other) (NN rule)) (PP (IN of) (NP (NN thumb)) (PP (IN about) (NP (NN ballooning)))))))"},
                       {17: "(ROOT (S (NP (NNS optimists)) (VP (VBP expect) (S (NP (NNP Hong) (NNP Kong)) (VP (TO to) (VP (VB hum) (ADVP (RB along) (SBAR (RB as) (S (VP (ADVP (IN before))))))))))))"},
+                      {},
                       {}]
 
-    np_trees = tree_reader.read_trees(NOUN_PHRASE_TREE)
-    np_trees = [t.prune_none().simplify_labels() for t in np_trees]
-    assert len(np_trees) == 1
-
-    test_trees = unary_trees + np_trees
+    test_trees = unary_trees + wide_trees
     gold_sequences = build_treebank(test_trees, TransitionScheme.IN_ORDER)
 
     check_repairs(test_trees, gold_sequences, expected_trees, shift_transition, fix_close_shift_shift_unambiguous)
