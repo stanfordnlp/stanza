@@ -444,7 +444,7 @@ def test_close_shift_shift(unary_trees):
     gold_sequences = build_treebank(test_trees, TransitionScheme.IN_ORDER)
 
     for tree, gold_sequence, expected_repairs in zip(test_trees, gold_sequences, expected_trees):
-        repairs = get_repairs(gold_sequence, shift_transition, fix_close_shift_shift)
+        repairs = get_repairs(gold_sequence, shift_transition, fix_close_shift_shift_unambiguous)
         assert len(repairs) == len(expected_repairs)
         for repair, expected in zip(repairs, expected_repairs):
             assert repair[0] == expected[0]

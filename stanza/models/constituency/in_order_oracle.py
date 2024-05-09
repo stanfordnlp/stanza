@@ -393,7 +393,7 @@ def fix_close_shift_nested(gold_transition, pred_transition, gold_sequence, gold
 
     return gold_sequence[:gold_index] + gold_sequence[open_index+1:]
 
-def fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_shift_shift_unambiguous(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
     """
     Repair Close/Shift -> Shift by moving the Close to after the next block is created
     """
@@ -642,20 +642,6 @@ class RepairType(Enum):
     #   T_A O_X T_B T_C C O_Y C
     CLOSE_SHIFT_UNAMBIGUOUS_BRACKET = (fix_close_shift_unambiguous_bracket,)
 
-    # If the model is supposed to build a block after a Close
-    # operation, attach that block to the piece to the left
-    # a couple different variations on this were tried
-    # we tried attaching all constituents to the
-    #   bracket which should have been closed
-    # we tried attaching exactly one constituent
-    # and we tried attaching only if there was
-    #   exactly one following constituent
-    # none of these improved f1.  for example, on the VI dataset, we
-    # lost 0.15 F1 with the exactly one following constituent version
-    # it might be worthwhile double checking some of the other
-    # versions to make sure those also fail, though
-    # CLOSE_SHIFT_SHIFT      = (fix_close_shift_shift,)
-
     # Similarly to WRONG_OPEN_TWO_SUBTREES, if the correct sequence is
     #   T1 O_x T2 T3 C
     # and instead we predicted
@@ -671,6 +657,20 @@ class RepairType(Enum):
     CORRECT                = (None, True)
 
     UNKNOWN                = None
+
+    # If the model is supposed to build a block after a Close
+    # operation, attach that block to the piece to the left
+    # a couple different variations on this were tried
+    # we tried attaching all constituents to the
+    #   bracket which should have been closed
+    # we tried attaching exactly one constituent
+    # and we tried attaching only if there was
+    #   exactly one following constituent
+    # none of these improved f1.  for example, on the VI dataset, we
+    # lost 0.15 F1 with the exactly one following constituent version
+    # it might be worthwhile double checking some of the other
+    # versions to make sure those also fail, though
+    CLOSE_SHIFT_SHIFT      = (fix_close_shift_shift_unambiguous,)
 
     # If a sequence should have gone Close - Open - Shift,
     # and instead we went Shift,
