@@ -542,9 +542,22 @@ class RepairType(Enum):
           w/ ambiguous open_three_subtrees 0.9264   0.9243
 
     Testing three different possible repairs for shift-open:
+          w/ ambiguous open_three_subtrees 0.9264   0.9243
           immediate close (unary)          0.9267   0.9246
           close after first bracket        0.9265   0.9256
           close after last bracket         0.9264   0.9240
+
+    Testing three possible repairs for close-open-shift/shift
+          w/ ambiguous open_three_subtrees   0.9264   0.9243
+          unambiguous c-o-s/shift            0.9265   0.9246
+          ambiguous c-o-s/shift closed early 0.9262   0.9246
+          ambiguous c-o-s/shift closed late  0.9259   0.9245
+
+    Testing three possible repairs for close-shift/shift
+          w/ ambiguous open_three_subtrees   0.9264   0.9243
+          unambiguous c-s/shift              0.9253   0.9239
+          ambiguous c-s/shift closed early   0.9259   0.9235
+          ambiguous c-s/shift closed late    0.9252   0.9241
     """
     def __new__(cls, fn, correct=False, debug=False):
         """
