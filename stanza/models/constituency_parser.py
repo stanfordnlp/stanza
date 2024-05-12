@@ -705,6 +705,10 @@ def build_argparse():
     parser.add_argument('--no_use_lattn', dest='use_lattn', action='store_false', help='Use the lattn layers - currently turned off')
     parser.add_argument('--no_lattn_combined_input', dest='lattn_combined_input', action='store_false', help="Don't combine all inputs for the lattn, not just the pattn")
 
+    parser.add_argument('--use_rattn', default=False, action='store_true', help='Use a local attention layer')
+    parser.add_argument('--rattn_window', default=8, type=int, help='Number of tokens to use for context in the local attention')
+    parser.add_argument('--rattn_heads', default=12, type=int, help='Number of heads to use for context in the local attention')
+
     parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
     parser.add_argument('--log_shapes', default=False, action='store_true', help='Log the parameters shapes at the beginning')
     parser.add_argument('--watch_regex', default=None, help='regex to describe which weights and biases to output, if any')
