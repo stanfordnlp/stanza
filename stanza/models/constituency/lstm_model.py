@@ -361,7 +361,7 @@ class LSTMModel(BaseModel, nn.Module):
             self.bert_dim = self.bert_model.config.hidden_size
             if args['bert_hidden_layers']:
                 # The average will be offset by 1/N so that the default zeros
-                # repressents an average of the N layers
+                # represents an average of the N layers
                 if args['bert_hidden_layers'] > bert_model.config.num_hidden_layers:
                     # limit ourselves to the number of layers actually available
                     # note that we can +1 because of the initial embedding layer
