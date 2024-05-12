@@ -414,6 +414,9 @@ def test_different_transition_sizes(pretrain_file):
                         '--sentence_boundary_vectors', 'none')
     run_forward_checks(model)
 
+def test_relative_attention(pretrain_file):
+    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10')
+    run_forward_checks(model)
 
 def test_lstm_tree_forward(pretrain_file):
     """
