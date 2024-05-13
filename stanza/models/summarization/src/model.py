@@ -234,11 +234,6 @@ class BaselineSeq2Seq(nn.Module):
         decoder_num_layers = self.model_args.get("decoder_num_layers", encoder_num_layers)
         self.pgen = self.model_args.get("pgen", False)
         self.coverage = self.model_args.get("coverage", False)
-
-        # TODO Remove this after testing.
-        if self.coverage:
-            print(f"Using coverage!")
-
         self.decoder = BaselineDecoder(self.vocab_size, encoder_hidden_dim, decoder_hidden_dim, self.embedding_dim, decoder_num_layers, self.pgen, self.coverage)
     
 
@@ -389,7 +384,7 @@ class BaselineSeq2Seq(nn.Module):
             teacher_force = torch.rand(1) < teacher_forcing_ratio
 
             # Get the highest predicted token from our predictions
-            top1 = torch.argmax(p_vocab, dim=1)
+            top1 = torch.argmax(p_vocab, dim=1)  # (batch size, 1)
 
             # If teacher forcing, use actual next token as next input. If not, use the predicted token.
             input = target_embeddings[:, t, :] if teacher_force else self.embedding(top1)  # TODO: Bug where if we select top1 to be an OOV word, then we need to have a valid embedding for the word
