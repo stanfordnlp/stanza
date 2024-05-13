@@ -15,8 +15,6 @@ from typing import List, Tuple
 from copy import deepcopy
 
 logger = logging.getLogger('stanza.lemmaclassifier')
-torch.set_printoptions(threshold=100, edgeitems=5, linewidth=100)
-
 
 """
 Overall structure
