@@ -378,7 +378,7 @@ class BaselineSeq2Seq(nn.Module):
                 p_vocab = final_vocab_dist
 
             # Place predictions in a tensor holding predictions for each token
-            outputs[:, t, :] = p_vocab 
+            outputs[:, t, :] = p_vocab
 
             # Decide whether to use teacher forcing or not
             teacher_force = torch.rand(1) < teacher_forcing_ratio
@@ -387,9 +387,14 @@ class BaselineSeq2Seq(nn.Module):
             top1 = torch.argmax(p_vocab, dim=1)  # (batch size, 1)
 
             # If teacher forcing, use actual next token as next input. If not, use the predicted token.
-            input = target_embeddings[:, t, :] if teacher_force else self.embedding(top1)  # TODO: Bug where if we select top1 to be an OOV word, then we need to have a valid embedding for the word
-            # If you get an index out of range in self error, it's because of the bug. Just rerun until you don't get that error.
-            
-            print(f"Executed decoder timestep {t}")
+            if teacher_force:
+                input = target_embeddings[:, t, :]   # token for timestep t in reference summary
+            else:
+                # TODO: Review this 
+                # When an OOV word is chosen as the next token, we give the UNK embedding as the input embedding 
+                # as the next word embedding because we do not have an embedding for this word
+                oov_words_mask = top1 >= self.vocab_size  # masking which chosen words are out of vocabulary
+                top1[oov_words_mask] = UNK_ID
+                input = self.embedding(top1)   
 
         return outputs
