@@ -69,14 +69,21 @@ class BahdanauAttention(nn.Module):
 
     
     def forward(self, encoder_outputs, decoder_hidden, coverage_vec=None):
+
+        """
+        encoder_outputs: the hidden states from the encoder representation (batch size, seq length, 2 * enc hidden dim)
+        decoder_hidden: the decoder hidden state to use for computing this attention. (batch size, decoder hidden dim)
+        coverage_vec (optional): if coverage is enabled, this is the coverage vector for the decoder timestep. Should be
+        shape (batch size, seq length).
+        """
+
         seq_len = encoder_outputs.shape[1]
         batch_size = encoder_outputs.shape[0]
 
-        # Repeat decoder hidden state seq_len times
+        # Repeat decoder hidden state seq_len times to match enc states length
         decoder_hidden = decoder_hidden.unsqueeze(1).repeat(1, seq_len, 1)
 
         # Compute energy scores with bias term
-        # print(f"Coverage = {self.coverage}, {coverage_vec.shape}")
 
         """
         For a single batch example:
@@ -97,22 +104,15 @@ class BahdanauAttention(nn.Module):
         """
         energy = None
         if self.coverage:
-            print("Entered into here")
-            print(f"Coverage vec shape {coverage_vec.shape}, Decoder hidden shape {decoder_hidden.shape}, {self.b_attn.shape}")
-            # print(f"{self.W_c(coverage_vec.unsqueeze(1)).squeeze(1).transpose(1, 2).shape},{self.W_h(encoder_outputs).shape}, {self.W_s(decoder_hidden).shape}")
-            # energy = torch.tanh(self.W_h(encoder_outputs) + self.W_s(decoder_hidden) + self.W_c(coverage_vec.unsqueeze(1)).squeeze(1).transpose(1, 2) + self.b_attn)
-            print(f"New coverage vec shape {coverage_vec.unsqueeze(-1).shape}, {coverage_vec.unsqueeze(-1)}")
+            # unsqueeze the coverage vec to align it for the transformation to shape (batch size, seq len, decoder hidden dim) with W_c
             energy = torch.tanh(self.W_h(encoder_outputs) + self.W_s(decoder_hidden) + self.W_c(coverage_vec.unsqueeze(-1)) + self.b_attn)
         else:
+            # no coverage, energy alignment scores become e_i^t = v^T tanh(W_h h_i + W_s s_t + b_attn)
             energy = torch.tanh(self.W_h(encoder_outputs) + self.W_s(decoder_hidden) + self.b_attn)
-
-        print(f"Energy scores shape: {energy.shape}")
 
         attention = self.v(energy).squeeze(2)
 
-        print(f"Attn shape {attention.shape}")
-
-        # Generate mask: valid tokens have a hidden state different from zero
+        # Generate mask: valid tokens have a nonzero hidden state
         mask = (encoder_outputs.abs().sum(dim=2) > 0).float()
 
         # Apply the mask by setting invalid positions to -inf
@@ -120,7 +120,7 @@ class BahdanauAttention(nn.Module):
         attention =  F.softmax(attention, dim=1)
 
         if self.coverage and coverage_vec is not None:
-            coverage_vec = coverage_vec + attention
+            coverage_vec = coverage_vec + attention   # continuously sum attention dist. for coverage
         return attention, coverage_vec
 
 
@@ -162,16 +162,16 @@ class BaselineDecoder(nn.Module):
         
         batch_size = input.shape[0]
         sequence_length = encoder_outputs.shape[1]  
-        print(f"Using seqlen {sequence_length}")
         if self.coverage and self.coverage_vec is None:
+            # The first coverage vector is set to all zeros
             self.coverage_vec = torch.zeros(batch_size, sequence_length)
         
         # Attention is computed using the decoder's current hidden state 'hidden' and all the encoder outputs
         attention_weights, coverage_vec = self.attention(encoder_outputs, hidden, coverage_vec=self.coverage_vec if self.coverage else None)
         if self.coverage:
             self.coverage_vec = coverage_vec
-            print(f"Coverage vector: {self.coverage_vec}, {self.coverage_vec.shape}")
 
+        # Context vector = sum_i {a_i^t * h_i} 
         context_vector = torch.bmm(attention_weights.unsqueeze(1), encoder_outputs)
         context_vector = context_vector.squeeze(1)  # (batch size, 2 * encoder hidden dim)
 
@@ -194,7 +194,7 @@ class BaselineDecoder(nn.Module):
             p_gen_input = torch.cat((context_vector, hidden, input.squeeze(1)), dim=1)  # (batch size, 2 * encoder hidden dim + decoder hidden dim + emb dim)
             p_gen = torch.sigmoid(self.p_gen_linear(p_gen_input))  # (batch size, 1)
 
-        # The paper states that the decoder state (hidden) and the context vector are concatenated
+        # Decoder state vector (hidden) and the context vector are concatenated
         # before being passed through linear layers to predict the next token.
         concatenated = torch.cat((hidden, context_vector), dim=1)
 
@@ -207,9 +207,6 @@ class BaselineDecoder(nn.Module):
 
 
 class BaselineSeq2Seq(nn.Module):
-    """
-    
-    """
     def __init__(self, model_args, pt_embedding):
         super(BaselineSeq2Seq, self).__init__()
         self.model_args = model_args
@@ -307,14 +304,20 @@ class BaselineSeq2Seq(nn.Module):
 
     def forward(self, text, target, teacher_forcing_ratio=0.5):
         """
-        text: (List[List[str]])
-        target: (List[List[str]])
+        text (List[List[str]]): The outer list is a collection of the examples used in training. The inner list is composed of the words within each example.
+        e.g. [["The", "quick", "brown", "fox"], ["Humpty", "dumpty", "fell", "off", "the", "wall", "."]]
+        This can be thought of to have shape (batch size, seq len) even though the inputs at this point aren't padded
+
+        target (List[List[str]]): A list of reference summaries for the input texts. The outer list is a collection of the reference summaries.
+        The inner list is composed of words within each reference summary.
+
+        teacher_forcing_ratio (float, optional): Probability to use for teacher forcing method. Should be set to 0 during test time.
 
         """
-        batch_size = min(len(text), self.batch_size) # TODO later fix 
+        batch_size = min(len(text), self.batch_size) # TODO mark for later review with John
 
         index_tensor, max_oov_words = self.build_extended_vocab_map(text)  # (batch size, seq len)
-        self.max_oov_words = max_oov_words
+        self.max_oov_words = max_oov_words   # the count of OOV words in the input texts 
 
         # Get embeddings over the input text
         embedded, input_lengths = self.extract_word_embeddings(text)
@@ -322,13 +325,15 @@ class BaselineSeq2Seq(nn.Module):
         # Get embeddings over the target text
         target_embeddings, target_lengths = self.extract_word_embeddings(target)
         target_len = target_embeddings.shape[1]   # TODO : Ask John how batch processing works with this. should this actually just be a uniform hyperparam like max_dec_steps? If so, how to do padding?
+        # target_len currently represents the maximum seq length out of all sequences in the reference summaries.
 
         # Tensor to store decoder outputs
         effective_vocab_size = self.vocab_size + self.max_oov_words if self.pgen else self.vocab_size
+
         outputs = torch.zeros(batch_size, target_len, effective_vocab_size)
 
         packed_input_seqs = pack_padded_sequence(embedded, input_lengths, batch_first=True, enforce_sorted=False)
-        # packed_target_seqs = pack_padded_sequence(target_embeddings, target_lengths, batch_first=True, enforce_sorted=False)
+        # packed_target_seqs = pack_padded_sequence(target_embeddings, target_lengths, batch_first=True, enforce_sorted=False)  TODO maybe remove this?
 
         # Embeddings fed into Encoder LSTM
         # Get the hidden states h_i from the encoder
@@ -341,14 +346,13 @@ class BaselineSeq2Seq(nn.Module):
         hidden = decoder_init_state   # the initial decoder hidden state is the linearized hidden state of the encoder
         cell = decoder_init_cell   # similar for the cell ^
 
-        for t in range(target_len):
+        for t in range(target_len):  # decoder timesteps
             p_vocab, hidden, cell, attn_weights, pgen = self.decoder(input, hidden, cell, encoder_outputs)
 
             # if no pgen, then our final dist is p_vocab. otherwise, calculate the final distribution
             if self.pgen:   
                 p_vocab_scaled = pgen * p_vocab   # (batch size, vocab size)
                 attn_dist_scaled = (1 - pgen) * attn_weights   # (batch size, seq len)
-
 
                 """
                 For each word in the sequence, we need to know if it is in the vocabulary or not. 
@@ -372,9 +376,9 @@ class BaselineSeq2Seq(nn.Module):
 
                 # Concatenate some zeros to each vocabulary dist, to hold the probabilities for in-article OOV words
                 extended_vocab_size = self.vocab_size + self.max_oov_words 
-                extended_vocab_dist = torch.zeros(batch_size, extended_vocab_size)
-                extended_vocab_dist[:, :self.vocab_size] = p_vocab_scaled  # add the existing distribution to the extended vocab
-
+                extended_vocab_dist = torch.zeros(batch_size, extended_vocab_size)   # one vocab dist per text
+                extended_vocab_dist[:, :self.vocab_size] = p_vocab_scaled  # fill the extended vocab with the existing distribution we have
+                # add the attention distribution to the extended vocab distribution to include input text words.
                 final_vocab_dist = extended_vocab_dist.scatter_add_(dim=1, index=index_tensor, src=attn_dist_scaled)
                 p_vocab = final_vocab_dist
 
