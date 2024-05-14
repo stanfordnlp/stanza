@@ -37,22 +37,19 @@ class SummarizationTrainer():
 
     def __init__(self, model_args: dict, embedding_file: str, lr: float):
         """
-        TODO: finish this documentation
-
         Model arguments:
         {
-        batch size, 
-        encoder hidden dim,
-        encoder num layers,
-        decoder hidden dim,
-        decoder num layers,
-        pgen,
-        coverage,
+        batch_size (int): size of data batches used during training, 
+        enc_hidden_dim (int): Size of encoder hidden state,
+        enc_num_layers (int): Number of layers in the encoder LSTM,
+        dec_hidden_dim (int): Size of decoder hidden state,
+        dec_num_layers (int): Number of layers in the decoder LSTM,
+        pgen (bool): Whether to use the pointergen feature in the model,
+        coverage (bool): Whether to include coverage vectors in the decoder,
         }
 
-        embedding_file:
-
-        lr:
+        embedding_file (str): Path to the word vector pretrain file for embedding layer
+        lr (float): Learning rate during training
         """
         self.model_args = model_args
 
