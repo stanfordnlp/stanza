@@ -19,7 +19,7 @@ from stanza.utils.get_tqdm import get_tqdm
 from typing import List, Tuple, Any, Mapping
 
 torch.set_printoptions(threshold=100, edgeitems=5, linewidth=100)
-logger = logging.getLogger('stanza.summarization')  # TODO: update these with Stanza-specific logging modules
+logger = logging.getLogger('stanza.summarization') 
 logger.propagate = False
 
 # Check if the logger has handlers already configured
@@ -85,10 +85,6 @@ class SummarizationTrainer():
             "pgen": pgen,
             "coverage": coverage
         }
-
-        # log the model args
-        model_args_message = f"""Using the following arguments for model initialization:\n\n Batch size: {batch_size}\nEncoder hidden dim {encoder_hidden_dim}\nEncoder num layers {encoder_num_layers}\nDecoder hidden dim {decoder_hidden_dim}\nDecoder num layers {decoder_num_layers}\nusing pgen: {pgen}\nusing coverage: {coverage}"""
-        logger.info(model_args_message)
 
         # return the model obj
         return BaselineSeq2Seq(parsed_model_args, self.pt_embedding)
