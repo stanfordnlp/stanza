@@ -43,7 +43,7 @@ def read_sentences_file(sentence_file):
             sentences.append(line)
     return sentences
 
-def process_raw_file(text_file, token_file, sentence_file):
+def process_raw_file(text_file, token_file, sentence_file, base_sent_idx=0):
     """
     Process a text file separated into a list of tokens using match_tokens_with_text from the tokenizer
 
@@ -77,7 +77,7 @@ def process_raw_file(text_file, token_file, sentence_file):
     sentences = []
     for sent_idx, sentence in enumerate(sentences_doc.sentences[0].tokens):
         tokens = []
-        tokens.append("# sent_id = %d" % (sent_idx+1))
+        tokens.append("# sent_id = %d" % (base_sent_idx + sent_idx + 1))
         tokens.append("# text = %s" % text[sentence.start_char:sentence.end_char].replace("\n", " "))
         token_idx = 0
         while token_idx + start_token_idx < len(tokens_doc.sentences[0].tokens):
@@ -107,7 +107,7 @@ def extract_sentences(dataset_files):
     sentences = []
     for text_file, token_file, sentence_file in dataset_files:
         print("Extracting sentences from %s and tokens from %s from the text file %s" % (sentence_file, token_file, text_file))
-        sentences.extend(process_raw_file(text_file, token_file, sentence_file))
+        sentences.extend(process_raw_file(text_file, token_file, sentence_file, len(sentences)))
     return sentences
 
 def split_sentences(sentences, train_split=0.8, dev_split=0.1):
