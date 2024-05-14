@@ -1,3 +1,4 @@
+import argparse
 import logging
 import os 
 import torch
@@ -12,6 +13,7 @@ sys.path.append(ROOT)
 from stanza.models.common.utils import default_device
 from stanza.models.common.foundation_cache import load_pretrain
 from stanza.models.summarization.constants import * 
+from stanza.models.summarization.src.model import *
 from stanza.utils.get_tqdm import get_tqdm
 
 from typing import List, Tuple, Any, Mapping
