@@ -102,14 +102,66 @@ class SummarizationTrainer():
         Returns:
             None (model with best validation set performance will be saved to the save file)
         """
+        # TODO: write this out
+        # Load model in
         pass 
 
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    # Model args
+    parser.add_argument("--enc_hidden_dim", type=int, default=DEFAULT_ENCODER_HIDDEN_DIM, help="Size of encoder hidden states")
+    parser.add_argument("--enc_num_layers", type=int, default="Number of layers in the encoder LSTM")
+    parser.add_argument("--dec_hidden_dim", type=int, default=DEFAULT_DECODER_HIDDEN_DIM, help="Size of decoder hidden state vector")
+    parser.add_argument("--dec_num_layers", type=int, default=DEFAULT_DECODER_NUM_LAYERS, help="Number of layers in the decoder LSTM")
+    parser.add_argument("--pgen", action="store_true", dest="pgen", default=False, help="Use pointergen probabilities to point to input text")
+    parser.add_argument("--coverage", action="store_true", dest="coverage", default=False, help="Use coverage vectors during decoding stage")
+    # Training args
+    parser.add_argument("--batch_size", type=int, default=DEFAULT_BATCH_SIZE, help="Batch size for data processing")
+    parser.add_argument("--save_name", type="str", default="", help="Path to destination for final trained model.")
+    parser.add_argument("--eval_file", type="str", default="", help="Path to the validation set file")
+    parser.add_argument("--train_file", type="str", default="", help="Path to the training data file")
+    parser.add_argument("--num_epochs", type=int, default=10, help="Number of training epochs")
+    parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
+    parser.add_argument("--wordvec_pretrain_file", type="str", default="", help="Path to pretrained word embeddings file")
+
+    # TODO set default values that make sense for the path vars
+    return parser
+
 def main():
-    # TODO: parse cli args, build the model args mapping
+    argparser = parse_args()
+    args = argparser.parse_args()
 
+    enc_hidden_dim = args.enc_hidden_dim
+    enc_num_layers = args.enc_num_layers
+    dec_hidden_dim = args.dec_hidden_dim
+    dec_num_layers = args.dec_num_layers
+    pgen = args.pgen
+    coverage = args.pgen
 
-    trainer = SummarizationTrainer()
-    trainer.train()
+    batch_size = args.batch_size
+    save_name = args.save_name
+    eval_file = args.eval_file
+    train_file = args.train_file
+    num_epochs = args.num_epochs
+    lr = args.lr
+    wordvec_pretrain_file = args.wordvec_pretrain_file
+
+    # TODO: Check files for existence and raise Exceptions accordingly
+
+    args = vars(args)
+
+    trainer = SummarizationTrainer(
+        model_args=args,
+        embedding_file=wordvec_pretrain_file,
+        lr=lr
+    )
+    trainer.train(
+        num_epochs=num_epochs,
+        save_name=save_name,
+        train_file=train_file,
+        eval_file=eval_file
+    )
 
 
 if __name__ == "__main__":
