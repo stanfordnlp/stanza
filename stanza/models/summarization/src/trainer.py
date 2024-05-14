@@ -142,8 +142,19 @@ def main():
     lr = args.lr
     wordvec_pretrain_file = args.wordvec_pretrain_file
 
-    # TODO: Check files for existence and raise Exceptions accordingly
-
+    if not os.path.exists(eval_file):
+        no_eval_file_msg = f"Could not find provided eval file: {eval_file}"
+        logger.ERROR(no_eval_file_msg)
+        raise FileNotFoundError(no_eval_file_msg)
+    if not os.path.exists(train_file):
+        no_train_file_msg = f"Could not find provided train file: {train_file}"
+        logger.ERROR(no_train_file_msg)
+        raise FileNotFoundError(no_train_file_msg)
+    if not os.path.exists(wordvec_pretrain_file):
+        no_wordvec_file_msg = f"Could not find provided wordvec pretrain file {wordvec_pretrain_file}"
+        logger.ERROR(no_wordvec_file_msg)
+        raise FileNotFoundError(no_wordvec_file_msg)
+    
     args = vars(args)
 
     trainer = SummarizationTrainer(
