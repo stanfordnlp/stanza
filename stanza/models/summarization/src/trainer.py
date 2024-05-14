@@ -109,7 +109,11 @@ class SummarizationTrainer():
         pass 
 
 def main():
-    logger.info("This is a test")
+    # TODO: parse cli args, build the model args mapping
+
+
+    trainer = SummarizationTrainer()
+    trainer.train()
 
 
 if __name__ == "__main__":
