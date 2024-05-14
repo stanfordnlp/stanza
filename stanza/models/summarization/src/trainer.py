@@ -66,10 +66,10 @@ class SummarizationTrainer():
 
         # parse input for valid args
         batch_size = self.model_args.get("batch_size", DEFAULT_BATCH_SIZE)
-        encoder_hidden_dim = self.model_args.get("encoder_hidden_dim", DEFAULT_ENCODER_HIDDEN_DIM)
-        encoder_num_layers = self.model_args.get("encoder_num_layers", DEFAULT_ENCODER_NUM_LAYERS)
-        decoder_hidden_dim = self.model_args.get("decoder_hidden_dim", DEFAULT_DECODER_HIDDEN_DIM)
-        decoder_num_layers = self.model_args.get("decoder_num_layers", DEFAULT_DECODER_NUM_LAYERS)
+        encoder_hidden_dim = self.model_args.get("enc_hidden_dim", DEFAULT_ENCODER_HIDDEN_DIM)
+        encoder_num_layers = self.model_args.get("enc_num_layers", DEFAULT_ENCODER_NUM_LAYERS)
+        decoder_hidden_dim = self.model_args.get("dec_hidden_dim", DEFAULT_DECODER_HIDDEN_DIM)
+        decoder_num_layers = self.model_args.get("dec_num_layers", DEFAULT_DECODER_NUM_LAYERS)
         pgen = self.model_args.get("pgen", False)
         coverage = self.model_args.get("coverage", False)
 
@@ -115,14 +115,12 @@ def parse_args():
     parser.add_argument("--coverage", action="store_true", dest="coverage", default=False, help="Use coverage vectors during decoding stage")
     # Training args
     parser.add_argument("--batch_size", type=int, default=DEFAULT_BATCH_SIZE, help="Batch size for data processing")
-    parser.add_argument("--save_name", type="str", default="", help="Path to destination for final trained model.")
-    parser.add_argument("--eval_file", type="str", default="", help="Path to the validation set file")
-    parser.add_argument("--train_file", type="str", default="", help="Path to the training data file")
+    parser.add_argument("--save_name", type="str", default=DEFAULT_SAVE_NAME, help="Path to destination for final trained model.")
+    parser.add_argument("--eval_file", type="str", default=DEFAULT_EVAL_FILE_PATH, help="Path to the validation set file")
+    parser.add_argument("--train_file", type="str", default=DEFAULT_TRAIN_FILE_PATH, help="Path to the training data file")
     parser.add_argument("--num_epochs", type=int, default=10, help="Number of training epochs")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
-    parser.add_argument("--wordvec_pretrain_file", type="str", default="", help="Path to pretrained word embeddings file")
-
-    # TODO set default values that make sense for the path vars
+    parser.add_argument("--wordvec_pretrain_file", type="str", default=DEFAULT_WORDVEC_PRETRAIN_FILE, help="Path to pretrained word embeddings file")
     return parser
 
 def main():
