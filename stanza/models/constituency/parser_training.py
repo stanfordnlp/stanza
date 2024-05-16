@@ -599,7 +599,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
                         # TODO: could randomly choose from the legal transitions
                         fake_transition = random.choice(model.transitions)
                         if fake_transition.is_legal(state, model):
-                            _, new_sequence = oracle.fix_error(gold_transition, fake_transition, state.gold_sequence, state.num_transitions)
+                            _, new_sequence = oracle.fix_error(fake_transition, model, state)
                             if new_sequence is not None:
                                 new_batch.append(state._replace(gold_sequence=new_sequence))
                                 update_transitions.append(fake_transition)
@@ -623,7 +623,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
                 update_transitions.append(gold_transition)
                 continue
 
-            repair_type, new_sequence = oracle.fix_error(gold_transition, pred_transition, state.gold_sequence, state.num_transitions)
+            repair_type, new_sequence = oracle.fix_error(pred_transition, model, state)
             # we can only reach here on an error
             assert not repair_type.is_correct
             repairs_used[repair_type] += 1
