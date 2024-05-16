@@ -57,7 +57,7 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
         return self.word_queue[pos+1]
 
     def finished(self, model):
-        return self.empty_word_queue() and self.has_one_constituent() and model.get_top_constituent(self.constituents).label in model.get_root_labels()
+        return self.empty_word_queue() and self.has_one_constituent() and model.get_top_constituent(self.constituents).label in model.root_labels
 
     def get_tree(self, model):
         return model.get_top_constituent(self.constituents)
