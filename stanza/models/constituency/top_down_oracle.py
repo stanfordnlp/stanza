@@ -20,7 +20,7 @@ def find_constituent_end(gold_sequence, cur_index):
     raise AssertionError("Open constituent not closed starting from index %d in sequence %s" % (cur_index, gold_sequence))
 
 
-def fix_shift_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_shift_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Predicted a close when we should have shifted
 
@@ -40,7 +40,7 @@ def fix_shift_close(gold_transition, pred_transition, gold_sequence, gold_index,
     close_index = advance_past_constituents(gold_sequence, gold_index)
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:close_index] + gold_sequence[close_index+1:]
 
-def fix_open_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_open_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Predicted a close when we should have opened a constituent
 
@@ -59,7 +59,7 @@ def fix_open_close(gold_transition, pred_transition, gold_sequence, gold_index, 
     close_index = advance_past_constituents(gold_sequence, gold_index)
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:close_index] + gold_sequence[close_index+1:]
 
-def fix_one_open_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_one_open_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Predicted a shift when we should have opened a constituent
 
@@ -91,7 +91,7 @@ def fix_one_open_shift(gold_transition, pred_transition, gold_sequence, gold_ind
     #print("Input sequence: %s\nIndex %d\nGold %s Pred %s\nUpdated sequence %s" % (gold_sequence, gold_index, gold_transition, pred_transition, updated_sequence))
     return updated_sequence
 
-def fix_multiple_open_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_multiple_open_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Predicted a shift when we should have opened multiple constituents instead
 
@@ -129,7 +129,7 @@ def fix_multiple_open_shift(gold_transition, pred_transition, gold_sequence, gol
     #print("Final updated sequence: %s" % updated_sequence)
     return updated_sequence
 
-def fix_nested_open_constituent(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_nested_open_constituent(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     We were supposed to predict Open(X), then Open(Y), but predicted Open(Y) instead
 
@@ -160,7 +160,7 @@ def fix_nested_open_constituent(gold_transition, pred_transition, gold_sequence,
     updated_sequence = gold_sequence[:gold_index] + gold_sequence[gold_index+1:close_index] + gold_sequence[close_index+1:]
     return updated_sequence
 
-def fix_shift_open_immediate_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_shift_open_immediate_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     We were supposed to Shift, but instead we Opened
 
@@ -184,7 +184,7 @@ def fix_shift_open_immediate_close(gold_transition, pred_transition, gold_sequen
 
     return gold_sequence[:gold_index] + [pred_transition, gold_transition, CloseConstituent()] + gold_sequence[gold_index+1:]
 
-def fix_shift_open_ambiguous_unary(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_shift_open_ambiguous_unary(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     We were supposed to Shift, but instead we Opened
 
@@ -207,7 +207,7 @@ def fix_shift_open_ambiguous_unary(gold_transition, pred_transition, gold_sequen
 
     return gold_sequence[:gold_index] + [pred_transition, gold_transition, CloseConstituent()] + gold_sequence[gold_index+1:]
 
-def fix_shift_open_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_shift_open_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     We were supposed to Shift, but instead we Opened
 
@@ -232,7 +232,7 @@ def fix_shift_open_ambiguous_later(gold_transition, pred_transition, gold_sequen
 
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:outer_close_index] + [CloseConstituent()] + gold_sequence[outer_close_index:]
 
-def fix_close_shift_ambiguous_immediate(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_shift_ambiguous_immediate(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Instead of a Close, we predicted a Shift.  This time, we immediately close no matter what comes after the next Shift.
 
@@ -262,7 +262,7 @@ def fix_close_shift_ambiguous_immediate(gold_transition, pred_transition, gold_s
     return updated_sequence
 
 
-def fix_close_shift_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_shift_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Instead of a Close, we predicted a Shift.  This time, we close at the end of the outer bracket no matter what comes after the next Shift.
 
@@ -295,7 +295,7 @@ def fix_close_shift_ambiguous_later(gold_transition, pred_transition, gold_seque
     return updated_sequence
 
 
-def fix_close_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, count_opens=False):
+def fix_close_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state, count_opens=False):
     """
     We were supposed to Close, but instead did a Shift
 
@@ -354,7 +354,7 @@ def fix_close_shift(gold_transition, pred_transition, gold_sequence, gold_index,
 def fix_close_shift_with_opens(*args, **kwargs):
     return fix_close_shift(*args, **kwargs, count_opens=True)
 
-def fix_close_open_correct_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, check_close=True):
+def fix_close_open_correct_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state, check_close=True):
     """
     We were supposed to Close, but instead did an Open
 
@@ -395,7 +395,7 @@ def fix_close_open_correct_open(gold_transition, pred_transition, gold_sequence,
 def fix_close_open_correct_open_ambiguous_immediate(*args, **kwargs):
     return fix_close_open_correct_open(*args, **kwargs, check_close=False)
 
-def fix_close_open_correct_open_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, check_close=True):
+def fix_close_open_correct_open_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state, check_close=True):
     """
     We were supposed to Close, but instead did an Open in an ambiguous context.  Here we resolve it later in the tree
     """
@@ -413,7 +413,7 @@ def fix_close_open_correct_open_ambiguous_later(gold_transition, pred_transition
     updated_sequence = gold_sequence[:gold_index] + gold_sequence[gold_index+1:close_index] + [gold_transition] + gold_sequence[close_index:]
     return updated_sequence
 
-def fix_open_open_ambiguous_unary(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_open_open_ambiguous_unary(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     If there is an Open/Open error which is not covered by the unambiguous single recall error, we try fixing it as a Unary
     """
@@ -433,7 +433,7 @@ def fix_open_open_ambiguous_unary(gold_transition, pred_transition, gold_sequenc
     updated_sequence = gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:close_index] + [CloseConstituent()] + gold_sequence[close_index:]
     return updated_sequence
 
-def fix_open_open_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_open_open_ambiguous_later(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     If there is an Open/Open error which is not covered by the
     unambiguous single recall error, we try fixing it by putting the
@@ -456,7 +456,7 @@ def fix_open_open_ambiguous_later(gold_transition, pred_transition, gold_sequenc
     updated_sequence = gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:close_index] + [CloseConstituent()] + gold_sequence[close_index:]
     return updated_sequence
 
-def fix_open_open_ambiguous_random(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_open_open_ambiguous_random(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     If there is an Open/Open error which is not covered by the
     unambiguous single recall error, we try fixing it by putting the

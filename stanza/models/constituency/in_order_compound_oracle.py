@@ -3,7 +3,7 @@ from enum import Enum
 from stanza.models.constituency.dynamic_oracle import advance_past_constituents, find_in_order_constituent_end, find_previous_open, DynamicOracle
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent, CompoundUnary, Finalize
 
-def fix_missing_unary_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_missing_unary_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     A CompoundUnary transition was missed after a Shift, but the sequence was continued correctly otherwise
     """
@@ -19,7 +19,7 @@ def fix_missing_unary_error(gold_transition, pred_transition, gold_sequence, gol
 
     return gold_sequence[:gold_index] + gold_sequence[gold_index+1:]
 
-def fix_wrong_unary_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_wrong_unary_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, CompoundUnary):
         return None
 
@@ -30,7 +30,7 @@ def fix_wrong_unary_error(gold_transition, pred_transition, gold_sequence, gold_
 
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index+1:]
 
-def fix_spurious_unary_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_spurious_unary_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if isinstance(gold_transition, CompoundUnary):
         return None
 
@@ -39,7 +39,7 @@ def fix_spurious_unary_error(gold_transition, pred_transition, gold_sequence, go
 
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:]
 
-def fix_open_shift_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_open_shift_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Fix a missed Open constituent where we predicted a Shift and the next transition was a Shift
 
@@ -60,7 +60,7 @@ def fix_open_shift_error(gold_transition, pred_transition, gold_sequence, gold_i
     assert close_index is not None
     return gold_sequence[:gold_index] + gold_sequence[gold_index+1:close_index] + gold_sequence[close_index+1:]
 
-def fix_open_open_two_subtrees_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_open_open_two_subtrees_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if gold_transition == pred_transition:
         return None
 
@@ -108,13 +108,13 @@ def fix_open_open_error(gold_transition, pred_transition, gold_sequence, gold_in
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index+1:block_end] + [CloseConstituent(), gold_transition] + gold_sequence[block_end:]
 
 
-def fix_open_open_three_subtrees_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_open_open_three_subtrees_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_open_open_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, exactly_three=True)
 
-def fix_open_open_many_subtrees_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_open_open_many_subtrees_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_open_open_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, exactly_three=False)
 
-def fix_open_close_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_open_close_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Find the closed bracket, reopen it
 
@@ -139,7 +139,7 @@ def fix_open_close_error(gold_transition, pred_transition, gold_sequence, gold_i
 
     return gold_sequence[:gold_index] + [pred_transition, gold_sequence[open_idx]] + gold_sequence[gold_index+1:close_idx] + gold_sequence[close_idx+1:]
 
-def fix_shift_close_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_shift_close_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Find the closed bracket, reopen it
     """
@@ -158,7 +158,7 @@ def fix_shift_close_error(gold_transition, pred_transition, gold_sequence, gold_
 
     return gold_sequence[:gold_index] + [pred_transition, gold_sequence[open_idx]] + gold_sequence[gold_index:]
 
-def fix_shift_open_unambiguous_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_shift_open_unambiguous_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, Shift):
         return None
 
@@ -175,7 +175,7 @@ def fix_shift_open_unambiguous_error(gold_transition, pred_transition, gold_sequ
 
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:bracket_end] + [CloseConstituent()] + gold_sequence[bracket_end:]
 
-def fix_close_shift_unambiguous_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_shift_unambiguous_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, CloseConstituent):
         return None
 

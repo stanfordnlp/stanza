@@ -51,7 +51,7 @@ def get_repairs(gold_sequence, wrong_transition, repair_fn):
     Returns a list of possible repairs, one for each position in the sequence
     Repairs are tuples, (idx, seq)
     """
-    repairs = [(idx, repair_fn(gold_transition, wrong_transition, gold_sequence, idx, ROOT_LABELS))
+    repairs = [(idx, repair_fn(gold_transition, wrong_transition, gold_sequence, idx, ROOT_LABELS, None, None))
                for idx, gold_transition in enumerate(gold_sequence)]
     repairs = [x for x in repairs if x[1] is not None]
     return repairs

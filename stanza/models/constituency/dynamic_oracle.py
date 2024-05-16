@@ -72,7 +72,7 @@ class DynamicOracle():
         if deactivated_levels:
             self.deactivated_levels = set([repair_types[x.upper()] for x in deactivated_levels.split(",")])
 
-    def fix_error(self, gold_transition, pred_transition, gold_sequence, gold_index):
+    def fix_error(self, pred_transition, model, state):
         """
         Return which error has been made, if any, along with an updated transition list
 
@@ -80,8 +80,7 @@ class DynamicOracle():
         that there will always be a CloseConstituent sometime after an
         OpenConstituent, for example
         """
-        assert gold_sequence[gold_index] == gold_transition
-
+        gold_transition = state.gold_sequence[state.num_transitions]
         if gold_transition == pred_transition:
             return self.repair_types.CORRECT, None
 
@@ -92,7 +91,7 @@ class DynamicOracle():
                 continue
             if repair_type in self.deactivated_levels:
                 continue
-            repair = repair_type.fn(gold_transition, pred_transition, gold_sequence, gold_index, self.root_labels)
+            repair = repair_type.fn(gold_transition, pred_transition, state.gold_sequence, state.num_transitions, self.root_labels, model, state)
             if repair is None:
                 continue
 

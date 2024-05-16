@@ -3,7 +3,7 @@ from enum import Enum
 from stanza.models.constituency.dynamic_oracle import advance_past_constituents, find_in_order_constituent_end, find_previous_open, DynamicOracle
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent
 
-def fix_wrong_open_root_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_wrong_open_root_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     If there is an open/open error specifically at the ROOT, close the wrong open and try again
     """
@@ -15,7 +15,7 @@ def fix_wrong_open_root_error(gold_transition, pred_transition, gold_sequence, g
 
     return None
 
-def fix_wrong_open_unary_chain(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_wrong_open_unary_chain(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Fix a wrong open/open in a unary chain by removing the skipped unary transitions
 
@@ -60,10 +60,10 @@ def fix_wrong_open_subtrees(gold_transition, pred_transition, gold_sequence, gol
 
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index+1:block_end] + [CloseConstituent(), gold_transition] + gold_sequence[block_end:]
 
-def fix_wrong_open_two_subtrees(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_wrong_open_two_subtrees(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_wrong_open_subtrees(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, more_than_two=False)
 
-def fix_wrong_open_multiple_subtrees(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_wrong_open_multiple_subtrees(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_wrong_open_subtrees(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, more_than_two=True)
 
 def advance_past_unaries(gold_sequence, cur_index):
@@ -71,7 +71,7 @@ def advance_past_unaries(gold_sequence, cur_index):
         cur_index += 2
     return cur_index
 
-def fix_wrong_open_stuff_unary(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_wrong_open_stuff_unary(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Fix a wrong open/open when there is an intervening constituent and then the guessed NT
 
@@ -114,7 +114,7 @@ def fix_wrong_open_stuff_unary(gold_transition, pred_transition, gold_sequence, 
     # oh well, none of this worked
     return None
 
-def fix_wrong_open_general(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_wrong_open_general(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Fix a general wrong open/open transition by accepting the open and continuing
 
@@ -136,7 +136,7 @@ def fix_wrong_open_general(gold_transition, pred_transition, gold_sequence, gold
 
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index+1:]
 
-def fix_missed_unary(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_missed_unary(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Fix a missed unary which is followed by an otherwise correct transition
 
@@ -151,7 +151,7 @@ def fix_missed_unary(gold_transition, pred_transition, gold_sequence, gold_index
         return gold_sequence[:gold_index] + gold_sequence[cur_index:]
     return None
 
-def fix_open_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_open_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Fix an Open replaced with a Shift
 
@@ -208,7 +208,7 @@ def fix_open_shift(gold_transition, pred_transition, gold_sequence, gold_index, 
     repair = gold_sequence[:gold_index] + gold_sequence[stuff_start:stuff_end] + gold_sequence[cur_index:]
     return repair
 
-def fix_open_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_open_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Fix an Open replaced with a Close
 
@@ -274,7 +274,7 @@ def fix_open_close(gold_transition, pred_transition, gold_sequence, gold_index, 
     repair = gold_sequence[:gold_index] + [pred_transition, prev_open] + gold_sequence[stuff_start:stuff_end] + gold_sequence[cur_index:]
     return repair
 
-def fix_shift_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_shift_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     This fixes Shift replaced with a Close transition.
 
@@ -344,16 +344,16 @@ def fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence
 
     return gold_sequence[:gold_index] + gold_sequence[open_index+1:end_index] + gold_sequence[gold_index:open_index+1] + gold_sequence[end_index:]
 
-def fix_close_shift_unambiguous_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_shift_unambiguous_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=False, late=False)
 
-def fix_close_shift_ambiguous_bracket_early(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_shift_ambiguous_bracket_early(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=True, late=False)
 
-def fix_close_shift_ambiguous_bracket_late(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_shift_ambiguous_bracket_late(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=True, late=True)
 
-def fix_close_shift_nested(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_shift_nested(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Fix a Close X..Open X..Shift pattern where both the Close and Open were skipped.
 
@@ -430,16 +430,16 @@ def fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_
 
     return gold_sequence[:gold_index] + gold_sequence[start_index:end_index] + [CloseConstituent()] + gold_sequence[end_index:]
 
-def fix_close_shift_shift_unambiguous(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_shift_shift_unambiguous(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=False, late=False)
 
-def fix_close_shift_shift_ambiguous_early(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_shift_shift_ambiguous_early(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=True, late=False)
 
-def fix_close_shift_shift_ambiguous_late(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def fix_close_shift_shift_ambiguous_late(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=True, late=True)
 
-def ambiguous_shift_open_unary_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def ambiguous_shift_open_unary_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, Shift):
         return None
     if not isinstance(pred_transition, OpenConstituent):
@@ -447,7 +447,7 @@ def ambiguous_shift_open_unary_close(gold_transition, pred_transition, gold_sequ
 
     return gold_sequence[:gold_index] + [pred_transition, CloseConstituent()] + gold_sequence[gold_index:]
 
-def ambiguous_shift_open_early_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def ambiguous_shift_open_early_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, Shift):
         return None
     if not isinstance(pred_transition, OpenConstituent):
@@ -458,7 +458,7 @@ def ambiguous_shift_open_early_close(gold_transition, pred_transition, gold_sequ
     end_index = find_in_order_constituent_end(gold_sequence, gold_index)
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:end_index] + [CloseConstituent()] + gold_sequence[end_index:]
 
-def ambiguous_shift_open_late_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def ambiguous_shift_open_late_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, Shift):
         return None
     if not isinstance(pred_transition, OpenConstituent):
@@ -468,7 +468,7 @@ def ambiguous_shift_open_late_close(gold_transition, pred_transition, gold_seque
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:end_index] + [CloseConstituent()] + gold_sequence[end_index:]
 
 
-def report_close_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def report_close_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, CloseConstituent):
         return None
     if not isinstance(pred_transition, Shift):
@@ -476,7 +476,7 @@ def report_close_shift(gold_transition, pred_transition, gold_sequence, gold_ind
 
     return RepairType.OTHER_CLOSE_SHIFT, None
 
-def report_close_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def report_close_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, CloseConstituent):
         return None
     if not isinstance(pred_transition, OpenConstituent):
@@ -484,7 +484,7 @@ def report_close_open(gold_transition, pred_transition, gold_sequence, gold_inde
 
     return RepairType.OTHER_CLOSE_OPEN, None
 
-def report_open_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def report_open_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, OpenConstituent):
         return None
     if not isinstance(pred_transition, OpenConstituent):
@@ -492,7 +492,7 @@ def report_open_open(gold_transition, pred_transition, gold_sequence, gold_index
 
     return RepairType.OTHER_OPEN_OPEN, None
 
-def report_open_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def report_open_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, OpenConstituent):
         return None
     if not isinstance(pred_transition, Shift):
@@ -500,7 +500,7 @@ def report_open_shift(gold_transition, pred_transition, gold_sequence, gold_inde
 
     return RepairType.OTHER_OPEN_SHIFT, None
 
-def report_open_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def report_open_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, OpenConstituent):
         return None
     if not isinstance(pred_transition, CloseConstituent):
@@ -508,7 +508,7 @@ def report_open_close(gold_transition, pred_transition, gold_sequence, gold_inde
 
     return RepairType.OTHER_OPEN_CLOSE, None
 
-def report_shift_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels):
+def report_shift_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, Shift):
         return None
     if not isinstance(pred_transition, OpenConstituent):

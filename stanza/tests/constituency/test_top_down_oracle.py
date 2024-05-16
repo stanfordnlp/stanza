@@ -1,5 +1,6 @@
 import pytest
 
+from stanza.models.constituency.base_model import SimpleModel
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent, TransitionScheme
 from stanza.models.constituency.top_down_oracle import *
 from stanza.models.constituency.transition_sequence import build_sequence
@@ -23,7 +24,16 @@ OPEN_SHIFT_PROBLEM_TREE = """
 ROOT_LABELS = ["ROOT"]
 
 def get_single_repair(gold_sequence, wrong_transition, repair_fn, idx, *args, **kwargs):
-    return repair_fn(gold_sequence[idx], wrong_transition, gold_sequence, idx, ROOT_LABELS, *args, **kwargs)
+    return repair_fn(gold_sequence[idx], wrong_transition, gold_sequence, idx, ROOT_LABELS, None, None, *args, **kwargs)
+
+def build_state(model, tree, num_transitions):
+    transitions = build_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN)
+    states = model.initial_state_from_gold_trees([tree], [transitions])
+    for idx, t in enumerate(transitions[:num_transitions]):
+        assert t.is_legal(states[0], model), "Transition {} not legal at step {} in sequence {}".format(t, idx, sequence)
+        states = model.bulk_apply(states, [t])
+    state = states[0]
+    return state
 
 def test_fix_open_shift():
     trees = read_trees(OPEN_SHIFT_EXAMPLE_TREE)
@@ -169,22 +179,27 @@ def test_fix_close_shift_ambiguous_later():
     assert new_sequence == expected_update
 
 def test_oracle_with_optional_level():
+    tree = read_trees(CLOSE_SHIFT_AMBIGUOUS_TREE)[0]
     gold_sequence = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), CloseConstituent(), Shift(), Shift(), CloseConstituent(), CloseConstituent()]
     expected_update = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), Shift(), CloseConstituent(), Shift(), CloseConstituent(), CloseConstituent()]
 
+    transitions = build_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN)
+    assert transitions == gold_sequence
+
     oracle = TopDownOracle(ROOT_LABELS, 1, "", "")
-    fix, new_sequence = oracle.fix_error(gold_transition=gold_sequence[7],
-                                         pred_transition=gold_sequence[8],
-                                         gold_sequence=gold_sequence,
-                                         gold_index=7)
+
+    model = SimpleModel(transition_scheme=TransitionScheme.TOP_DOWN_UNARY, root_labels=ROOT_LABELS)
+    state = build_state(model, tree, 7)
+    fix, new_sequence = oracle.fix_error(pred_transition=gold_sequence[8],
+                                         model=model,
+                                         state=state)
     assert fix is RepairType.UNKNOWN
     assert new_sequence is None
 
     oracle = TopDownOracle(ROOT_LABELS, 1, "CLOSE_SHIFT_AMBIGUOUS_IMMEDIATE_ERROR", "")
-    fix, new_sequence = oracle.fix_error(gold_transition=gold_sequence[7],
-                                         pred_transition=gold_sequence[8],
-                                         gold_sequence=gold_sequence,
-                                         gold_index=7)
+    fix, new_sequence = oracle.fix_error(pred_transition=gold_sequence[8],
+                                         model=model,
+                                         state=state)
     assert fix is RepairType.CLOSE_SHIFT_AMBIGUOUS_IMMEDIATE_ERROR
     assert new_sequence == expected_update
 
