@@ -431,7 +431,8 @@ class LSTMModel(BaseModel, nn.Module):
                                                                    self.args['lattn_partitioned'])
                 self.word_input_size = self.word_input_size + self.args['lattn_d_proj']*self.args['lattn_d_l']
 
-        self.rel_attn = None
+        self.rel_attn_forward = None
+        self.rel_attn_reverse = None
         if self.args.get('use_rattn', False):
             if self.word_input_size % self.args['rattn_heads'] != 0:
                 for rattn_heads in range(self.args['rattn_heads'] // 2):
@@ -446,8 +447,15 @@ class LSTMModel(BaseModel, nn.Module):
                 logger.warning("rattn_heads of %d does not work, but found a similar value of %d which does work", self.args['rattn_heads'], new_rattn_heads)
                 self.args['rattn_heads'] = new_rattn_heads
 
-            self.rel_attn_forward = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'])
-            self.rel_attn_reverse = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], reverse=True)
+            if self.args['rattn_forward']:
+                self.rel_attn_forward = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'])
+            else:
+                self.rel_attn_forward = nn.Identity()
+
+            if self.args['rattn_reverse']:
+                self.rel_attn_reverse = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], reverse=True)
+            else:
+                self.rel_attn_reverse = nn.Identity()
 
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_lstm_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
 
@@ -804,7 +812,7 @@ class LSTMModel(BaseModel, nn.Module):
                 labeled_representations = self.label_attention_module(partitioned_embeddings, tagged_word_lists)
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, labeled_representations)]
 
-        if self.rel_attn is not None:
+        if self.rel_attn_forward is not None or self.rel_attn_reverse is not None:
             all_word_inputs = [x +
                                self.rel_attn_forward(x.unsqueeze(0)).squeeze(0) +
                                self.rel_attn_reverse(x.unsqueeze(0)).squeeze(0)
