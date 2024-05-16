@@ -628,6 +628,20 @@ class RepairType(Enum):
           unambiguous c-s/shift              0.9155   0.9146
           ambiguous c-s/shift closed early   0.9145   0.9153
           ambiguous c-s/shift closed late    0.9138   0.9140
+
+    --------------------------------------------------------
+
+    Running VI experiments to verify some of the above findings
+    bert + peft, only 200 epochs
+
+    Comparing wrong_open fixes
+          w/o ambiguous open                 0.8272   0.7670
+          w/ ambiguous open_three_subtrees   0.8282   0.7668
+
+    Testing three possible repairs for close-shift/shift
+          unambiguous c-s/shift              0.8285   0.7683
+          ambiguous c-s/shift closed early   0.8276   0.7678
+          ambiguous c-s/shift closed late    0.8278   0.7668
     """
     def __new__(cls, fn, correct=False, debug=False):
         """
