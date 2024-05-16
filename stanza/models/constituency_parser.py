@@ -725,6 +725,15 @@ def build_model_filename(args):
     embedding = utils.embedding_name(args)
     maybe_finetune = "finetuned" if args['bert_finetune'] or args['stage1_bert_finetune'] else ""
     transformer_finetune_begin = "%d" % args['bert_finetune_begin_epoch'] if args['bert_finetune_begin_epoch'] is not None else ""
+
+    rattn = ""
+    if args['use_rattn']:
+        if args['rattn_forward']: rattn = rattn + "F"
+        if args['rattn_reverse']: rattn = rattn + "R"
+        if rattn:
+            rattn += "h%02d" % args['rattn_heads']
+            rattn += "w%02d" % args['rattn_window']
+
     model_save_file = args['save_name'].format(shorthand=args['shorthand'],
                                                oracle_level=args['oracle_level'],
                                                embedding=embedding,
@@ -733,6 +742,7 @@ def build_model_filename(args):
                                                transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
                                                tscheme=args['transition_scheme'].short_name,
                                                trans_layers=args['bert_hidden_layers'],
+                                               rattn=rattn,
                                                seed=args['seed'])
     model_save_file = re.sub("_+", "_", model_save_file)
     logger.info("Expanded save_name: %s", model_save_file)
