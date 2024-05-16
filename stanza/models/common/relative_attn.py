@@ -3,19 +3,28 @@ from torch import nn
 import torch.nn.functional as F
 
 class RelativeAttention(nn.Module):
-    def __init__(self, d_model, num_heads, window=8, dropout=0.2, reverse=False):
+    def __init__(self, d_model, num_heads, window=8, dropout=0.2, reverse=False, d_output=None, fudge_output=False):
         super().__init__()
-        d_head, remainder = divmod(d_model, num_heads)
+        if d_output is None:
+            d_output = d_model
+
+        d_head, remainder = divmod(d_output, num_heads)
         if remainder:
-            raise ValueError("incompatible `d_model` and `num_heads`")
+            if fudge_output:
+                d_head = d_head + 1
+                logger.debug("Relative attn: %d %% %d != 0, updating d_output to %d", d_output, num_heads, num_heads * d_head)
+                d_output = num_heads * d_head
+            else:
+                raise ValueError("incompatible `d_model` and `num_heads`")
         self.window = window
         self.d_model = d_model
         self.d_head = d_head
         self.num_heads = num_heads
-        self.key = nn.Linear(d_model, d_model)
+        self.d_output = d_output
+        self.key = nn.Linear(d_model, d_output)
         # the bias for query all gets trained to 0 anyway
-        self.query = nn.Linear(d_model, d_model, bias=False)
-        self.value = nn.Linear(d_model, d_model, bias=False)
+        self.query = nn.Linear(d_model, d_output, bias=False)
+        self.value = nn.Linear(d_model, d_output, bias=False)
         # initializing value with eye seems to hurt!
         #nn.init.eye_(self.value.weight)
 
@@ -80,8 +89,8 @@ class RelativeAttention(nn.Module):
             v = v[:, :, :, :orig_seq_len, :orig_seq_len]
         # result.shape = (batch_size, num_heads, d_head, orig_seq_len)
         result = torch.einsum('bndws,bndws->bnds', qk, v)
-        # batch_size, orig_seq_len, d_model
-        result = result.reshape(batch_size, self.d_model, orig_seq_len).transpose(1, 2)
+        # batch_size, orig_seq_len, d_output
+        result = result.reshape(batch_size, self.d_output, orig_seq_len).transpose(1, 2)
 
         if self.reverse:
             result = torch.flip(result, (1,))
