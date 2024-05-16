@@ -52,7 +52,7 @@ class BaseModel(ABC):
         self._transition_scheme = transition_scheme
         self._unary_limit = unary_limit
         self._reverse_sentence = reverse_sentence
-        self.root_labels = sorted(list(root_labels))
+        self._root_labels = sorted(list(root_labels))
 
     @abstractmethod
     def initial_word_queues(self, tagged_word_lists):
@@ -130,13 +130,14 @@ class BaseModel(ABC):
         For example, a model might want to remove transition embeddings before returning the transition
         """
 
-    def get_root_labels(self):
+    @property
+    def root_labels(self):
         """
         Return ROOT labels for this model.  Probably ROOT, TOP, or both
 
         (Danish uses 's', though)
         """
-        return self.root_labels
+        return self._root_labels
 
     def unary_limit(self):
         """
