@@ -219,11 +219,11 @@ class BaseModel(ABC):
                              for words in word_lists]
         return self.initial_state_from_preterminals(preterminal_lists, gold_trees=None, gold_sequences=None)
 
-    def initial_state_from_gold_trees(self, trees):
+    def initial_state_from_gold_trees(self, trees, gold_sequences=None):
         preterminal_lists = [[Tree(pt.label, Tree(pt.children[0].label))
                               for pt in tree.yield_preterminals()]
                              for tree in trees]
-        return self.initial_state_from_preterminals(preterminal_lists, gold_trees=trees, gold_sequences=None)
+        return self.initial_state_from_preterminals(preterminal_lists, gold_trees=trees, gold_sequences=gold_sequences)
 
     def build_batch_from_trees(self, batch_size, data_iterator):
         """
