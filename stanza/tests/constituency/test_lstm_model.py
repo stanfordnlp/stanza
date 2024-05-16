@@ -418,6 +418,13 @@ def test_relative_attention(pretrain_file):
     model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10')
     run_forward_checks(model)
 
+def test_relative_attention_directional(pretrain_file):
+    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--no_rattn_forward')
+    run_forward_checks(model)
+
+    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--no_rattn_reverse')
+    run_forward_checks(model)
+
 def test_lstm_tree_forward(pretrain_file):
     """
     Test the LSTM_TREE forward pass
