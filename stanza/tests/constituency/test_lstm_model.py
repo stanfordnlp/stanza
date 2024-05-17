@@ -418,6 +418,10 @@ def test_relative_attention(pretrain_file):
     model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10')
     run_forward_checks(model)
 
+def test_relative_attention_cat(pretrain_file):
+    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--rattn_cat')
+    run_forward_checks(model)
+
 def test_relative_attention_directional(pretrain_file):
     model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--no_rattn_forward')
     run_forward_checks(model)
