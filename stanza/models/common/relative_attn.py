@@ -1,6 +1,10 @@
+import logging
+
 import torch
 from torch import nn
 import torch.nn.functional as F
+
+logger = logging.getLogger('stanza')
 
 class RelativeAttention(nn.Module):
     def __init__(self, d_model, num_heads, window=8, dropout=0.2, reverse=False, d_output=None, fudge_output=False):

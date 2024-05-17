@@ -434,7 +434,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.rel_attn_forward = None
         self.rel_attn_reverse = None
         if self.args.get('use_rattn', False):
-            if self.word_input_size % self.args['rattn_heads'] != 0:
+            if not self.args['rattn_cat'] and self.word_input_size % self.args['rattn_heads'] != 0:
                 for rattn_heads in range(self.args['rattn_heads'] // 2):
                     if self.word_input_size % (self.args['rattn_heads'] + rattn_heads) == 0:
                         new_rattn_heads = self.args['rattn_heads'] + rattn_heads
@@ -448,14 +448,22 @@ class LSTMModel(BaseModel, nn.Module):
                 self.args['rattn_heads'] = new_rattn_heads
 
             if self.args['rattn_forward']:
-                self.rel_attn_forward = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'])
-            else:
-                self.rel_attn_forward = nn.Identity()
+                if self.args['rattn_cat']:
+                    self.rel_attn_forward = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], d_output=self.args['rattn_dim'], fudge_output=True)
+                else:
+                    self.rel_attn_forward = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'])
 
             if self.args['rattn_reverse']:
-                self.rel_attn_reverse = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], reverse=True)
-            else:
-                self.rel_attn_reverse = nn.Identity()
+                if self.args['rattn_cat']:
+                    self.rel_attn_reverse = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], reverse=True, d_output=self.args['rattn_dim'], fudge_output=True)
+                else:
+                    self.rel_attn_reverse = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], reverse=True)
+
+            if self.args['rattn_forward'] and self.args['rattn_cat']:
+                self.word_input_size += self.rel_attn_forward.d_output
+
+            if self.args['rattn_reverse'] and self.args['rattn_cat']:
+                self.word_input_size += self.rel_attn_reverse.d_output
 
         self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_lstm_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
 
@@ -813,10 +821,18 @@ class LSTMModel(BaseModel, nn.Module):
             all_word_inputs = [torch.cat((x, y[:x.shape[0], :]), axis=1) for x, y in zip(all_word_inputs, labeled_representations)]
 
         if self.rel_attn_forward is not None or self.rel_attn_reverse is not None:
-            all_word_inputs = [x +
-                               self.rel_attn_forward(x.unsqueeze(0)).squeeze(0) +
-                               self.rel_attn_reverse(x.unsqueeze(0)).squeeze(0)
-                               for x in all_word_inputs]
+            rattn_inputs = [[x] for x in all_word_inputs]
+
+            if self.rel_attn_forward is not None:
+                rattn_inputs = [x + [self.rel_attn_forward(x[0].unsqueeze(0)).squeeze(0)] for x in rattn_inputs]
+            if self.rel_attn_reverse is not None:
+                rattn_inputs = [x + [self.rel_attn_reverse(x[0].unsqueeze(0)).squeeze(0)] for x in rattn_inputs]
+
+            if self.args['rattn_cat']:
+                all_word_inputs = [torch.cat(x, axis=1) for x in rattn_inputs]
+            else:
+                rattn_inputs = [torch.stack(x, axis=2) for x in rattn_inputs]
+                all_word_inputs = [torch.sum(x, axis=2) for x in rattn_inputs]
 
         all_word_inputs = [self.word_dropout(word_inputs) for word_inputs in all_word_inputs]
         packed_word_input = torch.nn.utils.rnn.pack_sequence(all_word_inputs, enforce_sorted=False)

@@ -710,6 +710,8 @@ def build_argparse():
     parser.add_argument('--rattn_heads', default=12, type=int, help='Number of heads to use for context in the local attention')
     parser.add_argument('--no_rattn_forward', default=True, action='store_false', dest='rattn_forward', help="Use or don't use the forward relative attention")
     parser.add_argument('--no_rattn_reverse', default=True, action='store_false', dest='rattn_reverse', help="Use or don't use the reverse relative attention")
+    parser.add_argument('--rattn_cat', default=False, action='store_true', help='Stack the rattn layers instead of adding them')
+    parser.add_argument('--rattn_dim', default=200, type=int, help='Dimension of the rattn output when cat')
 
     parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
     parser.add_argument('--log_shapes', default=False, action='store_true', help='Log the parameters shapes at the beginning')
@@ -731,6 +733,8 @@ def build_model_filename(args):
         if args['rattn_forward']: rattn = rattn + "F"
         if args['rattn_reverse']: rattn = rattn + "R"
         if rattn:
+            if args['rattn_cat']:
+                rattn += "c"
             rattn += "h%02d" % args['rattn_heads']
             rattn += "w%02d" % args['rattn_window']
 
