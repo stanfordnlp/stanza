@@ -22,6 +22,9 @@ OPEN_SHIFT_PROBLEM_TREE = """
 
 ROOT_LABELS = ["ROOT"]
 
+def get_single_repair(gold_sequence, wrong_transition, repair_fn, idx):
+    return repair_fn(gold_sequence[idx], wrong_transition, gold_sequence, idx, ROOT_LABELS)
+
 def test_fix_open_shift():
     trees = read_trees(OPEN_SHIFT_EXAMPLE_TREE)
     assert len(trees) == 1
@@ -34,10 +37,10 @@ def test_fix_open_shift():
 
     assert transitions == EXPECTED_ORIG
 
-    new_transitions = fix_one_open_shift(OpenConstituent('NP'), Shift(), transitions, 2, ROOT_LABELS)
+    new_transitions = get_single_repair(transitions, Shift(), fix_one_open_shift, 2)
     assert new_transitions == EXPECTED_FIX_EARLY
 
-    new_transitions = fix_one_open_shift(OpenConstituent('NP'), Shift(), transitions, 8, ROOT_LABELS)
+    new_transitions = get_single_repair(transitions, Shift(), fix_one_open_shift, 8)
     assert new_transitions == EXPECTED_FIX_LATE
 
 def test_fix_open_shift_observed_error():
@@ -51,10 +54,10 @@ def test_fix_open_shift_observed_error():
     tree = trees[0]
 
     transitions = build_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN)
-    new_transitions = fix_one_open_shift(OpenConstituent('NP'), Shift(), transitions, 2, ROOT_LABELS)
+    new_transitions = get_single_repair(transitions, Shift(), fix_one_open_shift, 2)
     assert new_transitions is None
 
-    new_transitions = fix_multiple_open_shift(OpenConstituent('NP'), Shift(), transitions, 2, ROOT_LABELS)
+    new_transitions = get_single_repair(transitions, Shift(), fix_multiple_open_shift, 2)
 
     # Can break the expected transitions down like this:
     # [OpenConstituent(('ROOT',)), OpenConstituent(('S',)),
@@ -93,7 +96,7 @@ def test_open_open_ambiguous_unary_fix():
     EXPECTED_ORIG = [OpenConstituent('ROOT'), OpenConstituent('S'), OpenConstituent('NP'), Shift(), Shift(), CloseConstituent(), OpenConstituent('VP'), Shift(), OpenConstituent('NP'), Shift(), Shift(), CloseConstituent(), CloseConstituent(), CloseConstituent(), CloseConstituent()]
     EXPECTED_FIX = [OpenConstituent('ROOT'), OpenConstituent('S'), OpenConstituent('VP'), OpenConstituent('NP'), Shift(), Shift(), CloseConstituent(), CloseConstituent(), OpenConstituent('VP'), Shift(), OpenConstituent('NP'), Shift(), Shift(), CloseConstituent(), CloseConstituent(), CloseConstituent(), CloseConstituent()]
     assert transitions == EXPECTED_ORIG
-    new_transitions = fix_open_open_ambiguous_unary(OpenConstituent('NP'), OpenConstituent('VP'), transitions, 2, ROOT_LABELS)
+    new_transitions = get_single_repair(transitions, OpenConstituent('VP'), fix_open_open_ambiguous_unary, 2)
     assert new_transitions == EXPECTED_FIX
 
 
@@ -106,7 +109,7 @@ def test_open_open_ambiguous_later_fix():
     EXPECTED_ORIG = [OpenConstituent('ROOT'), OpenConstituent('S'), OpenConstituent('NP'), Shift(), Shift(), CloseConstituent(), OpenConstituent('VP'), Shift(), OpenConstituent('NP'), Shift(), Shift(), CloseConstituent(), CloseConstituent(), CloseConstituent(), CloseConstituent()]
     EXPECTED_FIX = [OpenConstituent('ROOT'), OpenConstituent('S'), OpenConstituent('VP'), OpenConstituent('NP'), Shift(), Shift(), CloseConstituent(), OpenConstituent('VP'), Shift(), OpenConstituent('NP'), Shift(), Shift(), CloseConstituent(), CloseConstituent(), CloseConstituent(), CloseConstituent(), CloseConstituent()]
     assert transitions == EXPECTED_ORIG
-    new_transitions = fix_open_open_ambiguous_later(OpenConstituent('NP'), OpenConstituent('VP'), transitions, 2, ROOT_LABELS)
+    new_transitions = get_single_repair(transitions, OpenConstituent('VP'), fix_open_open_ambiguous_later, 2)
     assert new_transitions == EXPECTED_FIX
 
 
@@ -146,11 +149,7 @@ def test_fix_close_shift_ambiguous_immediate():
     tree = trees[0]
 
     transitions = build_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN)
-    new_sequence = fix_close_shift_ambiguous_later(gold_transition=transitions[7],
-                                                   pred_transition=transitions[8],
-                                                   gold_sequence=transitions,
-                                                   gold_index=7,
-                                                   root_labels=ROOT_LABELS)
+    new_sequence = get_single_repair(transitions, transitions[8], fix_close_shift_ambiguous_later, 7)
     expected_original = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), CloseConstituent(), Shift(), Shift(), CloseConstituent(), CloseConstituent()]
     expected_update = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), Shift(), Shift(), CloseConstituent(), CloseConstituent(), CloseConstituent()]
     assert transitions == expected_original
@@ -163,11 +162,7 @@ def test_fix_close_shift_ambiguous_later():
     tree = trees[0]
 
     transitions = build_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN)
-    new_sequence = fix_close_shift_ambiguous_immediate(gold_transition=transitions[7],
-                                                       pred_transition=transitions[8],
-                                                       gold_sequence=transitions,
-                                                       gold_index=7,
-                                                       root_labels=ROOT_LABELS)
+    new_sequence = get_single_repair(transitions, transitions[8], fix_close_shift_ambiguous_immediate, 7)
     expected_original = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), CloseConstituent(), Shift(), Shift(), CloseConstituent(), CloseConstituent()]
     expected_update = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), Shift(), CloseConstituent(), Shift(), CloseConstituent(), CloseConstituent()]
     assert transitions == expected_original
@@ -204,11 +199,7 @@ def test_fix_close_shift():
 
     transitions = build_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN)
 
-    new_sequence = fix_close_shift(gold_transition=transitions[7],
-                                   pred_transition=transitions[8],
-                                   gold_sequence=transitions,
-                                   gold_index=7,
-                                   root_labels=ROOT_LABELS)
+    new_sequence = get_single_repair(transitions, transitions[8], fix_close_shift, 7)
 
     expected_original = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), CloseConstituent(), Shift(), CloseConstituent(), CloseConstituent()]
     expected_update   = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), Shift(), CloseConstituent(), CloseConstituent(), CloseConstituent()]
@@ -221,11 +212,7 @@ def test_fix_close_shift():
     tree = trees[0]
 
     transitions = build_sequence(tree, transition_scheme=TransitionScheme.TOP_DOWN)
-    new_sequence = fix_close_shift(gold_transition=transitions[7],
-                                   pred_transition=transitions[8],
-                                   gold_sequence=transitions,
-                                   gold_index=7,
-                                   root_labels=ROOT_LABELS)
+    new_sequence = get_single_repair(transitions, transitions[8], fix_close_shift, 7)
     assert new_sequence is None
 
 def test_fix_close_shift_deeper_tree():
@@ -268,18 +255,12 @@ def test_fix_close_shift_open_tree():
                            root_labels=ROOT_LABELS,
                            count_opens=False) == None
 
-    new_sequence = fix_close_shift_with_opens(gold_transition=transitions[7],
-                                              pred_transition=transitions[9],
-                                              gold_sequence=transitions,
-                                              gold_index=7,
-                                              root_labels=ROOT_LABELS)
+    new_sequence = get_single_repair(transitions, transitions[9], fix_close_shift_with_opens, 7)
 
     expected_original = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), CloseConstituent(), OpenConstituent('NP'), Shift(), CloseConstituent(), CloseConstituent(), CloseConstituent()]
     expected_update   = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), Shift(), CloseConstituent(), CloseConstituent(), CloseConstituent()]
     assert transitions == expected_original
     assert new_sequence == expected_update
-
-    assert fix_close_shift_with_opens(transitions[7], transitions[9], transitions, 7, ROOT_LABELS) == expected_update
 
 CLOSE_OPEN_EXAMPLE_TREE = """
 ( (VP (VBZ eat)
@@ -310,7 +291,7 @@ def test_fix_close_open():
     assert isinstance(transitions[5], CloseConstituent)
     assert transitions[6] == OpenConstituent("PP")
 
-    new_transitions = fix_close_open_correct_open(transitions[5], transitions[6], transitions, 5, ROOT_LABELS)
+    new_transitions = get_single_repair(transitions, transitions[6], fix_close_open_correct_open, 5)
 
     expected_original = [OpenConstituent('ROOT'), OpenConstituent('VP'), Shift(), OpenConstituent('NP'), Shift(), CloseConstituent(), OpenConstituent('PP'), Shift(), Shift(), Shift(), CloseConstituent(), CloseConstituent(), CloseConstituent()]
     expected_update   = [OpenConstituent('ROOT'), OpenConstituent('VP'), Shift(), OpenConstituent('NP'), Shift(), OpenConstituent('PP'), Shift(), Shift(), Shift(), CloseConstituent(), CloseConstituent(), CloseConstituent(), CloseConstituent()]
@@ -329,7 +310,7 @@ def test_fix_close_open_invalid():
         assert isinstance(transitions[5], CloseConstituent)
         assert isinstance(transitions[6], OpenConstituent)
 
-        new_transitions = fix_close_open_correct_open(transitions[5], OpenConstituent("PP"), transitions, 5, ROOT_LABELS)
+        new_transitions = get_single_repair(transitions, OpenConstituent("PP"), fix_close_open_correct_open, 5)
         assert new_transitions is None
 
 def test_fix_close_open_ambiguous_immediate():
@@ -409,7 +390,7 @@ def test_shift_close():
             continue
 
         assert isinstance(transitions[shift_position], Shift)
-        new_transitions = fix_shift_close(Shift(), CloseConstituent(), transitions, shift_position, ROOT_LABELS)
+        new_transitions = get_single_repair(transitions, CloseConstituent(), fix_shift_close, shift_position)
         reconstructed = reconstruct_tree(tree, new_transitions, transition_scheme=TransitionScheme.TOP_DOWN)
         if expected_tree is None:
             print(transitions)
@@ -435,11 +416,7 @@ def test_shift_open_ambiguous_unary():
     expected_original = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), CloseConstituent(), Shift(), Shift(), CloseConstituent(), CloseConstituent()]
     assert transitions == expected_original
 
-    new_sequence = fix_shift_open_ambiguous_unary(gold_transition=transitions[4],
-                                                  pred_transition=OpenConstituent("ZZ"),
-                                                  gold_sequence=transitions,
-                                                  gold_index=4,
-                                                  root_labels=ROOT_LABELS)
+    new_sequence = get_single_repair(transitions, OpenConstituent("ZZ"), fix_shift_open_ambiguous_unary, 4)
     expected_updated = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), OpenConstituent('ZZ'), Shift(), CloseConstituent(), Shift(), Shift(), CloseConstituent(), Shift(), Shift(), CloseConstituent(), CloseConstituent()]
     assert new_sequence == expected_updated
 
@@ -455,10 +432,6 @@ def test_shift_open_ambiguous_later():
     expected_original = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), Shift(), Shift(), Shift(), CloseConstituent(), Shift(), Shift(), CloseConstituent(), CloseConstituent()]
     assert transitions == expected_original
 
-    new_sequence = fix_shift_open_ambiguous_later(gold_transition=transitions[4],
-                                                  pred_transition=OpenConstituent("ZZ"),
-                                                  gold_sequence=transitions,
-                                                  gold_index=4,
-                                                  root_labels=ROOT_LABELS)
+    new_sequence = get_single_repair(transitions, OpenConstituent("ZZ"), fix_shift_open_ambiguous_later, 4)
     expected_updated = [OpenConstituent('ROOT'), OpenConstituent('NP'), Shift(), OpenConstituent('ADJP'), OpenConstituent('ZZ'), Shift(), Shift(), Shift(), CloseConstituent(), CloseConstituent(), Shift(), Shift(), CloseConstituent(), CloseConstituent()]
     assert new_sequence == expected_updated
