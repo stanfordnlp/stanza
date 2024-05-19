@@ -582,7 +582,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
     # any trees which are now finished are removed from the training cycle
     while len(current_batch) > 0:
         outputs, pred_transitions, _ = model.predict(current_batch, is_legal=False)
-        gold_transitions = [x.gold_sequence[x.num_transitions()] for x in current_batch]
+        gold_transitions = [x.gold_sequence[x.num_transitions] for x in current_batch]
         trans_tensor = [transition_tensors[gold_transition] for gold_transition in gold_transitions]
         all_errors.append(outputs)
         all_answers.extend(trans_tensor)
@@ -594,12 +594,12 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
             # we're going with idiot forcing
             if pred_transition == gold_transition:
                 transitions_correct[gold_transition.short_name()] += 1
-                if state.num_transitions() + 1 < len(state.gold_sequence):
+                if state.num_transitions + 1 < len(state.gold_sequence):
                     if oracle is not None and random.random() < args['oracle_forced_errors']:
                         # TODO: could randomly choose from the legal transitions
                         fake_transition = random.choice(model.transitions)
                         if fake_transition.is_legal(state, model):
-                            _, new_sequence = oracle.fix_error(gold_transition, fake_transition, state.gold_sequence, state.num_transitions())
+                            _, new_sequence = oracle.fix_error(gold_transition, fake_transition, state.gold_sequence, state.num_transitions)
                             if new_sequence is not None:
                                 new_batch.append(state._replace(gold_sequence=new_sequence))
                                 update_transitions.append(fake_transition)
@@ -615,7 +615,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
             #     is the close to end the sequence, which has no alternatives
             #   - the parsing mode is something else, in which case
             #     we have no oracle anyway
-            if state.num_transitions() + 1 >= len(state.gold_sequence):
+            if state.num_transitions + 1 >= len(state.gold_sequence):
                 continue
 
             if oracle is None or epoch < args['oracle_initial_epoch'] or not pred_transition.is_legal(state, model):
@@ -623,7 +623,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
                 update_transitions.append(gold_transition)
                 continue
 
-            repair_type, new_sequence = oracle.fix_error(gold_transition, pred_transition, state.gold_sequence, state.num_transitions())
+            repair_type, new_sequence = oracle.fix_error(gold_transition, pred_transition, state.gold_sequence, state.num_transitions)
             # we can only reach here on an error
             assert not repair_type.is_correct()
             repairs_used[repair_type] += 1

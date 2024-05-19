@@ -15,7 +15,7 @@ def build_initial_state(model, num_states=1):
 
     states = model.initial_state_from_words(sentences)
     assert len(states) == num_states
-    assert all(state.num_transitions() == 0 for state in states)
+    assert all(state.num_transitions == 0 for state in states)
     return states
 
 def test_initial_state(model=None):

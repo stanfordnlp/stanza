@@ -1137,7 +1137,7 @@ class LSTMModel(BaseModel, nn.Module):
         For each State, return the next item in the gold_sequence
         """
         predictions = self.forward(states)
-        transitions = [y.gold_sequence[y.num_transitions()] for y in states]
+        transitions = [y.gold_sequence[y.num_transitions] for y in states]
         indices = torch.tensor([self.transition_map[t] for t in transitions], device=predictions.device)
         scores = torch.take_along_dim(predictions, indices.unsqueeze(1), dim=1)
         return predictions, transitions, scores.squeeze(1)

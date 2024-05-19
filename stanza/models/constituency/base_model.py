@@ -183,11 +183,11 @@ class BaseModel(ABC):
         """
         For each State, return the next item in the gold_sequence
         """
-        transitions = [y.gold_sequence[y.num_transitions()] for y in states]
+        transitions = [y.gold_sequence[y.num_transitions] for y in states]
         if is_legal:
             for trans, state in zip(transitions, states):
                 if not trans.is_legal(state, self):
-                    raise RuntimeError("Transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(state.num_transitions(), trans, state.gold_tree, state.gold_sequence))
+                    raise RuntimeError("Transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(state.num_transitions, trans, state.gold_tree, state.gold_sequence))
         return None, transitions, None
 
     def initial_state_from_preterminals(self, preterminal_lists, gold_trees, gold_sequences):
@@ -416,7 +416,7 @@ class BaseModel(ABC):
                     remove.add(idx)
                     continue
 
-            if tree.num_transitions() >= len(tree.word_queue) * 20:
+            if tree.num_transitions >= len(tree.word_queue) * 20:
                 # too many transitions
                 # x20 is somewhat empirically chosen based on certain
                 # treebanks having deep unary structures, especially early

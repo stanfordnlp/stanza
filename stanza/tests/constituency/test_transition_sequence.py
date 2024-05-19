@@ -17,7 +17,7 @@ def reconstruct_tree(tree, sequence, transition_scheme=TransitionScheme.IN_ORDER
     model = SimpleModel(transition_scheme=transition_scheme, unary_limit=unary_limit, reverse_sentence=reverse)
     states = model.initial_state_from_gold_trees([tree])
     assert(len(states)) == 1
-    assert states[0].num_transitions() == 0
+    assert states[0].num_transitions == 0
 
     # TODO: could fold this into parse_sentences (similar to verify_transitions in trainer.py)
     for idx, t in enumerate(sequence):
@@ -38,7 +38,7 @@ def check_reproduce_tree(transition_scheme):
     states = model.initial_state_from_gold_trees(trees)
     assert(len(states)) == 1
     state = states[0]
-    assert state.num_transitions() == 0
+    assert state.num_transitions == 0
 
     for t in transitions:
         assert t.is_legal(state, model)
