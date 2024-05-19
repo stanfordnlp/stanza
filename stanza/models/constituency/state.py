@@ -47,6 +47,7 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
     def num_constituents(self):
         return len(self.constituents) - 1
 
+    @property
     def num_transitions(self):
         # -1 for the sentinel value
         return len(self.transitions) - 1
@@ -99,6 +100,7 @@ class MultiState(namedtuple('MultiState', ['states', 'gold_tree', 'gold_sequence
     def num_constituents(self):
         return len(self.states[0].constituents) - 1
 
+    @property
     def num_transitions(self):
         # -1 for the sentinel value
         return len(self.states[0].transitions) - 1
