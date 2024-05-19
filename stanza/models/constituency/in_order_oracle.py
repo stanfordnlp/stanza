@@ -537,8 +537,8 @@ class RepairType(Enum):
           +close_shift_nested 0.9253   0.9250
 
     Redoing the wrong_open_general, which seemed to hurt test scores:
-          wrong_open_two_subtrees          0.9244   0.9220
-          w/o ambiguous open               0.9261   0.9246
+          wrong_open_two_subtrees - l4     0.9244   0.9220
+          everything w/ open_two_subtrees  0.9261   0.9246
           w/ ambiguous open_three_subtrees 0.9264   0.9243
 
     Testing three different possible repairs for shift-open:
@@ -565,7 +565,7 @@ class RepairType(Enum):
     no charlm or bert, only 200 epochs
 
     Comparing wrong_open fixes
-          w/o ambiguous open                 0.8448   0.8335
+          w/ ambiguous open_two_subtrees     0.8448   0.8335
           w/ ambiguous open_three_subtrees   0.8424   0.8336
 
     Testing three possible repairs for close-shift/shift
@@ -579,7 +579,8 @@ class RepairType(Enum):
     bert + peft, only 200 epochs
 
     Comparing wrong_open fixes
-          w/o ambiguous open                 0.8908   0.8828
+          w/o ambiguous open/open fix        0.8923   0.8834
+          w/ ambiguous open_two_subtrees     0.8908   0.8828
           w/ ambiguous open_three_subtrees   0.8901   0.8801
 
     Testing three possible repairs for close-shift/shift
@@ -593,7 +594,8 @@ class RepairType(Enum):
     bert + peft, only 200 epochs
 
     Comparing wrong_open fixes
-          w/o ambiguous open                 0.9570   0.9410
+          w/o ambiguous open/open fix        0.9576   0.9402
+          w/ ambiguous open_two_subtrees     0.9570   0.9410
           w/ ambiguous open_three_subtrees   0.9569   0.9412
 
     Testing three possible repairs for close-shift/shift
@@ -607,7 +609,8 @@ class RepairType(Enum):
     bert + peft, only 200 epochs
 
     Comparing wrong_open fixes
-          w/o ambiguous open                 0.8377   0.8351
+          w/o ambiguous open/open fix        0.8380   0.8361
+          w/ ambiguous open_two_subtrees     0.8377   0.8351
           w/ ambiguous open_three_subtrees   0.8381   0.8368
 
     Testing three possible repairs for close-shift/shift
@@ -621,7 +624,8 @@ class RepairType(Enum):
     bert + peft, only 200 epochs
 
     Comparing wrong_open fixes
-          w/o ambiguous open                 0.9145   0.9144
+          w/o ambiguous open/open fix        0.9160   0.9143
+          w/ ambiguous open_two_subtrees     0.9145   0.9144
           w/ ambiguous open_three_subtrees   0.9146   0.9142
 
     Testing three possible repairs for close-shift/shift
@@ -635,7 +639,8 @@ class RepairType(Enum):
     bert + peft, only 200 epochs
 
     Comparing wrong_open fixes
-          w/o ambiguous open                 0.8272   0.7670
+          w/o ambiguous open/open fix        0.8282   0.7668
+          w/ ambiguous open_two_subtrees     0.8272   0.7670
           w/ ambiguous open_three_subtrees   0.8282   0.7668
 
     Testing three possible repairs for close-shift/shift
