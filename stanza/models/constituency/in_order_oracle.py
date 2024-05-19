@@ -537,9 +537,10 @@ class RepairType(Enum):
           +close_shift_nested 0.9253   0.9250
 
     Redoing the wrong_open_general, which seemed to hurt test scores:
-          wrong_open_two_subtrees - l4     0.9244   0.9220
-          everything w/ open_two_subtrees  0.9261   0.9246
-          w/ ambiguous open_three_subtrees 0.9264   0.9243
+          wrong_open_two_subtrees - L4             0.9244   0.9220
+          every else w/o ambiguous open/open fix   0.9259   0.9241
+          everything w/ open_two_subtrees          0.9261   0.9246
+          w/ ambiguous open_three_subtrees         0.9264   0.9243
 
     Testing three different possible repairs for shift-open:
           w/ ambiguous open_three_subtrees 0.9264   0.9243
