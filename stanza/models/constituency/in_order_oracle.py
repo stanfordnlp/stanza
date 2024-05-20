@@ -2,7 +2,7 @@ from enum import Enum
 
 import numpy as np
 
-from stanza.models.constituency.dynamic_oracle import advance_past_constituents, find_in_order_constituent_end, find_previous_open, DynamicOracle
+from stanza.models.constituency.dynamic_oracle import advance_past_constituents, find_in_order_constituent_end, find_previous_open, DynamicOracle, RepairEnum
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent
 
 def score_candidates(model, state, candidates, candidate_idx):
@@ -489,7 +489,15 @@ def fix_close_shift_shift_ambiguous_predicted(gold_transition, pred_transition, 
         assert current_index is not None
         candidates.append((gold_sequence[:gold_index], gold_sequence[start_index:current_index], [CloseConstituent()], gold_sequence[current_index:]))
     scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=2)
-    return best_candidate
+    if len(candidates) == 1:
+        return RepairType.CLOSE_SHIFT_SHIFT, best_candidate
+    if best_idx == len(candidates) - 1:
+        best_idx = -1
+    repair_type = RepairEnum(name=RepairType.CLOSE_SHIFT_SHIFT_AMBIGUOUS_PREDICTED.name,
+                             value="%d.%d" % (RepairType.CLOSE_SHIFT_SHIFT_AMBIGUOUS_PREDICTED.value, best_idx),
+                             is_correct=False)
+    #print(best_idx, len(candidates), repair_type)
+    return repair_type, best_candidate
 
 def ambiguous_shift_open_unary_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, Shift):
