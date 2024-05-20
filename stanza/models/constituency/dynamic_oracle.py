@@ -1,4 +1,8 @@
+from collections import namedtuple
+
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent
+
+RepairEnum = namedtuple("RepairEnum", "name value is_correct")
 
 def advance_past_constituents(gold_sequence, cur_index):
     """
