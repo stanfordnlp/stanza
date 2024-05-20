@@ -625,7 +625,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
 
             repair_type, new_sequence = oracle.fix_error(gold_transition, pred_transition, state.gold_sequence, state.num_transitions)
             # we can only reach here on an error
-            assert not repair_type.is_correct()
+            assert not repair_type.is_correct
             repairs_used[repair_type] += 1
             if new_sequence is not None and random.random() < args['oracle_frequency']:
                 new_batch.append(state._replace(gold_sequence=new_sequence))

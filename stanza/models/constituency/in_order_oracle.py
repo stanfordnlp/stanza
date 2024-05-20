@@ -665,6 +665,7 @@ class RepairType(Enum):
         obj.debug = debug
         return obj
 
+    @property
     def is_correct(self):
         return self.correct
 
