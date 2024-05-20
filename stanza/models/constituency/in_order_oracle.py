@@ -1,7 +1,33 @@
 from enum import Enum
 
+import numpy as np
+
 from stanza.models.constituency.dynamic_oracle import advance_past_constituents, find_in_order_constituent_end, find_previous_open, DynamicOracle
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent
+
+def score_candidates(model, state, candidates, candidate_idx):
+    """
+    score candidate fixed sequences by summing up the transition scores of the most important block
+
+    the candidate with the best summed score is chosen, and the candidate sequence is reconstructed from the blocks
+    """
+    scores = []
+    # could bulkify this if we wanted
+    for candidate in candidates:
+        current_state = [state]
+        for block in candidate[1:candidate_idx]:
+            for transition in block:
+                current_state = model.bulk_apply(current_state, [transition])
+        score = 0.0
+        for transition in candidate[candidate_idx]:
+            predictions = model.forward(current_state)
+            t_idx = model.transition_map[transition]
+            score += predictions[0, t_idx].cpu().item()
+            current_state = model.bulk_apply(current_state, [transition])
+        scores.append(score)
+    best_idx = np.argmax(scores)
+    best_candidate = [x for block in candidates[best_idx] for x in block]
+    return scores, best_idx, best_candidate
 
 def fix_wrong_open_root_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
@@ -439,6 +465,32 @@ def fix_close_shift_shift_ambiguous_early(gold_transition, pred_transition, gold
 def fix_close_shift_shift_ambiguous_late(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_close_shift_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=True, late=True)
 
+def fix_close_shift_shift_ambiguous_predicted(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+    if not isinstance(pred_transition, Shift):
+        return None
+    if len(gold_sequence) < gold_index + 2:
+        return None
+    start_index = gold_index + 1
+    start_index = advance_past_unaries(gold_sequence, start_index)
+    if len(gold_sequence) < start_index + 2:
+        return None
+    if not isinstance(gold_sequence[start_index], Shift):
+        return None
+
+    # now we know that the gold pattern was
+    #   Close (unaries) Shift
+    # and instead the model predicted Shift
+    candidates = []
+    current_index = start_index
+    while isinstance(gold_sequence[current_index], Shift):
+        current_index = find_in_order_constituent_end(gold_sequence, current_index)
+        assert current_index is not None
+        candidates.append((gold_sequence[:gold_index], gold_sequence[start_index:current_index], [CloseConstituent()], gold_sequence[current_index:]))
+    scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=2)
+    return best_candidate
+
 def ambiguous_shift_open_unary_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, Shift):
         return None
@@ -808,6 +860,11 @@ class RepairType(Enum):
     # into
     #   (A (B s1 s2 s3 s4))
     CLOSE_SHIFT_SHIFT_AMBIGUOUS_LATE    = (fix_close_shift_shift_ambiguous_late,)
+
+    # For the close-shift/shift errors which are ambiguous,
+    # this uses the model's predictions to guess which block
+    # to put the close after
+    CLOSE_SHIFT_SHIFT_AMBIGUOUS_PREDICTED = (fix_close_shift_shift_ambiguous_predicted,)
 
     # If a sequence should have gone Close - Open - Shift,
     # and instead we went Shift,
