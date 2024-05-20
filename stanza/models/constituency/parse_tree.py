@@ -40,6 +40,7 @@ class TreePrintMethod(Enum):
     LABELED_PARENS    = 2  # (_ROOT (_S ... )_S )_ROOT
     PRETTY            = 3  # multiple lines
     VLSP              = 4  # <s> (S ... ) </s>
+    LATEX_TREE        = 5  # \Tree [.S [.NP ... ] ]
 
 
 class Tree(StanzaObject):
@@ -207,6 +208,11 @@ class Tree(StanzaObject):
             print_format = TreePrintMethod.VLSP
             space_replacement = spec[0]
             use_tree_id = spec[-1] == 'i'
+        elif spec == 'T':
+            print_format = TreePrintMethod.LATEX_TREE
+        elif spec and len(spec) > 1 and spec[1] == 'T':
+            print_format = TreePrintMethod.LATEX_TREE
+            space_replacement = spec[0]
         elif spec:
             space_replacement = spec[0]
             warnings.warn("Use of a custom replacement without a format specifier is deprecated.  Please use {}O instead".format(space_replacement), stacklevel=2)
@@ -221,11 +227,14 @@ class Tree(StanzaObject):
 
         with StringIO() as buf:
             stack = deque()
-            if print_format == TreePrintMethod.VLSP:
-                if use_tree_id:
-                    buf.write("<s id={}>\n".format(self.tree_id))
+            if print_format == TreePrintMethod.VLSP or print_format == TreePrintMethod.LATEX_TREE:
+                if print_format == TreePrintMethod.VLSP:
+                    if use_tree_id:
+                        buf.write("<s id={}>\n".format(self.tree_id))
+                    else:
+                        buf.write("<s>\n")
                 else:
-                    buf.write("<s>\n")
+                    buf.write("\\Tree ")
                 if len(self.children) == 0:
                     raise ValueError("Cannot print an empty tree with V format")
                 elif len(self.children) > 1:
@@ -244,7 +253,13 @@ class Tree(StanzaObject):
                         buf.write(normalize(node.label))
                     continue
 
-                if print_format is TreePrintMethod.ONE_LINE or print_format is TreePrintMethod.VLSP:
+                if print_format is TreePrintMethod.LATEX_TREE:
+                    if node.is_preterminal():
+                        buf.write(normalize(node.children[0].label))
+                        continue
+                    buf.write("[.%s" % normalize(node.label))
+                    stack.append(" ]")
+                elif print_format is TreePrintMethod.ONE_LINE or print_format is TreePrintMethod.VLSP:
                     buf.write(OPEN_PAREN)
                     if node.label is not None:
                         buf.write(normalize(node.label))
