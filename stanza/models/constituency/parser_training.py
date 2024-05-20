@@ -540,7 +540,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
     tlogger.info("Transitions correct: %d\n  %s", total_correct, str(epoch_stats.transitions_correct))
     tlogger.info("Transitions incorrect: %d\n  %s", total_incorrect, str(epoch_stats.transitions_incorrect))
     if len(epoch_stats.repairs_used) > 0:
-        tlogger.info("Oracle repairs:\n  %s", "\n  ".join("%s (%d): %d" % (x, x.value, y) for x, y in epoch_stats.repairs_used.most_common()))
+        tlogger.info("Oracle repairs:\n  %s", "\n  ".join("%s (%s): %d" % (x.name, x.value, y) for x, y in epoch_stats.repairs_used.most_common()))
     if epoch_stats.fake_transitions_used > 0:
         tlogger.info("Fake transitions used: %d", epoch_stats.fake_transitions_used)
 
