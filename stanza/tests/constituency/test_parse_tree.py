@@ -315,6 +315,16 @@ def test_all_leaves_are_preterminals():
     assert len(trees) == 1
     assert not trees[0].all_leaves_are_preterminals()
 
+def test_latex():
+    """
+    Test the latex format for trees
+    """
+    expected = "\Tree [.S [.NP Jennifer ] [.VP has [.NP nice antennae ] ] ]"
+    tree = "(ROOT (S (NP (NNP Jennifer)) (VP (VBZ has) (NP (JJ nice) (NNS antennae)))))"
+    tree = tree_reader.read_trees(tree)[0]
+    text = "{:T}".format(tree)
+    assert text == expected
+
 def test_pretty_print():
     """
     Pretty print a couple trees - newlines & indentation
