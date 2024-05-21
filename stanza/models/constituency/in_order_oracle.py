@@ -1,33 +1,7 @@
 from enum import Enum
 
-import numpy as np
-
-from stanza.models.constituency.dynamic_oracle import advance_past_constituents, find_in_order_constituent_end, find_previous_open, DynamicOracle, RepairEnum
+from stanza.models.constituency.dynamic_oracle import advance_past_constituents, find_in_order_constituent_end, find_previous_open, score_candidates, DynamicOracle, RepairEnum
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent
-
-def score_candidates(model, state, candidates, candidate_idx):
-    """
-    score candidate fixed sequences by summing up the transition scores of the most important block
-
-    the candidate with the best summed score is chosen, and the candidate sequence is reconstructed from the blocks
-    """
-    scores = []
-    # could bulkify this if we wanted
-    for candidate in candidates:
-        current_state = [state]
-        for block in candidate[1:candidate_idx]:
-            for transition in block:
-                current_state = model.bulk_apply(current_state, [transition])
-        score = 0.0
-        for transition in candidate[candidate_idx]:
-            predictions = model.forward(current_state)
-            t_idx = model.transition_map[transition]
-            score += predictions[0, t_idx].cpu().item()
-            current_state = model.bulk_apply(current_state, [transition])
-        scores.append(score)
-    best_idx = np.argmax(scores)
-    best_candidate = [x for block in candidates[best_idx] for x in block]
-    return scores, best_idx, best_candidate
 
 def fix_wrong_open_root_error(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
