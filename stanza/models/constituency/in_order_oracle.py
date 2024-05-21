@@ -370,16 +370,16 @@ def fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence
 
     return gold_sequence[:gold_index] + gold_sequence[open_index+1:end_index] + gold_sequence[gold_index:open_index+1] + gold_sequence[end_index:]
 
-def fix_close_shift_unambiguous_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+def fix_close_open_shift_unambiguous_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=False, late=False)
 
-def fix_close_shift_ambiguous_bracket_early(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+def fix_close_open_shift_ambiguous_bracket_early(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=True, late=False)
 
-def fix_close_shift_ambiguous_bracket_late(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+def fix_close_open_shift_ambiguous_bracket_late(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=True, late=True)
 
-def fix_close_shift_nested(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+def fix_close_open_shift_nested(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Fix a Close X..Open X..Shift pattern where both the Close and Open were skipped.
 
@@ -837,7 +837,7 @@ class RepairType(Enum):
     # new X bracket.  In this case, the simplest fix
     # will be to skip both the close and the new open
     # and continue from there.
-    CLOSE_SHIFT_NESTED     = (fix_close_shift_nested,)
+    CLOSE_OPEN_SHIFT_NESTED = (fix_close_open_shift_nested,)
 
     # Fix an error where the correct sequence was to Close X, Open Y,
     # then continue building,
@@ -853,7 +853,7 @@ class RepairType(Enum):
     # is the only place for the missing close of X
     # So we can produce the following:
     #   T_A O_X T_B T_C C O_Y C
-    CLOSE_SHIFT_UNAMBIGUOUS_BRACKET = (fix_close_shift_unambiguous_bracket,)
+    CLOSE_OPEN_SHIFT_UNAMBIGUOUS_BRACKET = (fix_close_open_shift_unambiguous_bracket,)
 
     # Similarly to WRONG_OPEN_TWO_SUBTREES, if the correct sequence is
     #   T1 O_x T2 T3 C
@@ -915,12 +915,12 @@ class RepairType(Enum):
     # such as Close - Open - Shift - Shift
     # close the bracket ASAP
     # eg, Shift - Close - Open - Shift
-    CLOSE_SHIFT_AMBIGUOUS_BRACKET_EARLY = (fix_close_shift_ambiguous_bracket_early,)
+    CLOSE_OPEN_SHIFT_AMBIGUOUS_BRACKET_EARLY = (fix_close_open_shift_ambiguous_bracket_early,)
 
     # for Close - Open - Shift - Shift
     # close the bracket as late as possible
     # eg, Shift - Shift - Close - Open
-    CLOSE_SHIFT_AMBIGUOUS_BRACKET_LATE = (fix_close_shift_ambiguous_bracket_late,)
+    CLOSE_OPEN_SHIFT_AMBIGUOUS_BRACKET_LATE = (fix_close_open_shift_ambiguous_bracket_late,)
 
     # This particular repair effectively turns the shift -> ambiguous open
     # into a unary transition
