@@ -61,7 +61,7 @@ class BahdanauAttention(nn.Module):
 
         self.W_h = nn.Linear(encoder_hidden_dim * 2, decoder_hidden_dim, device=device)
         self.W_s = nn.Linear(decoder_hidden_dim, decoder_hidden_dim, device=device)
-        self.v = nn.Linear(decoder_hidden_dim, 1, bias=False, device=device)
+        self.v = nn.Linear(decoder_hidden_dim, 1, device=device)
         self.b_attn = nn.Parameter(torch.rand(decoder_hidden_dim)).to(device)
 
         self.W_c = None
@@ -108,23 +108,27 @@ class BahdanauAttention(nn.Module):
         energy = None
         if self.coverage:
             # unsqueeze the coverage vec to align it for the transformation to shape (batch size, seq len, decoder hidden dim) with W_c
-            energy = torch.tanh(self.W_h(encoder_outputs) + self.W_s(decoder_hidden) + self.W_c(coverage_vec.unsqueeze(-1)) + self.b_attn).to(self.device)
+            coverage_vec_unsqueezed = coverage_vec.unsqueeze(-1)
+            energy = torch.tanh(self.W_h(encoder_outputs) + self.W_s(decoder_hidden) + self.W_c(coverage_vec_unsqueezed) + self.b_attn).to(self.device)
         else:
             # no coverage, energy alignment scores become e_i^t = v^T tanh(W_h h_i + W_s s_t + b_attn)
             energy = torch.tanh(self.W_h(encoder_outputs) + self.W_s(decoder_hidden) + self.b_attn).to(self.device)
 
-        attention = self.v(energy).squeeze(2)
+        attention_raw = self.v(energy)
+        attention = attention_raw.squeeze(2)
 
         # Generate mask: valid tokens have a nonzero hidden state
         mask = (encoder_outputs.abs().sum(dim=2) > 0).float().to(self.device)
 
         # Apply the mask by setting invalid positions to -inf
         attention = attention.masked_fill(mask == 0, float('-inf'))
-        attention =  F.softmax(attention, dim=1)
+        attention = F.softmax(attention, dim=1)
 
         if self.coverage and coverage_vec is not None:
-            coverage_vec = coverage_vec + attention   # continuously sum attention dist. for coverage
-        return attention, coverage_vec
+            new_coverage_vec = coverage_vec + attention   # continuously sum attention dist. for coverage
+        else:
+            new_coverage_vec = None
+        return attention, new_coverage_vec
 
 
 class BaselineDecoder(nn.Module):
@@ -150,12 +154,12 @@ class BaselineDecoder(nn.Module):
             self.coverage_vec = None
          
         # Two linear layers as per equation (4) in the paper
-        self.V = nn.Linear(encoder_hidden_dim * 2 + decoder_hidden_dim, decoder_hidden_dim, device=device)
-        self.V_prime = nn.Linear(decoder_hidden_dim, output_dim, device=device)
+        self.V_1 = nn.Linear(encoder_hidden_dim * 2 + decoder_hidden_dim, decoder_hidden_dim, device=device)
+        self.V_1_prime = nn.Linear(decoder_hidden_dim, output_dim, device=device)
 
         self.dropout = nn.Dropout(dropout_p).to(device)
         
-        self.softmax = nn.Softmax(dim=1)  # Softmax layer for the final output
+        self.softmax = nn.LogSoftmax(dim=1)  # Softmax layer for the final output
 
     def forward(self, input, hidden, cell, encoder_outputs, src=None):
 
@@ -175,7 +179,7 @@ class BaselineDecoder(nn.Module):
         # Attention is computed using the decoder's current hidden state 'hidden' and all the encoder outputs
         attention_weights, coverage_vec = self.attention(encoder_outputs, hidden, coverage_vec=self.coverage_vec if self.coverage else None)
         if self.coverage:
-            self.coverage_vec = coverage_vec
+            self.coverage_vec = coverage_vec.detach()
 
         # Context vector = sum_i {a_i^t * h_i} 
         context_vector = torch.bmm(attention_weights.unsqueeze(1), encoder_outputs)
@@ -206,8 +210,8 @@ class BaselineDecoder(nn.Module):
         # before being passed through linear layers to predict the next token.
         concatenated = torch.cat((hidden, context_vector), dim=1)
 
-        output = self.V(concatenated) 
-        output = self.V_prime(output) 
+        output = self.V_1(concatenated) 
+        output = self.V_1_prime(output) 
 
         output = self.dropout(output)
 
@@ -294,10 +298,12 @@ class BaselineSeq2Seq(nn.Module):
 
         device = next(self.parameters()).device
 
-        index_tensor = torch.zeros(batch_size, max_seq_len, dtype=torch.int64, device=device)
+        # index_tensor = torch.zeros(batch_size, max_seq_len, dtype=torch.int64, device=device)
+        index_tensor = []
         for batch_idx, document in enumerate(src):
             num_oov_words = 0
-            doc_indexes = torch.zeros(max_seq_len, device=device)
+            # doc_indexes = torch.zeros(max_seq_len, device=device)
+            doc_indexes = []
             for i, word in enumerate(document):
                 vocab_idx = self.ext_vocab_map.get(word.lower()) 
 
@@ -309,12 +315,13 @@ class BaselineSeq2Seq(nn.Module):
                 revised_idx = self.ext_vocab_map.get(word.lower())
                 if revised_idx is None:
                     raise ValueError(f"Error building extended vocab map, word: {word}")
-                doc_indexes[i] = revised_idx
+                doc_indexes.append(revised_idx)
 
-            index_tensor[batch_idx] = doc_indexes
+            index_tensor.append(torch.tensor(doc_indexes, device=device))
             max_oov_words = max(max_oov_words, num_oov_words)
-
-        return index_tensor, max_oov_words
+        
+        revised_index_tensor = pad_sequence(index_tensor, batch_first=True)
+        return revised_index_tensor, max_oov_words
 
     def forward(self, text, target, teacher_forcing_ratio=0.5):
         """
@@ -347,8 +354,6 @@ class BaselineSeq2Seq(nn.Module):
         # Tensor to store decoder outputs
         effective_vocab_size = self.vocab_size + self.max_oov_words if self.pgen else self.vocab_size
 
-        outputs = torch.zeros(batch_size, target_len, effective_vocab_size, device=device)
-
         packed_input_seqs = pack_padded_sequence(embedded, input_lengths, batch_first=True, enforce_sorted=False)
         # packed_target_seqs = pack_padded_sequence(target_embeddings, target_lengths, batch_first=True, enforce_sorted=False)  TODO maybe remove this?
 
@@ -365,6 +370,7 @@ class BaselineSeq2Seq(nn.Module):
 
         # we want the attention weights return object to be shape (batch size, decoder timestep, input sequence length)
         # we want the coverage vector return object to be shape (batch size, decoder timestep, input sequence length)
+        outputs = torch.zeros(batch_size, target_len, effective_vocab_size, device=device)
         final_attn_weights = torch.zeros(batch_size, target_len, input_len, device=device)
         final_coverage_vecs = torch.zeros(batch_size, target_len, input_len, device=device)
 
@@ -403,14 +409,16 @@ class BaselineSeq2Seq(nn.Module):
                 extended_vocab_size = self.vocab_size + self.max_oov_words 
                 extended_vocab_dist = torch.zeros(batch_size, extended_vocab_size, device=device)   # one vocab dist per text
                 extended_vocab_dist[:, :self.vocab_size] = p_vocab_scaled  # fill the extended vocab with the existing distribution we have
+
                 # add the attention distribution to the extended vocab distribution to include input text words.
-                final_vocab_dist = extended_vocab_dist.scatter_add_(dim=1, index=index_tensor, src=attn_dist_scaled)
+                final_vocab_dist = extended_vocab_dist.scatter_add(dim=1, index=index_tensor, src=attn_dist_scaled)
                 p_vocab = final_vocab_dist
 
             # Place predictions in a tensor holding predictions for each token
             outputs[:, t, :] = p_vocab
             final_attn_weights[:, t, :] = attn_weights
-            final_coverage_vecs[:, t, :] = coverage_vector
+            if self.coverage:
+                final_coverage_vecs[:, t, :] = coverage_vector
 
             # Decide whether to use teacher forcing or not
             teacher_force = torch.rand(1) < teacher_forcing_ratio
@@ -427,5 +435,8 @@ class BaselineSeq2Seq(nn.Module):
                 oov_words_mask = top1 >= self.vocab_size  # masking which chosen words are out of vocabulary
                 top1[oov_words_mask] = UNK_ID
                 input = self.embedding(top1)   
+
+        self.ext_vocab_map = deepcopy(self.vocab_map)
+        self.max_oov_words = 0
 
         return outputs, final_attn_weights, final_coverage_vecs
