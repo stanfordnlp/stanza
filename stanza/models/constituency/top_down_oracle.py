@@ -481,6 +481,40 @@ def fix_open_open_ambiguous_random(gold_transition, pred_transition, gold_sequen
         return fix_open_open_ambiguous_unary(gold_transition, pred_transition, gold_sequence, gold_index, root_labels)
 
 
+def report_shift_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+    if not isinstance(gold_transition, Shift):
+        return None
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    return RepairType.OTHER_SHIFT_OPEN, None
+
+
+def report_close_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+    if not isinstance(pred_transition, Shift):
+        return None
+
+    return RepairType.OTHER_CLOSE_SHIFT, None
+
+def report_close_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    return RepairType.OTHER_CLOSE_OPEN, None
+
+def report_open_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+    if not isinstance(gold_transition, OpenConstituent):
+        return None
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    return RepairType.OTHER_OPEN_OPEN, None
+
+
 class RepairType(Enum):
     """
     Keep track of which repair is used, if any, on an incorrect transition
@@ -601,6 +635,13 @@ class RepairType(Enum):
 
     SHIFT_OPEN_AMBIGUOUS_LATER_ERROR       = (fix_shift_open_ambiguous_later,)
 
+    OTHER_SHIFT_OPEN                       = (report_shift_open, False, True)
+
+    OTHER_CLOSE_SHIFT                      = (report_close_shift, False, True)
+
+    OTHER_CLOSE_OPEN                       = (report_close_open, False, True)
+
+    OTHER_OPEN_OPEN                        = (report_open_open, False, True)
 
 class TopDownOracle(DynamicOracle):
     def __init__(self, root_labels, oracle_level, additional_oracle_levels, deactivated_oracle_levels):

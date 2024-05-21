@@ -193,7 +193,7 @@ def test_oracle_with_optional_level():
     fix, new_sequence = oracle.fix_error(pred_transition=gold_sequence[8],
                                          model=model,
                                          state=state)
-    assert fix is RepairType.UNKNOWN
+    assert fix is RepairType.OTHER_CLOSE_SHIFT
     assert new_sequence is None
 
     oracle = TopDownOracle(ROOT_LABELS, 1, "CLOSE_SHIFT_AMBIGUOUS_IMMEDIATE_ERROR", "")
