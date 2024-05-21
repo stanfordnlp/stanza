@@ -527,6 +527,40 @@ def ambiguous_shift_open_late_close(gold_transition, pred_transition, gold_seque
     end_index = advance_past_constituents(gold_sequence, gold_index)
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:end_index] + [CloseConstituent()] + gold_sequence[end_index:]
 
+def ambiguous_shift_open_predicted_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+    if not isinstance(gold_transition, Shift):
+        return None
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    unary_candidate = (gold_sequence[:gold_index], [pred_transition], [CloseConstituent()], gold_sequence[gold_index:])
+
+    early_index = find_in_order_constituent_end(gold_sequence, gold_index)
+    early_candidate = (gold_sequence[:gold_index], [pred_transition] + gold_sequence[gold_index:early_index], [CloseConstituent()], gold_sequence[early_index:])
+
+    late_index = advance_past_constituents(gold_sequence, gold_index)
+    if early_index == late_index:
+        candidates = [unary_candidate, early_candidate]
+        scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=2)
+        if best_idx == 0:
+            return_label = "U"
+        else:
+            return_label = "S"
+    else:
+        late_candidate = (gold_sequence[:gold_index], [pred_transition] + gold_sequence[gold_index:late_index], [CloseConstituent()], gold_sequence[late_index:])
+        candidates = [unary_candidate, early_candidate, late_candidate]
+        scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=2)
+        if best_idx == 0:
+            return_label = "U"
+        elif best_idx == 1:
+            return_label = "E"
+        else:
+            return_label = "L"
+    repair_type = RepairEnum(name=RepairType.SHIFT_OPEN_PREDICTED_CLOSE.name,
+                             value="%d.%s" % (RepairType.SHIFT_OPEN_PREDICTED_CLOSE.value, return_label),
+                             is_correct=False)
+    return repair_type, best_candidate
+
 
 def report_close_shift(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     if not isinstance(gold_transition, CloseConstituent):
@@ -901,6 +935,11 @@ class RepairType(Enum):
     # This is an ambiguous solution because it could also be closed either
     # as a unary transition or with a close at the end of the first constituent
     SHIFT_OPEN_LATE_CLOSE        = (ambiguous_shift_open_late_close,)
+
+    # Use the model to predict when to close!
+    # The different options for where to put the Close are put into the model,
+    # and the highest scoring close is used
+    SHIFT_OPEN_PREDICTED_CLOSE   = (ambiguous_shift_open_predicted_close,)
 
     OTHER_CLOSE_SHIFT            = (report_close_shift, False, True)
 
