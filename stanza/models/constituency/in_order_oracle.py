@@ -701,6 +701,7 @@ class RepairType(Enum):
           unambiguous c-s/shift              0.9253   0.9239
           ambiguous c-s/shift closed early   0.9259   0.9235
           ambiguous c-s/shift closed late    0.9252   0.9241
+          ambiguous c-s/shift predicted      0.9264   0.9243
 
     --------------------------------------------------------
 
@@ -730,6 +731,7 @@ class RepairType(Enum):
           unambiguous c-s/shift              0.8921   0.8825
           ambiguous c-s/shift closed early   0.8924   0.8841
           ambiguous c-s/shift closed late    0.8921   0.8806
+          ambiguous c-s/shift predicted      0.8923   0.8835
 
     --------------------------------------------------------
 
@@ -745,6 +747,7 @@ class RepairType(Enum):
           unambiguous c-s/shift              0.9566   0.9408
           ambiguous c-s/shift closed early   0.9564   0.9394
           ambiguous c-s/shift closed late    0.9572   0.9408
+          ambiguous c-s/shift predicted      0.9571   0.9404
 
     --------------------------------------------------------
 
@@ -760,6 +763,7 @@ class RepairType(Enum):
           unambiguous c-s/shift              0.8376   0.8392
           ambiguous c-s/shift closed early   0.8363   0.8359
           ambiguous c-s/shift closed late    0.8365   0.8383
+          ambiguous c-s/shift predicted      0.8379   0.8371
 
     --------------------------------------------------------
 
@@ -775,6 +779,7 @@ class RepairType(Enum):
           unambiguous c-s/shift              0.9155   0.9146
           ambiguous c-s/shift closed early   0.9145   0.9153
           ambiguous c-s/shift closed late    0.9138   0.9140
+          ambiguous c-s/shift predicted      0.9154   0.9144
 
     --------------------------------------------------------
 
@@ -790,6 +795,7 @@ class RepairType(Enum):
           unambiguous c-s/shift              0.8285   0.7683
           ambiguous c-s/shift closed early   0.8276   0.7678
           ambiguous c-s/shift closed late    0.8278   0.7668
+          ambiguous c-s/shift predicted      0.8270   0.7668
     """
     def __new__(cls, fn, correct=False, debug=False):
         """
