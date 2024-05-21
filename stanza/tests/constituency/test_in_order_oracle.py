@@ -382,7 +382,7 @@ def test_shift_close(unary_trees, gold_sequences):
     else:
         raise AssertionError("Did not find an expected repair location")
 
-def test_close_shift_nested(unary_trees, gold_sequences):
+def test_close_open_shift_nested(unary_trees, gold_sequences):
     shift_transition = Shift()
 
     expected_trees = [{},
@@ -392,7 +392,7 @@ def test_close_shift_nested(unary_trees, gold_sequences):
                       {}]
 
     for tree, gold_sequence, expected in zip(unary_trees, gold_sequences, expected_trees):
-        repairs = get_repairs(gold_sequence, shift_transition, fix_close_shift_nested)
+        repairs = get_repairs(gold_sequence, shift_transition, fix_close_open_shift_nested)
         assert len(repairs) == len(expected)
         if len(expected) >= 1:
             for repair in repairs:
@@ -425,7 +425,7 @@ def check_repairs(trees, gold_sequences, expected_trees, transition, repair_fn):
                 print(repair[0])
                 print(result_tree)
 
-def test_close_shift_unambiguous(unary_trees, gold_sequences):
+def test_close_open_shift_unambiguous(unary_trees, gold_sequences):
     shift_transition = Shift()
 
     expected_trees = [{},
@@ -433,9 +433,9 @@ def test_close_shift_unambiguous(unary_trees, gold_sequences):
                       {},
                       {2: "(ROOT (S (NP (NNS optimists) (VP (VBP expect) (S (NP (NNP Hong) (NNP Kong)) (VP (TO to) (VP (VB hum) (ADVP (RB along)) (SBAR (RB as) (S (VP (ADVP (IN before))))))))))))",
                        9: "(ROOT (S (NP (NNS optimists)) (VP (VBP expect) (S (NP (NNP Hong) (NNP Kong) (VP (TO to) (VP (VB hum) (ADVP (RB along)) (SBAR (RB as) (S (VP (ADVP (IN before))))))))))))"}]
-    check_repairs(unary_trees, gold_sequences, expected_trees, shift_transition, fix_close_shift_unambiguous_bracket)
+    check_repairs(unary_trees, gold_sequences, expected_trees, shift_transition, fix_close_open_shift_unambiguous_bracket)
 
-def test_close_shift_ambiguous_early(unary_trees, gold_sequences):
+def test_close_open_shift_ambiguous_early(unary_trees, gold_sequences):
     shift_transition = Shift()
 
     expected_trees = [{4: "(ROOT (S (NP (DT A) (NN record) (NN date) (VP (VBZ has) (RB n't) (VP (VBN been) (VP (VBN set))))) (. .)))"},
@@ -443,9 +443,9 @@ def test_close_shift_ambiguous_early(unary_trees, gold_sequences):
                       {2: "(ROOT (S (PRN (S (VP (VB See) (, ,)))) (NP (NP (DT the) (JJ other) (NN rule)) (PP (IN of) (NP (NN thumb))) (PP (IN about) (NP (NN ballooning))))))",
                        6: "(ROOT (S (PRN (S (VP (VB See))) (, ,)) (NP (NP (DT the) (JJ other) (NN rule)) (PP (IN of) (NP (NN thumb))) (PP (IN about) (NP (NN ballooning))))))"},
                       {}]
-    check_repairs(unary_trees, gold_sequences, expected_trees, shift_transition, fix_close_shift_ambiguous_bracket_early)
+    check_repairs(unary_trees, gold_sequences, expected_trees, shift_transition, fix_close_open_shift_ambiguous_bracket_early)
 
-def test_close_shift_ambiguous_late(unary_trees, gold_sequences):
+def test_close_open_shift_ambiguous_late(unary_trees, gold_sequences):
     shift_transition = Shift()
 
     expected_trees = [{4: "(ROOT (S (NP (DT A) (NN record) (NN date) (VP (VBZ has) (RB n't) (VP (VBN been) (VP (VBN set)))) (. .))))"},
@@ -453,7 +453,7 @@ def test_close_shift_ambiguous_late(unary_trees, gold_sequences):
                       {2: "(ROOT (S (PRN (S (VP (VB See) (, ,) (NP (NP (DT the) (JJ other) (NN rule)) (PP (IN of) (NP (NN thumb))) (PP (IN about) (NP (NN ballooning)))))))))",
                        6: "(ROOT (S (PRN (S (VP (VB See))) (, ,) (NP (NP (DT the) (JJ other) (NN rule)) (PP (IN of) (NP (NN thumb))) (PP (IN about) (NP (NN ballooning)))))))"},
                       {}]
-    check_repairs(unary_trees, gold_sequences, expected_trees, shift_transition, fix_close_shift_ambiguous_bracket_late)
+    check_repairs(unary_trees, gold_sequences, expected_trees, shift_transition, fix_close_open_shift_ambiguous_bracket_late)
 
 
 def test_close_shift_shift(unary_trees, wide_trees):
