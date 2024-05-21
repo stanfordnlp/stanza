@@ -379,6 +379,54 @@ def fix_close_open_shift_ambiguous_bracket_early(gold_transition, pred_transitio
 def fix_close_open_shift_ambiguous_bracket_late(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     return fix_close_shift_open_bracket(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, ambiguous=True, late=True)
 
+def fix_close_open_shift_ambiguous_predicted(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+    if not isinstance(pred_transition, Shift):
+        return None
+
+    if len(gold_sequence) < gold_index + 3:
+        return None
+    if not isinstance(gold_sequence[gold_index+1], OpenConstituent):
+        return None
+
+    open_index = advance_past_unaries(gold_sequence, gold_index+1)
+    if not isinstance(gold_sequence[open_index], OpenConstituent):
+        return None
+    if not isinstance(gold_sequence[open_index+1], Shift):
+        return None
+
+    # check that the next operation was to open a *different* constituent
+    # from the one we just closed
+    prev_open_index = find_previous_open(gold_sequence, gold_index)
+    if prev_open_index is None:
+        return None
+    prev_open = gold_sequence[prev_open_index]
+    if gold_sequence[open_index] == prev_open:
+        return None
+
+    # alright, at long last we have:
+    #   a close that was missed
+    #   a non-nested open that was missed
+    end_index = find_in_order_constituent_end(gold_sequence, open_index+1)
+
+    candidates = []
+    candidates.append((gold_sequence[:gold_index], gold_sequence[open_index+1:end_index], gold_sequence[gold_index:open_index+1], gold_sequence[end_index:]))
+    while isinstance(gold_sequence[end_index], Shift):
+        end_index = find_in_order_constituent_end(gold_sequence, end_index+1)
+        candidates.append((gold_sequence[:gold_index], gold_sequence[open_index+1:end_index], gold_sequence[gold_index:open_index+1], gold_sequence[end_index:]))
+
+    scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=2)
+    if len(candidates) == 1:
+        return RepairType.CLOSE_OPEN_SHIFT_UNAMBIGUOUS_BRACKET, best_candidate
+
+    if best_idx == len(candidates) - 1:
+        best_idx = -1
+    repair_type = RepairEnum(name=RepairType.CLOSE_OPEN_SHIFT_AMBIGUOUS_PREDICTED.name,
+                             value="%d.%d" % (RepairType.CLOSE_OPEN_SHIFT_AMBIGUOUS_PREDICTED.value, best_idx),
+                             is_correct=False)
+    return repair_type, best_candidate
+
 def fix_close_open_shift_nested(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Fix a Close X..Open X..Shift pattern where both the Close and Open were skipped.
@@ -921,6 +969,13 @@ class RepairType(Enum):
     # close the bracket as late as possible
     # eg, Shift - Shift - Close - Open
     CLOSE_OPEN_SHIFT_AMBIGUOUS_BRACKET_LATE = (fix_close_open_shift_ambiguous_bracket_late,)
+
+    # If the sequence should have gone
+    #   Close - Open - Shift
+    # and instead we predicted a Shift
+    # in a context where closing the bracket would be ambiguous
+    # we use the model to predict where the close should actually happen
+    CLOSE_OPEN_SHIFT_AMBIGUOUS_PREDICTED = (fix_close_open_shift_ambiguous_predicted,)
 
     # This particular repair effectively turns the shift -> ambiguous open
     # into a unary transition
