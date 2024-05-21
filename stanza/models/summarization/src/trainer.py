@@ -136,6 +136,7 @@ class SummarizationTrainer():
 
                 # Get model output
                 # TODO: can i put these on the device later?
+                self.optimizer.zero_grad()
                 output, attention_scores, coverage_vectors = self.model(articles, summaries)  # (batch size, seq len, vocab size)
                 output = output.permute(0, 2, 1)   # (batch size, vocab size, seq len)
 
@@ -170,7 +171,6 @@ class SummarizationTrainer():
                 print("TARGET INDICES SHAPE",target_indices.shape)
                 # Compute losses (base loss)
                 log_loss = self.criterion(output, target_indices)
-
                 # coverage loss
                 if self.model.coverage:
                     coverage_losses = torch.sum(torch.min(attention_scores, coverage_vectors), dim=-1)
@@ -188,7 +188,6 @@ class SummarizationTrainer():
                 print(f"sequence loss shape {sequence_loss.shape}")  # (batch size)
                 batch_loss = sequence_loss.mean()
                 print("BATCH LOSS SHAPE", batch_loss.shape, batch_loss)  # ([])
-                self.optimizer.zero_grad()
                 batch_loss.backward()
                 self.optimizer.step()
         # TODO evaluate model checkpoint on val set
