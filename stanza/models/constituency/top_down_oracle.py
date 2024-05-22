@@ -1,7 +1,7 @@
 from enum import Enum
 import random
 
-from stanza.models.constituency.dynamic_oracle import advance_past_constituents, DynamicOracle
+from stanza.models.constituency.dynamic_oracle import advance_past_constituents, score_candidates, DynamicOracle, RepairEnum
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent
 
 def find_constituent_end(gold_sequence, cur_index):
@@ -18,7 +18,6 @@ def find_constituent_end(gold_sequence, cur_index):
                 return cur_index
         cur_index += 1
     raise AssertionError("Open constituent not closed starting from index %d in sequence %s" % (cur_index, gold_sequence))
-
 
 def fix_shift_close(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
@@ -232,6 +231,40 @@ def fix_shift_open_ambiguous_later(gold_transition, pred_transition, gold_sequen
 
     return gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:outer_close_index] + [CloseConstituent()] + gold_sequence[outer_close_index:]
 
+def fix_shift_open_ambiguous_predicted(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+    if not isinstance(pred_transition, OpenConstituent):
+        return None
+
+    if not isinstance(gold_transition, Shift):
+        return None
+
+    assert len(gold_sequence) > gold_index + 1
+    if isinstance(gold_sequence[gold_index+1], CloseConstituent):
+        # this is the unambiguous case, which should already be handled
+        return None
+
+    # at this point: have Opened a constituent which we don't want
+    # need to figure out where to Close it
+    # could close it after the shift or after any given block
+    candidates = []
+    current_index = gold_index
+    while not isinstance(gold_sequence[current_index], CloseConstituent):
+        if isinstance(gold_sequence[current_index], Shift):
+            end_index = current_index
+        else:
+            end_index = find_constituent_end(gold_sequence, current_index)
+        candidates.append((gold_sequence[:gold_index], [pred_transition], gold_sequence[gold_index:end_index+1], [CloseConstituent()], gold_sequence[end_index+1:]))
+        current_index = end_index + 1
+
+    scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=3)
+    if best_idx == len(candidates) - 1:
+        best_idx = -1
+    repair_type = RepairEnum(name=RepairType.SHIFT_OPEN_AMBIGUOUS_PREDICTED.name,
+                             value="%d.%d" % (RepairType.SHIFT_OPEN_AMBIGUOUS_PREDICTED.value, best_idx),
+                             is_correct=False)
+    return repair_type, best_candidate
+
+
 def fix_close_shift_ambiguous_immediate(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
     """
     Instead of a Close, we predicted a Shift.  This time, we immediately close no matter what comes after the next Shift.
@@ -354,6 +387,44 @@ def fix_close_shift(gold_transition, pred_transition, gold_sequence, gold_index,
 def fix_close_shift_with_opens(*args, **kwargs):
     return fix_close_shift(*args, **kwargs, count_opens=True)
 
+def fix_close_next_correct_predicted(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state):
+    """
+    We were supposed to Close, but instead predicted Shift when the next transition is Shift
+
+    This differs from the previous Close-Shift in that this case does
+    not have an unambiguous place to put the Close.  Instead, we let
+    the model predict where to put the Close
+
+    Note that this can also work for Close-Open with the next Open correct
+
+    Not covered (yet?) is multiple Close in a row
+    """
+    if not isinstance(gold_transition, CloseConstituent):
+        return None
+    if not isinstance(pred_transition, (Shift, OpenConstituent)):
+        return None
+    if gold_sequence[gold_index+1] != pred_transition:
+        return None
+
+    candidates = []
+    current_index = gold_index + 1
+    while not isinstance(gold_sequence[current_index], CloseConstituent):
+        if isinstance(gold_sequence[current_index], Shift):
+            end_index = current_index
+        else:
+            end_index = find_constituent_end(gold_sequence, current_index)
+        candidates.append((gold_sequence[:gold_index], gold_sequence[gold_index+1:end_index+1], [CloseConstituent()], gold_sequence[end_index+1:]))
+        current_index = end_index + 1
+
+    scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=3)
+    if best_idx == len(candidates) - 1:
+        best_idx = -1
+    repair_type = RepairEnum(name=RepairType.CLOSE_NEXT_CORRECT_AMBIGUOUS_PREDICTED.name,
+                             value="%d.%d" % (RepairType.CLOSE_NEXT_CORRECT_AMBIGUOUS_PREDICTED.value, best_idx),
+                             is_correct=False)
+    return repair_type, best_candidate
+
+
 def fix_close_open_correct_open(gold_transition, pred_transition, gold_sequence, gold_index, root_labels, model, state, check_close=True):
     """
     We were supposed to Close, but instead did an Open
@@ -430,6 +501,8 @@ def fix_open_open_ambiguous_unary(gold_transition, pred_transition, gold_sequenc
         return None
 
     close_index = find_constituent_end(gold_sequence, gold_index)
+    assert close_index is not None
+    assert isinstance(gold_sequence[close_index], CloseConstituent)
     updated_sequence = gold_sequence[:gold_index] + [pred_transition] + gold_sequence[gold_index:close_index] + [CloseConstituent()] + gold_sequence[close_index:]
     return updated_sequence
 
@@ -625,6 +698,11 @@ class RepairType(Enum):
 
     CLOSE_SHIFT_AMBIGUOUS_LATER_ERROR      = (fix_close_shift_ambiguous_later,)
 
+    # can potentially fix either close/shift or close/open
+    # as long as the gold transition after the close
+    # was the same as the transition we just predicted
+    CLOSE_NEXT_CORRECT_AMBIGUOUS_PREDICTED = (fix_close_next_correct_predicted,)
+
     OPEN_OPEN_AMBIGUOUS_UNARY_ERROR        = (fix_open_open_ambiguous_unary,)
 
     OPEN_OPEN_AMBIGUOUS_LATER_ERROR        = (fix_open_open_ambiguous_later,)
@@ -634,6 +712,8 @@ class RepairType(Enum):
     SHIFT_OPEN_AMBIGUOUS_UNARY_ERROR       = (fix_shift_open_ambiguous_unary,)
 
     SHIFT_OPEN_AMBIGUOUS_LATER_ERROR       = (fix_shift_open_ambiguous_later,)
+
+    SHIFT_OPEN_AMBIGUOUS_PREDICTED         = (fix_shift_open_ambiguous_predicted,)
 
     OTHER_SHIFT_OPEN                       = (report_shift_open, False, True)
 
