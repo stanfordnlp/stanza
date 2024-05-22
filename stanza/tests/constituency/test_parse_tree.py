@@ -319,7 +319,7 @@ def test_latex():
     """
     Test the latex format for trees
     """
-    expected = "\Tree [.S [.NP Jennifer ] [.VP has [.NP nice antennae ] ] ]"
+    expected = "\\Tree [.S [.NP Jennifer ] [.VP has [.NP nice antennae ] ] ]"
     tree = "(ROOT (S (NP (NNP Jennifer)) (VP (VBZ has) (NP (JJ nice) (NNS antennae)))))"
     tree = tree_reader.read_trees(tree)[0]
     text = "{:T}".format(tree)
