@@ -770,6 +770,18 @@ class RepairType(Enum):
           ambiguous c-s/shift closed early   0.8276   0.7678
           ambiguous c-s/shift closed late    0.8278   0.7668
           ambiguous c-s/shift predicted      0.8270   0.7668
+
+    --------------------------------------------------------
+
+    Testing a combination of ambiguous vs predicted transitions
+
+      ambiguous
+    EN: (no CSS_U)                           0.9258   0.9252
+    ZH: (no CSS_U)                           0.9153   0.9145
+
+      predicted
+    EN: (no CSS_U)                           0.9264   0.9241
+    ZH: (no CSS_U)                           0.9145   0.9141
     """
     def __new__(cls, fn, correct=False, debug=False):
         """
