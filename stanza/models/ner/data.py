@@ -2,7 +2,7 @@ import random
 import logging
 import torch
 
-from stanza.models.common.bert_embedding import filter_data
+from stanza.models.common.bert_embedding import filter_data, needs_length_filter
 from stanza.models.common.data import map_to_ids, get_long_tensor, sort_all
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX
 from stanza.models.pos.vocab import CharVocab, CompositeVocab, WordVocab
@@ -25,7 +25,7 @@ class DataLoader:
         data = self._load_doc(self.doc, scheme)
 
         # filter out the long sentences if bert is used
-        if self.args.get('bert_model', False):
+        if self.args.get('bert_model', None) and needs_length_filter(self.args['bert_model']):
             data = filter_data(self.args['bert_model'], data, bert_tokenizer)
 
         self.tags = [[w[1] for w in sent] for sent in data]
