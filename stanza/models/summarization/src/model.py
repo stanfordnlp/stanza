@@ -231,6 +231,7 @@ class BaselineSeq2Seq(nn.Module):
         self.device = device
         self.input_size = 0
         self.batch_size = self.model_args.get("batch_size", DEFAULT_BATCH_SIZE)
+        self.unsaved_modules = []
         
         emb_matrix = pt_embedding.emb   # have to load this in through file by using 'load_pretrain' helper
         self.vocab_size = emb_matrix.shape[0]
@@ -275,7 +276,6 @@ class BaselineSeq2Seq(nn.Module):
 
         embedded = self.embedding(padded_inputs).to(device)
         return embedded, input_lengths
-    
     
     def build_extended_vocab_map(self, src: List[List[str]]):
         """
@@ -322,6 +322,10 @@ class BaselineSeq2Seq(nn.Module):
         
         revised_index_tensor = pad_sequence(index_tensor, batch_first=True)
         return revised_index_tensor, max_oov_words
+
+    def add_unsaved_module(self, name, module):
+        self.unsaved_modules += [name]
+        setattr(self, name, module)
 
     def forward(self, text, target, teacher_forcing_ratio=0.5):
         """
