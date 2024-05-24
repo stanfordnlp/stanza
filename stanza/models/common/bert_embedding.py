@@ -96,6 +96,15 @@ def filter_data(model_name, data, tokenizer = None, log_level=logging.DEBUG):
     
     return filtered_data
 
+def needs_length_filter(model_name):
+    """
+    TODO: we were lazy and didn't implement any form of length fudging for models other than bert/roberta/electra
+    """
+    if 'bart' in model_name or 'xlnet' in model_name:
+        return True
+    if model_name.startswith("vinai/phobert"):
+        return True
+    return False
 
 def cloned_feature(feature, num_layers, detach=True):
     """
