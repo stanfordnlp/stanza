@@ -225,26 +225,42 @@ class BaselineDecoder(nn.Module):
 
 
 class BaselineSeq2Seq(nn.Module):
-    def __init__(self, model_args, pt_embedding, device):
+    def __init__(self, model_args, pt_embedding, device, 
+                 use_charlm: bool = False, charlm_forward_file: str = None, charlm_backward_file: str = None):
+        
         super(BaselineSeq2Seq, self).__init__()
         self.model_args = model_args
         self.device = device
-        self.input_size = 0
         self.batch_size = self.model_args.get("batch_size", DEFAULT_BATCH_SIZE)
         self.unsaved_modules = []
+        self.input_size = 0
+        self.use_charlm = use_charlm
         
+        # word embeddings
         emb_matrix = pt_embedding.emb   # have to load this in through file by using 'load_pretrain' helper
         self.vocab_size = emb_matrix.shape[0]
-        self.embedding_dim = emb_matrix.shape[1]
+        self.word_embedding_dim = emb_matrix.shape[1]
+        self.vocab = pt_embedding.vocab  # to get word from index, used in characterlm
 
         self.embedding = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=False)   # freeze False because 'See et. al.' updates embeddings
         self.vocab_map = {word.replace('\xa0', ' '): i for i, word in enumerate(pt_embedding.vocab)}
+
+        # charlm embeddings
+        if self.use_charlm:
+            if charlm_forward_file is None or not os.path.exists(charlm_forward_file):
+                raise FileNotFoundError(f"Could not find forward character model: {charlm_forward_file}")
+            if charlm_backward_file is None or not os.path.exists(charlm_backward_file):
+                raise FileNotFoundError(f"Could not find backward character model: {charlm_backward_file}")
+            self.add_unsaved_module("charmodel_forward", CharacterLanguageModel.load(charlm_forward_file))
+            self.add_unsaved_module("charmodel_backward", CharacterLanguageModel.load(charlm_backward_file))
+
+            self.input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
 
         # extended vocab 
         self.ext_vocab_map = deepcopy(self.vocab_map)
         self.max_oov_words = 0
 
-        self.input_size += self.embedding_dim
+        self.input_size += self.word_embedding_dim
 
         encoder_hidden_dim = self.model_args.get("encoder_hidden_dim", DEFAULT_ENCODER_HIDDEN_DIM)
         encoder_num_layers = self.model_args.get("encoder_num_layers", DEFAULT_ENCODER_NUM_LAYERS)
@@ -254,27 +270,38 @@ class BaselineSeq2Seq(nn.Module):
         decoder_num_layers = self.model_args.get("decoder_num_layers", encoder_num_layers)
         self.pgen = self.model_args.get("pgen", False)
         self.coverage = self.model_args.get("coverage", False)
-        self.decoder = BaselineDecoder(self.vocab_size, encoder_hidden_dim, decoder_hidden_dim, self.embedding_dim, decoder_num_layers, self.pgen, self.coverage,
+        self.decoder = BaselineDecoder(self.vocab_size, encoder_hidden_dim, decoder_hidden_dim, self.input_size, decoder_num_layers, self.pgen, self.coverage,
                                        device=device)
     
-
-    def extract_word_embeddings(self, text: List[List[str]]):
+    def get_text_embeddings(self, text: List[List[str]]):
         """
         Extracts the word embeddings over the input articles in 'text'.
 
-        text (List[List[str]]): Tokenized articles of text
+        text (List[List[str]]): Tokenized batch of articles of text. Each inner List[str] is a single article.
 
         Returns a tensor of the padded embeddings over the inputs. Also returns the input lengths.
         """
         device = next(self.parameters()).device
+
+        # Get word embeddings
         token_ids, input_lengths = [], []
         for article in text:
             article_token_ids = torch.tensor([self.vocab_map.get(word.lower(), UNK_ID) for word in article], device=device)
             token_ids.append(article_token_ids)
             input_lengths.append(len(article_token_ids))
         padded_inputs = pad_sequence(token_ids, batch_first=True).to(device)
+        embedded = self.embedding(padded_inputs).to(device)  # (batch size, seq len, word emb dim)
 
-        embedded = self.embedding(padded_inputs).to(device)
+        # Optionally, build Char embedding reps too
+        if self.use_charlm:
+            # TODO : Are these charmodels on the same device? If not, how do we move them onto same device?
+            char_reps_forward = self.charmodel_forward.build_char_representation(text)
+            char_reps_backward = self.charmodel_backward.build_char_representation(text)
+
+            char_reps_forward = pad_sequence(char_reps_forward, batch_first=True)
+            char_reps_backward = pad_sequence(char_reps_backward, batch_first=True)
+
+            embedded = torch.cat((embedded, char_reps_forward, char_reps_backward), 2)  # (batch size, seq len, word emb dim + char emb dim)
         return embedded, input_lengths
     
     def build_extended_vocab_map(self, src: List[List[str]]):
@@ -346,11 +373,11 @@ class BaselineSeq2Seq(nn.Module):
         self.max_oov_words = max_oov_words   # the count of OOV words in the input texts 
 
         # Get embeddings over the input text
-        embedded, input_lengths = self.extract_word_embeddings(text)
+        embedded, input_lengths = self.get_text_embeddings(text)
         input_len = embedded.shape[1]  # the max seq len out of all inputs
 
         # Get embeddings over the target text
-        target_embeddings, target_lengths = self.extract_word_embeddings(target)
+        target_embeddings, target_lengths = self.get_text_embeddings(target)
 
         target_len = target_embeddings.shape[1]   # TODO : Ask John how batch processing works with this. should this actually just be a uniform hyperparam like max_dec_steps? If so, how to do padding?
         # target_len currently represents the maximum seq length out of all sequences in the reference summaries.
@@ -367,7 +394,7 @@ class BaselineSeq2Seq(nn.Module):
         encoder_outputs, encoder_hidden, encoder_cell, decoder_init_state, decoder_init_cell = self.encoder(packed_input_seqs)
 
         # For each decoder time step, the decoder receives the word embedding of the previous word 
-        input = target_embeddings[:, 0, :] # TODO make sure the data uses <sos> at the beginning of sentences
+        input = target_embeddings[:, 0, :]
 
         hidden = decoder_init_state   # the initial decoder hidden state is the linearized hidden state of the encoder
         cell = decoder_init_cell   # similar for the cell ^
