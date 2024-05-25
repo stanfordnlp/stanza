@@ -76,6 +76,9 @@ class SummarizationTrainer():
         decoder_num_layers = self.model_args.get("dec_num_layers", DEFAULT_DECODER_NUM_LAYERS)
         pgen = self.model_args.get("pgen", False)
         coverage = self.model_args.get("coverage", False)
+        use_charlm = self.model_args.get("charlm", False)
+        charlm_forward_file = self.model_args.get("charlm_forward_file", None)
+        charlm_backward_file = self.model_args.get("charlm_backward_file", None)
 
         parsed_model_args = {
             "batch_size": batch_size,
@@ -88,7 +91,8 @@ class SummarizationTrainer():
         }
 
         # return the model obj
-        return BaselineSeq2Seq(parsed_model_args, self.pt_embedding, device=self.device)
+        return BaselineSeq2Seq(parsed_model_args, self.pt_embedding, device=self.device, 
+                               use_charlm=use_charlm, charlm_forward_file=charlm_forward_file, charlm_backward_file=charlm_backward_file)
 
     def train(self, num_epochs: int, save_name: str, train_file: str, eval_file: str) -> None:
         """
@@ -135,7 +139,6 @@ class SummarizationTrainer():
             for articles, summaries in zip(articles_batches, summaries_batches):
 
                 # Get model output
-                # TODO: can i put these on the device later?
                 self.optimizer.zero_grad()
                 output, attention_scores, coverage_vectors = self.model(articles, summaries)  # (batch size, seq len, vocab size)
                 output = output.permute(0, 2, 1)   # (batch size, vocab size, seq len)
@@ -210,6 +213,9 @@ def parse_args():
     parser.add_argument("--num_epochs", type=int, default=10, help="Number of training epochs")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
     parser.add_argument("--wordvec_pretrain_file", type=str, default=DEFAULT_WORDVEC_PRETRAIN_FILE, help="Path to pretrained word embeddings file")
+    parser.add_argument("--charlm", action="store_true", dest="charlm", default=False, help="Use character language model embeddings.")
+    parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
+    parser.add_argument("--charlm_backward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
     return parser
 
 def main():
@@ -230,6 +236,9 @@ def main():
     num_epochs = args.num_epochs
     lr = args.lr
     wordvec_pretrain_file = args.wordvec_pretrain_file
+    charlm_forward_file = args.charlm_forward_file
+    charlm_backward_file = args.charlm_backward_file
+    use_charlm = args.charlm
 
     if not os.path.exists(eval_file):
         no_eval_file_msg = f"Could not find provided eval file: {eval_file}"
@@ -243,11 +252,20 @@ def main():
         no_wordvec_file_msg = f"Could not find provided wordvec pretrain file {wordvec_pretrain_file}"
         logger.error(no_wordvec_file_msg)
         raise FileNotFoundError(no_wordvec_file_msg)
+    if use_charlm:
+        if not os.path.exists(charlm_forward_file):
+            no_charlm_forward_file_msg = f"Could not find provided charlm forward file {charlm_forward_file}"
+            logger.error(no_charlm_forward_file_msg)
+            raise FileNotFoundError(no_charlm_forward_file_msg)
+        if not os.path.exists(charlm_backward_file):
+            no_charlm_backward_file_msg = f"Could not find provided charlm backward file {charlm_backward_file}"
+            logger.error(no_charlm_backward_file_msg)
+            raise FileNotFoundError(no_charlm_backward_file_msg)
     
     args = vars(args)
     logger.info("Using the following args for training:")
     for arg, val in args.items():
-        print(f"{arg}: {val}")
+        logger.info(f"{arg}: {val}")
 
     trainer = SummarizationTrainer(
         model_args=args,
