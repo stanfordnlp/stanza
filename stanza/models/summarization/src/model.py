@@ -465,9 +465,24 @@ class BaselineSeq2Seq(nn.Module):
                 # as the next word embedding because we do not have an embedding for this word
                 oov_words_mask = top1 >= self.vocab_size  # masking which chosen words are out of vocabulary
                 top1[oov_words_mask] = UNK_ID
-                input = self.embedding(top1)   
+                # generate embedding for next word
+                input = self.embedding(top1) 
+                if self.use_charlm:
+                    # build_char_representation take [[str]], so we need to convert the tensor of IDs to list of strings
+                    chosen_words = [[word] for word in self.vocab.unmap(top1)]
+                    # TODO: if u print this, the model keeps choosing '<PAD>' which is concerning. Am I not doing something right?
 
-        self.ext_vocab_map = deepcopy(self.vocab_map)
+                    char_reps_forward = self.charmodel_forward.build_char_representation(chosen_words)
+                    char_reps_backward = self.charmodel_backward.build_char_representation(chosen_words)
+                    
+                    char_reps_forward = pad_sequence(char_reps_forward, batch_first=True)
+                    char_reps_backward = pad_sequence(char_reps_backward, batch_first=True)
+
+                    # the char reps are shape (batch size, seq len, char_dim) but the seq len is always 1 because we only choose 
+                    # 1 token, so we simply squeeze the seqlen dim to get (batch size, char_dim) to concat with the word emb
+                    input = torch.cat((input, char_reps_forward.squeeze(1), char_reps_backward.squeeze(1)), 1)  # (batch size, 1, word emb dim + char emb dim)
+                
+        self.ext_vocab_map = deepcopy(self.vocab_map)  # reset OOV words for the next batch of text
         self.max_oov_words = 0
 
         return outputs, final_attn_weights, final_coverage_vecs
