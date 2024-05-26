@@ -486,3 +486,91 @@ class BaselineSeq2Seq(nn.Module):
         self.max_oov_words = 0
 
         return outputs, final_attn_weights, final_coverage_vecs
+
+    def run_encoder(self, examples):
+        """
+        For beam search decoding: run the encoder and return the encoder outputs, and the decoder init states
+        
+        examples: [[str]], the tokenized text of batches of article examples
+        """
+        unpacked_lstm_outputs, hidden, cell, hidden_linearized, cell_linearized = self.encoder(examples)
+        return unpacked_lstm_outputs, hidden_linearized, cell_linearized
+
+    def decode_onestep(self, examples: List[List[str]], latest_tokens: List[List[str]], enc_states: torch.Tensor, 
+                       dec_hidden: torch.Tensor, dec_cell: torch.Tensor, prev_coverage: torch.Tensor):
+        """
+        For beam search decoding: Run the decoder for a single step.
+
+        Args:
+            examples (List[List[str]]): the raw tokenized text of the batch examples
+            latest_tokens (List[List[str]]): the tokens used as input to the decoder for this timestep (i.e. last token to be decoded)
+            enc_states: The encoder states for the text (beam size, seq len, enc hidden dim)
+            dec_hidden: A tensor of the hidden state of the decoder at the current timestep for each batch (beam size, dec hidden dim)
+            dec_cell: A tensor of the cell state of the decoder at the current timestep for each batch (beam size, dec hidden dim)
+            prev_coverage: Coverage vectors from the last timestep. None if not using coverage.
+
+        Returns:
+            ids: top 2k token ids from prediction (beam size, 2 * beam size)
+            probs: top 2k log probabilities. shape (beam size, 2 * beam size)
+            new_hidden: new hidden states for the decoder. shape (beam size, dec hidden dim)
+            attn_dists: attention distributions. shape (beam size, seq len)
+            p_gens: generation probabilities fro this step. shape (beam size)
+            new_coverage: Coverage vectors for this step. Shape (beam size, seq len)
+
+        TODO be careful that this function might set new state variables for the model components, so 
+        be mindful of this and just load a model checkpoint when using this. Do not run on an in-progress
+        model being trained
+
+        """
+
+        beam_size = dec_hidden.shape[0]
+        device = next(self.parameters()).device
+        index_tensor, max_oov_words = self.build_extended_vocab_map(examples)
+
+        latest_token_emb, _ = self.get_text_embeddings(latest_tokens)  # batch size, seq len, emb dim
+        latest_token_emb = latest_token_emb.squeeze(1)  # squeeze the seqlen dim
+
+        attention_weights, coverage_vec = self.decoder.attention(enc_states, dec_hidden, coverage_vec)
+        # TODO: test if this still causes an error when used in this function
+        if prev_coverage is not None:  # remove from device because this updates
+            prev_coverage = prev_coverage.detach()
+
+        context_vector = torch.bmm(attention_weights.unsqueeze(1), enc_states)
+        context_vector = context_vector.squeeze(1)  # (beam size, 2 * enc hidden dim)
+
+        input = latest_token_emb.unsqueeze(1)  # (batch size, 1, embedding dim)
+        dec_hidden = dec_hidden.unsqueeze(1).transpose(0, 1)
+        dec_cell = dec_cell.unsqueeze(1).tranpose(0, 1)
+
+        lstm_output, (hidden, cell) = self.decoder.lstm(input, (dec_hidden, dec_cell))
+
+        hidden, cell = hidden.transpose(0, 1), cell.transpose(0, 1)
+        dec_hidden, dec_cell = hidden.squeeze(1), cell.squeeze(1)  # Updated decoder state (beam size, decoder hidden dim)
+
+        p_gen = None
+        if self.pgen:
+            p_gen_input = torch.cat((context_vector, dec_hidden, input.squeeze(1)), dim=1)  # (beam size, 2 * enc_hidden_dim + dec hidden dim + emb dim)
+            p_gen = torch.sigmoid(self.decoder.p_gen_linear(p_gen_input))  # (beam size, 1)
+        
+        # Decoder state and context vector and concatenated and passed through linear layers to produce the vocab dist.
+        concatenated = torch.cat((dec_hidden, context_vector), dim=1)
+        output = self.decoder.V_1(concatenated)
+        output = self.decoder.V_1_prime(output)
+        p_vocab = self.decoder.softmax(output)  # (beam size, vocab size)
+
+        # Make final distribution if needed
+        if self.pgen:
+            scaled_p_vocab = p_gen * p_vocab  # (beam size, vocab size)
+            attention_weights = (1 - p_gen) * attention_weights  # (beam size, seq len)
+
+            extended_vocab_size = self.vocab_size + max_oov_words
+            extended_vocab_dist = torch.zeros(beam_size, extended_vocab_size, device=device) 
+            extended_vocab_dist[:, :self.vocab_size] = scaled_p_vocab
+
+            final_vocab_dist = extended_vocab_dist.scatter_add(dim=1, index=index_tensor, src=attention_weights)
+            p_vocab = final_vocab_dist
+        
+        # Produce top 2k IDs and top 2k log probabilities
+        top_k_probs, top_k_ids = torch.topk(p_vocab, beam_size, dim=1)
+        top_k_probs = torch.log(top_k_probs)
+        return top_k_ids, top_k_probs, dec_hidden, dec_cell, attention_weights, p_gen, prev_coverage
