@@ -52,9 +52,11 @@ class BeamSearchDecoder():
                 
 
             except Exception as e:
-                raise(f"Error on article {i}: {" ".join([word for word in article])}\n\n{e}")
+                print(f'Error on article {i}: {" ".join([word for word in article])}\n')
+                raise(e)
         assert len(examples) == len(summaries), f"Expected number of summaries ({len(summaries)}) to match number of articles ({len(examples)})."
-
+        return summaries
+    
     def log_output(self, article: List[str], summary: str) -> None:
         if self.logger is None:
             raise ValueError(f"Cannot log output without a Logger. Logger: {self.logger}")

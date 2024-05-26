@@ -194,6 +194,7 @@ class SummarizationTrainer():
                 batch_loss.backward()
                 self.optimizer.step()
         # TODO evaluate model checkpoint on val set
+        torch.save(self.model, save_name)
 
 
 def parse_args():

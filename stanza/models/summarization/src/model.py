@@ -493,7 +493,9 @@ class BaselineSeq2Seq(nn.Module):
         
         examples: [[str]], the tokenized text of batches of article examples
         """
-        unpacked_lstm_outputs, hidden, cell, hidden_linearized, cell_linearized = self.encoder(examples)
+        embedded, input_lens = self.get_text_embeddings(examples)
+        packed_input_seqs = pack_padded_sequence(embedded, input_lens, batch_first=True, enforce_sorted=False)
+        unpacked_lstm_outputs, hidden, cell, hidden_linearized, cell_linearized = self.encoder(packed_input_seqs)
         return unpacked_lstm_outputs, hidden_linearized, cell_linearized
 
     def decode_onestep(self, examples: List[List[str]], latest_tokens: List[List[str]], enc_states: torch.Tensor, 
@@ -530,17 +532,17 @@ class BaselineSeq2Seq(nn.Module):
         latest_token_emb, _ = self.get_text_embeddings(latest_tokens)  # batch size, seq len, emb dim
         latest_token_emb = latest_token_emb.squeeze(1)  # squeeze the seqlen dim
 
-        attention_weights, coverage_vec = self.decoder.attention(enc_states, dec_hidden, coverage_vec)
+        attention_weights, coverage_vec = self.decoder.attention(enc_states, dec_hidden, prev_coverage)
         # TODO: test if this still causes an error when used in this function
         if prev_coverage is not None:  # remove from device because this updates
-            prev_coverage = prev_coverage.detach()
+            prev_coverage = coverage_vec.detach()
 
         context_vector = torch.bmm(attention_weights.unsqueeze(1), enc_states)
         context_vector = context_vector.squeeze(1)  # (beam size, 2 * enc hidden dim)
 
         input = latest_token_emb.unsqueeze(1)  # (batch size, 1, embedding dim)
         dec_hidden = dec_hidden.unsqueeze(1).transpose(0, 1)
-        dec_cell = dec_cell.unsqueeze(1).tranpose(0, 1)
+        dec_cell = dec_cell.unsqueeze(1).transpose(0, 1)
 
         lstm_output, (hidden, cell) = self.decoder.lstm(input, (dec_hidden, dec_cell))
 
@@ -571,6 +573,6 @@ class BaselineSeq2Seq(nn.Module):
             p_vocab = final_vocab_dist
         
         # Produce top 2k IDs and top 2k log probabilities
-        top_k_probs, top_k_ids = torch.topk(p_vocab, beam_size, dim=1)
+        top_k_probs, top_k_ids = torch.topk(p_vocab, 2*beam_size, dim=1)
         top_k_probs = torch.log(top_k_probs)
         return top_k_ids, top_k_probs, dec_hidden, dec_cell, attention_weights, p_gen, prev_coverage
