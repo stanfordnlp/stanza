@@ -65,7 +65,7 @@ class Hypothesis():
 
     def get_avg_log_prob(self):
         # Normalize by sequence length (longer sequences will always have lower probability)
-        return self.get_log_prob / len(self.tokens)
+        return self.get_log_prob() / len(self.tokens)
 
 
 def run_beam_search(model: BaselineSeq2Seq, vocab: BaseVocab, example: List[str], beam_size: int,
@@ -91,11 +91,12 @@ def run_beam_search(model: BaselineSeq2Seq, vocab: BaseVocab, example: List[str]
     # Initialize N-Hypotheses for beam search 
     hyps = [
         Hypothesis(
-            tokens=[vocab.unit2d(START_TOKEN)],  # TODO verify that this is not unknown to the glove vocab
+            tokens=[vocab.unit2id(START_TOKEN)],  # TODO verify that this is not unknown to the glove vocab
             log_probs=[0.0],
             state=(dec_hidden_init[0], dec_cell_init[0]),  # only one example, so get the state for that example
+            attn_dists=[],
             p_gens=[], 
-            coverage=torch.zeros(enc_states.shape[1])  # sequence length
+            coverage=torch.zeros(enc_states.shape[1], device=device)  # sequence length
         ) for _ in range(beam_size)
     ]
     results = []  # stores our finished hypotheses (decoded out the STOP token)
@@ -116,9 +117,9 @@ def run_beam_search(model: BaselineSeq2Seq, vocab: BaseVocab, example: List[str]
             examples = batch,
             latest_tokens=latest_tokens,
             enc_states=enc_states, 
-            dec_hidden=torch.tensor(hidden_states, device=device),
-            dec_cell=torch.tensor(cell_states, device=device),
-            prev_coverage=torch.tensor(prev_coverage, device=device)
+            dec_hidden=torch.stack(hidden_states).to(device),
+            dec_cell=torch.stack(cell_states).to(device),
+            prev_coverage=torch.stack(prev_coverage).to(device)
         )
 
         # extend current hypotheses with the possible next tokens. We determine the choices to be 2 x beam size for the choices
