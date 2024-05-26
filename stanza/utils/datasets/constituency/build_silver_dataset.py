@@ -68,9 +68,11 @@ def main():
     foundation_cache = retag_pipeline[0].foundation_cache if retag_pipeline else FoundationCache()
 
     logger.info("Building ensemble #1 out of %s", args['e1'])
-    e1 = Ensemble(args['e1'], args, foundation_cache)
+    e1 = Ensemble(args, filenames=args['e1'], foundation_cache=foundation_cache)
+    e1.to(args.get('device', None))
     logger.info("Building ensemble #2 out of %s", args['e2'])
-    e2 = Ensemble(args['e2'], args, foundation_cache)
+    e2 = Ensemble(args, filenames=args['e2'], foundation_cache=foundation_cache)
+    e2.to(args.get('device', None))
 
     tokenized_sentences = text_processing.read_tokenized_file(args['tokenized_file'])
     logger.info("Read %d tokenized sentences", len(tokenized_sentences))
