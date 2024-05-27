@@ -1,6 +1,7 @@
 """
 Preprocessing on the CNN Dailymail dataset 
 """
+import argparse
 import os
 import logging
 import sys
@@ -142,7 +143,7 @@ class Dataset:
 def write_dataset(save_path_root: str, split: DatasetSplit, streaming: bool = True, chunk_size: int = 1000):
     """
     Writes the `split` section of the CNN dailymail dataset to `save_path_root`. The dataset will be split into
-    chunked files, where the path to the data will be {save_path_root}/{split}/examples_{i} for the i-th chunk.
+    chunked files, where the path to the data will be `{save_path_root}/{split}/examples_{i}` for the i-th chunk.
 
     Args:
         save_path (str): Path to save file
@@ -171,6 +172,12 @@ def write_dataset(save_path_root: str, split: DatasetSplit, streaming: bool = Tr
             cur_chunk.write_chunk(tokenizer_client=client)
             logger.info("All examples have been processed.")
 
+def split_type(value):
+    try:
+        return DatasetSplit(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{value}' is not a valid DatasetSplit type. Choose from 'train', 'validation', 'test'.")
+
 
 if __name__ == "__main__":
 
@@ -178,3 +185,20 @@ if __name__ == "__main__":
     SPLIT = DatasetSplit.TRAIN
 
     write_dataset(ROOT, SPLIT)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--data_root", type=str, default=ROOT, help="Path to root directory containing data for the split you are preparing dataset for.")
+    parser.add_argument("--split", type=split_type, required=True, default=SPLIT, help="Which split you are attempting to write data for (train, validation, test)")
+    parser.add_argument("--chunk_size", type=int, default=1000, help="Size of data chunk files to split data into.")
+
+    args = parser.parse_args()
+
+    data_root = args.data_root
+    split = args.split
+    chunk_size = args.chunk_size
+
+    logger.info(f"Using the following args for preparing dataset: ")
+    for k, v in args.items():
+        logger.info(f"{k}: {v}")
+
+    write_dataset(data_root, split, chunk_size=chunk_size)
