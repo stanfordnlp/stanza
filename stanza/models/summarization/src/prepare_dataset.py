@@ -4,6 +4,7 @@ Preprocessing on the CNN Dailymail dataset
 import os
 import logging
 import sys
+import random
 
 ROOT = '/Users/alexshan/Desktop/stanza'
 sys.path.append(ROOT)
@@ -34,7 +35,7 @@ class DatasetSplit(Enum):
     VAL = "validation"
 
 
-class Chunk():
+class Chunk:
 
     def __init__(self, path: str, articles: List[str], summaries: List[str]):
 
@@ -53,7 +54,7 @@ class Chunk():
         self.summaries = self.summaries + [summary]
     
     def write_chunk(self, tokenizer_client: CoreNLPClient):
-        with open(self.path, "w+") as f:
+        with open(self.path, "w+", encoding="utf-8") as f:
             for article, summary in zip(self.articles, self.summaries):
                 
                 processed_article = []
@@ -77,6 +78,66 @@ class Chunk():
     def __len__(self):
         return len(self.articles)
 
+
+class Dataset:
+    
+    def __init__(self, data_root: str, batch_size: int, shuffle: bool = True):
+        """
+        Args:
+            data_root (str): Path to the root of the data directory containing chunked files.
+            batch_size (int): Size of each batch of examples 
+        
+        Returns:
+            1. List[List[List[str]]]: Batches of articles, where each token is a separate entry within each sentence
+            2. List[List[List[str]]]: Batches of summaries, where each token is a separate entry within each sentence
+        """
+
+        if not os.path.exists(data_root):
+            raise FileNotFoundError(f"Expected to find path to root: {data_root}, but is missing.")
+        
+        articles, summaries = [], []
+        chunked_files = os.listdir(data_root)
+        data_paths = [os.path.join(data_root, chunked) for chunked in chunked_files]
+
+        for path in data_paths:
+            with open(path, "r+", encoding='utf-8') as f:
+                
+                lines = f.readlines()
+
+                for i in range(0, len(lines), 2):  # iterate through lines in increments of two, getting article + summary
+                    article, summary = lines[i].strip("\n"), lines[i + 1].strip("\n")
+                    tokenized_article, tokenized_summary = article.split(" "), summary.split(" ")
+                    articles.append(tokenized_article)
+                    summaries.append(tokenized_summary)
+        
+        self.articles = articles
+        self.summaries = summaries
+
+        if len(self.articles) != len(self.summaries):
+            raise ValueError(f"Data mismatch: found {len(self.summaries)} summaries compared to {len(self.articles)} articles.")
+
+        self.batch_size = batch_size
+        self.shuffle = shuffle
+
+    def __len__(self):
+        # Number of batches, rounded up to the nearest batch
+        return len(self.articles) // self.batch_size + (len(self.articles) % self.batch_size > 0)
+    
+    def __iter__(self):
+        num_articles = len(self.articles)
+        indices = list(range(num_articles))
+
+        if self.shuffle:
+            random.shuffle(indices)
+
+        for i in range(self.__len__()):
+            batch_start = self.batch_size * i 
+            batch_end = min(batch_start + self.batch_size, num_articles)
+
+            batch_articles = [self.articles[x] for x in indices[batch_start: batch_end]]
+            batch_summaries = [self.summaries[x] for x in indices[batch_start: batch_end]]
+            yield batch_articles, batch_summaries
+        
 
 def write_dataset(save_path_root: str, split: DatasetSplit, streaming: bool = True, chunk_size: int = 1000):
     """
