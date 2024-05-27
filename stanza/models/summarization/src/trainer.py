@@ -18,6 +18,7 @@ from stanza.models.summarization.constants import *
 from stanza.models.summarization.src.model import *
 from stanza.utils.get_tqdm import get_tqdm
 from stanza.models.summarization.src.utils import *
+from stanza.models.summarization.src.prepare_dataset import Dataset
 
 from typing import List, Tuple, Any, Mapping
 
@@ -101,8 +102,8 @@ class SummarizationTrainer():
         Args:
             num_epochs (int): Number of training epochs 
             save_name (str): Path to store trained model
-            eval_file (str): Path to the validation set file for evaluating model checkpoints
-            train_file (str): Path to training data file containing tokenized text for each article
+            eval_file (str): Path to the validation set file roots evaluating model checkpoints
+            train_file (str): Path to training data root containing chunked files with tokenized text for each article + summary
 
         Returns:
             None (model with best validation set performance will be saved to the save file)
@@ -113,20 +114,9 @@ class SummarizationTrainer():
 
         self.model.to(device)
 
-        # Get dataset (and validate existence of paths)
-        # TODO
-        articles_batches = [
-            [
-                ["The", "cat", "ate", "the", "small", "pizza", ".", "It", "tasted", "good", "and", "the", "cat", "ate", "another", "one", "again", "."], 
-                ["Here", "is", "another", "example", "sentence", "." "Aasfjhasgfjhkasgf", "OGahsjhFKH", "Notawarfsah"]
-            ]
-        ]
-        summaries_batches = [
-            [
-            ["The", "cat", "ate", "two", "pizzas", "."], 
-            ["Another", "example", "sentence", ".", "But", "this", "summary", "is", "longer", "somehow", "again", "."]
-            ]
-        ]
+        # Get dataset 
+        batch_size = self.model_args.get("batch_size", DEFAULT_BATCH_SIZE)
+        dataset = Dataset(train_file, batch_size)
 
         # Load optimizer
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
@@ -136,14 +126,12 @@ class SummarizationTrainer():
         for epoch in range(num_epochs):
             # Iterate through dataset  TODO fix this
             # for batch in tokenized_dataset:
-            for articles, summaries in zip(articles_batches, summaries_batches):
+            for articles, summaries in dataset:
 
                 # Get model output
                 self.optimizer.zero_grad()
                 output, attention_scores, coverage_vectors = self.model(articles, summaries)  # (batch size, seq len, vocab size)
                 output = output.permute(0, 2, 1)   # (batch size, vocab size, seq len)
-
-                print(output.shape, attention_scores.shape, coverage_vectors.shape)
 
                 target_indices = convert_text_to_token_ids(self.model.vocab_map, summaries, UNK_ID)  # does this need to use the extended vocab map? If so, how? Do we have to compute it beforehand here?
                 # target_indices = self.model.build_extended_vocab_map(summaries)
@@ -209,8 +197,8 @@ def parse_args():
     # Training args
     parser.add_argument("--batch_size", type=int, default=DEFAULT_BATCH_SIZE, help="Batch size for data processing")
     parser.add_argument("--save_name", type=str, default=DEFAULT_SAVE_NAME, help="Path to destination for final trained model.")
-    parser.add_argument("--eval_file", type=str, default=DEFAULT_EVAL_FILE_PATH, help="Path to the validation set file")
-    parser.add_argument("--train_file", type=str, default=DEFAULT_TRAIN_FILE_PATH, help="Path to the training data file")
+    parser.add_argument("--eval_path", type=str, default=DEFAULT_EVAL_ROOT, help="Path to the validation set root")
+    parser.add_argument("--train_path", type=str, default=DEFAULT_TRAIN_ROOT, help="Path to the training data root")
     parser.add_argument("--num_epochs", type=int, default=10, help="Number of training epochs")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate")
     parser.add_argument("--wordvec_pretrain_file", type=str, default=DEFAULT_WORDVEC_PRETRAIN_FILE, help="Path to pretrained word embeddings file")
@@ -232,8 +220,8 @@ def main():
 
     batch_size = args.batch_size
     save_name = args.save_name
-    eval_file = args.eval_file
-    train_file = args.train_file
+    eval_path = args.eval_path
+    train_path = args.train_path
     num_epochs = args.num_epochs
     lr = args.lr
     wordvec_pretrain_file = args.wordvec_pretrain_file
@@ -241,12 +229,12 @@ def main():
     charlm_backward_file = args.charlm_backward_file
     use_charlm = args.charlm
 
-    if not os.path.exists(eval_file):
-        no_eval_file_msg = f"Could not find provided eval file: {eval_file}"
+    if not os.path.exists(eval_path):
+        no_eval_file_msg = f"Could not find provided eval dir: {eval_path}"
         logger.error(no_eval_file_msg)
         raise FileNotFoundError(no_eval_file_msg)
-    if not os.path.exists(train_file):
-        no_train_file_msg = f"Could not find provided train file: {train_file}"
+    if not os.path.exists(train_path):
+        no_train_file_msg = f"Could not find provided train dir: {train_path}"
         logger.error(no_train_file_msg)
         raise FileNotFoundError(no_train_file_msg)
     if not os.path.exists(wordvec_pretrain_file):
@@ -276,8 +264,8 @@ def main():
     trainer.train(
         num_epochs=num_epochs,
         save_name=save_name,
-        train_file=train_file,
-        eval_file=eval_file
+        train_file=train_path,
+        eval_file=eval_path
     )
 
 
