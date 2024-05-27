@@ -1,6 +1,7 @@
 """
 Evaluates a trained abstractive summarization Seq2Seq model
 """
+import argparse
 import sys
 import os 
 import torch
@@ -84,4 +85,31 @@ def evaluate_from_path(model_path: str, eval_path: str, logger: logging.Logger =
                    )
 
 
-# TODO: add argparse
+def main():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_path", type=str, default="", help="Path to trained model file.")
+    parser.add_argument("--eval_path", type=str, default="", help="Path to directory containing chunked test files.")
+    
+    args = parser.parse_args()
+
+    model_path = args.model_path
+    eval_path = args.eval_path
+
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Expected to find model in {model_path}.")
+    if not os.path.exists(eval_path):
+        raise FileNotFoundError(f"Expected to find directory {eval_path}.")
+    
+    logger.info(f"Using the following args for evaluating model: ")
+    for k, v in args.items():
+        logger.info(f"{k}: {v}")
+    
+    evaluate_from_path(
+        model_path,
+        eval_path,
+        logger=logger 
+    )
+
+if __name__ == "__main__":
+    main()
