@@ -383,7 +383,8 @@ class BaselineSeq2Seq(nn.Module):
         # target_len currently represents the maximum seq length out of all sequences in the reference summaries.
 
         # Tensor to store decoder outputs
-        effective_vocab_size = self.vocab_size + self.max_oov_words if self.pgen else self.vocab_size
+        # effective_vocab_size = self.vocab_size + self.max_oov_words if self.pgen else self.vocab_size TODO review
+        effective_vocab_size = len(self.ext_vocab_map) if self.pgen else self.vocab_size
 
         packed_input_seqs = pack_padded_sequence(embedded, input_lengths, batch_first=True, enforce_sorted=False)
         # packed_target_seqs = pack_padded_sequence(target_embeddings, target_lengths, batch_first=True, enforce_sorted=False)  TODO maybe remove this?
@@ -437,7 +438,8 @@ class BaselineSeq2Seq(nn.Module):
                 # contains the index of the sequence token in the extended vocab
 
                 # Concatenate some zeros to each vocabulary dist, to hold the probabilities for in-article OOV words
-                extended_vocab_size = self.vocab_size + self.max_oov_words 
+                # extended_vocab_size = self.vocab_size + self.max_oov_words   TODO review
+                extended_vocab_size = len(self.ext_vocab_map)
                 extended_vocab_dist = torch.zeros(batch_size, extended_vocab_size, device=device)   # one vocab dist per text
                 extended_vocab_dist[:, :self.vocab_size] = p_vocab_scaled  # fill the extended vocab with the existing distribution we have
 
