@@ -19,6 +19,7 @@ from stanza.models.summarization.src.model import *
 from stanza.utils.get_tqdm import get_tqdm
 from stanza.models.summarization.src.utils import *
 from stanza.models.summarization.src.prepare_dataset import Dataset
+from stanza.models.summarization.src.evaluate import evaluate_from_path
 
 from typing import List, Tuple, Any, Mapping
 
@@ -108,6 +109,8 @@ class SummarizationTrainer():
         Returns:
             None (model with best validation set performance will be saved to the save file)
         """
+        best_rouge = 0
+        best_model_path = os.path.join(os.path.dirname(save_name), "temp_best")  # best checkpoint so far
         device = default_device()
         # Load model in
         self.model = self.build_model()
@@ -181,8 +184,19 @@ class SummarizationTrainer():
                 print("BATCH LOSS SHAPE", batch_loss.shape, batch_loss)  # ([])
                 batch_loss.backward()
                 self.optimizer.step()
-        # TODO evaluate model checkpoint on val set
-        torch.save(self.model, save_name)
+            # TODO evaluate model checkpoint on val set
+            torch.save(self.model, save_name)
+            results = evaluate_from_path(
+                                        model_path=save_name,
+                                        eval_path=eval_file,
+                                        logger=logger
+                                        )
+        # compare to best checkpoint
+        if results.get('rougeLsum') > best_rouge:
+            best_rouge = results.get("rougeLsum")
+            torch.save(self.model, best_model_path)
+        best_model = torch.load(best_model_path)
+        torch.save(best_model, save_name)
 
 
 def parse_args():
