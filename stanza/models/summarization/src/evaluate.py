@@ -44,6 +44,7 @@ def evaluate_predictions_rouge(generated_summaries: List[str], reference_summari
     
     for k, v in results.items():
         logger.info(f"{k}: {v:.4f}")
+    return results
 
 
 def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: List[List[str]], logger: logging.Logger = None):
@@ -75,7 +76,8 @@ def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: 
     generated_summaries = [" ".join(summary) for summary in generated_summaries]
     summaries = [" ".join(summary) for summary in summaries]
     
-    evaluate_predictions_rouge(generated_summaries, summaries)
+    results = evaluate_predictions_rouge(generated_summaries, summaries)
+    return results
 
 
 def evaluate_from_path(model_path: str, eval_path: str, logger: logging.Logger = None):
@@ -104,12 +106,13 @@ def evaluate_from_path(model_path: str, eval_path: str, logger: logging.Logger =
                 articles.append(tokenized_article)
                 summaries.append(tokenized_summary)
     
-    evaluate_model_rouge(
+    results = evaluate_model_rouge(
                    model_path, 
                    articles, 
                    summaries, 
                    logger
                    )
+    return results
 
 
 def main():
