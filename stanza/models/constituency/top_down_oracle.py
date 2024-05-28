@@ -661,7 +661,7 @@ class RepairType(Enum):
     IN predicted                              0.8911   0.8801
 
     IT ambiguous                              0.8404   0.8380
-    IT predicted                              0.8399   0.8403
+    IT predicted                              0.8397   0.8398
 
     VI ambiguous                              0.8290   0.7676
     VI predicted                              0.8287   0.7682
