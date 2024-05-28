@@ -642,6 +642,29 @@ class RepairType(Enum):
     Training by randomly choosing between the open/open, 50/50
        +open/open random       0.9257     0.9235
     so that didn't work great compared to the individual transitions
+
+    Testing deterministic resolutions of the ambiguous transitions
+    vs predicting the appropriate transition to use:
+    SHIFT_OPEN_AMBIGUOUS_UNARY_ERROR,CLOSE_SHIFT_AMBIGUOUS_IMMEDIATE_ERROR,CLOSE_OPEN_AMBIGUOUS_IMMEDIATE_ERROR
+    SHIFT_OPEN_AMBIGUOUS_PREDICTED,CLOSE_NEXT_CORRECT_AMBIGUOUS_PREDICTED
+
+    EN ambiguous (no charlm or transformer)   0.9268   0.9231
+    EN predicted                              0.9270   0.9257
+
+    ZH ambiguous                              0.9137   0.9127
+    ZH predicted                              0.9148   0.9141
+
+    DE ambiguous                              0.9579   0.9408
+    DE predicted                              0.9575   0.9406
+
+    IN ambiguous                              0.8889   0.8794
+    IN predicted                              0.8911   0.8801
+
+    IT ambiguous                              0.8404   0.8380
+    IT predicted                              0.8399   0.8403
+
+    VI ambiguous                              0.8290   0.7676
+    VI predicted                              0.8287   0.7682
     """
     def __new__(cls, fn, correct=False, debug=False):
         """
