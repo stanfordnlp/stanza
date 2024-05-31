@@ -30,12 +30,16 @@ def generate_train_subset():
         summary_text = example['highlights']
 
 
-def convert_text_to_token_ids(vocab_map: Mapping[str, int], text_batch: List[List[str]], UNK_ID: int):
+def convert_text_to_token_ids(vocab_map: Mapping[str, int], text_batch: List[List[str]], UNK_ID: int, max_steps: int = None):
     """
     Converts a text batch to a batch of token IDs.
     """
 
     token_ids = []
+
+    if max_steps is not None:  # Truncate
+         text_batch = [article[: max_steps] for article in text_batch]
+         
     for article in text_batch:
         article_token_ids = torch.tensor([vocab_map.get(word.lower(), UNK_ID) for word in article])
         token_ids.append(article_token_ids)
