@@ -270,6 +270,8 @@ def add_predict_output_args(parser):
     parser.add_argument('--predict_file', type=str, default=None, help='Base name for writing predictions')
     parser.add_argument('--predict_format', type=str, default="{:_O}", help='Format to use when writing predictions')
 
+    parser.add_argument('--predict_output_gold_tags', default=False, action='store_true', help='Output gold tags as part of the evaluation - useful for putting the trees through EvalB')
+
 def postprocess_predict_output_args(args):
     if len(args['predict_format']) <= 2 or (len(args['predict_format']) <= 3 and args['predict_format'].endswith("Vi")):
         args['predict_format'] = "{:" + args['predict_format'] + "}"
