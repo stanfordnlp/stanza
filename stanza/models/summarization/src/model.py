@@ -243,9 +243,18 @@ class BaselineSeq2Seq(nn.Module):
         self.vocab_size = emb_matrix.shape[0]
         self.word_embedding_dim = emb_matrix.shape[1]
         self.vocab = pt_embedding.vocab  # to get word from index, used in characterlm
+        START_TOKEN, STOP_TOKEN = "<s>", "</s>"
+        start_vector = torch.randn((1, self.word_embedding_dim))
+        stop_vector = torch.randn((1, self.word_embedding_dim))
+        extended_embeddings = torch.cat((torch.from_numpy(emb_matrix), start_vector, stop_vector), dim=0)
 
-        self.embedding = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=False)   # freeze False because 'See et. al.' updates embeddings
+        # self.embedding = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=False)   # freeze False because 'See et. al.' updates embeddings
+
+        self.embedding = nn.Embedding(len(self.vocab) + 2, self.word_embedding_dim, _weight=extended_embeddings)
         self.vocab_map = {word.replace('\xa0', ' '): i for i, word in enumerate(pt_embedding.vocab)}
+        self.vocab_map[START_TOKEN] = len(self.vocab_map)
+        self.vocab_map[STOP_TOKEN] = len(self.vocab_map)
+        self.vocab_size += 2 
 
         # charlm embeddings
         if self.use_charlm:
@@ -475,7 +484,9 @@ class BaselineSeq2Seq(nn.Module):
                 input = self.embedding(top1) 
                 if self.use_charlm:
                     # build_char_representation take [[str]], so we need to convert the tensor of IDs to list of strings
-                    chosen_words = [[word] for word in self.vocab.unmap(top1)]
+                    id2unit = {idx: word for word, idx in self.ext_vocab_map.items()}
+                    top1_words = [id2unit.get(word.item()) for word in top1]
+                    chosen_words = [[word] for word in top1_words]
                     # TODO: if u print this, the model keeps choosing '<PAD>' which is concerning. Am I not doing something right?
 
                     char_reps_forward = self.charmodel_forward.build_char_representation(chosen_words)
