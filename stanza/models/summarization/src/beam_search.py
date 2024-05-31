@@ -5,6 +5,7 @@ import torch
 
 from typing import List, Tuple, Mapping, Any
 from stanza.models.summarization.src.model import BaselineSeq2Seq
+from stanza.models.summarization.constants import UNK_ID
 from stanza.models.common.vocab import BaseVocab, UNK
 
 class Hypothesis():
@@ -68,8 +69,8 @@ class Hypothesis():
         return self.get_log_prob() / len(self.tokens)
 
 
-def run_beam_search(model: BaselineSeq2Seq, vocab: BaseVocab, example: List[str], beam_size: int,
-                    max_dec_steps: int, min_dec_steps: int):
+def run_beam_search(model: BaselineSeq2Seq, unit2id: Mapping, id2unit: Mapping, example: List[str], beam_size: int,
+                    max_dec_steps: int, min_dec_steps: int, max_enc_steps: int):
     """
     Performs beam search decoding on an example.
 
@@ -82,7 +83,7 @@ def run_beam_search(model: BaselineSeq2Seq, vocab: BaseVocab, example: List[str]
 
     # Run encoder over the batch of examples to get the encoder hidden states and decoder init state
     # note that the batch is the same example repeated 
-    enc_states, dec_hidden_init, dec_cell_init = model.run_encoder(batch)
+    enc_states, dec_hidden_init, dec_cell_init = model.run_encoder(batch, max_enc_steps)
 
     # enc states shape (batch size, seq len, 2 * enc hidden dim)
     # dec states are shape (batch size, dec hidden dim)
@@ -91,7 +92,7 @@ def run_beam_search(model: BaselineSeq2Seq, vocab: BaseVocab, example: List[str]
     # Initialize N-Hypotheses for beam search 
     hyps = [
         Hypothesis(
-            tokens=[vocab.unit2id(START_TOKEN)],  # TODO verify that this is not unknown to the glove vocab
+            tokens=[unit2id.get(START_TOKEN, UNK_ID)],  # TODO verify that this is not unknown to the glove vocab
             log_probs=[0.0],
             state=(dec_hidden_init[0], dec_cell_init[0]),  # only one example, so get the state for that example
             attn_dists=[],
@@ -104,16 +105,15 @@ def run_beam_search(model: BaselineSeq2Seq, vocab: BaseVocab, example: List[str]
     # Run the loop while we still have decoding steps and the number of finished results is less than the beam size
     steps = 0
     while steps < max_dec_steps and len(results) < beam_size:
-
         latest_tokens = [h.get_latest_token() for h in hyps]  # get latest token from each hypothesis 
-        latest_tokens = [t if t in range(len(vocab)) else vocab.unit2id(UNK) for t in latest_tokens]  # change any OOV words to UNK
-        latest_tokens = [[vocab.id2unit(t)] for t in latest_tokens]  # convert back to word because model.decode_onestep() expects string
+        latest_tokens = [t if t in range(len(unit2id)) else UNK_ID for t in latest_tokens]  # change any OOV words to UNK
+        latest_tokens = [[id2unit.get(t)] for t in latest_tokens]  # convert back to word because model.decode_onestep() expects string
         hidden_states = [h.state[0] for h in hyps]
         cell_states = [h.state[1] for h in hyps]
         prev_coverage = [h.coverage for h in hyps]
 
         # run the decoder for one timestep, decoding out choices for the next token of each sequence
-        topk_ids, topk_log_probs, new_hiddens, new_cells, attn_dists, p_gens, new_coverage = model.decode_onestep(
+        topk_ids, topk_log_probs, new_hiddens, new_cells, attn_dists, p_gens, new_coverage, unit2id_ = model.decode_onestep(
             examples = batch,
             latest_tokens=latest_tokens,
             enc_states=enc_states, 
@@ -121,6 +121,10 @@ def run_beam_search(model: BaselineSeq2Seq, vocab: BaseVocab, example: List[str]
             dec_cell=torch.stack(cell_states).to(device),
             prev_coverage=torch.stack(prev_coverage).to(device)
         )
+        # create updated id2unit from unit2id_.
+        # Note that the outputted unit2id_ is always continually updated every call to model.decode_onestep()
+        # So we know that the id2unit is always updated with the most recent OOV words that can be chosen in our hyps
+        id2unit = {idx: word.replace('\xa0', ' ') for word, idx in unit2id_.items()}
 
         # extend current hypotheses with the possible next tokens. We determine the choices to be 2 x beam size for the choices
         all_hyps = []
@@ -130,7 +134,7 @@ def run_beam_search(model: BaselineSeq2Seq, vocab: BaseVocab, example: List[str]
             for j in range(2 * beam_size):  # for each of the top 2*beam_size hypotheses:
                 # Extend the ith hypothesis with the jth option
                 new_hyp = h.extend(
-                    token=topk_ids[i, j],
+                    token=topk_ids[i, j].item(),
                     log_prob=topk_log_probs[i, j],
                     state=(new_hidden, new_cell),
                     attn_dist=attn_dist,
@@ -141,7 +145,7 @@ def run_beam_search(model: BaselineSeq2Seq, vocab: BaseVocab, example: List[str]
         # Filter and collect any hypotheses that have produced the end token (or are over limit)
         hyps = []
         for h in sort_hypotheses(all_hyps):  # in order of most likely h
-            if h.get_latest_token() == vocab.unit2id(STOP_TOKEN):   # if we reach the stop token
+            if h.get_latest_token() == unit2id.get(STOP_TOKEN):   # if we reach the stop token
                 # if the hypothesis is sufficiently long, then put in results, otherwise discard
                 if steps >= min_dec_steps:
                     results.append(h)
@@ -159,7 +163,7 @@ def run_beam_search(model: BaselineSeq2Seq, vocab: BaseVocab, example: List[str]
 
     # Sort hypotheses by the average log probability and return the hypothesis with the highest average log prob
     hyps_sorted = sort_hypotheses(results)
-    return hyps_sorted[0]
+    return hyps_sorted[0], id2unit
 
 
 def sort_hypotheses(hyps: List[Hypothesis]):
