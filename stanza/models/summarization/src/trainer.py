@@ -62,6 +62,8 @@ class SummarizationTrainer():
         self.pt_embedding = pt
         self.lr = lr
         self.device = default_device() 
+        self.max_enc_steps = self.model_args.get("max_enc_steps", None)
+        self.max_dec_steps = self.model_args.get("max_dec_steps", None)
 
     def build_model(self) -> BaselineSeq2Seq:
         """
@@ -81,6 +83,8 @@ class SummarizationTrainer():
         use_charlm = self.model_args.get("charlm", False)
         charlm_forward_file = self.model_args.get("charlm_forward_file", None)
         charlm_backward_file = self.model_args.get("charlm_backward_file", None)
+        max_enc_steps = self.model_args.get("max_enc_steps", None)
+        max_dec_steps = self.model_args.get("max_dec_steps", None)
 
         parsed_model_args = {
             "batch_size": batch_size,
@@ -89,7 +93,9 @@ class SummarizationTrainer():
             "decoder_hidden_dim": decoder_hidden_dim,
             "decoder_num_layers": decoder_num_layers,
             "pgen": pgen,
-            "coverage": coverage
+            "coverage": coverage,
+            "max_enc_steps": max_enc_steps,
+            "max_dec_steps": max_dec_steps,
         }
 
         # return the model obj
@@ -136,7 +142,7 @@ class SummarizationTrainer():
                 output, attention_scores, coverage_vectors = self.model(articles, summaries)  # (batch size, seq len, vocab size)
                 output = output.permute(0, 2, 1)   # (batch size, vocab size, seq len)
 
-                target_indices = convert_text_to_token_ids(self.model.vocab_map, summaries, UNK_ID)  # does this need to use the extended vocab map? If so, how? Do we have to compute it beforehand here?
+                target_indices = convert_text_to_token_ids(self.model.vocab_map, summaries, UNK_ID, self.max_dec_steps)  # does this need to use the extended vocab map? If so, how? Do we have to compute it beforehand here?
                 # target_indices = self.model.build_extended_vocab_map(summaries)
                 """
                 Do we use the extended vocab map to get the target indices? 
@@ -160,7 +166,6 @@ class SummarizationTrainer():
 
 
                 """
-                print(target_indices)
 
                 print("TARGET INDICES SHAPE",target_indices.shape)
                 # Compute losses (base loss)
@@ -219,6 +224,8 @@ def parse_args():
     parser.add_argument("--charlm", action="store_true", dest="charlm", default=False, help="Use character language model embeddings.")
     parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
     parser.add_argument("--charlm_backward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
+    parser.add_argument("--max_enc_steps", type=int, default=None, help="Limit on article sizes (will be truncated)")
+    parser.add_argument("--max_dec_steps", type=int, default=None, help="Limit on summary sizes (will be truncated)")
     return parser
 
 def main():
@@ -242,6 +249,8 @@ def main():
     charlm_forward_file = args.charlm_forward_file
     charlm_backward_file = args.charlm_backward_file
     use_charlm = args.charlm
+    max_enc_steps = args.max_enc_steps
+    max_dec_steps = args.max_dec_steps
 
     if not os.path.exists(eval_path):
         no_eval_file_msg = f"Could not find provided eval dir: {eval_path}"
