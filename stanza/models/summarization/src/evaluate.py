@@ -47,7 +47,8 @@ def evaluate_predictions_rouge(generated_summaries: List[str], reference_summari
     return results
 
 
-def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: List[List[str]], logger: logging.Logger = None):
+def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: List[List[str]], logger: logging.Logger = None,
+                         max_enc_steps: int = None, max_dec_steps: int = None):
 
     """
     Evaluates a model on a set of articles and summaries by generating its own summaries from the articles
@@ -58,20 +59,23 @@ def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: 
         articles (List[List[str]]): A list of articles where each word is tokenized as a separate List entry
         summaries (List[List[str]]): A list of corresponding summaries where each word is tokenized as a separate List entry
         logger (Logger, optional): Logger object used to print supplementary info during evaluation.
+        max_enc_steps (int, optional): Limit on the number of tokens per article. Defaults to no limit.
+        max_dec_stpes (int, optional): Limit on the number of tokens per summary. Defaults to no limit.
     """
     
     trained_model = torch.load(model_path)
-    vocab = trained_model.vocab
+    # vocab = trained_model.vocab
 
-    decoder = BeamSearchDecoder(trained_model, vocab, logger)
+    decoder = BeamSearchDecoder(trained_model, logger)
 
     generated_summaries = decoder.decode_examples(
                                                  examples=articles,
                                                  beam_size=4,
-                                                 max_dec_steps=400,
-                                                 min_dec_steps=10,
-                                                 verbose=False       
-                                                 )  # TODO consider making these toggle-able via argparse
+                                                 max_dec_steps=max_dec_steps,
+                                                 min_dec_steps=10,  # TODO make this toggle, reference paper
+                                                 max_enc_steps=max_enc_steps,
+                                                 verbose=False,       
+                                                 )
     
     generated_summaries = [" ".join(summary) for summary in generated_summaries]
     summaries = [" ".join(summary) for summary in summaries]
@@ -80,7 +84,8 @@ def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: 
     return results
 
 
-def evaluate_from_path(model_path: str, eval_path: str, logger: logging.Logger = None):
+def evaluate_from_path(model_path: str, eval_path: str, logger: logging.Logger = None, 
+                       max_enc_steps: int = None, max_dec_steps: int = None):
 
     """
     Evaluates a trained summarization model given a path to the directory containing 
@@ -90,6 +95,8 @@ def evaluate_from_path(model_path: str, eval_path: str, logger: logging.Logger =
         model_path (str): Path to trained and saved model checkpoint.
         eval_path (str): Path to root of the eval set directory containing chunked files with examples.
         logger (Logger, optional): Logger object used to print supplementary info during evaluation.
+        max_enc_steps (int, optional): Limit on the number of tokens per article. Defaults to no limit.
+        max_dec_stpes (int, optional): Limit on the number of tokens per summary. Defaults to no limit.
     """
     
     # Get data
@@ -106,11 +113,18 @@ def evaluate_from_path(model_path: str, eval_path: str, logger: logging.Logger =
                 articles.append(tokenized_article)
                 summaries.append(tokenized_summary)
     
+    if max_enc_steps is not None:  # truncate input article
+        articles = [article[: max_enc_steps] for article in articles] 
+    if max_dec_steps is not None:  # truncate summaries
+        summaries = [summary[: max_dec_steps] for summary in articles]
+
     results = evaluate_model_rouge(
                    model_path, 
                    articles, 
                    summaries, 
-                   logger
+                   logger,
+                   max_enc_steps=max_enc_steps,
+                   max_dec_steps=max_dec_steps,
                    )
     return results
 
@@ -120,11 +134,15 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_path", type=str, default="", help="Path to trained model file.")
     parser.add_argument("--eval_path", type=str, default="", help="Path to directory containing chunked test files.")
+    parser.add_argument("--max_enc_steps", type=int, default=None, help="Limit on the number of tokens per article")
+    parser.add_argument("--max_dec_steps", type=int, default=None, help="Limit on the number of tokens per summary")
     
     args = parser.parse_args()
 
     model_path = args.model_path
     eval_path = args.eval_path
+    max_enc_steps = args.max_enc_steps
+    max_dec_steps = args.max_dec_steps
 
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Expected to find model in {model_path}.")
@@ -132,13 +150,16 @@ def main():
         raise FileNotFoundError(f"Expected to find directory {eval_path}.")
     
     logger.info(f"Using the following args for evaluating model: ")
+    args = vars(args)
     for k, v in args.items():
         logger.info(f"{k}: {v}")
     
     evaluate_from_path(
         model_path,
         eval_path,
-        logger=logger 
+        logger=logger,
+        max_enc_steps=max_enc_steps,
+        max_dec_steps=max_dec_steps, 
     )
 
 if __name__ == "__main__":
