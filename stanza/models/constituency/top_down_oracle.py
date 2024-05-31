@@ -650,21 +650,27 @@ class RepairType(Enum):
 
     EN ambiguous (no charlm or transformer)   0.9268   0.9231
     EN predicted                              0.9270   0.9257
+    EN none of the above                      0.9268   0.9229
 
     ZH ambiguous                              0.9137   0.9127
     ZH predicted                              0.9148   0.9141
+    ZH none of the above                      0.9141   0.9143
 
     DE ambiguous                              0.9579   0.9408
     DE predicted                              0.9575   0.9406
+    DE none of the above                      0.9581   0.9411
 
-    IN ambiguous                              0.8889   0.8794
-    IN predicted                              0.8911   0.8801
+    ID ambiguous                              0.8889   0.8794
+    ID predicted                              0.8911   0.8801
+    ID none of the above                      0.8913   0.8822
 
     IT ambiguous                              0.8404   0.8380
     IT predicted                              0.8397   0.8398
+    IT none of the above                      0.8400   0.8409
 
     VI ambiguous                              0.8290   0.7676
     VI predicted                              0.8287   0.7682
+    VI none of the above                      0.8292   0.7691
     """
     def __new__(cls, fn, correct=False, debug=False):
         """
