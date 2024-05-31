@@ -5,6 +5,7 @@ Takes an existing model and runs beam search decoding across many examples
 
 import torch
 
+from copy import deepcopy
 from typing import List, Tuple, Mapping, Any
 from stanza.models.summarization.src.model import BaselineSeq2Seq
 from stanza.models.summarization.src.beam_search import *
@@ -17,30 +18,34 @@ class BeamSearchDecoder():
     Decoder for summarization using beam search
     """
 
-    def __init__(self, model: BaselineSeq2Seq, vocab: BaseVocab, logger: Logger = None):
+    def __init__(self, model: BaselineSeq2Seq, logger: Logger = None):
         self.model = model 
-        self.vocab = vocab
         self.stop_token = "</s>"
         self.start_token = "<s>" 
         self.logger = logger
+        self.ext_id2unit = {idx: word for word, idx in self.model.ext_vocab_map.items()}
+        self.ext_unit2id = self.model.ext_vocab_map
     
-    def decode_examples(self, examples: List[List[str]], beam_size: int, max_dec_steps: int, min_dec_steps: int,
-                        verbose: bool = False) -> List[List[str]]:
+    def decode_examples(self, examples: List[List[str]], beam_size: int, max_dec_steps: int = None, min_dec_steps: int = None,
+                        max_enc_steps: int = None, verbose: bool = True) -> List[List[str]]:
         summaries = []  # outputs 
         for i, article in enumerate(examples):
             
             try:
                 # Run beam search to get the best hypothesis
-                best_hyp = run_beam_search(self.model, 
-                                           self.vocab, 
+                best_hyp, id2unit = run_beam_search(self.model, 
+                                           self.ext_unit2id,
+                                           self.ext_id2unit, 
                                            article, 
                                            beam_size,
                                            max_dec_steps,
-                                           min_dec_steps
+                                           min_dec_steps,
+                                           max_enc_steps,
                                            )
                 
                 output_ids = [int(t) for t in best_hyp.tokens[1: ]]  # exclude START tokens but not STOP because not guaranteed to contain STOP
-                decoded_words = [self.vocab.id2unit(idx) for idx in output_ids]
+
+                decoded_words = [id2unit.get(idx) for idx in output_ids]
                 if self.stop_token in decoded_words:
                     fst_stop_index = decoded_words.index(self.stop_token)  # index of the first STOP token
                     decoded_words = decoded_words[: fst_stop_index]
