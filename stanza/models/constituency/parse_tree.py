@@ -512,7 +512,10 @@ class Tree(StanzaObject):
         if self.is_leaf():
             raise ValueError("Must call replace_tags with non-leaf")
 
-        tag_iterator = iter(tags)
+        if isinstance(tags, Tree):
+            tag_iterator = (x.label for x in tags.yield_preterminals())
+        else:
+            tag_iterator = iter(tags)
 
         new_tree = copy.deepcopy(self)
         queue = deque()

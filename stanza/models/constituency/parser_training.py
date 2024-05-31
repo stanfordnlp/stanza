@@ -715,14 +715,20 @@ def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None):
         else:
             with open(pred_file, 'w') as fout:
                 for tree in full_results:
-                    fout.write(args['predict_format'].format(tree.predictions[0].tree))
+                    output_tree = tree.predictions[0].tree
+                    if args['predict_output_gold_tags']:
+                        output_tree = output_tree.replace_tags(tree.gold)
+                    fout.write(args['predict_format'].format(output_tree))
                     fout.write("\n")
 
             for i in range(num_generate):
                 pred_file = os.path.join(args['predict_dir'], args['predict_file'] + ".%03d.pred.mrg" % i)
                 with open(pred_file, 'w') as fout:
                     for tree in generated_treebanks[-(i+1)]:
-                        fout.write(args['predict_format'].format(tree.predictions[0].tree))
+                        output_tree = tree.predictions[0].tree
+                        if args['predict_output_gold_tags']:
+                            output_tree = output_tree.replace_tags(tree.gold)
+                        fout.write(args['predict_format'].format(output_tree))
                         fout.write("\n")
 
             with open(orig_file, 'w') as fout:
