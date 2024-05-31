@@ -234,6 +234,8 @@ class BaselineSeq2Seq(nn.Module):
         self.batch_size = self.model_args.get("batch_size", DEFAULT_BATCH_SIZE)
         self.unsaved_modules = []
         self.input_size = 0
+        self.max_enc_steps = self.model_args.get("max_enc_steps", None)   # truncate articles to max_enc_steps tokens 
+        self.max_dec_steps = self.model_args.get("max_dec_steps", None)   # truncate summaries to max_dec_steps tokens
         self.use_charlm = use_charlm
         
         # word embeddings
@@ -273,15 +275,20 @@ class BaselineSeq2Seq(nn.Module):
         self.decoder = BaselineDecoder(self.vocab_size, encoder_hidden_dim, decoder_hidden_dim, self.input_size, decoder_num_layers, self.pgen, self.coverage,
                                        device=device)
     
-    def get_text_embeddings(self, text: List[List[str]]):
+    def get_text_embeddings(self, text: List[List[str]], max_steps: int = None):
         """
         Extracts the word embeddings over the input articles in 'text'.
-
-        text (List[List[str]]): Tokenized batch of articles of text. Each inner List[str] is a single article.
+        
+        Args:
+            text (List[List[str]]): Tokenized batch of articles of text. Each inner List[str] is a single article.
+            max_steps (int, optional): A limit on the maximum number of tokens in the texts. Defaults to no limit.
 
         Returns a tensor of the padded embeddings over the inputs. Also returns the input lengths.
         """
         device = next(self.parameters()).device
+
+        if max_steps is not None:  # truncate text
+            text = [article[: max_steps] for article in text]
 
         # Get word embeddings
         token_ids, input_lengths = [], []
@@ -294,7 +301,6 @@ class BaselineSeq2Seq(nn.Module):
 
         # Optionally, build Char embedding reps too
         if self.use_charlm:
-            # TODO : Are these charmodels on the same device? If not, how do we move them onto same device?
             char_reps_forward = self.charmodel_forward.build_char_representation(text)
             char_reps_backward = self.charmodel_backward.build_char_representation(text)
 
@@ -319,17 +325,13 @@ class BaselineSeq2Seq(nn.Module):
         As long as the attn mask is computed correctly, it should be okay for the index tensor to be zeroes.
         If the attn is computed, then out of sequence words get 0 attention.
         """
-        batch_size = len(src)
-        max_seq_len = max([len(doc) for doc in src])
         max_oov_words = 0
 
         device = next(self.parameters()).device
 
-        # index_tensor = torch.zeros(batch_size, max_seq_len, dtype=torch.int64, device=device)
         index_tensor = []
         for batch_idx, document in enumerate(src):
             num_oov_words = 0
-            # doc_indexes = torch.zeros(max_seq_len, device=device)
             doc_indexes = []
             for i, word in enumerate(document):
                 vocab_idx = self.ext_vocab_map.get(word.lower()) 
@@ -367,27 +369,30 @@ class BaselineSeq2Seq(nn.Module):
 
         """
         device = next(self.parameters()).device
-        batch_size = min(len(text), self.batch_size) # TODO mark for later review with John
+        batch_size = min(len(text), self.batch_size) 
+
+        if self.max_enc_steps is not None:  # truncate text
+            text = [article[: self.max_enc_steps] for article in text]
+        if self.max_dec_steps is not None:  # truncate target
+            target = [summary[: self.max_dec_steps] for summary in target]
 
         index_tensor, max_oov_words = self.build_extended_vocab_map(text)  # (batch size, seq len)
         self.max_oov_words = max_oov_words   # the count of OOV words in the input texts 
 
         # Get embeddings over the input text
-        embedded, input_lengths = self.get_text_embeddings(text)
+        embedded, input_lengths = self.get_text_embeddings(text, self.max_enc_steps)
         input_len = embedded.shape[1]  # the max seq len out of all inputs
 
         # Get embeddings over the target text
-        target_embeddings, target_lengths = self.get_text_embeddings(target)
-
+        target_embeddings, target_lengths = self.get_text_embeddings(target, self.max_dec_steps)  # (batch size, seq len, input size)
+        
         target_len = target_embeddings.shape[1]   # TODO : Ask John how batch processing works with this. should this actually just be a uniform hyperparam like max_dec_steps? If so, how to do padding?
         # target_len currently represents the maximum seq length out of all sequences in the reference summaries.
 
         # Tensor to store decoder outputs
-        # effective_vocab_size = self.vocab_size + self.max_oov_words if self.pgen else self.vocab_size TODO review
         effective_vocab_size = len(self.ext_vocab_map) if self.pgen else self.vocab_size
 
         packed_input_seqs = pack_padded_sequence(embedded, input_lengths, batch_first=True, enforce_sorted=False)
-        # packed_target_seqs = pack_padded_sequence(target_embeddings, target_lengths, batch_first=True, enforce_sorted=False)  TODO maybe remove this?
 
         # Embeddings fed into Encoder LSTM
         # Get the hidden states h_i from the encoder
@@ -438,8 +443,7 @@ class BaselineSeq2Seq(nn.Module):
                 # contains the index of the sequence token in the extended vocab
 
                 # Concatenate some zeros to each vocabulary dist, to hold the probabilities for in-article OOV words
-                # extended_vocab_size = self.vocab_size + self.max_oov_words   TODO review
-                extended_vocab_size = len(self.ext_vocab_map)
+                extended_vocab_size = len(self.ext_vocab_map)  # vocab size + number of unique OOV words across all batch examples
                 extended_vocab_dist = torch.zeros(batch_size, extended_vocab_size, device=device)   # one vocab dist per text
                 extended_vocab_dist[:, :self.vocab_size] = p_vocab_scaled  # fill the extended vocab with the existing distribution we have
 
@@ -487,15 +491,17 @@ class BaselineSeq2Seq(nn.Module):
         self.ext_vocab_map = deepcopy(self.vocab_map)  # reset OOV words for the next batch of text
         self.max_oov_words = 0
 
+        print(f"OUTPUTS SHAPE: {outputs.shape}")
+
         return outputs, final_attn_weights, final_coverage_vecs
 
-    def run_encoder(self, examples):
+    def run_encoder(self, examples, max_enc_steps: int = None):
         """
         For beam search decoding: run the encoder and return the encoder outputs, and the decoder init states
         
         examples: [[str]], the tokenized text of batches of article examples
         """
-        embedded, input_lens = self.get_text_embeddings(examples)
+        embedded, input_lens = self.get_text_embeddings(examples, max_steps=max_enc_steps)
         packed_input_seqs = pack_padded_sequence(embedded, input_lens, batch_first=True, enforce_sorted=False)
         unpacked_lstm_outputs, hidden, cell, hidden_linearized, cell_linearized = self.encoder(packed_input_seqs)
         return unpacked_lstm_outputs, hidden_linearized, cell_linearized
@@ -531,11 +537,10 @@ class BaselineSeq2Seq(nn.Module):
         device = next(self.parameters()).device
         index_tensor, max_oov_words = self.build_extended_vocab_map(examples)
 
-        latest_token_emb, _ = self.get_text_embeddings(latest_tokens)  # batch size, seq len, emb dim
+        latest_token_emb, _ = self.get_text_embeddings(latest_tokens)  # batch size, seq len (1), emb dim
         latest_token_emb = latest_token_emb.squeeze(1)  # squeeze the seqlen dim
 
         attention_weights, coverage_vec = self.decoder.attention(enc_states, dec_hidden, prev_coverage)
-        # TODO: test if this still causes an error when used in this function
         if prev_coverage is not None:  # remove from device because this updates
             prev_coverage = coverage_vec.detach()
 
@@ -567,7 +572,7 @@ class BaselineSeq2Seq(nn.Module):
             scaled_p_vocab = p_gen * p_vocab  # (beam size, vocab size)
             attention_weights = (1 - p_gen) * attention_weights  # (beam size, seq len)
 
-            extended_vocab_size = self.vocab_size + max_oov_words
+            extended_vocab_size = len(self.ext_vocab_map)
             extended_vocab_dist = torch.zeros(beam_size, extended_vocab_size, device=device) 
             extended_vocab_dist[:, :self.vocab_size] = scaled_p_vocab
 
@@ -577,4 +582,4 @@ class BaselineSeq2Seq(nn.Module):
         # Produce top 2k IDs and top 2k log probabilities
         top_k_probs, top_k_ids = torch.topk(p_vocab, 2*beam_size, dim=1)
         top_k_probs = torch.log(top_k_probs)
-        return top_k_ids, top_k_probs, dec_hidden, dec_cell, attention_weights, p_gen, prev_coverage
+        return top_k_ids, top_k_probs, dec_hidden, dec_cell, attention_weights, p_gen, prev_coverage, self.ext_vocab_map
