@@ -167,7 +167,6 @@ class SummarizationTrainer():
 
                 """
 
-                print("TARGET INDICES SHAPE",target_indices.shape)
                 # Compute losses (base loss)
                 log_loss = self.criterion(output, target_indices)
                 # coverage loss
@@ -175,18 +174,12 @@ class SummarizationTrainer():
                     coverage_losses = torch.sum(torch.min(attention_scores, coverage_vectors), dim=-1)
 
                     combined_losses = log_loss + coverage_losses
-
-                    print(f"LOG LOSS: {log_loss}   {log_loss.shape}")  # should be (batch size, seq len)
-                    print(f"COV LOSS {coverage_losses}    {coverage_losses.shape}")  # (batch size, seq len)
                 else:
                     combined_losses = log_loss 
                 
                 # backwards
                 sequence_loss = combined_losses.mean(dim=1)
-
-                print(f"sequence loss shape {sequence_loss.shape}")  # (batch size)
                 batch_loss = sequence_loss.mean()
-                print("BATCH LOSS SHAPE", batch_loss.shape, batch_loss)  # ([])
                 batch_loss.backward()
                 self.optimizer.step()
             # TODO evaluate model checkpoint on val set
