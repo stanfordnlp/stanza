@@ -11,6 +11,10 @@ from stanza.models.summarization.src.model import BaselineSeq2Seq
 from stanza.models.summarization.src.beam_search import *
 from stanza.models.common.vocab import BaseVocab, UNK
 from logging import Logger
+from stanza.utils.get_tqdm import get_tqdm
+
+tqdm = get_tqdm()
+
 
 class BeamSearchDecoder():
 
@@ -29,7 +33,7 @@ class BeamSearchDecoder():
     def decode_examples(self, examples: List[List[str]], beam_size: int, max_dec_steps: int = None, min_dec_steps: int = None,
                         max_enc_steps: int = None, verbose: bool = True) -> List[List[str]]:
         summaries = []  # outputs 
-        for i, article in enumerate(examples):
+        for i, article in tqdm(enumerate(examples), desc="decoding examples for evaluation..."):
             
             try:
                 # Run beam search to get the best hypothesis
@@ -37,10 +41,10 @@ class BeamSearchDecoder():
                                            self.ext_unit2id,
                                            self.ext_id2unit, 
                                            article, 
-                                           beam_size,
-                                           max_dec_steps,
-                                           min_dec_steps,
-                                           max_enc_steps,
+                                           beam_size=beam_size,
+                                           max_dec_steps=max_dec_steps,
+                                           min_dec_steps=min_dec_steps,
+                                           max_enc_steps=max_enc_steps,
                                            )
                 
                 output_ids = [int(t) for t in best_hyp.tokens[1: ]]  # exclude START tokens but not STOP because not guaranteed to contain STOP
@@ -57,7 +61,7 @@ class BeamSearchDecoder():
                 
 
             except Exception as e:
-                print(f'Error on article {i}: {" ".join([word for word in article])}\n')
+                self.logger(f'Error on article {i}: {" ".join([word for word in article])}\n')
                 raise(e)
         assert len(examples) == len(summaries), f"Expected number of summaries ({len(summaries)}) to match number of articles ({len(examples)})."
         return summaries
