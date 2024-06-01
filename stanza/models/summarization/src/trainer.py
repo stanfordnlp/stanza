@@ -116,7 +116,7 @@ class SummarizationTrainer():
             None (model with best validation set performance will be saved to the save file)
         """
         best_rouge = 0
-        best_model_path = generate_checkpoint_path(save_name)
+        model_chkpt_path = generate_checkpoint_path(save_name)
         device = default_device()
         # Load model in
         self.model = self.build_model()
@@ -183,23 +183,22 @@ class SummarizationTrainer():
                 running_loss += batch_loss.item()
                 self.optimizer.step()
             
+            # Evaluate current model checkpoint
             epoch_loss = running_loss / len(dataset)
             logger.info(f"Epoch {epoch + 1} / {num_epochs}, Loss: {epoch_loss:.6f}")
-            torch.save(self.model, save_name)
+            torch.save(self.model, model_chkpt_path)  
             results = evaluate_from_path(
-                                        model_path=save_name,
+                                        model_path=model_chkpt_path,
                                         eval_path=eval_file,
                                         logger=logger,
                                         max_dec_steps=self.max_dec_steps,
                                         max_enc_steps=self.max_enc_steps
                                         )
-            # compare to best checkpoint
+            # compare to best checkpoint, if this chkpt is best, save to the output file
             if results.get('rougeLsum') > best_rouge:
                 best_rouge = results.get("rougeLsum")
-                torch.save(self.model, best_model_path)
-                logger.info(f"New best model saved to {best_model_path}! RougeLSum: {best_rouge}.")
-        best_model = torch.load(best_model_path)
-        torch.save(best_model, save_name)
+                torch.save(self.model, save_name)
+                logger.info(f"New best model saved to {save_name}! RougeLSum: {best_rouge}.")
 
 
 def parse_args():

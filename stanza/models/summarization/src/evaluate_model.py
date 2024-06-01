@@ -64,7 +64,8 @@ def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: 
     """
     
     trained_model = torch.load(model_path)
-    # vocab = trained_model.vocab
+    trained_model.eval()
+    logger.info(f"Successfully loaded model at {model_path} for evaluation.")
 
     decoder = BeamSearchDecoder(trained_model, logger)
 
