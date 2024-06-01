@@ -142,8 +142,7 @@ class SummarizationTrainer():
                 output, attention_scores, coverage_vectors = self.model(articles, summaries)  # (batch size, seq len, vocab size)
                 output = output.permute(0, 2, 1)   # (batch size, vocab size, seq len)
 
-                target_indices = convert_text_to_token_ids(self.model.vocab_map, summaries, UNK_ID, self.max_dec_steps)  # does this need to use the extended vocab map? If so, how? Do we have to compute it beforehand here?
-                # target_indices = self.model.build_extended_vocab_map(summaries)
+                target_indices = convert_text_to_token_ids(self.model.vocab_map, summaries, UNK_ID, self.max_dec_steps) 
                 """
                 Do we use the extended vocab map to get the target indices? 
 

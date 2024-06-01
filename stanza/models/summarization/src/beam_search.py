@@ -76,7 +76,7 @@ def run_beam_search(model: BaselineSeq2Seq, unit2id: Mapping, id2unit: Mapping, 
 
     Returns the hypothesis for each example with the highest average log probability.
     """
-    START_TOKEN = "<s>"  # TODO find what this should be
+    START_TOKEN = "<s>"  
     STOP_TOKEN = "</s>"
     batch = [example for _ in range(beam_size)]
     device = next(model.parameters()).device
@@ -92,7 +92,7 @@ def run_beam_search(model: BaselineSeq2Seq, unit2id: Mapping, id2unit: Mapping, 
     # Initialize N-Hypotheses for beam search 
     hyps = [
         Hypothesis(
-            tokens=[unit2id.get(START_TOKEN, UNK_ID)],  # TODO verify that this is not unknown to the glove vocab
+            tokens=[unit2id.get(START_TOKEN, UNK_ID)],  
             log_probs=[0.0],
             state=(dec_hidden_init[0], dec_cell_init[0]),  # only one example, so get the state for that example
             attn_dists=[],

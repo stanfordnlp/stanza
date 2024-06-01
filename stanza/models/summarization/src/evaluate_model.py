@@ -103,7 +103,7 @@ def evaluate_from_path(model_path: str, eval_path: str, logger: logging.Logger =
     chunked_files = os.listdir(eval_path)
     data_paths = [os.path.join(eval_path, chunked) for chunked in chunked_files]
 
-    for path in data_paths:  # TODO consider moving this section as a helper
+    for path in data_paths:  
         with open(path, "r+", encoding='utf-8') as f:
             lines = f.readlines()
             for i in range(0, len(lines), 2):  # iterate through lines in increments of two, getting article + summary
