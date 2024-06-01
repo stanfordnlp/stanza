@@ -16,7 +16,6 @@ from stanza.models.summarization.src.decode import BeamSearchDecoder
 from stanza.models.summarization.src.model import BaselineSeq2Seq
 from stanza.models.common.vocab import BaseVocab
 
-
 logger = logging.getLogger('stanza.summarization') 
 logger.propagate = False
 
@@ -39,7 +38,8 @@ def evaluate_predictions_rouge(generated_summaries: List[str], reference_summari
     rouge = evaluate.load('rouge')
     results = rouge.compute(
                             predictions=generated_summaries,
-                            references=reference_summaries
+                            references=reference_summaries,
+                            use_aggregator=True
                             )
     
     for k, v in results.items():
@@ -76,7 +76,6 @@ def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: 
                                                  max_enc_steps=max_enc_steps,
                                                  verbose=False,       
                                                  )
-    
     generated_summaries = [" ".join(summary) for summary in generated_summaries]
     summaries = [" ".join(summary) for summary in summaries]
     
