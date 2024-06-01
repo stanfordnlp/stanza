@@ -61,7 +61,7 @@ class BeamSearchDecoder():
                 
 
             except Exception as e:
-                self.logger(f'Error on article {i}: {" ".join([word for word in article])}\n')
+                self.logger.error(f'Error on article {i}: {" ".join([word for word in article])}\n')
                 raise(e)
         assert len(examples) == len(summaries), f"Expected number of summaries ({len(summaries)}) to match number of articles ({len(examples)})."
         return summaries
