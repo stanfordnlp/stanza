@@ -137,6 +137,13 @@ class Dataset:
 
             batch_articles = [self.articles[x] for x in indices[batch_start: batch_end]]
             batch_summaries = [self.summaries[x] for x in indices[batch_start: batch_end]]
+
+            if len(batch_articles) < self.batch_size:
+                deficit = self.batch_size - len(batch_articles)
+                padding_indices = random.choices(indices, k=deficit)
+                batch_articles.extend([self.articles[x] for x in padding_indices])
+                batch_summaries.extend([self.summaries[x] for x in padding_indices])
+                
             yield batch_articles, batch_summaries
         
 
