@@ -487,7 +487,6 @@ class BaselineSeq2Seq(nn.Module):
                     id2unit = {idx: word for word, idx in self.ext_vocab_map.items()}
                     top1_words = [id2unit.get(word.item()) for word in top1]
                     chosen_words = [[word] for word in top1_words]
-                    # TODO: if u print this, the model keeps choosing '<PAD>' which is concerning. Am I not doing something right?
 
                     char_reps_forward = self.charmodel_forward.build_char_representation(chosen_words)
                     char_reps_backward = self.charmodel_backward.build_char_representation(chosen_words)
@@ -501,8 +500,6 @@ class BaselineSeq2Seq(nn.Module):
                 
         self.ext_vocab_map = deepcopy(self.vocab_map)  # reset OOV words for the next batch of text
         self.max_oov_words = 0
-
-        print(f"OUTPUTS SHAPE: {outputs.shape}")
 
         return outputs, final_attn_weights, final_coverage_vecs
 
