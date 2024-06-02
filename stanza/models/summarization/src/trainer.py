@@ -102,7 +102,7 @@ class SummarizationTrainer():
         return BaselineSeq2Seq(parsed_model_args, self.pt_embedding, device=self.device, 
                                use_charlm=use_charlm, charlm_forward_file=charlm_forward_file, charlm_backward_file=charlm_backward_file)
 
-    def train(self, num_epochs: int, save_name: str, train_file: str, eval_file: str) -> None:
+    def train(self, num_epochs: int, save_name: str, train_file: str, eval_file: str, checkpoint_load_path: str = None) -> None:
         """
         Trains a model on batches of texts
 
@@ -111,6 +111,7 @@ class SummarizationTrainer():
             save_name (str): Path to store trained model
             eval_file (str): Path to the validation set file roots evaluating model checkpoints
             train_file (str): Path to training data root containing chunked files with tokenized text for each article + summary
+            checkpoint_load_path (str): Path to model checkpoint to begin training from if provided.
 
         Returns:
             None (model with best validation set performance will be saved to the save file)
@@ -119,9 +120,14 @@ class SummarizationTrainer():
         model_chkpt_path = generate_checkpoint_path(save_name)
         device = default_device()
         # Load model in
-        self.model = self.build_model()
+        if checkpoint_load_path is not None and os.path.exists(checkpoint_load_path):  # load chkpt
+            logger.info(f"Loading model checkpoint to start from: {checkpoint_load_path}")
+            self.model = torch.load(checkpoint_load_path)
+        else:  # train a new model from scratch
+            self.model = self.build_model()
 
         self.model.to(device)
+        logger.info(f"Model moved to device {device}.")
 
         # Get dataset 
         batch_size = self.model_args.get("batch_size", DEFAULT_BATCH_SIZE)
@@ -135,6 +141,7 @@ class SummarizationTrainer():
         for epoch in range(num_epochs):
             self.model.train()
             running_loss = 0.0
+            logger.info(f"Starting new epoch: {epoch + 1} / {num_epochs}")
             for articles, summaries in tqdm(dataset, desc="Training on examples..."):
 
                 # Get model output
@@ -142,7 +149,7 @@ class SummarizationTrainer():
                 output, attention_scores, coverage_vectors = self.model(articles, summaries)  # (batch size, seq len, vocab size)
                 output = output.permute(0, 2, 1)   # (batch size, vocab size, seq len)
 
-                target_indices = convert_text_to_token_ids(self.model.vocab_map, summaries, UNK_ID, self.max_dec_steps) 
+                target_indices = convert_text_to_token_ids(self.model.vocab_map, summaries, UNK_ID, self.max_dec_steps).to(device) 
                 """
                 Do we use the extended vocab map to get the target indices? 
 
@@ -194,6 +201,8 @@ class SummarizationTrainer():
                                         max_dec_steps=self.max_dec_steps,
                                         max_enc_steps=self.max_enc_steps
                                         )
+            
+            logger.info(f"Epoch {epoch + 1} / {num_epochs} results: {results}")
             # compare to best checkpoint, if this chkpt is best, save to the output file
             if results.get('rougeLsum') > best_rouge:
                 best_rouge = results.get("rougeLsum")
@@ -211,6 +220,7 @@ def parse_args():
     parser.add_argument("--pgen", action="store_true", dest="pgen", default=False, help="Use pointergen probabilities to point to input text")
     parser.add_argument("--coverage", action="store_true", dest="coverage", default=False, help="Use coverage vectors during decoding stage")
     # Training args
+    parser.add_argument("--checkpoint_load_path", type=str, default="", help="If training from a checkpoint, the path to the checkpoint")
     parser.add_argument("--batch_size", type=int, default=DEFAULT_BATCH_SIZE, help="Batch size for data processing")
     parser.add_argument("--save_name", type=str, default=DEFAULT_SAVE_NAME, help="Path to destination for final trained model.")
     parser.add_argument("--eval_path", type=str, default=DEFAULT_EVAL_ROOT, help="Path to the validation set root")
@@ -236,6 +246,7 @@ def main():
     pgen = args.pgen
     coverage = args.pgen
 
+    checkpoint_load_path = args.checkpoint_load_path
     batch_size = args.batch_size
     save_name = args.save_name
     eval_path = args.eval_path
@@ -249,6 +260,10 @@ def main():
     max_enc_steps = args.max_enc_steps
     max_dec_steps = args.max_dec_steps
 
+    if not os.path.exists(checkpoint_load_path):
+        no_chkpt_msg = f"Could not find checkpoint loading file: {checkpoint_load_path}"
+        logger.error(no_chkpt_msg)
+        raise FileNotFoundError(no_chkpt_msg)
     if not os.path.exists(eval_path):
         no_eval_file_msg = f"Could not find provided eval dir: {eval_path}"
         logger.error(no_eval_file_msg)
@@ -285,7 +300,8 @@ def main():
         num_epochs=num_epochs,
         save_name=save_name,
         train_file=train_path,
-        eval_file=eval_path
+        eval_file=eval_path,
+        checkpoint_load_path=checkpoint_load_path
     )
 
 
