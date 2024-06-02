@@ -549,7 +549,7 @@ class BaselineSeq2Seq(nn.Module):
         latest_token_emb = latest_token_emb.squeeze(1)  # squeeze the seqlen dim
 
         attention_weights, coverage_vec = self.decoder.attention(enc_states, dec_hidden, prev_coverage)
-        if prev_coverage is not None:  # remove from device because this updates
+        if prev_coverage is not None and self.coverage:  # remove from device because this updates
             prev_coverage = coverage_vec.detach()
 
         context_vector = torch.bmm(attention_weights.unsqueeze(1), enc_states)
