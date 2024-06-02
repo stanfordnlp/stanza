@@ -2,6 +2,18 @@
 Run beam search decoding from a trained abstractive summarization model
 """
 import torch
+import logging
+
+logger = logging.getLogger('stanza.summarization') 
+logger.propagate = False
+
+# Check if the logger has handlers already configured
+if not logger.handlers:
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)  
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
 
 from typing import List, Tuple, Mapping, Any
 from stanza.models.summarization.src.model import BaselineSeq2Seq
@@ -72,13 +84,13 @@ class Hypothesis():
 def run_beam_search(model: BaselineSeq2Seq, unit2id: Mapping, id2unit: Mapping, example: List[str], beam_size: int,
                     max_dec_steps: int, min_dec_steps: int, max_enc_steps: int):
     """
-    Performs beam search decoding on an example.
+    Performs beam search decoding on an example (ONE EXAMPLE).
 
     Returns the hypothesis for each example with the highest average log probability.
     """
     START_TOKEN = "<s>"  
     STOP_TOKEN = "</s>"
-    batch = [example for _ in range(beam_size)]
+    batch = [example for _ in range(beam_size)]  # each batch is a single example repeated `beam_size` times
     device = next(model.parameters()).device
 
     # Run encoder over the batch of examples to get the encoder hidden states and decoder init state
