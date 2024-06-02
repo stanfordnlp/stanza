@@ -124,6 +124,7 @@ class SummarizationTrainer():
             logger.info(f"Loading model checkpoint to start from: {checkpoint_load_path}")
             self.model = torch.load(checkpoint_load_path)
         else:  # train a new model from scratch
+            logger.info(f"Training model from scratch. Will be saved to {save_name}")
             self.model = self.build_model()
 
         self.model.to(device)
@@ -220,7 +221,7 @@ def parse_args():
     parser.add_argument("--pgen", action="store_true", dest="pgen", default=False, help="Use pointergen probabilities to point to input text")
     parser.add_argument("--coverage", action="store_true", dest="coverage", default=False, help="Use coverage vectors during decoding stage")
     # Training args
-    parser.add_argument("--checkpoint_load_path", type=str, default="", help="If training from a checkpoint, the path to the checkpoint")
+    parser.add_argument("--checkpoint_load_path", type=str, default=None, help="If training from a checkpoint, the path to the checkpoint. Defaults to None.")
     parser.add_argument("--batch_size", type=int, default=DEFAULT_BATCH_SIZE, help="Batch size for data processing")
     parser.add_argument("--save_name", type=str, default=DEFAULT_SAVE_NAME, help="Path to destination for final trained model.")
     parser.add_argument("--eval_path", type=str, default=DEFAULT_EVAL_ROOT, help="Path to the validation set root")
@@ -260,10 +261,11 @@ def main():
     max_enc_steps = args.max_enc_steps
     max_dec_steps = args.max_dec_steps
 
-    if not os.path.exists(checkpoint_load_path):
-        no_chkpt_msg = f"Could not find checkpoint loading file: {checkpoint_load_path}"
-        logger.error(no_chkpt_msg)
-        raise FileNotFoundError(no_chkpt_msg)
+    if checkpoint_load_path is not None:
+        if not os.path.exists(checkpoint_load_path):
+            no_chkpt_msg = f"Could not find checkpoint loading file: {checkpoint_load_path}"
+            logger.error(no_chkpt_msg)
+            raise FileNotFoundError(no_chkpt_msg)
     if not os.path.exists(eval_path):
         no_eval_file_msg = f"Could not find provided eval dir: {eval_path}"
         logger.error(no_eval_file_msg)
