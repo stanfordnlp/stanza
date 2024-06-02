@@ -15,6 +15,7 @@ from typing import List, Tuple, Mapping
 from stanza.models.summarization.src.decode import BeamSearchDecoder
 from stanza.models.summarization.src.model import BaselineSeq2Seq
 from stanza.models.common.vocab import BaseVocab
+from stanza.models.common.utils import default_device
 
 logger = logging.getLogger('stanza.summarization') 
 logger.propagate = False
@@ -62,8 +63,9 @@ def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: 
         max_enc_steps (int, optional): Limit on the number of tokens per article. Defaults to no limit.
         max_dec_stpes (int, optional): Limit on the number of tokens per summary. Defaults to no limit.
     """
-    
+    device = default_device()
     trained_model = torch.load(model_path)
+    trained_model = trained_model.to(device)
     trained_model.eval()
     logger.info(f"Successfully loaded model at {model_path} for evaluation.")
 

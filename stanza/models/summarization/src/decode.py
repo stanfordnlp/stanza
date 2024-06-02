@@ -29,10 +29,13 @@ class BeamSearchDecoder():
         self.logger = logger
         self.ext_id2unit = {idx: word for word, idx in self.model.ext_vocab_map.items()}
         self.ext_unit2id = self.model.ext_vocab_map
+
+        self.logger(f"Loaded model into BeamSearchDecoder on device {next(self.model.parameters()).device}")
     
     def decode_examples(self, examples: List[List[str]], beam_size: int, max_dec_steps: int = None, min_dec_steps: int = None,
                         max_enc_steps: int = None, verbose: bool = True) -> List[List[str]]:
         summaries = []  # outputs 
+        
         for i, article in tqdm(enumerate(examples), desc="decoding examples for evaluation..."):
             
             try:
