@@ -109,7 +109,7 @@ def run_beam_search(model: BaselineSeq2Seq, unit2id: Mapping, id2unit: Mapping, 
             state=(dec_hidden_init[0], dec_cell_init[0]),  # only one example, so get the state for that example
             attn_dists=[],
             p_gens=[], 
-            coverage=torch.zeros(enc_states.shape[1], device=device)  # sequence length
+            coverage=torch.zeros(enc_states.shape[1], device=device) if model.coverage else None # sequence length
         ) for _ in range(beam_size)
     ]
     results = []  # stores our finished hypotheses (decoded out the STOP token)
