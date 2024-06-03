@@ -114,6 +114,8 @@ def evaluate_from_path(model_path: str, eval_path: str, logger: logging.Logger =
                 tokenized_article, tokenized_summary = article.split(" "), summary.split(" ")
                 articles.append(tokenized_article)
                 summaries.append(tokenized_summary)
+
+    logger.info(f"Successfully loaded dataset for evaluation.")
     
     if max_enc_steps is not None:  # truncate input article
         articles = [article[: max_enc_steps] for article in articles] 
