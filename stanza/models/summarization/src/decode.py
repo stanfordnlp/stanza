@@ -45,9 +45,11 @@ class BeamSearchDecoder():
     def decode_examples(self, examples: List[List[str]], beam_size: int, max_dec_steps: int = None, min_dec_steps: int = None,
                         max_enc_steps: int = None, verbose: bool = True) -> List[List[str]]:
         summaries = []  # outputs 
-
+        num_examples = len(examples)
+        PRINT_EVERY = 1000  
         for i, article in tqdm(enumerate(examples), desc="decoding examples for evaluation..."):
-            
+            if i % PRINT_EVERY == 0:
+                logger.info(f"Attempting to generate examples for eval for article {i + 1} / {num_examples}")
             try:
                 # Run beam search to get the best hypothesis
                 best_hyp, id2unit = run_beam_search(self.model, 
