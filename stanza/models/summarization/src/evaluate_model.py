@@ -69,7 +69,7 @@ def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: 
     trained_model.eval()
     logger.info(f"Successfully loaded model at {model_path} for evaluation.")
 
-    decoder = BeamSearchDecoder(trained_model, logger)
+    decoder = BeamSearchDecoder(trained_model)
 
     generated_summaries = decoder.decode_examples(
                                                  examples=articles,
