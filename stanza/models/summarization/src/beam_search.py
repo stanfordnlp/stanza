@@ -131,7 +131,7 @@ def run_beam_search(model: BaselineSeq2Seq, unit2id: Mapping, id2unit: Mapping, 
             enc_states=enc_states, 
             dec_hidden=torch.stack(hidden_states).to(device),
             dec_cell=torch.stack(cell_states).to(device),
-            prev_coverage=torch.stack(prev_coverage).to(device)
+            prev_coverage=torch.stack(prev_coverage).to(device) if prev_coverage is not None else None
         )
         # create updated id2unit from unit2id_.
         # Note that the outputted unit2id_ is always continually updated every call to model.decode_onestep()
@@ -142,7 +142,8 @@ def run_beam_search(model: BaselineSeq2Seq, unit2id: Mapping, id2unit: Mapping, 
         all_hyps = []
         num_original_hyps = 1 if steps == 0 else len(hyps)
         for i in range(num_original_hyps):
-            h, new_hidden, new_cell, attn_dist, p_gen, new_coverage_i = hyps[i], new_hiddens[i], new_cells[i], attn_dists[i], p_gens[i], new_coverage[i]
+            p_gen = [] if p_gens is None else p_gens[i]
+            h, new_hidden, new_cell, attn_dist, new_coverage_i = hyps[i], new_hiddens[i], new_cells[i], attn_dists[i], new_coverage[i]
             for j in range(2 * beam_size):  # for each of the top 2*beam_size hypotheses:
                 # Extend the ith hypothesis with the jth option
                 new_hyp = h.extend(
