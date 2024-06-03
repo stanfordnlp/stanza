@@ -118,6 +118,7 @@ class SummarizationTrainer():
         """
         best_rouge = 0
         model_chkpt_path = generate_checkpoint_path(save_name)
+        best_loss = float('inf')
         device = default_device()
         # Load model in
         if checkpoint_load_path is not None and os.path.exists(checkpoint_load_path):  # load chkpt
@@ -194,21 +195,25 @@ class SummarizationTrainer():
             # Evaluate current model checkpoint
             epoch_loss = running_loss / len(dataset)
             logger.info(f"Epoch {epoch + 1} / {num_epochs}, Loss: {epoch_loss:.6f}")
-            torch.save(self.model, model_chkpt_path)  
-            results = evaluate_from_path(
-                                        model_path=model_chkpt_path,
-                                        eval_path=eval_file,
-                                        logger=logger,
-                                        max_dec_steps=self.max_dec_steps,
-                                        max_enc_steps=self.max_enc_steps
-                                        )
+            # torch.save(self.model, model_chkpt_path)  
+            # results = evaluate_from_path(
+            #                             model_path=model_chkpt_path,
+            #                             eval_path=eval_file,
+            #                             logger=logger,
+            #                             max_dec_steps=self.max_dec_steps,
+            #                             max_enc_steps=self.max_enc_steps
+            #                             )
             
-            logger.info(f"Epoch {epoch + 1} / {num_epochs} results: {results}")
+            # logger.info(f"Epoch {epoch + 1} / {num_epochs} results: {results}")
             # compare to best checkpoint, if this chkpt is best, save to the output file
-            if results.get('rougeLsum') > best_rouge:
-                best_rouge = results.get("rougeLsum")
+            # if results.get('rougeLsum') > best_rouge:
+            #     best_rouge = results.get("rougeLsum")
+            #     torch.save(self.model, save_name)
+            #     logger.info(f"New best model saved to {save_name}! RougeLSum: {best_rouge}.")
+            if epoch_loss < best_loss:
+                best_loss = epoch_loss
                 torch.save(self.model, save_name)
-                logger.info(f"New best model saved to {save_name}! RougeLSum: {best_rouge}.")
+                logger.info(f"New best model saved to {save_name}! Loss : {best_loss}")
 
 
 def parse_args():
