@@ -19,6 +19,7 @@ from stanza.models.common import utils
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.constituency import retagging
 from stanza.models.constituency import text_processing
+from stanza.models.constituency import tree_reader
 from stanza.models.constituency.ensemble import Ensemble
 from stanza.utils.get_tqdm import get_tqdm
 
@@ -29,7 +30,9 @@ logger = logging.getLogger('stanza.constituency.trainer')
 def parse_args(args=None):
     parser = argparse.ArgumentParser(description="Script that uses multiple ensembles to find trees where both ensembles agree")
 
-    parser.add_argument('--tokenized_file', type=str, default=None, help='Input file of tokenized text for parsing with parse_text.')
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument('--tokenized_file', type=str, default=None, help='Input file of tokenized text for parsing with parse_text.')
+    input_group.add_argument('--tree_file', type=str, default=None, help='Input file of already parsed text for reparsing with parse_text.')
     parser.add_argument('--output_file', type=str, default=None, help='Where to put the output file')
 
     parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
@@ -74,7 +77,13 @@ def main():
     e2 = Ensemble(args, filenames=args['e2'], foundation_cache=foundation_cache)
     e2.to(args.get('device', None))
 
-    tokenized_sentences = text_processing.read_tokenized_file(args['tokenized_file'])
+    if args['tokenized_file']:
+        tokenized_sentences = text_processing.read_tokenized_file(args['tokenized_file'])
+    elif args['tree_file']:
+        treebank = tree_reader.read_treebank(args['tree_file'])
+        tokenized_sentences = [x.leaf_labels() for x in treebank]
+        if args['lang'] == 'vi':
+            tokenized_sentences = [[x.replace("_", " ") for x in sentence] for sentence in tokenized_sentences]
     logger.info("Read %d tokenized sentences", len(tokenized_sentences))
 
     all_models = e1.models + e2.models
