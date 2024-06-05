@@ -365,7 +365,7 @@ class BaselineSeq2Seq(nn.Module):
         self.unsaved_modules += [name]
         setattr(self, name, module)
 
-    def forward(self, text, target, teacher_forcing_ratio=0.5):
+    def forward(self, text, target, teacher_forcing_ratio=1.0):
         """
         text (List[List[str]]): The outer list is a collection of the examples used in training. The inner list is composed of the words within each example.
         e.g. [["The", "quick", "brown", "fox"], ["Humpty", "dumpty", "fell", "off", "the", "wall", "."]]

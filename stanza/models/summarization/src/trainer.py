@@ -148,7 +148,7 @@ class SummarizationTrainer():
 
                 # Get model output
                 self.optimizer.zero_grad()
-                output, attention_scores, coverage_vectors = self.model(articles, summaries)  # (batch size, seq len, vocab size)
+                output, attention_scores, coverage_vectors = self.model(articles, summaries, teacher_forcing=1.0)  # (batch size, seq len, vocab size)
                 output = output.permute(0, 2, 1)   # (batch size, vocab size, seq len)
 
                 target_indices = convert_text_to_token_ids(self.model.vocab_map, summaries, UNK_ID, self.max_dec_steps).to(device) 
@@ -189,6 +189,15 @@ class SummarizationTrainer():
                 sequence_loss = combined_losses.mean(dim=1)
                 batch_loss = sequence_loss.mean()
                 batch_loss.backward()
+                torch.nn.utils.clip_grad_norm_(self.model.parameters(), 2.0)  # add gradient clipping at a max of 2.0 grad norm
+
+                total_norm = 0
+                for param in self.model.parameters():
+                    param_norm = param.grad.data.norm(2)
+                    total_norm += param_norm.item() ** 2
+                total_norm = total_norm ** 0.5
+                logger.info(f"Epoch {epoch + 1} / {num_epochs}: Gradient Norm: {total_norm:.4f}")
+
                 running_loss += batch_loss.item()
                 self.optimizer.step()
             
