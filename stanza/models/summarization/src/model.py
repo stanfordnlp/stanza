@@ -37,12 +37,15 @@ class BaselineEncoder(nn.Module):
         self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=num_layers, bidirectional=True, batch_first=True, device=device)
         self.dropout = nn.Dropout(dropout_p).to(device)
         self.hidden_out = nn.Linear(hidden_dim * 2, hidden_dim, device=device)
+        self.layer_norm = nn.LayerNorm(hidden_dim)
         self.device = device
 
     def forward(self, text):
         outputs, (hidden, cell) = self.lstm(text)
         unpacked_lstm_outputs, _ = pad_packed_sequence(outputs, batch_first=True)
-        unpacked_lstm_outputs = self.dropout(unpacked_lstm_outputs)
+
+        unpacked_lstm_outputs = self.layer_norm(unpacked_lstm_outputs)  # apply layernorm
+        unpacked_lstm_outputs = self.dropout(unpacked_lstm_outputs)   # apply dropout
         
         hidden = torch.cat((hidden[-2, :, :], hidden[-1, :, :]), dim=1).to(self.device) 
         cell = torch.cat((cell[-2, :, :], cell[-1, :, :]), dim=1).to(self.device)
@@ -148,6 +151,7 @@ class BaselineDecoder(nn.Module):
         self.coverage = use_coverage
 
         if self.pgen:
+            self.layer_norm_pgen = nn.LayerNorm(encoder_hidden_dim * 2 + emb_dim + decoder_hidden_dim)
             self.p_gen_linear = nn.Linear(encoder_hidden_dim * 2 + emb_dim + decoder_hidden_dim, 1, device=device) 
 
         if self.coverage:
@@ -156,6 +160,8 @@ class BaselineDecoder(nn.Module):
         # Two linear layers as per equation (4) in the paper
         self.V_1 = nn.Linear(encoder_hidden_dim * 2 + decoder_hidden_dim, decoder_hidden_dim, device=device)
         self.V_1_prime = nn.Linear(decoder_hidden_dim, output_dim, device=device)
+
+        self.layer_norm_output = nn.LayerNorm(output_dim)
 
         self.dropout = nn.Dropout(dropout_p).to(device)
         
@@ -204,6 +210,7 @@ class BaselineDecoder(nn.Module):
         p_gen = None
         if self.pgen:
             p_gen_input = torch.cat((context_vector, hidden, input.squeeze(1)), dim=1)  # (batch size, 2 * encoder hidden dim + decoder hidden dim + emb dim)
+            p_gen_input = self.layer_norm_pgen(p_gen_input)
             p_gen = torch.sigmoid(self.p_gen_linear(p_gen_input))  # (batch size, 1)
 
         # Decoder state vector (hidden) and the context vector are concatenated
@@ -213,6 +220,7 @@ class BaselineDecoder(nn.Module):
         output = self.V_1(concatenated) 
         output = self.V_1_prime(output) 
 
+        output = self.layer_norm_output(output)
         output = self.dropout(output)
 
         p_vocab = self.softmax(output)
