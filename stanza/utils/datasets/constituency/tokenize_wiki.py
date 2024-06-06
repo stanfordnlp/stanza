@@ -39,10 +39,17 @@ def parse_args():
         default='vi',
         help='Which language tools to use for tokenization and POS'
     )
-    parser.add_argument(
+
+    input_group = parser.add_mutually_exclusive_group(required=True)
+    input_group.add_argument(
         '--input_dir',
-        default='extern_data/vietnamese/wikipedia/text/AA',
+        default=None,
         help='Path to the wikipedia dump after processing by wikiextractor'
+    )
+    input_group.add_argument(
+        '--input_file',
+        default=None,
+        help='Path to a single file of the wikipedia dump after processing by wikiextractor'
     )
     parser.add_argument(
         '--bert_tokenizer',
@@ -65,7 +72,12 @@ def parse_args():
 
 def main():
     args = parse_args()
-    files = selftrain_wiki.list_wikipedia_files(args.input_dir)
+    if args.input_dir is not None:
+        files = selftrain_wiki.list_wikipedia_files(args.input_dir)
+    elif args.input_file is not None:
+        files = [args.input_file]
+    else:
+        raise ValueError("Need to specify at least one file or directory!")
 
     if args.bert_tokenizer:
         tokenizer = load_tokenizer(args.bert_tokenizer)
