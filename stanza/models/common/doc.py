@@ -1019,8 +1019,10 @@ class Token(StanzaObject):
         """
         self._id = token_entry.get(ID)
         self._text = token_entry.get(TEXT)
-        if not self._id or not self._text:
-            raise ValueError('id and text should be included for the token')
+        if not self._id:
+            raise ValueError('id not included for the token')
+        if not self._text:
+            raise ValueError('text not included for the token')
         self._misc = token_entry.get(MISC, None)
         self._ner = token_entry.get(NER, None)
         self._multi_ner = token_entry.get(MULTI_NER, None)
