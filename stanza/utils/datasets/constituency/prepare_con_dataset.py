@@ -158,6 +158,9 @@ zh_ctb-51 is the 5.1 version of CTB
            year={2005},
            pages={207–238}}
 
+zh_ctb-51b is the same dataset, but using a smaller dev/test set
+  in our experiments, this is substantially easier
+
 zh_ctb-90 is the 9.0 version of CTB
   put LDC2016T13 in $CONSTITUENCY_BASE/chinese
   python3 -m stanza.utils.datasets.constituency.prepare_con_dataset zh_ctb-90
@@ -414,6 +417,15 @@ def process_ctb_51(paths, dataset_name, *args):
     output_dir = paths["CONSTITUENCY_DATA_DIR"]
     convert_ctb.convert_ctb(input_dir, output_dir, dataset_name, convert_ctb.Version.V51)
 
+def process_ctb_51b(paths, dataset_name, *args):
+    lang, source = dataset_name.split("_", 1)
+    assert lang == 'zh-hans'
+    assert source == 'ctb-51b'
+
+    input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "chinese", "LDC2005T01U01_ChineseTreebank5.1", "bracketed")
+    output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    convert_ctb.convert_ctb(input_dir, output_dir, dataset_name, convert_ctb.Version.V51b)
+
 def process_ctb_90(paths, dataset_name, *args):
     lang, source = dataset_name.split("_", 1)
     assert lang == 'zh-hans'
@@ -494,6 +506,7 @@ DATASET_MAPPING = {
     'vi_vlsp23':    process_vlsp22,  # options allow for this
 
     'zh-hans_ctb-51':   process_ctb_51,
+    'zh-hans_ctb-51b':  process_ctb_51b,
     'zh-hans_ctb-90':   process_ctb_90,
 }
 
