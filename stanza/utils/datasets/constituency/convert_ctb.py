@@ -13,7 +13,8 @@ tqdm = get_tqdm()
 
 class Version(Enum):
     V51   = 1
-    V90   = 2
+    V51b  = 2
+    V90   = 3
 
 def filenum_to_shard_51(filenum):
     if filenum >= 1 and filenum <= 815:
@@ -29,6 +30,20 @@ def filenum_to_shard_51(filenum):
     if filenum >= 816 and filenum <= 885:
         return 2
     if filenum >= 1137 and filenum <= 1147:
+        return 2
+
+    raise ValueError("Unhandled filenum %d" % filenum)
+
+def filenum_to_shard_51_basic(filenum):
+    if filenum >= 1 and filenum <= 270:
+        return 0
+    if filenum >= 400 and filenum <= 1151:
+        return 0
+
+    if filenum >= 301 and filenum <= 325:
+        return 1
+
+    if filenum >= 271 and filenum <= 300:
         return 2
 
     raise ValueError("Unhandled filenum %d" % filenum)
@@ -140,10 +155,10 @@ def convert_ctb(input_dir, output_dir, dataset_name, version):
     sorted_filenames.sort()
 
     for filenum, filename in tqdm(sorted_filenames):
-        if version is Version.V51:
+        if version in (Version.V51, Version.V51b):
             with open(filename, errors='ignore', encoding="gb2312") as fin:
                 text = fin.read()
-        else:
+        elif version is Version.V90:
             with open(filename, encoding="utf-8") as fin:
                 text = fin.read()
             if text.find("<TURN>") >= 0 and text.find("</TURN>") < 0:
@@ -163,6 +178,8 @@ def convert_ctb(input_dir, output_dir, dataset_name, version):
                 if filenum in (6066, 6453):
                     text = text.replace("<", "&lt;").replace(">", "&gt;")
                 text = "<foo><TEXT>\n%s</TEXT></foo>\n" % text
+        else:
+            raise ValueError("Unknown CTB version %s" % version)
         text = id_re.sub(r'<S ID="\1">', text)
         text = text.replace("&", "&amp;")
 
@@ -175,7 +192,7 @@ def convert_ctb(input_dir, output_dir, dataset_name, version):
         if version is Version.V90 and len(trees) == 0:
             trees = [x for x in collect_trees_text(xml_root)]
 
-        if version is Version.V51:
+        if version in (Version.V51, Version.V51b):
             trees = [x[0] for x in trees if filenum != 414 or x[1] != "4366"]
         else:
             trees = [x[0] for x in trees]
@@ -192,6 +209,8 @@ def convert_ctb(input_dir, output_dir, dataset_name, version):
 
         if version is Version.V51:
             shard = filenum_to_shard_51(filenum)
+        elif version is Version.V51b:
+            shard = filenum_to_shard_51_basic(filenum)
         else:
             shard = filenum_to_shard_90(filenum)
         datasets[shard].extend(trees)
