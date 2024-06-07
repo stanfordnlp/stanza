@@ -227,18 +227,22 @@ class Tree(StanzaObject):
 
         with StringIO() as buf:
             stack = deque()
-            if print_format == TreePrintMethod.VLSP or print_format == TreePrintMethod.LATEX_TREE:
-                if print_format == TreePrintMethod.VLSP:
-                    if use_tree_id:
-                        buf.write("<s id={}>\n".format(self.tree_id))
-                    else:
-                        buf.write("<s>\n")
+            if print_format == TreePrintMethod.VLSP:
+                if use_tree_id:
+                    buf.write("<s id={}>\n".format(self.tree_id))
                 else:
-                    buf.write("\\Tree ")
+                    buf.write("<s>\n")
                 if len(self.children) == 0:
                     raise ValueError("Cannot print an empty tree with V format")
                 elif len(self.children) > 1:
                     raise ValueError("Cannot print a tree with %d branches with V format" % len(self.children))
+                stack.append(self.children[0])
+            elif print_format == TreePrintMethod.LATEX_TREE:
+                buf.write("\\Tree ")
+                if len(self.children) == 0:
+                    raise ValueError("Cannot print an empty tree with T format")
+                elif len(self.children) > 1:
+                    raise ValueError("Cannot print a tree with %d branches with T format" % len(self.children))
                 stack.append(self.children[0])
             else:
                 stack.append(self)
