@@ -37,7 +37,7 @@ class BaselineEncoder(nn.Module):
         self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=num_layers, bidirectional=True, batch_first=True, device=device)
         self.dropout = nn.Dropout(dropout_p).to(device)
         self.hidden_out = nn.Linear(hidden_dim * 2, hidden_dim, device=device)
-        self.layer_norm = nn.LayerNorm(hidden_dim)
+        self.layer_norm = nn.LayerNorm(hidden_dim * 2)
         self.device = device
 
     def forward(self, text):
@@ -167,7 +167,7 @@ class BaselineDecoder(nn.Module):
         
         self.softmax = nn.LogSoftmax(dim=1)  # Softmax layer for the final output
 
-    def forward(self, input, hidden, cell, encoder_outputs, src=None):
+    def forward(self, input, hidden, cell, encoder_outputs):
 
         """
         input : (batch size, emb dim)
@@ -251,16 +251,14 @@ class BaselineSeq2Seq(nn.Module):
         self.vocab_size = emb_matrix.shape[0]
         self.word_embedding_dim = emb_matrix.shape[1]
         self.vocab = pt_embedding.vocab  # to get word from index, used in characterlm
-        START_TOKEN, STOP_TOKEN = "<s>", "</s>"
+        # Add the START and STOP tokens to the embedding layer
         start_vector = torch.randn((1, self.word_embedding_dim))
         stop_vector = torch.randn((1, self.word_embedding_dim))
         extended_embeddings = torch.cat((torch.from_numpy(emb_matrix), start_vector, stop_vector), dim=0)
 
-        # self.embedding = nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=False)   # freeze False because 'See et. al.' updates embeddings
-
         self.embedding = nn.Embedding(len(self.vocab) + 2, self.word_embedding_dim, _weight=extended_embeddings)
-        self.vocab_map = {word.replace('\xa0', ' '): i for i, word in enumerate(pt_embedding.vocab)}
-        self.vocab_map[START_TOKEN] = len(self.vocab_map)
+        self.vocab_map = {word.replace('\xa0', ' '): i for i, word in enumerate(pt_embedding.vocab)}  # word to ID
+        self.vocab_map[START_TOKEN] = len(self.vocab_map)  # ADD STOP and START tokens to vocab map
         self.vocab_map[STOP_TOKEN] = len(self.vocab_map)
         self.vocab_size += 2 
 
@@ -280,17 +278,19 @@ class BaselineSeq2Seq(nn.Module):
         self.max_oov_words = 0
 
         self.input_size += self.word_embedding_dim
-
+        # Encoder
         encoder_hidden_dim = self.model_args.get("encoder_hidden_dim", DEFAULT_ENCODER_HIDDEN_DIM)
         encoder_num_layers = self.model_args.get("encoder_num_layers", DEFAULT_ENCODER_NUM_LAYERS)
         self.encoder = BaselineEncoder(self.input_size, encoder_hidden_dim, num_layers=encoder_num_layers, device=device)
-
+        # Decoder
         decoder_hidden_dim = self.model_args.get("decoder_hidden_dim", encoder_hidden_dim)   # default value should be same hidden dim as encoder
         decoder_num_layers = self.model_args.get("decoder_num_layers", encoder_num_layers)
+        
+        # Additional features
         self.pgen = self.model_args.get("pgen", False)
         self.coverage = self.model_args.get("coverage", False)
-        self.decoder = BaselineDecoder(self.vocab_size, encoder_hidden_dim, decoder_hidden_dim, self.input_size, decoder_num_layers, self.pgen, self.coverage,
-                                       device=device)
+        self.decoder = BaselineDecoder(self.vocab_size, encoder_hidden_dim, decoder_hidden_dim, self.input_size, decoder_num_layers, 
+                                       self.pgen, self.coverage, device=device)
     
     def get_text_embeddings(self, text: List[List[str]], max_steps: int = None):
         """
