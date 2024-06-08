@@ -131,7 +131,7 @@ def run_beam_search(model: BaselineSeq2Seq, unit2id: Mapping, id2unit: Mapping, 
             enc_states=enc_states, 
             dec_hidden=torch.stack(hidden_states).to(device),
             dec_cell=torch.stack(cell_states).to(device),
-            prev_coverage=torch.stack(prev_coverage).to(device) if prev_coverage is not None else None
+            prev_coverage=torch.stack(prev_coverage).to(device) if prev_coverage[0] is not None else None
         )
         # create updated id2unit from unit2id_.
         # Note that the outputted unit2id_ is always continually updated every call to model.decode_onestep()
