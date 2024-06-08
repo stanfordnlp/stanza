@@ -260,13 +260,6 @@ class SummarizationTrainer():
                 batch_loss.backward()
                 torch.nn.utils.clip_grad_norm_(self.model.parameters(), 2.0)  # add gradient clipping at a max of 2.0 grad norm
 
-                total_norm = 0
-                for param in self.model.parameters():
-                    param_norm = param.grad.data.norm(2)
-                    total_norm += param_norm.item() ** 2
-                total_norm = total_norm ** 0.5
-                logger.info(f"Epoch {epoch + 1} / {num_epochs}: Gradient Norm: {total_norm:.4f}")
-
                 running_loss += batch_loss.item()
                 self.optimizer.step()
             
@@ -284,24 +277,6 @@ class SummarizationTrainer():
                 best_loss = val_set_loss
                 torch.save(self.model, save_name)
                 logger.info(f"New best model saved to {save_name}! Val set loss: {best_loss}")
-            # results = evaluate_from_path(
-            #                             model_path=model_chkpt_path,
-            #                             eval_path=eval_file,
-            #                             logger=logger,
-            #                             max_dec_steps=self.max_dec_steps,
-            #                             max_enc_steps=self.max_enc_steps
-            #                             )
-            
-            # logger.info(f"Epoch {epoch + 1} / {num_epochs} results: {results}")
-            # compare to best checkpoint, if this chkpt is best, save to the output file
-            # if results.get('rougeLsum') > best_rouge:
-            #     best_rouge = results.get("rougeLsum")
-            #     torch.save(self.model, save_name)
-            #     logger.info(f"New best model saved to {save_name}! RougeLSum: {best_rouge}.")
-            # if epoch_loss < best_loss:
-            #     best_loss = epoch_loss
-            #     torch.save(self.model, save_name)
-            #     logger.info(f"New best model saved to {save_name}! Loss : {best_loss}")
 
 
 def parse_args():
