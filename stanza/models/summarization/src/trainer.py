@@ -19,7 +19,7 @@ from stanza.models.summarization.src.model import *
 from stanza.utils.get_tqdm import get_tqdm
 from stanza.models.summarization.src.utils import *
 from stanza.models.summarization.src.prepare_dataset import Dataset
-from stanza.models.summarization.src.evaluate_model import evaluate_from_path
+from stanza.models.summarization.src.evaluate_model import evaluate_rouge_from_path
 
 from typing import List, Tuple, Any, Mapping
 
@@ -119,6 +119,54 @@ class SummarizationTrainer():
             model.decoder.attention.coverage = True
             model.decoder.attention.W_c = nn.Linear(1, model.decoder.decoder_hidden_dim, device=device)
         return model
+
+    def compute_validation_loss(self, save_path: str, eval_file: str) -> float:
+        """
+        Computes the loss across the validation set for model selection across epochs
+
+        Args:
+            save_path (str): Path to the saved model checkpoint to evaluate
+            eval_file (str): Path to the directory containing validation set files with examples
+        """
+        batch_size = self.model_args.get("batch_size", DEFAULT_BATCH_SIZE)
+        device = default_device()
+        val_set = Dataset(
+                          data_root=eval_file,
+                          batch_size=batch_size,
+                          shuffle=True
+                          )
+        model = torch.load(save_path)
+        model = model.to(device)
+        model.eval()  # disable dropout
+
+        # Load loss function
+        self.criterion = nn.NLLLoss(reduction="none")
+        self.criterion = self.criterion.to(device)
+        running_loss = 0.0
+        with torch.no_grad():
+            for articles, summaries in tqdm(val_set, desc="Computing validation loss..."):
+                output, attention_scores, coverage_vectors = model(articles, summaries, 0.0)  # (batch size, seq len, vocab size). Turn off teacher-forcing
+                output = output.permute(0, 2, 1)   # (batch size, vocab size, seq len)
+
+                target_indices = convert_text_to_token_ids(model.vocab_map, summaries, UNK_ID, self.max_dec_steps).to(device)
+
+                # Compute losses (base loss)
+                log_loss = self.criterion(output, target_indices)
+                # coverage loss
+                if model.coverage:
+                    coverage_losses = torch.sum(torch.min(attention_scores, coverage_vectors), dim=-1)
+                    combined_losses = log_loss + coverage_losses
+                else:
+                    combined_losses = log_loss 
+                
+                # backwards
+                sequence_loss = combined_losses.mean(dim=1)
+                batch_loss = sequence_loss.mean()
+
+                running_loss += batch_loss.item()
+        avg_loss = running_loss / len(val_set)
+        return avg_loss
+            
 
     def train(self, num_epochs: int, save_name: str, train_file: str, eval_file: str, checkpoint_load_path: str = None) -> None:
         """
@@ -225,7 +273,17 @@ class SummarizationTrainer():
             # Evaluate current model checkpoint
             epoch_loss = running_loss / len(dataset)
             logger.info(f"Epoch {epoch + 1} / {num_epochs}, Loss: {epoch_loss:.6f}")
-            # torch.save(self.model, model_chkpt_path)  
+            torch.save(self.model, model_chkpt_path)  
+
+            val_set_loss = self.compute_validation_loss(
+                                                             save_path=model_chkpt_path,
+                                                             eval_file=eval_file 
+                                                             )
+            logger.info(f"Epoch [{epoch + 1}/{num_epochs}] average validation loss: {val_set_loss}.")
+            if val_set_loss < best_loss:
+                best_loss = val_set_loss
+                torch.save(self.model, save_name)
+                logger.info(f"New best model saved to {save_name}! Val set loss: {best_loss}")
             # results = evaluate_from_path(
             #                             model_path=model_chkpt_path,
             #                             eval_path=eval_file,
@@ -240,10 +298,10 @@ class SummarizationTrainer():
             #     best_rouge = results.get("rougeLsum")
             #     torch.save(self.model, save_name)
             #     logger.info(f"New best model saved to {save_name}! RougeLSum: {best_rouge}.")
-            if epoch_loss < best_loss:
-                best_loss = epoch_loss
-                torch.save(self.model, save_name)
-                logger.info(f"New best model saved to {save_name}! Loss : {best_loss}")
+            # if epoch_loss < best_loss:
+            #     best_loss = epoch_loss
+            #     torch.save(self.model, save_name)
+            #     logger.info(f"New best model saved to {save_name}! Loss : {best_loss}")
 
 
 def parse_args():
