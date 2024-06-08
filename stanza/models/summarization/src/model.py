@@ -151,8 +151,8 @@ class BaselineDecoder(nn.Module):
         self.coverage = use_coverage
 
         if self.pgen:
-            self.layer_norm_pgen = nn.LayerNorm(encoder_hidden_dim * 2 + emb_dim + decoder_hidden_dim)
             self.p_gen_linear = nn.Linear(encoder_hidden_dim * 2 + emb_dim + decoder_hidden_dim, 1, device=device) 
+            self.layer_norm_pgen = nn.LayerNorm(1)
 
         if self.coverage:
             self.coverage_vec = None
@@ -209,9 +209,10 @@ class BaselineDecoder(nn.Module):
 
         p_gen = None
         if self.pgen:
-            p_gen_input = torch.cat((context_vector, hidden, input.squeeze(1)), dim=1)  # (batch size, 2 * encoder hidden dim + decoder hidden dim + emb dim)
-            p_gen_input = self.layer_norm_pgen(p_gen_input)
-            p_gen = torch.sigmoid(self.p_gen_linear(p_gen_input))  # (batch size, 1)
+            pgen_input = torch.cat((context_vector, hidden, input.squeeze(1)), dim=1)  # (batch size, 2 * encoder hidden dim + decoder hidden dim + emb dim)
+            linearized_pgen_input = self.p_gen_linear(pgen_input)
+            normalized_pgen_input = self.layer_norm_pgen(linearized_pgen_input)
+            p_gen = torch.sigmoid()  # (batch size, 1)
 
         # Decoder state vector (hidden) and the context vector are concatenated
         # before being passed through linear layers to predict the next token.
@@ -291,6 +292,8 @@ class BaselineSeq2Seq(nn.Module):
         self.coverage = self.model_args.get("coverage", False)
         self.decoder = BaselineDecoder(self.vocab_size, encoder_hidden_dim, decoder_hidden_dim, self.input_size, decoder_num_layers, 
                                        self.pgen, self.coverage, device=device)
+        
+        self._initialize_weights()
     
     def get_text_embeddings(self, text: List[List[str]], max_steps: int = None):
         """
@@ -372,6 +375,16 @@ class BaselineSeq2Seq(nn.Module):
     def add_unsaved_module(self, name, module):
         self.unsaved_modules += [name]
         setattr(self, name, module)
+
+    def _initialize_weights(self):
+
+        def _init_weights(m):
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                if m.bias is not None:
+                    nn.init.zeros_(m.bias)
+        
+        self.apply(_init_weights)
 
     def forward(self, text, target, teacher_forcing_ratio=1.0):
         """
