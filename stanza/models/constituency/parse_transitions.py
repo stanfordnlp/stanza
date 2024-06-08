@@ -272,6 +272,11 @@ class Dummy():
     def is_preterminal(self):
         return False
 
+    def __format__(self, spec):
+        if spec is None or spec == '' or spec == 'O':
+            return "(%s ...)" % self.label
+        raise ValueError("Unhandled spec: %s" % spec)
+
     def __str__(self):
         return "Dummy({})".format(self.label)
 
