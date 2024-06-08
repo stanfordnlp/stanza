@@ -102,6 +102,24 @@ class SummarizationTrainer():
         return BaselineSeq2Seq(parsed_model_args, self.pt_embedding, device=self.device, 
                                use_charlm=use_charlm, charlm_forward_file=charlm_forward_file, charlm_backward_file=charlm_backward_file)
 
+    def load_model_from_checkpoint(self, checkpoint_load_path: str, device: str) -> BaselineSeq2Seq:
+        """
+        Loads a Seq2Seq model from its checkpoint state in `checkpoint_load_path`.
+
+        Args:
+            checkpoint_load_path (str): Path to the saved model file to load from.
+            device (str): Which device to move the model components to
+        """
+        model = torch.load(checkpoint_load_path)
+        # If the new model args specify to use coverage, then initialize the coverage if it doesn't already exist
+        if self.model_args.get("coverage") and not model.coverage:  
+            model.coverage = True 
+            model.decoder.coverage = True
+            model.decoder.coverage_vec = None
+            model.decoder.attention.coverage = True
+            model.decoder.attention.W_c = nn.Linear(1, model.decoder.decoder_hidden_dim, device=device)
+        return model
+
     def train(self, num_epochs: int, save_name: str, train_file: str, eval_file: str, checkpoint_load_path: str = None) -> None:
         """
         Trains a model on batches of texts
@@ -123,7 +141,10 @@ class SummarizationTrainer():
         # Load model in
         if checkpoint_load_path is not None and os.path.exists(checkpoint_load_path):  # load chkpt
             logger.info(f"Loading model checkpoint to start from: {checkpoint_load_path}")
-            self.model = torch.load(checkpoint_load_path)
+            self.model = self.load_model_from_checkpoint(
+                                                        checkpoint_load_path=checkpoint_load_path,
+                                                        device=device,
+                                                        )
         else:  # train a new model from scratch
             logger.info(f"Training model from scratch. Will be saved to {save_name}")
             self.model = self.build_model()
@@ -148,7 +169,7 @@ class SummarizationTrainer():
 
                 # Get model output
                 self.optimizer.zero_grad()
-                output, attention_scores, coverage_vectors = self.model(articles, summaries, teacher_forcing=1.0)  # (batch size, seq len, vocab size)
+                output, attention_scores, coverage_vectors = self.model(articles, summaries, 1.0)  # (batch size, seq len, vocab size)
                 output = output.permute(0, 2, 1)   # (batch size, vocab size, seq len)
 
                 target_indices = convert_text_to_token_ids(self.model.vocab_map, summaries, UNK_ID, self.max_dec_steps).to(device) 
