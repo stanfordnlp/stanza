@@ -479,9 +479,10 @@ class BaselineSeq2Seq(nn.Module):
 
                 # add the attention distribution to the extended vocab distribution to include input text words.
                 final_vocab_dist = extended_vocab_dist.scatter_add(dim=1, index=index_tensor, src=attn_dist_scaled)
-                p_vocab = torch.log(final_vocab_dist + 1e-10)  # apply log to final dist
+                p_vocab = final_vocab_dist  
 
             # Place predictions in a tensor holding predictions for each token
+            p_vocab = torch.log(p_vocab + 1e-10)  # take the log of the final distribution and add epsilon for numerical stability
             outputs[:, t, :] = p_vocab
             final_attn_weights[:, t, :] = attn_weights
             if self.coverage:
