@@ -86,7 +86,7 @@ def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: 
     return results
 
 
-def evaluate_from_path(model_path: str, eval_path: str, logger: logging.Logger = None, 
+def evaluate_rouge_from_path(model_path: str, eval_path: str, logger: logging.Logger = None, 
                        max_enc_steps: int = None, max_dec_steps: int = None):
 
     """
@@ -158,7 +158,7 @@ def main():
     for k, v in args.items():
         logger.info(f"{k}: {v}")
     
-    evaluate_from_path(
+    evaluate_rouge_from_path(
         model_path,
         eval_path,
         logger=logger,
