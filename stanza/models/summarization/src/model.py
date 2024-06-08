@@ -165,7 +165,7 @@ class BaselineDecoder(nn.Module):
 
         self.dropout = nn.Dropout(dropout_p).to(device)
         
-        self.softmax = nn.LogSoftmax(dim=1)  # Softmax layer for the final output
+        self.softmax = nn.Softmax(dim=1)  # Softmax layer for the final output
 
     def forward(self, input, hidden, cell, encoder_outputs):
 
@@ -479,7 +479,7 @@ class BaselineSeq2Seq(nn.Module):
 
                 # add the attention distribution to the extended vocab distribution to include input text words.
                 final_vocab_dist = extended_vocab_dist.scatter_add(dim=1, index=index_tensor, src=attn_dist_scaled)
-                p_vocab = final_vocab_dist
+                p_vocab = torch.log(final_vocab_dist + 1e-10)  # apply log to final dist
 
             # Place predictions in a tensor holding predictions for each token
             outputs[:, t, :] = p_vocab
