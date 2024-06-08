@@ -212,7 +212,7 @@ class BaselineDecoder(nn.Module):
             pgen_input = torch.cat((context_vector, hidden, input.squeeze(1)), dim=1)  # (batch size, 2 * encoder hidden dim + decoder hidden dim + emb dim)
             linearized_pgen_input = self.p_gen_linear(pgen_input)
             normalized_pgen_input = self.layer_norm_pgen(linearized_pgen_input)
-            p_gen = torch.sigmoid()  # (batch size, 1)
+            p_gen = torch.sigmoid(normalized_pgen_input)  # (batch size, 1)
 
         # Decoder state vector (hidden) and the context vector are concatenated
         # before being passed through linear layers to predict the next token.
