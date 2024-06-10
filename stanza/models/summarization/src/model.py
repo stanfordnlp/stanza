@@ -34,7 +34,7 @@ class BaselineEncoder(nn.Module):
         self.hidden_dim = hidden_dim
         self.input_dim = input_dim
         self.num_layers = num_layers
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=num_layers, bidirectional=True, batch_first=True, device=device)
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=num_layers, bidirectional=True, batch_first=True, device=device, dropout=LSTM_DROPOUT_P)
         self.dropout = nn.Dropout(dropout_p).to(device)
         self.hidden_out = nn.Linear(hidden_dim * 2, hidden_dim, device=device)
         self.layer_norm = nn.LayerNorm(hidden_dim * 2)
@@ -45,11 +45,13 @@ class BaselineEncoder(nn.Module):
         unpacked_lstm_outputs, _ = pad_packed_sequence(outputs, batch_first=True)
 
         unpacked_lstm_outputs = self.layer_norm(unpacked_lstm_outputs)  # apply layernorm
-        unpacked_lstm_outputs = self.dropout(unpacked_lstm_outputs)   # apply dropout
         
         hidden = torch.cat((hidden[-2, :, :], hidden[-1, :, :]), dim=1).to(self.device) 
         cell = torch.cat((cell[-2, :, :], cell[-1, :, :]), dim=1).to(self.device)
 
+        # Apply dropout to the concatenated hidden states before the linear layer
+        hidden = self.dropout(hidden)
+        cell = self.dropout(cell)
 
         hidden_linearized = self.hidden_out(hidden)   # apply linear layer to reduce dimensionality -> initial decoder state
         cell_linearized = self.hidden_out(cell)
@@ -72,6 +74,8 @@ class BahdanauAttention(nn.Module):
             # self.W_c = nn.Linear(17, decoder_hidden_dim)  # replace 17 with seqlen, or maybe this should be max dec steps
             # self.W_c = nn.Conv1d(in_channels=1, out_channels=decoder_hidden_dim, kernel_size=1, bias=False)
             self.W_c = nn.Linear(1, decoder_hidden_dim, device=device)
+
+        self.dropout = nn.Dropout(ATTN_DROPOUT_P)
 
     
     def forward(self, encoder_outputs, decoder_hidden, coverage_vec=None):
@@ -117,6 +121,7 @@ class BahdanauAttention(nn.Module):
             # no coverage, energy alignment scores become e_i^t = v^T tanh(W_h h_i + W_s s_t + b_attn)
             energy = torch.tanh(self.W_h(encoder_outputs) + self.W_s(decoder_hidden) + self.b_attn).to(self.device)
 
+        energy = self.dropout(energy)
         attention_raw = self.v(energy)
         attention = attention_raw.squeeze(2)
 
@@ -144,7 +149,7 @@ class BaselineDecoder(nn.Module):
         self.decoder_hidden_dim = decoder_hidden_dim
         self.encoder_hidden_dim = encoder_hidden_dim
 
-        self.lstm = nn.LSTM(emb_dim, decoder_hidden_dim, num_layers=num_layers, batch_first=True, device=device)   
+        self.lstm = nn.LSTM(emb_dim, decoder_hidden_dim, num_layers=num_layers, batch_first=True, device=device, dropout=LSTM_DROPOUT_P)   
         self.attention = BahdanauAttention(encoder_hidden_dim, decoder_hidden_dim, coverage=use_coverage, device=device)
                 
         self.pgen = use_pgen
@@ -219,6 +224,7 @@ class BaselineDecoder(nn.Module):
         concatenated = torch.cat((hidden, context_vector), dim=1)
 
         output = self.V_1(concatenated) 
+        output = self.dropout(output)
         output = self.V_1_prime(output) 
 
         output = self.layer_norm_output(output)
