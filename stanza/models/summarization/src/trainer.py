@@ -205,7 +205,7 @@ class SummarizationTrainer():
         dataset = Dataset(train_file, batch_size)
 
         # Load optimizer
-        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=0.01)
         self.criterion = nn.NLLLoss(reduction="none")
         self.criterion = self.criterion.to(next(self.model.parameters()).device)
 
