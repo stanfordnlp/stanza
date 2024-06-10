@@ -14,8 +14,11 @@ UNK = "<UNK>"
 START_TOKEN = "<s>"
 STOP_TOKEN = "</s>"
 
-DEFAULT_BATCH_SIZE = 16
+# model hyperparams
+LSTM_DROPOUT_P = 0.2
+ATTN_DROPOUT_P = 0.5
 
+DEFAULT_BATCH_SIZE = 16
 DEFAULT_EVAL_ROOT = os.path.join(os.path.dirname(__file__), "data", "validation")
 DEFAULT_TRAIN_ROOT = os.path.join(os.path.dirname(__file__), "data", "train")
 DEFAULT_SAVE_NAME = os.path.join(os.path.dirname(__file__), "saved_models", "summarization_model.pt")
