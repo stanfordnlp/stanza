@@ -37,7 +37,7 @@ def filenum_to_shard_51(filenum):
 def filenum_to_shard_51_basic(filenum):
     if filenum >= 1 and filenum <= 270:
         return 0
-    if filenum >= 400 and filenum <= 1151:
+    if filenum >= 440 and filenum <= 1151:
         return 0
 
     if filenum >= 301 and filenum <= 325:
@@ -45,6 +45,9 @@ def filenum_to_shard_51_basic(filenum):
 
     if filenum >= 271 and filenum <= 300:
         return 2
+
+    if filenum >= 400 and filenum <= 439:
+        return None
 
     raise ValueError("Unhandled filenum %d" % filenum)
 
@@ -213,6 +216,8 @@ def convert_ctb(input_dir, output_dir, dataset_name, version):
             shard = filenum_to_shard_51_basic(filenum)
         else:
             shard = filenum_to_shard_90(filenum)
+        if shard is None:
+            continue
         datasets[shard].extend(trees)
 
 
