@@ -34,8 +34,9 @@ class BaselineEncoder(nn.Module):
         self.hidden_dim = hidden_dim
         self.input_dim = input_dim
         self.num_layers = num_layers
-        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=num_layers, bidirectional=True, batch_first=True, device=device, dropout=LSTM_DROPOUT_P)
-        self.dropout = nn.Dropout(dropout_p).to(device)
+        self.lstm = nn.LSTM(input_dim, hidden_dim, num_layers=num_layers, bidirectional=True, batch_first=True, device=device)
+        self.lstm_dropout = nn.Dropout(LSTM_DROPOUT_P).to(device)
+        self.linear_dropout = nn.Dropout(dropout_p).to(device)
         self.hidden_out = nn.Linear(hidden_dim * 2, hidden_dim, device=device)
         self.layer_norm = nn.LayerNorm(hidden_dim * 2)
         self.device = device
@@ -45,13 +46,14 @@ class BaselineEncoder(nn.Module):
         unpacked_lstm_outputs, _ = pad_packed_sequence(outputs, batch_first=True)
 
         unpacked_lstm_outputs = self.layer_norm(unpacked_lstm_outputs)  # apply layernorm
+        unpacked_lstm_outputs = self.lstm_dropout(unpacked_lstm_outputs)  # dropout on the lstm output
         
         hidden = torch.cat((hidden[-2, :, :], hidden[-1, :, :]), dim=1).to(self.device) 
         cell = torch.cat((cell[-2, :, :], cell[-1, :, :]), dim=1).to(self.device)
 
         # Apply dropout to the concatenated hidden states before the linear layer
-        hidden = self.dropout(hidden)
-        cell = self.dropout(cell)
+        hidden = self.linear_dropout(hidden)
+        cell = self.linear_dropout(cell)
 
         hidden_linearized = self.hidden_out(hidden)   # apply linear layer to reduce dimensionality -> initial decoder state
         cell_linearized = self.hidden_out(cell)
@@ -149,7 +151,7 @@ class BaselineDecoder(nn.Module):
         self.decoder_hidden_dim = decoder_hidden_dim
         self.encoder_hidden_dim = encoder_hidden_dim
 
-        self.lstm = nn.LSTM(emb_dim, decoder_hidden_dim, num_layers=num_layers, batch_first=True, device=device, dropout=LSTM_DROPOUT_P)   
+        self.lstm = nn.LSTM(emb_dim, decoder_hidden_dim, num_layers=num_layers, batch_first=True, device=device)   
         self.attention = BahdanauAttention(encoder_hidden_dim, decoder_hidden_dim, coverage=use_coverage, device=device)
                 
         self.pgen = use_pgen
@@ -206,6 +208,9 @@ class BaselineDecoder(nn.Module):
         cell = cell.unsqueeze(1).transpose(0, 1)
 
         lstm_output, (hidden, cell) = self.lstm(input, (hidden, cell))
+
+        hidden = self.dropout(hidden)
+        cell = self.dropout(cell)
 
         hidden, cell = hidden.transpose(0, 1), cell.transpose(0, 1)
         hidden, cell = hidden.squeeze(1), cell.squeeze(1)  # 'hidden' is now the updated decoder state after processing the current input token
