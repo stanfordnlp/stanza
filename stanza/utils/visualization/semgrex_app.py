@@ -357,5 +357,37 @@ def ssurgeon_state():
             output_str = "\n".join(output)
             st.download_button("Download your edited file", data=output_str, file_name="SSurgeon.conll")
 
+
+def main():
+    
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--CLASSPATH",
+        type=str,
+        default=os.environ.get("CLASSPATH", None),
+        help="Path to your CoreNLP directory.",
+    )  # for example, set $CLASSPATH to "C:\\stanford-corenlp-4.5.2\\stanford-corenlp-4.5.2\\*"
+    args = parser.parse_args()
+    
+    CLASSPATH = args.CLASSPATH
+    os.environ["CLASSPATH"] = CLASSPATH
+
+    if os.environ.get("CLASSPATH") is None:
+        logging.error("Provide a valid $CLASSPATH value (path to your CoreNLP installation).")
+        raise ValueError("Provide a valid $CLASSPATH value (path to your CoreNLP installation).")
+
+    # run pipeline once per user session
+    if "pipeline" not in st.session_state:  
+        en_nlp_stanza = Pipeline(
+            "en", processors="tokenize, pos, lemma, depparse"
+        )
+        st.session_state["pipeline"] = en_nlp_stanza
+
+    #### Below is the webpage states that run. Streamlit operates by having the rendered HTML and when the user interacts with
+    # the page, these states are run once more with their internal states possibly altered (e.g. user clicks a button). 
+
+    semgrex_state()
+    ssurgeon_state()
+
 if __name__ == "__main__":
     main()
