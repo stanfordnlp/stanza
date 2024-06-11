@@ -22,7 +22,7 @@ def generate_edited_deprel_unadjusted(edited_doc, lang_code, visualize_xpos):
     return sv.get_sentences_html(doc=edited_doc, language=lang_code, visualize_xpos=visualize_xpos)
 
 
-def visualize_edited_deprel_adjusted_str_input(input_str, semgrex_query, ssurgeon_query, lang_code="en", visualize_xpos=False, render=False):
+def visualize_ssurgeon_deprel_adjusted_str_input(input_str, semgrex_query, ssurgeon_query, lang_code="en", visualize_xpos=False, render=False):
     """
     Visualizes the edited side of the ssurgeon edit
     :param unedited_doc:
