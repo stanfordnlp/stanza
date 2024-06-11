@@ -1,3 +1,7 @@
+"""
+Visualize named entities from different texts and Stanza documents (+ CoNLL files)
+"""
+
 from spacy import displacy
 from spacy.tokens import Doc
 from spacy.tokens import Span

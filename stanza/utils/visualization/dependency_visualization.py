@@ -1,3 +1,7 @@
+"""
+Functions to visualize dependency relations in texts and Stanza documents 
+"""
+
 from stanza.models.common.constant import is_right_to_left
 import stanza
 import spacy
