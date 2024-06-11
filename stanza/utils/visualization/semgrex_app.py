@@ -85,14 +85,21 @@ def get_semgrex_window_input() -> Tuple[bool, int, int]:
 
 
 def get_pos_input() -> bool:
+    """
+    Prompts client for whether they want to see xpos tags instead of upos.
+    """
     use_xpos = st.checkbox("Would you like to visualize xpos tags?",
                            help="The default visualization options use upos tags for part-of-speech labeling. If xpos tags aren't available for the sentence, displays upos.")
     return use_xpos
 
+
 def get_input() -> Tuple[str, str, List[str], Tuple[bool, int, int, bool]]:
-    input_txt, input_queries = get_text_and_query()
+    """
+    Tie together all inputs to query user for all possible inputs.
+    """
+    input_txt, input_queries = get_semgrex_text_and_query()
     client_files = get_file_input()  # this is already converted to string format
-    window_input = get_window_input()
+    window_input = get_semgrex_window_input()
     visualize_xpos = get_pos_input()
     return input_txt, input_queries, client_files, window_input, visualize_xpos
 
@@ -276,34 +283,38 @@ def ssurgeon_state():
         placeholder="relabelNamedEdge -edge bad -reln advcl"
     )
 
+    # File uploading box
     st.markdown("""**Alternatively, upload file(s) to edit.**""")
     uploaded_files = st.file_uploader(
         "", accept_multiple_files=True, label_visibility="collapsed"
     )
     res = []
-    for file in uploaded_files:
+    # Convert uploaded files to strings for processing
+    for file in uploaded_files: 
         stringio = StringIO(file.getvalue().decode("utf-8"))
         string_data = stringio.read()
         res.append(string_data)
 
+    # Input button to trigger processing phase 
     clicked = st.button(
-        "Load Semgrex search visualization",
-        help="""Semgrex search visualizations only display 
-        sentences with a query match. Non-matching sentences are not shown.""",
+        "Load Ssurgeon visualization",
     )
     clicked_for_file_edit = st.button(
         "Edit File"
     )
-
+    # Once the user requests the Ssurgeon operation, run this block:
     if clicked:
         try:
             with st.spinner("Processing..."):
                 semgrex_queries = semgrex_input_queries # separate queries into individual parts
                 ssurgeon_queries = [ssurgeon_input_queries]
-                html_strings = ssv.visualize_edited_deprel_adjusted_str_input(input_txt, semgrex_queries, ssurgeon_queries)
+
+                # use SSurgeon to edit the deprel, get the HTML for new relations
+                html_strings = ssv.visualize_ssurgeon_deprel_adjusted_str_input(input_txt, semgrex_queries, ssurgeon_queries)
                 doc = CoNLL.conll2doc(input_str=input_txt)
                 string_txt = " ".join([word.text for sentence in doc.sentences for word in sentence.words])
 
+                # Render pre-edited input
                 html_string = (
                     "<h3>Previous deprel visualization:</h3>"
                 )
