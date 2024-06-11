@@ -1,7 +1,11 @@
 import os
 import argparse
-import stanza
 import sys
+
+root_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
+sys.path.append(root_dir)
+
+from stanza.pipeline.core import Pipeline
 from stanza.server.semgrex import Semgrex
 from stanza.models.common.constant import is_right_to_left
 import spacy
@@ -14,7 +18,7 @@ from typing import List, Tuple, Any
 from utils import find_nth, round_base
 
 
-def get_sentences_html(doc: stanza.Document, language: str, visualize_xpos: bool = False) -> List[str]:
+def get_sentences_html(doc: Any, language: str, visualize_xpos: bool = False) -> List[str]:
     """
     Returns a list of HTML strings representing the dependency visualizations of a given stanza document.
     One HTML string is generated per sentence of the document object. Converts the stanza document object
@@ -239,7 +243,7 @@ def render_html_strings(edited_html_strings: List[str]) -> None:
 
 
 def visualize_search_doc(
-    doc: stanza.Document,
+    doc: Any,
     semgrex_queries: List[str],
     lang_code: str,
     start_match: int = 0,
@@ -324,7 +328,7 @@ def visualize_search_str(
     @return: A list of HTML strings representing the dependency relations of the doc object.
     """
     if pipe is None:
-        nlp = stanza.Pipeline(lang_code, processors="tokenize, pos, lemma, depparse")
+        nlp = Pipeline(lang_code, processors="tokenize, pos, lemma, depparse")
     else:
         nlp = pipe
     doc = nlp(text)
@@ -554,7 +558,7 @@ def main():
 
     Example: CLASSPATH=C:\\Users\\Alex\\PycharmProjects\\pythonProject\\stanford-corenlp-4.5.0\\stanford-corenlp-4.5.0\\*
     """
-    nlp = stanza.Pipeline("en", processors="tokenize,pos,lemma,depparse")
+    nlp = Pipeline("en", processors="tokenize,pos,lemma,depparse")
     doc = nlp(
         "Banning opal removed artifact decks from the meta. Banning tennis resulted in players banning people."
     )
@@ -565,7 +569,7 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--doc", type=stanza.Document, default=doc, help="Stanza document to process."
+        "--doc", type=Any, default=doc, help="Stanza document to process."
     )
     parser.add_argument(
         "--queries",
