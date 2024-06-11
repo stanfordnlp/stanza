@@ -26,13 +26,13 @@ def get_semgrex_text_and_query() -> Tuple[str, str]:
     """
     input_txt = st.text_area(
         "Text to analyze",
-        """Banning opal removed artifact decks from the meta.""",
-        placeholder="Banning opal removed artifact decks from the meta.",
+        DEFAULT_SAMPLE_TEXT,
+        placeholder=DEFAULT_SAMPLE_TEXT,
     )
     input_queries = st.text_area(
         "Semgrex search queries (separate each query with a comma)",
-        "{pos:NN}=object <obl {}=action, {cpos:NOUN}=thing <obj {cpos:VERB}=action",
-        placeholder="""{pos:NN}=object <obl {}=action, {cpos:NOUN}=thing <obj {cpos:VERB}=action""",
+        DEFAULT_SEMGREX_QUERY,
+        placeholder=DEFAULT_SEMGREX_QUERY,
     )
     return input_txt, input_queries
 
@@ -244,25 +244,27 @@ def semgrex_state():
         visualize_xpos=visualize_xpos
     )
 
-    SAMPLE_DOC = """
-    # sent_id = 271
-    # text = Hers is easy to clean.
-    # previous = What did the dealer like about Alex's car?
-    # comment = extraction/raising via "tough extraction" and clausal subject
-    1	Hers	hers	PRON	PRP	Gender=Fem|Number=Sing|Person=3|Poss=Yes|PronType=Prs	3	nsubj	_	_
-    2	is	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	3	cop	_	_
-    3	easy	easy	ADJ	JJ	Degree=Pos	0	root	_	_
-    4	to	to	PART	TO	_	5	mark	_	_
-    5	clean	clean	VERB	VB	VerbForm=Inf	3	csubj	_	SpaceAfter=No
-    6	.	.	PUNCT	.	_	5	punct	_	_
+
+def ssurgeon_state():
     """
+    Contains the ssurgeon state for the webpage.
+
+    This contains the markdown and calls the processes that run Ssurgeon operations.
+
+    When the text boxes, buttons, or other interactable features are edited by the user, this function
+    runs with the updated page state and conducts operations (e.g. runs a Ssurgeon operation on a submitted file)
+    """
+
     st.title("Displaying Ssurgeon Results")
 
+    # Textbox for input to SSurgeon (text)
     input_txt = st.text_area(
         "Text to analyze",
-        SAMPLE_DOC,
-        placeholder=SAMPLE_DOC,
+        SAMPLE_SSURGEON_DOC,
+        placeholder=SAMPLE_SSURGEON_DOC,
     )
+
+    # Textbox for input queries to SSurgeon (commands + queries)
     semgrex_input_queries = st.text_area(
         "Semgrex search queries (separate each query with a comma)",
         "{}=source >nsubj {} >csubj=bad {}",
