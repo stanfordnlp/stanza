@@ -1,19 +1,24 @@
+import os 
+import sys 
 import streamlit as st
 import streamlit.components.v1 as components
-from semgrex_visualizer import visualize_search_str
-from semgrex_visualizer import edit_html_overflow
+import stanza.utils.visualization.ssurgeon_visualizer as ssv
+import logging
+
+from stanza.utils.visualization.semgrex_visualizer import visualize_search_str
+from stanza.utils.visualization.semgrex_visualizer import edit_html_overflow
+from stanza.utils.visualization.constants import *
 from stanza.utils.conll import CoNLL
-import ssurgeon_visualizer as ssv
 from stanza.server.ssurgeon import *
+from stanza.pipeline.core import Pipeline
+
 from io import StringIO
 import os
-import stanza
-import typing
 from typing import List, Tuple, Any
 import argparse
 
 
-def get_text_and_query() -> Tuple[str, str]:
+def get_semgrex_text_and_query() -> Tuple[str, str]:
     """
     Gets user input for the Semgrex text and queries to process.
 
@@ -51,7 +56,7 @@ def get_file_input() -> List[str]:
     return res
 
 
-def get_window_input() -> Tuple[bool, int, int]:
+def get_semgrex_window_input() -> Tuple[bool, int, int]:
     """
     Allows user to specify a specific window of Semgrex hits to visualize. Works similar to Python splicing.
 
@@ -120,6 +125,8 @@ def run_semgrex_process(
     """
 
     if clicked:
+
+        # process inputs, reject bad ones
         if not input_txt and not client_files:
             st.error("Please provide a text input or upload files for analysis.")
         elif input_txt and client_files:
@@ -177,6 +184,7 @@ def run_semgrex_process(
                     if len(html_strings) == 0:
                         st.write("No Semgrex match hits!")
 
+                    # Render successful Semgrex results
                     for s in html_strings:
                         s_no_overflow = edit_html_overflow(s)
                         components.html(
@@ -197,26 +205,17 @@ def run_semgrex_process(
                 )
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "--CLASSPATH",
-        type=str,
-        default=os.environ.get("CLASSPATH"),
-        help="""Path to your CoreNLP directory.""",
-    )  # for example, set $CLASSPATH to "C:\\stanford-corenlp-4.5.2\\stanford-corenlp-4.5.2\\*"
-    args = parser.parse_args()
-    print("CLASSPATH:" , args.CLASSPATH)
-    CLASSPATH = args.CLASSPATH
+def semgrex_state():
+    """
+    Contains the Semgrex portion of the webpage.
 
-    # os.environ["CLASSPATH"] = CLASSPATH
-    os.environ["CLASSPATH"] = "C:\\Users\\Alex\\Desktop\\stanford-corenlp-4.5.3\\*"
-    if "pipeline" not in st.session_state:  # run pipeline once per user session
-        en_nlp_stanza = stanza.Pipeline(
-            "en", processors="tokenize, pos, lemma, depparse"
-        )
-        st.session_state["pipeline"] = en_nlp_stanza
+    This contains the markdown and calls to the processes which run when a query is made.
 
+    When the `Load Semgrex search visualization` button is pressed, the function `run_semgrex_process`
+    is called inside this function and the rendered visual is placed onto the webpage.
+    """
+
+    # Title Markdown for page header
     st.title("Displaying Semgrex Queries")
 
     html_string = (
@@ -310,12 +309,13 @@ def main():
                 components.html(
                     run_semgrex_process(input_txt=string_txt, input_queries=semgrex_queries, clicked=clicked,
                                         show_window=False, client_files=[], pipe=st.session_state["pipeline"],
-                                        start_window=1, end_window=11, visualize_xpos=visualize_xpos, show_success=False)
+                                        start_window=1, end_window=11, visualize_xpos=False, show_success=False)
                 )
 
                 if len(html_strings) == 0:
                     st.write("No Semgrex match hits!")
 
+                # Render edited outputs
                 for s in html_strings:
                     html_string = (
                         "<h3>Edited deprel visualization:</h3>"
@@ -329,6 +329,8 @@ def main():
             st.error(
                 "Your text input or your provided Semgrex/Ssurgeon queries are incorrect. Please try again."
             )
+    # If the input is a file instead of raw text, process the file with Ssurgeon and give an output
+    # that can be downloaded by the client
     if clicked_for_file_edit:
         # files are in res
         if len(res) == 0:
