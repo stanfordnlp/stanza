@@ -1,17 +1,14 @@
 """
 Visualization tooling for Ssurgeon
 """
-
-import semgrex_visualizer as sv
+import os
+import sys
+import stanza.utils.visualization.semgrex_visualizer as sv
 import stanza.server.ssurgeon
 from stanza.server.ssurgeon import process_doc_one_operation, convert_response_to_doc
 from stanza.utils.conll import CoNLL
-import os
+from stanza.utils.visualization.constants import *
 import logging
-
-# Load classpath if not already existing
-if not os.environ.get('CLASSPATH'):
-    logging.info("Load the path to wherever CoreNLP is installed on your machine to $CLASSPATH.")
 
 
 def generate_edited_deprel_unadjusted(edited_doc, lang_code, visualize_xpos):
@@ -49,19 +46,9 @@ def visualize_edited_deprel_adjusted_str_input(input_str, semgrex_query, ssurgeo
 
 
 def main():
-    
-    SAMPLE_DOC = """
-    # sent_id = 271
-    # text = Hers is easy to clean.
-    # previous = What did the dealer like about Alex's car?
-    # comment = extraction/raising via "tough extraction" and clausal subject
-    1	Hers	hers	PRON	PRP	Gender=Fem|Number=Sing|Person=3|Poss=Yes|PronType=Prs	3	nsubj	_	_
-    2	is	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	3	cop	_	_
-    3	easy	easy	ADJ	JJ	Degree=Pos	0	root	_	_
-    4	to	to	PART	TO	_	5	mark	_	_
-    5	clean	clean	VERB	VB	VerbForm=Inf	3	csubj	_	SpaceAfter=No
-    6	.	.	PUNCT	.	_	5	punct	_	_
-    """
+    # Load classpath if not already existing
+    if not os.environ.get('CLASSPATH'):
+        logging.info("Load the path to wherever CoreNLP is installed on your machine to $CLASSPATH.")
 
     # The default semgrex detects sentences in the UD_English-Pronouns dataset which have both nsubj and csubj on the same word.
     # The default ssurgeon transforms the unwanted csubj to advcl
@@ -69,22 +56,15 @@ def main():
     ssurgeon = ["relabelNamedEdge -edge bad -reln advcl"]  # example
     semgrex = "{}=source >nsubj {} >csubj=bad {}"  # example
     SSURGEON_JAVA = "edu.stanford.nlp.semgraph.semgrex.ssurgeon.ProcessSsurgeonRequest"
-    doc = CoNLL.conll2doc(input_str=SAMPLE_DOC)
+    doc = CoNLL.conll2doc(input_str=SAMPLE_SSURGEON_DOC)
 
     print("{:C}".format(doc))
     ssurgeon_response = process_doc_one_operation(doc, semgrex, ssurgeon)
     updated_doc = convert_response_to_doc(doc, ssurgeon_response)
     print("{:C}".format(updated_doc))
     print(generate_edited_deprel_unadjusted(updated_doc, lang_code='en', visualize_xpos=False))
-    visualize_edited_deprel_adjusted_str_input(SAMPLE_DOC, semgrex, ssurgeon)
+    visualize_ssurgeon_deprel_adjusted_str_input(SAMPLE_SSURGEON_DOC, semgrex, ssurgeon)
 
 
 if __name__ == '__main__':
     main()
-
-
-
-
-
-
-
