@@ -1,0 +1,27 @@
+# Overview
+
+The code in this directory contains tooling required for Semgrex and Ssurgeon visualization.
+Searching dependency graphs and manipulating them can be a time consuming and challenging task to get right.
+Semgrex is a system for searching dependency graphs and Ssurgeon is a system for manipulating the output of Semgrex.
+The compact language used by these systems allows for easy command line or API processing of dependencies.
+
+We now offer Semgrex and Ssurgeon through a web interface, now accessible via Streamlit with visualizations.
+
+## How to run visualizations through Streamlit
+
+Streamlit can be used to visualize Semgrex and Ssurgeon results and process files.
+Here are instructions for setting up a Streamlit webpage:
+
+1. install Streamlit. `pip install streamlit`
+2. install Stanford CoreNLP if you have not. You can find an installation here: https://stanfordnlp.github.io/CoreNLP/download.html
+3. set the $CLASSPATH environment variable to your local installation of CoreNLP.
+4. install streamlit, spacy, and ipython.  You can use the "visualization" stanza setup option for that
+5. Run `streamlit run stanza/utils/visualization/semgrex_app.py --theme.backgroundColor "#FFFFFF"`
+
+This should begin a Streamlit runtime application on your local machine that can be interacted with.
+
+For instructions on how to use Ssurgeon and Semgrex, refer to these helpful pages:
+https://aclanthology.org/2023.tlt-1.7.pdf
+https://nlp.stanford.edu/nlp/javadoc/javanlp-3.5.0/edu/stanford/nlp/semgraph/semgrex/SemgrexPattern.html
+https://stanfordnlp.github.io/stanza/client_regex.html
+https://stanfordnlp.github.io/CoreNLP/corenlp-server.html#query-tokensregex-tokensregex
