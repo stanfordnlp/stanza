@@ -8,7 +8,7 @@ import torch.optim as optim
 from datasets import load_dataset
 from transformers import AutoTokenizer
 
-# To add Stanza modules, TODO remove this and just EXPORT this to the sys path manually before running
+# To add Stanza modules
 ROOT = '/Users/alexshan/Desktop/stanza'
 sys.path.append(ROOT)
 
@@ -145,10 +145,18 @@ class SummarizationTrainer():
         running_loss = 0.0
         with torch.no_grad():
             for articles, summaries in tqdm(val_set, desc="Computing validation loss..."):
+
+                if self.max_enc_steps is not None:  # truncate text
+                    articles = [article[: self.max_enc_steps] for article in articles]
+                if self.max_dec_steps is not None:  # truncate target
+                    summaries = [summary[: self.max_dec_steps] for summary in summaries]
+                    # if the truncated summary has no STOP token, add one
+                    summaries = [summary + [STOP_TOKEN] if summary[-1] != STOP_TOKEN else summary for summary in summaries]
+
                 output, attention_scores, coverage_vectors = model(articles, summaries, 0.0)  # (batch size, seq len, vocab size). Turn off teacher-forcing
                 output = output.permute(0, 2, 1)   # (batch size, vocab size, seq len)
 
-                target_indices = convert_text_to_token_ids(model.vocab_map, summaries, UNK_ID, self.max_dec_steps).to(device)
+                target_indices = convert_text_to_token_ids(model.vocab_map, summaries, UNK_ID, self.max_dec_steps + 1 if self.max_dec_steps is not None else None).to(device)  # self.max_dec_steps + 1 because of STOP token
 
                 # Compute losses (base loss)
                 log_loss = self.criterion(output, target_indices)
@@ -180,9 +188,8 @@ class SummarizationTrainer():
             checkpoint_load_path (str): Path to model checkpoint to begin training from if provided.
 
         Returns:
-            None (model with best validation set performance will be saved to the save file)
+            None (model with best validation loss will be saved to the save file)
         """
-        best_rouge = 0
         model_chkpt_path = generate_checkpoint_path(save_name)
         best_loss = float('inf')
         device = default_device()
@@ -214,35 +221,22 @@ class SummarizationTrainer():
             running_loss = 0.0
             logger.info(f"Starting new epoch: {epoch + 1} / {num_epochs}")
             for articles, summaries in tqdm(dataset, desc="Training on examples..."):
+                
+                if self.max_enc_steps is not None:  # truncate text
+                    articles = [article[: self.max_enc_steps] for article in articles]
+                if self.max_dec_steps is not None:  # truncate target
+                    summaries = [summary[: self.max_dec_steps] for summary in summaries]
+                    # if the truncated summary has no STOP token, add one
+                    summaries = [summary + [STOP_TOKEN] if summary[-1] != STOP_TOKEN else summary for summary in summaries]
 
                 # Get model output
                 self.optimizer.zero_grad()
                 output, attention_scores, coverage_vectors = self.model(articles, summaries, 1.0)  # (batch size, seq len, vocab size)
                 output = output.permute(0, 2, 1)   # (batch size, vocab size, seq len)
 
-                target_indices = convert_text_to_token_ids(self.model.vocab_map, summaries, UNK_ID, self.max_dec_steps).to(device) 
-                """
-                Do we use the extended vocab map to get the target indices? 
+                target_indices = convert_text_to_token_ids(self.model.vocab_map, summaries, UNK_ID, self.max_dec_steps + 1 if self.max_dec_steps is not None else None).to(device)  # + 1 because of STOP token
 
-                Reasons for yes: 
-                - We need to get the indices on the reference summary for OOV words, as they may appear in there
-                - If we just use the vocab map, any reference summary words may just have nothing
-
-                Reasons for no:
-                - Are we adding too many indices?
-
-                For a reference summary, it might contain words not in the vocab or the original article. 
-                What happens in this case? 
-                - We create a target index for it, and it goes into the extended vocab
-                - The extended vocab was initially meant for input text words that are new
-
-                - Ultimately why would this be an issue? We give a new index if its OOV, and we train it to include that sometimes.
-
-                If we were using a normal vocab map, there wouldn't be any loss for a word that is OOV in the reference summary.
-                That means during loss computation, it would expect token UNK when we predict within our vocab (which contains unk!)
-
-
-                """
+                print(f"OUTPUT SHAPE {output.shape}  TARGET SHAPE {target_indices.shape}")
 
                 # Compute losses (base loss)
                 log_loss = self.criterion(output, target_indices)
@@ -269,9 +263,9 @@ class SummarizationTrainer():
             torch.save(self.model, model_chkpt_path)  
 
             val_set_loss = self.compute_validation_loss(
-                                                             save_path=model_chkpt_path,
-                                                             eval_file=eval_file 
-                                                             )
+                                                        save_path=model_chkpt_path,
+                                                        eval_file=eval_file 
+                                                        )
             logger.info(f"Epoch [{epoch + 1}/{num_epochs}] average validation loss: {val_set_loss}.")
             if val_set_loss < best_loss:
                 best_loss = val_set_loss
