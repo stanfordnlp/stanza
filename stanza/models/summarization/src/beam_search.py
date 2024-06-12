@@ -17,7 +17,7 @@ if not logger.handlers:
 
 from typing import List, Tuple, Mapping, Any
 from stanza.models.summarization.src.model import BaselineSeq2Seq
-from stanza.models.summarization.constants import UNK_ID
+from stanza.models.summarization.constants import UNK_ID, STOP_TOKEN, START_TOKEN
 from stanza.models.common.vocab import BaseVocab, UNK
 
 class Hypothesis():
@@ -88,14 +88,18 @@ def run_beam_search(model: BaselineSeq2Seq, unit2id: Mapping, id2unit: Mapping, 
 
     Returns the hypothesis for each example with the highest average log probability.
     """
-    START_TOKEN = "<s>"  
-    STOP_TOKEN = "</s>"
+    # Truncate if needed
+    example = example[: max_enc_steps]
+    if example[-1] != STOP_TOKEN:
+        example = example + [STOP_TOKEN]
+
+
     batch = [example for _ in range(beam_size)]  # each batch is a single example repeated `beam_size` times
     device = next(model.parameters()).device
 
     # Run encoder over the batch of examples to get the encoder hidden states and decoder init state
     # note that the batch is the same example repeated 
-    enc_states, dec_hidden_init, dec_cell_init = model.run_encoder(batch, max_enc_steps)
+    enc_states, dec_hidden_init, dec_cell_init = model.run_encoder(batch)
 
     # enc states shape (batch size, seq len, 2 * enc hidden dim)
     # dec states are shape (batch size, dec hidden dim)

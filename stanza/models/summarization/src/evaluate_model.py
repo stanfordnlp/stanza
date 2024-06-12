@@ -16,6 +16,7 @@ from stanza.models.summarization.src.decode import BeamSearchDecoder
 from stanza.models.summarization.src.model import BaselineSeq2Seq
 from stanza.models.common.vocab import BaseVocab
 from stanza.models.common.utils import default_device
+from stanza.models.summarization.constants import *
 
 logger = logging.getLogger('stanza.summarization') 
 logger.propagate = False
@@ -61,7 +62,7 @@ def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: 
         summaries (List[List[str]]): A list of corresponding summaries where each word is tokenized as a separate List entry
         logger (Logger, optional): Logger object used to print supplementary info during evaluation.
         max_enc_steps (int, optional): Limit on the number of tokens per article. Defaults to no limit.
-        max_dec_stpes (int, optional): Limit on the number of tokens per summary. Defaults to no limit.
+        max_dec_steps (int, optional): Limit on the number of tokens per summary. Defaults to no limit.
         verbose (bool, optional): Prints out some examples for analysis. Defaults to False.
     """
     device = default_device()
@@ -124,10 +125,12 @@ def evaluate_rouge_from_path(model_path: str, eval_path: str, logger: logging.Lo
 
     logger.info(f"Successfully loaded dataset for evaluation.")
     
-    if max_enc_steps is not None:  # truncate input article
-        articles = [article[: max_enc_steps] for article in articles] 
-    if max_dec_steps is not None:  # truncate summaries
-        summaries = [summary[: max_dec_steps] for summary in articles]
+    if max_enc_steps is not None:  # truncate text
+        articles = [article[: max_enc_steps] for article in articles]
+    if max_dec_steps is not None:  # truncate target
+        summaries = [summary[: max_dec_steps] for summary in summaries]
+        # if the truncated summary has no STOP token, add one
+        summaries = [summary + [STOP_TOKEN] if summary[-1] != STOP_TOKEN else summary for summary in summaries]
 
     results = evaluate_model_rouge(
                    model_path, 

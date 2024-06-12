@@ -31,15 +31,18 @@ def generate_train_subset():
         summary_text = example['highlights']
 
 
-def convert_text_to_token_ids(vocab_map: Mapping[str, int], text_batch: List[List[str]], UNK_ID: int, max_steps: int = None):
+def convert_text_to_token_ids(vocab_map: Mapping[str, int], text_batch: List[List[str]], UNK_ID: int, max_steps: int = None) -> torch.Tensor:
     """
     Converts a text batch to a batch of token IDs.
     """
 
     token_ids = []
 
-    if max_steps is not None:  # Truncate
-         text_batch = [article[: max_steps] for article in text_batch]
+    if max_steps is not None:
+            lengths = set([len(t) for t in text_batch])
+            for length in lengths:
+                if length > max_steps:
+                    raise ValueError(f"Expected all sequences to have length of at most {max_steps}. Found {length}.")
 
     for article in text_batch:
         article_token_ids = torch.tensor([vocab_map.get(word.lower(), UNK_ID) for word in article])

@@ -254,8 +254,6 @@ class BaselineSeq2Seq(nn.Module):
         self.batch_size = self.model_args.get("batch_size", DEFAULT_BATCH_SIZE)
         self.unsaved_modules = []
         self.input_size = 0
-        self.max_enc_steps = self.model_args.get("max_enc_steps", None)   # truncate articles to max_enc_steps tokens 
-        self.max_dec_steps = self.model_args.get("max_dec_steps", None)   # truncate summaries to max_dec_steps tokens
         self.use_charlm = use_charlm
         
         # word embeddings
@@ -306,7 +304,7 @@ class BaselineSeq2Seq(nn.Module):
         
         self._initialize_weights()
     
-    def get_text_embeddings(self, text: List[List[str]], max_steps: int = None):
+    def get_text_embeddings(self, text: List[List[str]]):
         """
         Extracts the word embeddings over the input articles in 'text'.
         
@@ -317,9 +315,6 @@ class BaselineSeq2Seq(nn.Module):
         Returns a tensor of the padded embeddings over the inputs. Also returns the input lengths.
         """
         device = next(self.parameters()).device
-
-        if max_steps is not None:  # truncate text
-            text = [article[: max_steps] for article in text]
 
         # Get word embeddings
         token_ids, input_lengths = [], []
@@ -412,22 +407,17 @@ class BaselineSeq2Seq(nn.Module):
         device = next(self.parameters()).device
         batch_size = min(len(text), self.batch_size) 
 
-        if self.max_enc_steps is not None:  # truncate text
-            text = [article[: self.max_enc_steps] for article in text]
-        if self.max_dec_steps is not None:  # truncate target
-            target = [summary[: self.max_dec_steps] for summary in target]
-
         index_tensor, max_oov_words = self.build_extended_vocab_map(text)  # (batch size, seq len)
         self.max_oov_words = max_oov_words   # the count of OOV words in the input texts 
 
         # Get embeddings over the input text
-        embedded, input_lengths = self.get_text_embeddings(text, self.max_enc_steps)
+        embedded, input_lengths = self.get_text_embeddings(text) 
         input_len = embedded.shape[1]  # the max seq len out of all inputs
 
         # Get embeddings over the target text
-        target_embeddings, target_lengths = self.get_text_embeddings(target, self.max_dec_steps)  # (batch size, seq len, input size)
+        target_embeddings, target_lengths = self.get_text_embeddings(target)  # (batch size, seq len, input size)
         
-        target_len = target_embeddings.shape[1]   # TODO : Ask John how batch processing works with this. should this actually just be a uniform hyperparam like max_dec_steps? If so, how to do padding?
+        target_len = target_embeddings.shape[1]   
         # target_len currently represents the maximum seq length out of all sequences in the reference summaries.
 
         # Tensor to store decoder outputs
@@ -536,13 +526,13 @@ class BaselineSeq2Seq(nn.Module):
 
         return outputs, final_attn_weights, final_coverage_vecs
 
-    def run_encoder(self, examples, max_enc_steps: int = None):
+    def run_encoder(self, examples):
         """
         For beam search decoding: run the encoder and return the encoder outputs, and the decoder init states
         
         examples: [[str]], the tokenized text of batches of article examples
         """
-        embedded, input_lens = self.get_text_embeddings(examples, max_steps=max_enc_steps)
+        embedded, input_lens = self.get_text_embeddings(examples)
         packed_input_seqs = pack_padded_sequence(embedded, input_lens, batch_first=True, enforce_sorted=False)
         unpacked_lstm_outputs, hidden, cell, hidden_linearized, cell_linearized = self.encoder(packed_input_seqs)
         return unpacked_lstm_outputs, hidden_linearized, cell_linearized
