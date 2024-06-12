@@ -236,8 +236,6 @@ class SummarizationTrainer():
 
                 target_indices = convert_text_to_token_ids(self.model.vocab_map, summaries, UNK_ID, self.max_dec_steps + 1 if self.max_dec_steps is not None else None).to(device)  # + 1 because of STOP token
 
-                print(f"OUTPUT SHAPE {output.shape}  TARGET SHAPE {target_indices.shape}")
-
                 # Compute losses (base loss)
                 log_loss = self.criterion(output, target_indices)
                 # coverage loss
