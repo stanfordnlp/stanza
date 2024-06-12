@@ -143,7 +143,8 @@ def run_beam_search(model: BaselineSeq2Seq, unit2id: Mapping, id2unit: Mapping, 
         num_original_hyps = 1 if steps == 0 else len(hyps)
         for i in range(num_original_hyps):
             p_gen = [] if p_gens is None else p_gens[i]
-            h, new_hidden, new_cell, attn_dist, new_coverage_i = hyps[i], new_hiddens[i], new_cells[i], attn_dists[i], new_coverage[i]
+            new_coverage_i = new_coverage[i] if new_coverage is not None else None
+            h, new_hidden, new_cell, attn_dist = hyps[i], new_hiddens[i], new_cells[i], attn_dists[i]
             for j in range(2 * beam_size):  # for each of the top 2*beam_size hypotheses:
                 # Extend the ith hypothesis with the jth option
                 new_hyp = h.extend(
