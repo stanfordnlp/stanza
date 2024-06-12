@@ -49,7 +49,7 @@ def evaluate_predictions_rouge(generated_summaries: List[str], reference_summari
 
 
 def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: List[List[str]], logger: logging.Logger = None,
-                         max_enc_steps: int = None, max_dec_steps: int = None):
+                         max_enc_steps: int = None, max_dec_steps: int = None, verbose: bool = False):
 
     """
     Evaluates a model on a set of articles and summaries by generating its own summaries from the articles
@@ -62,6 +62,7 @@ def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: 
         logger (Logger, optional): Logger object used to print supplementary info during evaluation.
         max_enc_steps (int, optional): Limit on the number of tokens per article. Defaults to no limit.
         max_dec_stpes (int, optional): Limit on the number of tokens per summary. Defaults to no limit.
+        verbose (bool, optional): Prints out some examples for analysis. Defaults to False.
     """
     device = default_device()
     trained_model = torch.load(model_path)
@@ -77,17 +78,22 @@ def evaluate_model_rouge(model_path: str, articles: List[List[str]], summaries: 
                                                  max_dec_steps=max_dec_steps,
                                                  min_dec_steps=10,  # TODO make this toggle, reference paper
                                                  max_enc_steps=max_enc_steps,
-                                                 verbose=False,       
+                                                 verbose=verbose,       
                                                  )
     generated_summaries = [" ".join(summary) for summary in generated_summaries]
     summaries = [" ".join(summary) for summary in summaries]
+
+    if verbose:
+        logger.info(f"Finished decoding examples. Printing 10 examples:")
+        for gen, real in zip(generated_summaries[: 10], summaries[: 10]):
+            logger.info(f"GENERATED SUMMARY: {gen} \nREFERENCE SUMMARY: {real}\n\n")
     
     results = evaluate_predictions_rouge(generated_summaries, summaries)
     return results
 
 
 def evaluate_rouge_from_path(model_path: str, eval_path: str, logger: logging.Logger = None, 
-                       max_enc_steps: int = None, max_dec_steps: int = None):
+                       max_enc_steps: int = None, max_dec_steps: int = None, verbose: bool = False):
 
     """
     Evaluates a trained summarization model given a path to the directory containing 
@@ -99,6 +105,7 @@ def evaluate_rouge_from_path(model_path: str, eval_path: str, logger: logging.Lo
         logger (Logger, optional): Logger object used to print supplementary info during evaluation.
         max_enc_steps (int, optional): Limit on the number of tokens per article. Defaults to no limit.
         max_dec_stpes (int, optional): Limit on the number of tokens per summary. Defaults to no limit.
+        verbose (bool, optional): Prints out some examples for analysis. Defaults to False. 
     """
     
     # Get data
@@ -129,6 +136,7 @@ def evaluate_rouge_from_path(model_path: str, eval_path: str, logger: logging.Lo
                    logger,
                    max_enc_steps=max_enc_steps,
                    max_dec_steps=max_dec_steps,
+                   verbose=verbose,
                    )
     return results
 
@@ -140,6 +148,7 @@ def main():
     parser.add_argument("--eval_path", type=str, default="", help="Path to directory containing chunked test files.")
     parser.add_argument("--max_enc_steps", type=int, default=None, help="Limit on the number of tokens per article")
     parser.add_argument("--max_dec_steps", type=int, default=None, help="Limit on the number of tokens per summary")
+    parser.add_argument("--verbose", action="store_true", dest="verbose", default=False, help="Prints out some examples of decoded results.")
     
     args = parser.parse_args()
 
@@ -147,6 +156,7 @@ def main():
     eval_path = args.eval_path
     max_enc_steps = args.max_enc_steps
     max_dec_steps = args.max_dec_steps
+    verbose = args.verbose
 
     if not os.path.exists(model_path):
         raise FileNotFoundError(f"Expected to find model in {model_path}.")
@@ -164,6 +174,7 @@ def main():
         logger=logger,
         max_enc_steps=max_enc_steps,
         max_dec_steps=max_dec_steps, 
+        verbose=verbose
     )
 
 if __name__ == "__main__":
