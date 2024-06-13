@@ -4,6 +4,9 @@ Constant values for model building and execution
 
 import os 
 
+# general
+PADDING_TOKEN = "<PAD>"
+
 # for model.py
 DEFAULT_ENCODER_HIDDEN_DIM = 128
 DEFAULT_ENCODER_NUM_LAYERS = 1

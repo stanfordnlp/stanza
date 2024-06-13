@@ -25,10 +25,19 @@ Uni-LSTM Decoder
 
 """
 
+class TrainingStateError(Exception):
+
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+    def __str__(self):
+        return self.message
+
 
 class BaselineEncoder(nn.Module):
 
-    def __init__(self, input_dim, hidden_dim, num_layers=1, device=None, dropout_p: float = 0.5):
+    def __init__(self, input_dim, hidden_dim, num_layers=1, device=None, padding_idx = 0, dropout_p: float = 0.5):
         super(BaselineEncoder, self).__init__()
 
         self.hidden_dim = hidden_dim
@@ -40,10 +49,11 @@ class BaselineEncoder(nn.Module):
         self.hidden_out = nn.Linear(hidden_dim * 2, hidden_dim, device=device)
         self.layer_norm = nn.LayerNorm(hidden_dim * 2)
         self.device = device
+        self.padding_idx = padding_idx
 
     def forward(self, text):
         outputs, (hidden, cell) = self.lstm(text)
-        unpacked_lstm_outputs, _ = pad_packed_sequence(outputs, batch_first=True)
+        unpacked_lstm_outputs, _ = pad_packed_sequence(outputs, batch_first=True, padding_value=self.padding_idx)
 
         unpacked_lstm_outputs = self.layer_norm(unpacked_lstm_outputs)  # apply layernorm
         unpacked_lstm_outputs = self.lstm_dropout(unpacked_lstm_outputs)  # dropout on the lstm output
@@ -96,24 +106,6 @@ class BahdanauAttention(nn.Module):
         decoder_hidden = decoder_hidden.unsqueeze(1).repeat(1, seq_len, 1).to(self.device)
 
         # Compute energy scores with bias term
-
-        """
-        For a single batch example:
-
-        the energy vector at timestep t, e^t, has shape (sequence length).
-        the i-th element of the energy vector, e_i^t, is a scalar computed with c_i^t, also a scalar.
-        this implies that the coverage vector at timestep t, c^t, has shape (sequence length)
-
-        Therefore, we want to design the w_c term to have size (hidden dim), such that multiplying
-        the two gives us shape (sequence length, hidden dim) which might require unsqueezing the w_c
-        vector along the sequence length direction so that at the i-th hidden state, we have the same w_c.
-        So what we really want is a tensor of shape (hidden dim, sequence length) for the W_c
-
-        We want out (batch size, sequence length, hidden dim). So our input should be shape
-        (batch size, sequence length, sequence length). We need to copy the dim of the coverage vec. 
-
-        
-        """
         energy = None
         if self.coverage:
             # unsqueeze the coverage vec to align it for the transformation to shape (batch size, seq len, decoder hidden dim) with W_c
@@ -127,7 +119,7 @@ class BahdanauAttention(nn.Module):
         attention_raw = self.v(energy)
         attention = attention_raw.squeeze(2)
 
-        # Generate mask: valid tokens have a nonzero hidden state
+        # Generate mask: valid tokens have a nonzero hidden state. Having a zero hidden state means its a padding token.
         mask = (encoder_outputs.abs().sum(dim=2) > 0).float().to(self.device)
 
         # Apply the mask by setting invalid positions to -inf
@@ -266,11 +258,14 @@ class BaselineSeq2Seq(nn.Module):
         stop_vector = torch.randn((1, self.word_embedding_dim))
         extended_embeddings = torch.cat((torch.from_numpy(emb_matrix), start_vector, stop_vector), dim=0)
 
-        self.embedding = nn.Embedding(len(self.vocab) + 2, self.word_embedding_dim, _weight=extended_embeddings)
         self.vocab_map = {word.replace('\xa0', ' '): i for i, word in enumerate(pt_embedding.vocab)}  # word to ID
         self.vocab_map[START_TOKEN] = len(self.vocab_map)  # ADD STOP and START tokens to vocab map
         self.vocab_map[STOP_TOKEN] = len(self.vocab_map)
         self.vocab_size += 2 
+        self.padding_token_idx = self.vocab_map.get(PADDING_TOKEN)
+
+        self.embedding = nn.Embedding(self.vocab_size, self.word_embedding_dim, 
+                                      _weight=extended_embeddings, padding_idx=self.padding_token_idx)
 
         # charlm embeddings
         if self.use_charlm:
@@ -291,7 +286,8 @@ class BaselineSeq2Seq(nn.Module):
         # Encoder
         encoder_hidden_dim = self.model_args.get("encoder_hidden_dim", DEFAULT_ENCODER_HIDDEN_DIM)
         encoder_num_layers = self.model_args.get("encoder_num_layers", DEFAULT_ENCODER_NUM_LAYERS)
-        self.encoder = BaselineEncoder(self.input_size, encoder_hidden_dim, num_layers=encoder_num_layers, device=device)
+        self.encoder = BaselineEncoder(self.input_size, encoder_hidden_dim, num_layers=encoder_num_layers, device=device, 
+                                       padding_idx=self.padding_token_idx)
         # Decoder
         decoder_hidden_dim = self.model_args.get("decoder_hidden_dim", encoder_hidden_dim)   # default value should be same hidden dim as encoder
         decoder_num_layers = self.model_args.get("decoder_num_layers", encoder_num_layers)
@@ -315,6 +311,7 @@ class BaselineSeq2Seq(nn.Module):
         Returns a tensor of the padded embeddings over the inputs. Also returns the input lengths.
         """
         device = next(self.parameters()).device
+        PADDING_TOKEN_ID = self.vocab_map.get(PADDING_TOKEN)
 
         # Get word embeddings
         token_ids, input_lengths = [], []
@@ -322,7 +319,7 @@ class BaselineSeq2Seq(nn.Module):
             article_token_ids = torch.tensor([self.vocab_map.get(word.lower(), UNK_ID) for word in article], device=device)
             token_ids.append(article_token_ids)
             input_lengths.append(len(article_token_ids))
-        padded_inputs = pad_sequence(token_ids, batch_first=True).to(device)
+        padded_inputs = pad_sequence(token_ids, batch_first=True, padding_value=PADDING_TOKEN_ID).to(device)
         embedded = self.embedding(padded_inputs).to(device)  # (batch size, seq len, word emb dim)
 
         # Optionally, build Char embedding reps too
@@ -330,8 +327,8 @@ class BaselineSeq2Seq(nn.Module):
             char_reps_forward = self.charmodel_forward.build_char_representation(text)
             char_reps_backward = self.charmodel_backward.build_char_representation(text)
 
-            char_reps_forward = pad_sequence(char_reps_forward, batch_first=True)
-            char_reps_backward = pad_sequence(char_reps_backward, batch_first=True)
+            char_reps_forward = pad_sequence(char_reps_forward, batch_first=True, padding_value=PADDING_TOKEN_ID)
+            char_reps_backward = pad_sequence(char_reps_backward, batch_first=True, padding_value=PADDING_TOKEN_ID)
 
             embedded = torch.cat((embedded, char_reps_forward, char_reps_backward), 2)  # (batch size, seq len, word emb dim + char emb dim)
         return embedded, input_lengths
@@ -354,6 +351,7 @@ class BaselineSeq2Seq(nn.Module):
         max_oov_words = 0
 
         device = next(self.parameters()).device
+        PADDING_TOKEN_ID = self.vocab_map.get(PADDING_TOKEN)
 
         index_tensor = []
         for batch_idx, document in enumerate(src):
@@ -375,7 +373,7 @@ class BaselineSeq2Seq(nn.Module):
             index_tensor.append(torch.tensor(doc_indexes, device=device))
             max_oov_words = max(max_oov_words, num_oov_words)
         
-        revised_index_tensor = pad_sequence(index_tensor, batch_first=True)
+        revised_index_tensor = pad_sequence(index_tensor, batch_first=True, padding_value=PADDING_TOKEN_ID)
         return revised_index_tensor, max_oov_words
 
     def add_unsaved_module(self, name, module):
@@ -406,6 +404,7 @@ class BaselineSeq2Seq(nn.Module):
         """
         device = next(self.parameters()).device
         batch_size = min(len(text), self.batch_size) 
+        PADDING_TOKEN_IDX = self.vocab_map.get(PADDING_TOKEN)
 
         index_tensor, max_oov_words = self.build_extended_vocab_map(text)  # (batch size, seq len)
         self.max_oov_words = max_oov_words   # the count of OOV words in the input texts 
@@ -499,6 +498,8 @@ class BaselineSeq2Seq(nn.Module):
             if teacher_force:
                 input = target_embeddings[:, t, :].to(device)   # token for timestep t in reference summary
             else:
+                if self.training:
+                    raise TrainingStateError("Model in training mode should always be using teacher-forcing mode.")
                 # When an OOV word is chosen as the next token, we give the UNK embedding as the input embedding 
                 # as the next word embedding because we do not have an embedding for this word
                 oov_words_mask = top1 >= self.vocab_size  # masking which chosen words are out of vocabulary
@@ -514,8 +515,8 @@ class BaselineSeq2Seq(nn.Module):
                     char_reps_forward = self.charmodel_forward.build_char_representation(chosen_words)
                     char_reps_backward = self.charmodel_backward.build_char_representation(chosen_words)
                     
-                    char_reps_forward = pad_sequence(char_reps_forward, batch_first=True)
-                    char_reps_backward = pad_sequence(char_reps_backward, batch_first=True)
+                    char_reps_forward = pad_sequence(char_reps_forward, batch_first=True, padding_value=PADDING_TOKEN_IDX)
+                    char_reps_backward = pad_sequence(char_reps_backward, batch_first=True, padding_value=PADDING_TOKEN_IDX)
 
                     # the char reps are shape (batch size, seq len, char_dim) but the seq len is always 1 because we only choose 
                     # 1 token, so we simply squeeze the seqlen dim to get (batch size, char_dim) to concat with the word emb
