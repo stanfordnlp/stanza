@@ -852,7 +852,8 @@ TRANSFORMER_NICKNAMES = {
     "vinai/phobert-large": "phobert-large",
 
     # zh
-    "hfl/chinese-roberta-wwm-ext": "roberta",
+    "google-bert/bert-base-chinese": "google-bert-chinese",
+    "hfl/chinese-roberta-wwm-ext": "hfl-roberta-chinese",
     "hfl/chinese-electra-180g-large-discriminator": "electra-large",
 
     # multi-lingual Indic
