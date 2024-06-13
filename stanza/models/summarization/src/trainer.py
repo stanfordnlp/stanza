@@ -190,7 +190,7 @@ class SummarizationTrainer():
         Returns:
             None (model with best validation loss will be saved to the save file)
         """
-        model_chkpt_path = generate_checkpoint_path(save_name)
+        model_chkpt_path = generate_checkpoint_path(save_name)  # adds 'ckpt' to model save path name. Used for eval
         best_loss = float('inf')
         device = default_device()
         # Load model in
@@ -210,10 +210,11 @@ class SummarizationTrainer():
         # Get dataset 
         batch_size = self.model_args.get("batch_size", DEFAULT_BATCH_SIZE)
         dataset = Dataset(train_file, batch_size)
+        PADDING_TOKEN_ID = self.model.vocab_map.get(PADDING_TOKEN)
 
         # Load optimizer
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=0.01)
-        self.criterion = nn.NLLLoss(reduction="none")
+        self.criterion = nn.NLLLoss(reduction="none", ignore_index=PADDING_TOKEN_ID)
         self.criterion = self.criterion.to(next(self.model.parameters()).device)
 
         for epoch in range(num_epochs):

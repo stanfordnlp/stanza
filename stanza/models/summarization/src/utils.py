@@ -3,9 +3,11 @@ Utility functions for building and training summarization model(s)
 """
 import os
 import torch
+
 from itertools import islice
 from typing import List, Tuple, Mapping
 from transformers import AutoTokenizer
+from stanza.models.summarization.constants import PADDING_TOKEN
 from datasets import load_dataset
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_sequence
 
@@ -48,7 +50,9 @@ def convert_text_to_token_ids(vocab_map: Mapping[str, int], text_batch: List[Lis
         article_token_ids = torch.tensor([vocab_map.get(word.lower(), UNK_ID) for word in article])
         token_ids.append(article_token_ids)
 
-    padded_inputs = pad_sequence(token_ids, batch_first=True)
+    PADDING_TOKEN_ID = vocab_map.get(PADDING_TOKEN)
+
+    padded_inputs = pad_sequence(token_ids, batch_first=True, padding_value=PADDING_TOKEN_ID)
     return padded_inputs
 
 def generate_checkpoint_path(save_path: str):
