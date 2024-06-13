@@ -51,6 +51,8 @@ def convert_text_to_token_ids(vocab_map: Mapping[str, int], text_batch: List[Lis
         token_ids.append(article_token_ids)
 
     PADDING_TOKEN_ID = vocab_map.get(PADDING_TOKEN)
+    if PADDING_TOKEN_ID is None:
+        raise ValueError(f"Expected to find Padding token id for {PADDING_TOKEN} but got None instead.")
 
     padded_inputs = pad_sequence(token_ids, batch_first=True, padding_value=PADDING_TOKEN_ID)
     return padded_inputs
