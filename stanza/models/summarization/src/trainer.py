@@ -139,8 +139,11 @@ class SummarizationTrainer():
         model = model.to(device)
         model.eval()  # disable dropout
 
+        PADDING_TOKEN_ID = model.vocab_map.get(PADDING_TOKEN)
+        assert PADDING_TOKEN_ID is not None, f'Expected to find padding id for {PADDING_TOKEN}'
+
         # Load loss function
-        self.criterion = nn.NLLLoss(reduction="none")
+        self.criterion = nn.NLLLoss(reduction="none", ignore_index=PADDING_TOKEN_ID)
         self.criterion = self.criterion.to(device)
         running_loss = 0.0
         with torch.no_grad():
