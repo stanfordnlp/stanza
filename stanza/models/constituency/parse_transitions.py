@@ -118,6 +118,18 @@ class Transition(ABC):
         A short name to identify this transition
         """
 
+    def short_label(self):
+        if not hasattr(self, "label"):
+            return self.short_name()
+
+        if isinstance(self.label, str):
+            label = self.label
+        elif len(self.label) == 1:
+            label = self.label[0]
+        else:
+            label = self.label
+        return "{}({})".format(self.short_name(), label)
+
     def __lt__(self, other):
         # put the Shift at the front of a list, and otherwise sort alphabetically
         if self == other:
@@ -275,6 +287,8 @@ class Dummy():
     def __format__(self, spec):
         if spec is None or spec == '' or spec == 'O':
             return "(%s ...)" % self.label
+        if spec == 'T':
+            return "\Tree [.%s ? ]" % self.label
         raise ValueError("Unhandled spec: %s" % spec)
 
     def __str__(self):

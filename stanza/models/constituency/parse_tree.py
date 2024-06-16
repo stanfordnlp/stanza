@@ -241,9 +241,14 @@ class Tree(StanzaObject):
                 buf.write("\\Tree ")
                 if len(self.children) == 0:
                     raise ValueError("Cannot print an empty tree with T format")
-                elif len(self.children) > 1:
-                    raise ValueError("Cannot print a tree with %d branches with T format" % len(self.children))
-                stack.append(self.children[0])
+                elif len(self.children) == 1 and len(self.children[0].children) == 0:
+                    buf.write("[.? ")
+                    buf.write(normalize(self.children[0].label))
+                    buf.write(" ]")
+                elif self.label == 'ROOT':
+                    stack.append(self.children[0])
+                else:
+                    stack.append(self)
             else:
                 stack.append(self)
             while len(stack) > 0:
