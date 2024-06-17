@@ -193,7 +193,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     @torch.no_grad()
     def evaluate(self,
                  data_split: str = "dev",
-                 word_level_conll: bool = False
+                 word_level_conll: bool = False, 
+                 eval_lang=None
                  ) -> Tuple[float, Tuple[float, float, float]]:
         """ Evaluates the modes on the data split provided.
 
@@ -223,10 +224,15 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             pbar = tqdm(docs, unit="docs", ncols=0)
             for doc in pbar:
                 # doc 1072 has.... 17771 words?
-                if len(doc["subwords"]) > 5000:
-                    logger.warning(f"EVAL: skipping document with {len(doc['subwords'])} subwords...")
-                    continue
+#                 if len(doc["subwords"]) > 5000:
+                    # logger.warning(f"EVAL: skipping document with {len(doc['subwords'])} subwords...")
+                    # continue
 
+                if eval_lang and doc.get("lang", "") != eval_lang:
+                    # logger.warning(f"Skipping document with language {doc['lang']}... ")
+                    # skip that document, only used for ablation
+                    continue
+ 
                 res = self.run(doc)
 
                 if (res.coref_y.argmax(dim=1) == 1).all():
@@ -320,7 +326,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             # logger.info(f"NON-DUMMY: p: {p:.5f} | r: {r:.5f} | f: {(2*p*r)/(p+r):.5f}")
             logger.info(f"BAKE!: {w_checker.bakeoff:.5f}")
 
-        return (running_loss / len(docs), *s_checker.total_lea, s_checker.bakeoff)
+        return (running_loss / len(docs), *s_checker.total_lea, *w_checker.total_lea, *s_checker.mbc, *w_checker.mbc, w_checker.bakeoff, s_checker.bakeoff)
 
     def load_weights(self,
                      path: Optional[str] = None,
@@ -334,18 +340,21 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         Assumes files are named like {configuration}_(e{epoch}_{time})*.pt.
         """
         if path is None:
-            pattern = rf"{self.config.section}_\(e(\d+)_[^()]*\).*\.pt"
+            # pattern = rf"{self.config.section}_\(e(\d+)_[^()]*\).*\.pt"
+            # tries to load the last checkpoint in the same dir
+            pattern = rf"{self.config.section}.*?\.checkpoint\.pt"
             files = []
+            os.makedirs(self.config.save_dir, exist_ok=True)
             for f in os.listdir(self.config.save_dir):
                 match_obj = re.match(pattern, f)
                 if match_obj:
-                    files.append((int(match_obj.group(1)), f))
+                    files.append(f)
             if not files:
                 if noexception:
                     logger.debug("No weights have been loaded", flush=True)
                     return
                 raise OSError(f"No weights found in {self.config.save_dir}!")
-            _, path = sorted(files)[-1]
+            path = sorted(files)[-1]
             path = os.path.join(self.config.save_dir, path)
 
         if map_location is None:
@@ -537,18 +546,19 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         logger.info("\n".join(lines))
 
 
-    def train(self, log=False):
+    def train(self, log=False, skip_lang=None):
         """
         Trains all the trainable blocks in the model using the config provided.
 
         log: whether or not to log using wandb
+        skip_lang: str if we want to skip training this language (used for ablation)
         """
 
         if log:
             import wandb
             wandb.watch((self.bert, self.pw,
                          self.a_scorer, self.we,
-                         self.rough_scorer, self.sp), log_freq=4, log="all", log_graph=True)
+                         self.rough_scorer, self.sp), log_freq=4, log="all")
 
         docs = self._get_docs(self.config.train_data)
         docs_ids = list(range(len(docs)))
@@ -566,6 +576,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             pbar = tqdm(docs_ids, unit="docs", ncols=0)
             for doc_indx, doc_id in enumerate(pbar):
                 doc = docs[doc_id]
+
+                if skip_lang and doc.get("lang", "") == skip_lang:
+                    logger.warning(f"Skipping document {doc_id} with language {doc['lang']}... ")
+                    # skip that document, only used for ablation
+                    continue
 
                 # doc 1072 has.... 17771 words?
                 if len(doc["subwords"]) > 5000:
@@ -626,7 +641,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 running_r_loss += r_loss.item()
 
                 # log every 50 docs
-                if log and doc_indx % 50 == 0:
+                if log and doc_indx % 100 == 0:
                     wandb.log({'train_c_loss': c_loss.item(),
                                'train_s_loss': s_loss.item(),
                                'train_r_loss': r_loss.item()})
