@@ -17,9 +17,10 @@ def write_conll(doc: Doc,
                 f_obj: TextIO):
     """ Writes span/cluster information to f_obj, which is assumed to be a file
     object open for writing """
-    placeholder = "\t_" * 7
+    placeholder = list("\t_" * 7)
     # the nth token needs to be a number
     placeholder[10] = "0"
+    placeholder = "".join(placeholder)
     doc_id = doc["document_id"]
     words = doc["cased_words"]
     part_id = doc["part_id"]
