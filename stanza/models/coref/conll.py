@@ -48,9 +48,9 @@ def write_conll(doc: Doc,
 
         cluster_info_lst = []
         for cluster_marker in starts[word_id]:
-            cluster_info_lst.append(f"(e{cluster_marker}-{heads['cluster_marker']}")
+            cluster_info_lst.append(f"(e{cluster_marker}-{heads[cluster_marker]}")
         for cluster_marker in single_word[word_id]:
-            cluster_info_lst.append(f"(e{cluster_marker}-{heads['cluster_marker']})")
+            cluster_info_lst.append(f"(e{cluster_marker}-{heads[cluster_marker]})")
         for cluster_marker in ends[word_id]:
             cluster_info_lst.append(f"e{cluster_marker})")
         cluster_info = "-".join(cluster_info_lst) if cluster_info_lst else "_"
