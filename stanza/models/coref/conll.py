@@ -21,7 +21,7 @@ def write_conll(doc: Doc,
     # the nth token needs to be a number
     placeholder[9] = "0"
     placeholder = "".join(placeholder)
-    doc_id = doc["document_id"]
+    doc_id = doc["document_id"].replace("-", "_").replace("/", "_").replace(".","_")
     words = doc["cased_words"]
     part_id = doc["part_id"]
     sents = doc["sent_id"]
@@ -59,6 +59,21 @@ def write_conll(doc: Doc,
             cluster_info_lst.append(f"(e{cluster_marker}-{min(heads[cluster_marker][part], end-start)})")
         for part, cluster_marker in ends[word_id]:
             cluster_info_lst.append(f"e{cluster_marker})")
+
+
+        # we need our clusters to be ordered such that the one that closest first is listed last
+        def compare_sort(x):
+            split = x.split("-")
+            if len(split) > 1: 
+                try:
+                    return int(split[-1].replace(")", "").strip())  
+                except ValueError:
+                    breakpoint()
+            else: 
+                # we want everything that's a closer to be first
+                return 1000000000
+
+        cluster_info_lst = sorted(cluster_info_lst, key=compare_sort, reverse=True)
         cluster_info = "".join(cluster_info_lst) if cluster_info_lst else "_"
 
         if word_id == 0 or sents[word_id] != sents[word_id - 1]:
