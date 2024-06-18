@@ -249,17 +249,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
 
                 if word_level_conll:
-                    conll.write_conll(doc,
-                                      [[(i, i + 1) for i in cluster]
-                                       for cluster in doc["word_clusters"]],
-                                      gold_f)
-                    conll.write_conll(doc,
-                                      [[(i, i + 1) for i in cluster]
-                                       for cluster in res.word_clusters],
-                                      pred_f)
+                    raise NotImplementedError("We now write Conll-U conforming to UDCoref, which means that the span_clusters annotations will have headword info. word_level option is meaningless.")
                 else:
-                    conll.write_conll(doc, doc["span_clusters"], gold_f)
-                    conll.write_conll(doc, res.span_clusters, pred_f)
+                    conll.write_conll(doc, doc["span_clusters"], doc["word_clusters"], gold_f)
+                    conll.write_conll(doc, res.span_clusters, res.word_clusters, pred_f)
 
                 w_checker.add_predictions(doc["word_clusters"], res.word_clusters)
                 w_lea = w_checker.total_lea
