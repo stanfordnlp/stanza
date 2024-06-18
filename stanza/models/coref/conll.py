@@ -19,7 +19,7 @@ def write_conll(doc: Doc,
     object open for writing """
     placeholder = list("\t_" * 7)
     # the nth token needs to be a number
-    placeholder[10] = "0"
+    placeholder[9] = "0"
     placeholder = "".join(placeholder)
     doc_id = doc["document_id"]
     words = doc["cased_words"]
@@ -33,12 +33,16 @@ def write_conll(doc: Doc,
     single_word = defaultdict(lambda: [])
 
     for cluster_id, cluster in enumerate(clusters):
-        for start, end in cluster:
+        if len(heads[cluster_id]) != len(cluster):
+            # TODO debug this fact and why it occurs
+            # print(f"cluster {cluster_id} doesn't have the same number of elements for word and span levels, skipping...")
+            continue
+        for cluster_part, (start, end) in enumerate(cluster):
             if end - start == 1:
-                single_word[start].append(cluster_id)
+                single_word[start].append((cluster_part, cluster_id))
             else:
-                starts[start].append(cluster_id)
-                ends[end - 1].append(cluster_id)
+                starts[start].append((cluster_part, cluster_id))
+                ends[end - 1].append((cluster_part, cluster_id))
 
     f_obj.write(f"# newdoc id = {doc_id}\n# global.Entity = eid-head\n")
 
@@ -47,25 +51,29 @@ def write_conll(doc: Doc,
     for word_id, word in enumerate(words):
 
         cluster_info_lst = []
-        for cluster_marker in starts[word_id]:
-            cluster_info_lst.append(f"(e{cluster_marker}-{heads[cluster_marker]}")
-        for cluster_marker in single_word[word_id]:
-            cluster_info_lst.append(f"(e{cluster_marker}-{heads[cluster_marker]})")
-        for cluster_marker in ends[word_id]:
+        for part, cluster_marker in starts[word_id]:
+            start, end = clusters[cluster_marker][part]
+            cluster_info_lst.append(f"(e{cluster_marker}-{min(heads[cluster_marker][part], end-start)}")
+        for part, cluster_marker in single_word[word_id]:
+            start, end = clusters[cluster_marker][part]
+            cluster_info_lst.append(f"(e{cluster_marker}-{min(heads[cluster_marker][part], end-start)})")
+        for part, cluster_marker in ends[word_id]:
             cluster_info_lst.append(f"e{cluster_marker})")
-        cluster_info = "-".join(cluster_info_lst) if cluster_info_lst else "_"
+        cluster_info = "".join(cluster_info_lst) if cluster_info_lst else "_"
 
         if word_id == 0 or sents[word_id] != sents[word_id - 1]:
             f_obj.write(f"# sent_id = {doc_id}-{sent_id}\n")
             word_number = 0
             sent_id += 1
 
-        f_obj.write(f"{word_number:>2}\t"
-                    f"{word:>{max_word_len}}{placeholder}\tEntity={cluster_info}\n")
+        if cluster_info != "_":
+            cluster_info = f"Entity={cluster_info}"
+
+        f_obj.write(f"{word_id}\t{word}{placeholder}\t{cluster_info}\n")
 
         word_number += 1
 
-    f_obj.write("\n\n")
+    f_obj.write("\n")
 
 
 @contextmanager
