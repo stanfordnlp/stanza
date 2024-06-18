@@ -166,7 +166,6 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                                             bias="none")
 
             self.bert.train()
-            # self.bert.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": False})
             self.bert = get_peft_model(self.bert, self.__peft_config)
             self.trainable["bert"] = self.bert
 
@@ -546,7 +545,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         logger.info("\n".join(lines))
 
 
-    def train(self, log=False, skip_lang=None):
+    def train(self, log=False):
         """
         Trains all the trainable blocks in the model using the config provided.
 
@@ -576,11 +575,6 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             pbar = tqdm(docs_ids, unit="docs", ncols=0)
             for doc_indx, doc_id in enumerate(pbar):
                 doc = docs[doc_id]
-
-                if skip_lang and doc.get("lang", "") == skip_lang:
-                    logger.warning(f"Skipping document {doc_id} with language {doc['lang']}... ")
-                    # skip that document, only used for ablation
-                    continue
 
                 # doc 1072 has.... 17771 words?
                 if len(doc["subwords"]) > 5000:
