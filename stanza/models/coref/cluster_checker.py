@@ -211,7 +211,7 @@ class ClusterChecker:
         except ImportError:
             raise ImportError("To perform CEAF scoring, please install scipy via `pip install scipy` for the Kuhn-Munkres linear assignment scheme.")
 
-        clusters = [c for c in clusters if len(c) != 1]
+        clusters = [c for c in clusters]
         scores = np.zeros((len(gold_clusters), len(clusters)))
         for i in range(len(gold_clusters)):
             for j in range(len(clusters)):
