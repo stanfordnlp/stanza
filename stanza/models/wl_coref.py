@@ -118,8 +118,6 @@ if __name__ == "__main__":
                            help="If set, update the learning rate for the transformer")
     argparser.add_argument("--save_dir", default=None,
                            help="If set, update the save directory for writing models")
-    argparser.add_argument("--skip_lang", default=None,
-                           help="skip a language in training")
     argparser.add_argument("--score_lang", default=None,
                            help="only score a particular language for eval")
     argparser.add_argument("--log_norms", action="store_true", default=None,
@@ -170,7 +168,7 @@ if __name__ == "__main__":
             model.load_weights(path=args.weights, map_location="cpu",
                                noexception=args.warm_start)
         with output_running_time():
-            model.train(args.wandb, args.skip_lang)
+            model.train(args.wandb)
     else:
         config_update = {
             'log_norms': args.log_norms if args.log_norms is not None else False
