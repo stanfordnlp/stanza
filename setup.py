@@ -109,7 +109,12 @@ setup(
         ],
         'datasets': [
             'datasets',
-        ]
+        ],
+        'visualization': [
+            'spacy',
+            'streamlit',
+            'ipython',
+        ],
     },
 
     # If there are data files included in your packages that need to be
