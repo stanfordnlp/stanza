@@ -951,41 +951,24 @@ def build_combined_spanish_dataset(paths, model_type, dataset):
     udbase_dir = paths["UDBASE"]
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
     handparsed_dir = paths["HANDPARSED_DIR"]
+
+    main_treebanks = ["UD_Spanish-AnCora"]
+    extra_treebanks = ["UD_Spanish-GSD"]
     if dataset == 'train':
-        treebanks = ["UD_Spanish-AnCora", "UD_Spanish-GSD"]
         sents = []
-        for treebank in treebanks:
-            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
-            new_sents = read_sentences_from_conllu(conllu_file)
-            if treebank.endswith("GSD"):
-                new_sents = replace_semicolons(new_sents)
-            sents.extend(new_sents)
-
-        extra_spanish = os.path.join(handparsed_dir, "spanish-mwt", "spanish.mwt")
-        if not os.path.exists(extra_spanish):
-            raise FileNotFoundError("Cannot find the extra dataset 'spanish.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
-        extra_sents = read_sentences_from_conllu(extra_spanish)
-        sents.extend(extra_sents)
-    else:
-        conllu_file = common.find_treebank_dataset_file("UD_Spanish-AnCora", udbase_dir, dataset, "conllu", fail=True)
-        sents = read_sentences_from_conllu(conllu_file)
-
-    return sents
-
-def build_spanish_gsdplus_dataset(paths, model_type, dataset):
-    """
-    es_gsdplus is GSD with a few MWT splits to cover some errors
-    """
-    udbase_dir = paths["UDBASE"]
-    tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
-    handparsed_dir = paths["HANDPARSED_DIR"]
-    if dataset == 'train':
-        treebanks = ["UD_Spanish-GSD"]
-        sents = []
-        for treebank in treebanks:
+        for treebank in main_treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
             new_sents = read_sentences_from_conllu(conllu_file)
             sents.extend(new_sents)
+
+        if model_type in (common.ModelType.TOKENIZER, common.ModelType.MWT, common.ModelType.LEMMA):
+            for treebank in extra_treebanks:
+                conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+                new_sents = read_sentences_from_conllu(conllu_file)
+                if treebank.endswith("GSD"):
+                    new_sents = replace_semicolons(new_sents)
+                sents.extend(new_sents)
+
         if model_type in (common.ModelType.TOKENIZER, common.ModelType.MWT, common.ModelType.LEMMA):
             extra_spanish = os.path.join(handparsed_dir, "spanish-mwt", "handpicked.mwt")
             if not os.path.exists(extra_spanish):
@@ -993,7 +976,7 @@ def build_spanish_gsdplus_dataset(paths, model_type, dataset):
             extra_sents = read_sentences_from_conllu(extra_spanish)
             sents.extend(extra_sents)
     else:
-        conllu_file = common.find_treebank_dataset_file("UD_Spanish-GSD", udbase_dir, dataset, "conllu", fail=True)
+        conllu_file = common.find_treebank_dataset_file("UD_Spanish-AnCora", udbase_dir, dataset, "conllu", fail=True)
         sents = read_sentences_from_conllu(conllu_file)
 
     return sents
@@ -1054,7 +1037,6 @@ def build_combined_hebrew_dataset(paths, model_type, dataset):
 COMBINED_FNS = {
     "en_combined": build_combined_english_dataset,
     "es_combined": build_combined_spanish_dataset,
-    "es_gsdplus":  build_spanish_gsdplus_dataset,
     "fr_combined": build_combined_french_dataset,
     "he_combined": build_combined_hebrew_dataset,
     "it_combined": build_combined_italian_dataset,
