@@ -124,7 +124,9 @@ class CorefProcessor(UDProcessor):
                 sent_id = sent_ids[span[0]]
                 sentence = sentences[sent_id]
                 start_word = word_pos[span[0]]
-                end_word = word_pos[span[1]]
+                # fiddle -1 / +1 so as to avoid problems with coref
+                # clusters that end at exactly the end of a document
+                end_word = word_pos[span[1]-1] + 1
                 # very UD specific test for most number of proper nouns in a mention
                 # will do nothing if POS is not active (they will all be None)
                 num_propn = sum(word.pos == 'PROPN' for word in sentence.words[start_word:end_word])
@@ -139,7 +141,7 @@ class CorefProcessor(UDProcessor):
             for span in span_cluster:
                 sent_id = sent_ids[span[0]]
                 start_word = word_pos[span[0]]
-                end_word = word_pos[span[1]]
+                end_word = word_pos[span[1]-1] + 1
                 mentions.append(CorefMention(sent_id, start_word, end_word))
             representative = mentions[best_span]
             representative_text = extract_text(document, representative.sentence, representative.start_word, representative.end_word)
