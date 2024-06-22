@@ -472,7 +472,7 @@ def load_resources_json(model_dir=DEFAULT_MODEL_DIR, resources_filepath=None):
         resources_filepath = os.path.join(model_dir, 'resources.json')
     if not os.path.exists(resources_filepath):
         raise ResourcesFileNotFoundError(resources_filepath)
-    with open(resources_filepath) as fin:
+    with open(resources_filepath, encoding="utf-8") as fin:
         resources = json.load(fin)
     return resources
 
