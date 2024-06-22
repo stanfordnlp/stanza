@@ -150,13 +150,16 @@ def maybe_add_fake_dependencies(lines):
         new_lines[first_idx] = "\t".join(new_lines[first_idx])
     return new_lines
 
+def write_sentences_to_file(outfile, sents):
+    for lines in sents:
+        lines = maybe_add_fake_dependencies(lines)
+        for line in lines:
+            print(line, file=outfile)
+        print("", file=outfile)
+
 def write_sentences_to_conllu(filename, sents):
     with open(filename, 'w', encoding="utf-8") as outfile:
-        for lines in sents:
-            lines = maybe_add_fake_dependencies(lines)
-            for line in lines:
-                print(line, file=outfile)
-            print("", file=outfile)
+        write_sentences_to_file(outfile, sents)
 
 def find_treebank_dataset_file(treebank, udbase_dir, dataset, extension, fail=False, env_var="UDBASE"):
     """

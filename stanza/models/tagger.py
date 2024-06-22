@@ -10,6 +10,7 @@ import argparse
 import logging
 import os
 import time
+import zipfile
 
 import numpy as np
 import torch
@@ -175,14 +176,29 @@ def get_eval_type(dev_batch):
 
 def load_training_data(args, pretrain):
     train_docs = []
-    train_files = args['train_file'].split(";")
-    for train_file in train_files:
-        logger.info("Reading %s" % train_file)
-        # train_data is now a list of sentences, where each sentence is a
-        # list of words, in which each word is a dict of conll attributes
-        train_file_data, _, _ = CoNLL.conll2dict(input_file=train_file)
-        logger.info("Train File {}, Data Size: {}".format(train_file, len(train_file_data)))
-        train_docs.append(Document(train_file_data))
+    raw_train_files = args['train_file'].split(";")
+    train_files = []
+    for train_file in raw_train_files:
+        if zipfile.is_zipfile(train_file):
+            logger.info("Decompressing %s" % train_file)
+            with zipfile.ZipFile(train_file) as zin:
+                for zipped_train_file in zin.namelist():
+                    with zin.open(zipped_train_file) as fin:
+                        logger.info("Reading %s from %s" % (zipped_train_file, train_file))
+                        train_str = fin.read()
+                        train_str = train_str.decode("utf-8")
+                        train_file_data, _, _ = CoNLL.conll2dict(input_str=train_str)
+                        logger.info("Train File {} from {}, Data Size: {}".format(zipped_train_file, train_file, len(train_file_data)))
+                        train_docs.append(Document(train_file_data))
+                        train_files.append("%s %s" % (train_file, zipped_train_file))
+        else:
+            logger.info("Reading %s" % train_file)
+            # train_data is now a list of sentences, where each sentence is a
+            # list of words, in which each word is a dict of conll attributes
+            train_file_data, _, _ = CoNLL.conll2dict(input_file=train_file)
+            logger.info("Train File {}, Data Size: {}".format(train_file, len(train_file_data)))
+            train_docs.append(Document(train_file_data))
+            train_files.append(train_file)
     if sum(len(x.sentences) for x in train_docs) == 0:
         raise RuntimeError("Training data for the tagger is empty: %s" % args['train_file'])
     # we want to ensure that the model is able te output _ for empty columns,

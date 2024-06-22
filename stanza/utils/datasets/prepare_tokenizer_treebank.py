@@ -23,16 +23,18 @@ There are a few special case handlings of treebanks in this file:
 
 import argparse
 import glob
+import io
 import os
 import random
 import re
 import tempfile
+import zipfile
 
 from collections import Counter
 
 from stanza.models.common.constant import treebank_to_short_name
 import stanza.utils.datasets.common as common
-from stanza.utils.datasets.common import read_sentences_from_conllu, write_sentences_to_conllu, INT_RE, MWT_RE, MWT_OR_COPY_RE
+from stanza.utils.datasets.common import read_sentences_from_conllu, write_sentences_to_conllu, write_sentences_to_file, INT_RE, MWT_RE, MWT_OR_COPY_RE
 import stanza.utils.datasets.tokenization.convert_ml_cochin as convert_ml_cochin
 import stanza.utils.datasets.tokenization.convert_my_alt as convert_my_alt
 import stanza.utils.datasets.tokenization.convert_vi_vlsp as convert_vi_vlsp
@@ -46,6 +48,7 @@ def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_n
 
     print("Copying from %s to %s" % (original, copied))
     # do this instead of shutil.copyfile in case there are manipulations needed
+    # for example, we might need to add fake dependencies (TODO: still needed?)
     sents = read_sentences_from_conllu(original)
     write_sentences_to_conllu(copied, sents)
 
@@ -941,33 +944,63 @@ def replace_semicolons(sentences):
     print("Updated %d sentences to replace sentence-final ; with ." % count)
     return new_sents
 
+def strip_xpos(sents):
+    """
+    Removes all xpos from the given dataset
+
+    Particularly useful when mixing two different POS formalisms in the same tagger
+    """
+    new_sents = []
+    for sentence in sents:
+        new_sent = []
+        for word in sentence:
+            if word.startswith("#"):
+                new_sent.append(word)
+                continue
+            pieces = word.split("\t")
+            pieces[4] = "_"
+            new_sent.append("\t".join(pieces))
+        new_sents.append(new_sent)
+    return new_sents
+
 def build_combined_spanish_dataset(paths, model_type, dataset):
     """
     es_combined is AnCora and GSD put together
 
-    TODO: remove features which aren't shared between datasets
+    For POS training, we put the different datasets into a zip file so
+    that we can keep the conllu files separate and remove the xpos
+    from the non-AnCora training files.  It is necessary to remove the
+    xpos because GSD and PUD both use different xpos schemes from
+    AnCora, and the tagger can use additional data files as training
+    data without a specific column if that column is entirely blank
+
     TODO: consider mixing in PUD?
     """
     udbase_dir = paths["UDBASE"]
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
     handparsed_dir = paths["HANDPARSED_DIR"]
 
-    main_treebanks = ["UD_Spanish-AnCora"]
-    extra_treebanks = ["UD_Spanish-GSD"]
-    if dataset == 'train':
-        sents = []
-        for treebank in main_treebanks:
+    treebanks = ["UD_Spanish-AnCora", "UD_Spanish-GSD"]
+
+    if dataset == 'train' and model_type == common.ModelType.POS:
+        documents = {}
+        for treebank in treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
             new_sents = read_sentences_from_conllu(conllu_file)
-            sents.extend(new_sents)
+            if not treebank.endswith("AnCora"):
+                new_sents = strip_xpos(new_sents)
+            documents[treebank] = new_sents
 
-        if model_type in (common.ModelType.TOKENIZER, common.ModelType.MWT, common.ModelType.LEMMA):
-            for treebank in extra_treebanks:
-                conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
-                new_sents = read_sentences_from_conllu(conllu_file)
-                if treebank.endswith("GSD"):
-                    new_sents = replace_semicolons(new_sents)
-                sents.extend(new_sents)
+        return documents
+
+    if dataset == 'train':
+        sents = []
+        for treebank in treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+            new_sents = read_sentences_from_conllu(conllu_file)
+            if treebank.endswith("GSD"):
+                new_sents = replace_semicolons(new_sents)
+            sents.extend(new_sents)
 
         if model_type in (common.ModelType.TOKENIZER, common.ModelType.MWT, common.ModelType.LEMMA):
             extra_spanish = os.path.join(handparsed_dir, "spanish-mwt", "handpicked.mwt")
@@ -1056,11 +1089,22 @@ def build_combined_dataset(paths, short_name, model_type, augment):
     for dataset in ("train", "dev", "test"):
         output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
         sents = build_fn(paths, model_type, dataset)
-        if dataset == 'train' and augment:
-            sents = augment_punct(sents)
-        if extra_fn is not None:
-            sents.extend(extra_fn(paths, dataset))
-        write_sentences_to_conllu(output_conllu, sents)
+        if isinstance(sents, dict):
+            if dataset == 'train' and augment:
+                for filename in list(sents.keys()):
+                    sents[filename] = augment_punct(sents[filename])
+            output_zip = os.path.splitext(output_conllu)[0] + ".zip"
+            with zipfile.ZipFile(output_zip, "w") as zout:
+                for filename in list(sents.keys()):
+                    with zout.open(filename + ".conllu", "w") as zfout:
+                        with io.TextIOWrapper(zfout, encoding='utf-8', newline='') as fout:
+                            write_sentences_to_file(fout, sents[filename])
+        else:
+            if dataset == 'train' and augment:
+                sents = augment_punct(sents)
+            if extra_fn is not None:
+                sents.extend(extra_fn(paths, dataset))
+            write_sentences_to_conllu(output_conllu, sents)
 
 BIO_DATASETS = ("en_craft", "en_genia", "en_mimic")
 
@@ -1244,11 +1288,12 @@ def process_treebank(treebank, model_type, paths, args):
         else:
             process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment)
 
-    if not short_name in ('th_orchid', 'th_lst20'):
-        common.convert_conllu_to_txt(tokenizer_dir, short_name)
+    if model_type is common.ModelType.TOKENIZER:
+        if not short_name in ('th_orchid', 'th_lst20'):
+            common.convert_conllu_to_txt(tokenizer_dir, short_name)
 
-    if args.prepare_labels:
-        common.prepare_tokenizer_treebank_labels(tokenizer_dir, short_name)
+        if args.prepare_labels:
+            common.prepare_tokenizer_treebank_labels(tokenizer_dir, short_name)
 
 
 def main():

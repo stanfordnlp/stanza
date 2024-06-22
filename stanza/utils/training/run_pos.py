@@ -77,10 +77,21 @@ def run_treebank(mode, paths, treebank, short_name,
         eval_file = extra_args[extra_args.index('--eval_file') + 1]
 
     if mode == Mode.TRAIN:
+        train_pieces = []
         for train_piece in train_file.split(";"):
-            if not os.path.exists(train_piece):
+            zip_piece = os.path.splitext(train_piece)[0] + ".zip"
+            if os.path.exists(train_piece) and os.path.exists(zip_piece):
+                logger.error("POS TRAIN FILE %s and %s both exist... this is very confusing, skipping %s" % (train_piece, zip_piece, short_name))
+                return
+            if os.path.exists(train_piece):
+                train_pieces.append(train_piece)
+            else: # not os.path.exists(train_piece):
+                if os.path.exists(zip_piece):
+                    train_pieces.append(zip_piece)
+                    continue
                 logger.error("TRAIN FILE NOT FOUND: %s ... skipping" % train_piece)
                 return
+        train_file = ";".join(train_pieces)
 
         train_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
                       "--train_file", train_file,
