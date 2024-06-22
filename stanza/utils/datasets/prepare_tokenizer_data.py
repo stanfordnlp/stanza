@@ -65,7 +65,7 @@ def main(args):
 
     args = parser.parse_args(args=args)
 
-    with open(args.plaintext_file, 'r') as f:
+    with open(args.plaintext_file, 'r', encoding='utf-8') as f:
         text = ''.join(f.readlines())
     textlen = len(text)
 
@@ -79,7 +79,7 @@ def main(args):
     index = 0 # character offset in rawtext
 
     mwt_expansions = []
-    with open(args.conllu_file, 'r') as f:
+    with open(args.conllu_file, 'r', encoding='utf-8') as f:
         buf = ''
         mwtbegin = 0
         mwtend = -1
