@@ -6,30 +6,25 @@ to produce consistent POS and UFeats predictions.
 For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
 """
 
-import sys
-import os
-import shutil
-import time
-from datetime import datetime
 import argparse
 import logging
+import os
+import time
+
 import numpy as np
-import random
 import torch
 from torch import nn, optim
 
-import stanza.models.pos.data as data
 from stanza.models.pos.data import Dataset, ShuffledDataset
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos import scorer
 from stanza.models.common import utils
 from stanza.models.common import pretrain
-from stanza.models.common.data import augment_punct
 from stanza.models.common.doc import *
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
-from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
+from stanza.utils.conll import CoNLL
 
 logger = logging.getLogger('stanza')
 
