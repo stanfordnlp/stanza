@@ -98,6 +98,7 @@ default_treebanks = {
     "ur":      "udtb",
     "vi":      "vtb",
     "wo":      "wtb",
+    "xcl":     "caval",
     "zh-hans": "gsdsimp",
     "zh-hant": "gsd",
     "multilingual": "ud"
@@ -197,6 +198,7 @@ specific_default_pretrains = {
     "ur":      "conll17",
     "vi":      "conll17",
     "wo":      "fasttextwiki",
+    "xcl":     "caval",
     "zh-hans": "fasttext157",
     "zh-hant": "conll17",
 }
