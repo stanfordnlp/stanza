@@ -1288,7 +1288,7 @@ def process_treebank(treebank, model_type, paths, args):
         else:
             process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment)
 
-    if model_type is common.ModelType.TOKENIZER:
+    if model_type is common.ModelType.TOKENIZER or model_type is common.ModelType.MWT:
         if not short_name in ('th_orchid', 'th_lst20'):
             common.convert_conllu_to_txt(tokenizer_dir, short_name)
 
