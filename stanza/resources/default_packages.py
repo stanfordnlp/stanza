@@ -29,7 +29,7 @@ default_treebanks = {
     "de":      "gsd",
     "el":      "gdt",
     "en":      "combined",
-    "es":      "ancora",
+    "es":      "combined",
     "et":      "edt",
     "eu":      "bdt",
     "fa":      "perdt",
