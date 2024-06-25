@@ -193,6 +193,14 @@ the fasttext vectors performed better for these tasks.
 | fasttextwiki | 94.47 | 78.28    | 73.15  | 62.65     |
 | vcwe         | 94.16 | 78.09    | 74.72  | 64.24     |
 
+### Classical Armenian
+
+The word vectors for Classical Armenian are licensed under the
+[CC BY-NC-ND 4.0 license](https://creativecommons.org/licenses/by-nc-nd/4.0/deed.en)
+for non-profit use only.
+
+https://github.com/stanfordnlp/stanza/issues/1343
+
 ### English
 
 For the biomed datasets, we use two sources of word vectors.
