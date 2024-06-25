@@ -859,13 +859,23 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         y[y == 0] = -1                                 # -1 for non-gold words
         y = utils.add_dummy(y)                         # [n_words, n_cands + 1]
 
-        # I apologize for this abuse of everything that's good about PyTorch.
-        # in essence, this line finds the INDEX of FIRST OCCURENCE of each NON-ZERO value
-        # from cluster_ids. We need this information because we use it to mark the
-        # special "is-start-of-ref" marker used to detect singletons.
-        first_coref = (cluster_ids ==
-                       cluster_ids.unique().sort().values[1:].unsqueeze(1)
-                       ).float().topk(k=1, dim=1).indices.squeeze()
+        PREDICT_ALL_CLUSTER_STARTS = False
+        if not PREDICT_ALL_CLUSTER_STARTS:
+            unique, counts = cluster_ids.unique(return_counts=True)
+            singleton_clusters = unique[(counts == 1) & (unique != 0)]
+            first_corefs = [(cluster_ids == i).nonzero().flatten()[0] for i in singleton_clusters]
+            if len(first_corefs) > 0:
+                first_coref = torch.stack(first_corefs)
+            else:
+                first_coref = torch.tensor([]).to(cluster_ids.device).long()
+        else:
+            # I apologize for this abuse of everything that's good about PyTorch.
+            # in essence, this line finds the INDEX of FIRST OCCURENCE of each NON-ZERO value
+            # from cluster_ids. We need this information because we use it to mark the
+            # special "is-start-of-ref" marker used to detect singletons.
+            first_coref = (cluster_ids ==
+                           cluster_ids.unique().sort().values[1:].unsqueeze(1)
+                           ).float().topk(k=1, dim=1).indices.squeeze()
         y = (y == cluster_ids.unsqueeze(1))            # True if coreferent
         # For all rows with no gold antecedents setting dummy to True
         y[y.sum(dim=1) == 0, 0] = True
