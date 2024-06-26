@@ -521,6 +521,11 @@ def main(dataset_name, *args):
         raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_con_dataset")
 
 if __name__ == '__main__':
-    main(sys.argv[1], sys.argv[2:])
+    if len(sys.argv) == 1:
+        print("Known datasets:")
+        for key in DATASET_MAPPING:
+            print("  %s" % key)
+    else:
+        main(sys.argv[1], sys.argv[2:])
 
 
