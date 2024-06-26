@@ -424,6 +424,9 @@ def process_ctb_51b(paths, dataset_name, *args):
 
     input_dir = os.path.join(paths["CONSTITUENCY_BASE"], "chinese", "LDC2005T01U01_ChineseTreebank5.1", "bracketed")
     output_dir = paths["CONSTITUENCY_DATA_DIR"]
+    if not os.path.exists(input_dir):
+        raise FileNotFoundError("CTB 5.1 location not found: %s" % input_dir)
+    print("Loading trees from %s" % input_dir)
     convert_ctb.convert_ctb(input_dir, output_dir, dataset_name, convert_ctb.Version.V51b)
 
 def process_ctb_90(paths, dataset_name, *args):
