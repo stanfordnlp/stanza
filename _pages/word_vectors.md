@@ -198,8 +198,8 @@ the fasttext vectors performed better for these tasks.
 The [word vectors](https://github.com/stanfordnlp/stanza/issues/1343)
 for Classical Armenian are licensed under the
 [CC BY-NC-ND 4.0 license](https://creativecommons.org/licenses/by-nc-nd/4.0/deed.en)
-for non-profit use only.  They were produced at the
-[Caval project](https://www.phil.uni-wuerzburg.de/vgsp/forschung/projekte/),
+for non-profit use only.  They were produced by the
+[Caval project](https://www.phil.uni-wuerzburg.de/vgsp/forschung/projekte/) at University of Wurzburg,
 which published
 [Development of Linguistic Annotation Toolkit for Classical Armenian in SpaCy, Stanza, and UDPipe](https://github.com/caval-repository/xcl_nlp/blob/main/Kharatyan_Kocharov_2024_xcl_parsers.pdf)
 at the
