@@ -485,12 +485,14 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         res.coref_scores = torch.cat(a_scores_lst, dim=0)
 
         res.coref_y = self._get_ground_truth(
-            cluster_ids, top_indices, (top_rough_scores > float("-inf")))
+            cluster_ids, top_indices, (top_rough_scores > float("-inf")),
+            self.config.clusters_starts_are_singletons)
         ground_truth = self._get_ground_truth(
-                cluster_ids, 
-                torch.arange(0, 
-                    rough_scores.shape[0]).repeat(rough_scores.shape[0],1), 
-                (rough_scores > float("-inf")))[:,2:] # chop away dummy and start
+            cluster_ids, 
+            torch.arange(0, 
+                         rough_scores.shape[0]).repeat(rough_scores.shape[0],1), 
+            (rough_scores > float("-inf")),
+            self.config.clusters_starts_are_singletons)[:,2:] # chop away dummy and start
         # crop the loss to only where de have something to backprop
         # i.e. there is an actual coref
         res.rough_y = ground_truth[ground_truth.sum(dim=1) > 0]
@@ -840,7 +842,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     @staticmethod
     def _get_ground_truth(cluster_ids: torch.Tensor,
                           top_indices: torch.Tensor,
-                          valid_pair_map: torch.Tensor) -> torch.Tensor:
+                          valid_pair_map: torch.Tensor,
+                          cluster_starts: bool) -> torch.Tensor:
         """
         Args:
             cluster_ids: tensor of shape [n_words], containing cluster indices
@@ -859,8 +862,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         y[y == 0] = -1                                 # -1 for non-gold words
         y = utils.add_dummy(y)                         # [n_words, n_cands + 1]
 
-        PREDICT_ALL_CLUSTER_STARTS = False
-        if not PREDICT_ALL_CLUSTER_STARTS:
+        if not cluster_starts:
             unique, counts = cluster_ids.unique(return_counts=True)
             singleton_clusters = unique[(counts == 1) & (unique != 0)]
             first_corefs = [(cluster_ids == i).nonzero().flatten()[0] for i in singleton_clusters]
