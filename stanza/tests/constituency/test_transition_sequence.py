@@ -22,7 +22,7 @@ def reconstruct_tree(tree, sequence, transition_scheme=TransitionScheme.IN_ORDER
     # TODO: could fold this into parse_sentences (similar to verify_transitions in trainer.py)
     for idx, t in enumerate(sequence):
         assert t.is_legal(states[0], model), "Transition {} not legal at step {} in sequence {}".format(t, idx, sequence)
-        states = parse_transitions.bulk_apply(model, states, [t])
+        states = model.bulk_apply(states, [t])
 
     result_tree = states[0].constituents.value
     if reverse:

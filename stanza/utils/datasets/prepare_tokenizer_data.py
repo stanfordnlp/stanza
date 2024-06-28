@@ -132,16 +132,20 @@ def main(args):
 
                 last_comments = ''
 
-    output.close()
+    status_line = ""
+    if args.output:
+        output.close()
+        status_line = 'Tokenizer labels written to %s\n  ' % args.output
 
     mwts = Counter(mwt_expansions)
     if args.mwt_output is None:
         print('MWTs:', mwts)
     else:
         with open(args.mwt_output, 'w') as f:
-            json.dump(list(mwts.items()), f)
+            json.dump(list(mwts.items()), f, indent=2)
 
-        print('{} unique MWTs found in data'.format(len(mwts)))
+        status_line = status_line + '{} unique MWTs found in data.  MWTs written to {}'.format(len(mwts), args.mwt_output)
+        print(status_line)
 
 if __name__ == '__main__':
     main(sys.argv[1:])

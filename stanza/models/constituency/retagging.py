@@ -17,12 +17,13 @@ from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.common.vocab import VOCAB_PREFIX
 from stanza.resources.common import download_resources_json, load_resources_json, get_language_resources
 
-logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.constituency.trainer')
 
 # xpos tagger doesn't produce PP tag on the turin treebank,
 # so instead we use upos to avoid unknown tag errors
 RETAG_METHOD = {
     "da": "upos",   # the DDT has no xpos tags anyway
+    "de": "upos",   # DE GSD is also missing a few punctuation tags
     "es": "upos",   # AnCora has half-finished xpos tags
     "id": "upos",   # GSD is missing a few punctuation tags - fixed in 2.12, though
     "it": "upos",
@@ -109,10 +110,13 @@ def build_retag_pipeline(args):
             if path is not None:
                 retag_args['allow_unknown_language'] = True
                 retag_args['pos_model_path'] = path
+                tlogger.debug('Creating retag pipeline using %s', path)
+            else:
+                tlogger.debug('Creating retag pipeline for %s package', package)
 
             retag_pipeline = Pipeline(foundation_cache=foundation_cache, **retag_args)
             if args['retag_xpos'] and len(retag_pipeline.processors['pos'].vocab['xpos']) == len(VOCAB_PREFIX):
-                logger.warning("XPOS for the %s tagger is empty.  Switching to UPOS", package)
+                tlogger.warning("XPOS for the %s tagger is empty.  Switching to UPOS", package)
                 args['retag_xpos'] = False
                 args['retag_method'] = 'upos'
             return retag_pipeline

@@ -47,6 +47,8 @@ def send_semgrex_request(request):
 
 def build_request(doc, semgrex_patterns, enhanced=False):
     request = SemgrexRequest()
+    if isinstance(semgrex_patterns, str):
+        semgrex_patterns = [semgrex_patterns]
     for semgrex in semgrex_patterns:
         request.semgrex.append(semgrex)
 

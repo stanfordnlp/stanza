@@ -19,9 +19,10 @@ def main():
 
     dataset_name = "it_vit_sentences_poetry"
 
-    poetry_filename = os.path.join(paths["SENTIMENT_BASE"], "italian", "sentence_classification", "poetry", "testset_labeled.txt")
+    poetry_filename = os.path.join(paths["SENTIMENT_BASE"], "italian", "sentence_classification", "poetry", "testset_300_labeled.txt")
     if not os.path.exists(poetry_filename):
         raise FileNotFoundError("Expected to find the labeled file in %s" % poetry_filename)
+    print("Reading the labeled poetry from %s" % poetry_filename)
 
     tokenizer = stanza.Pipeline("it", processors="tokenize", tokenize_no_ssplit=True)
     dataset = []
@@ -31,16 +32,22 @@ def main():
             if not line:
                 continue
 
-            pieces = line.split(maxsplit=2)
-            # first column is an ID we discard
-            # second column is the label
-            label = pieces[1]
+            line = line.replace(u'\ufeff', '')
+            pieces = line.split(maxsplit=1)
+            # first column is the label
+            # remainder of the text is the raw text
+            label = pieces[0].strip()
             if label not in ('0', '1'):
-                raise ValueError("Unexpected label %s for line %d" % (label, line_num))
+                if label == "viene" and line_num == 257:
+                    print("Skipping known missing label at line 257")
+                    continue
+                assert isinstance(label, str)
+                ords = ",".join(str(ord(x)) for x in label)
+                raise ValueError("Unexpected label |%s| (%s) for line %d" % (label, ords, line_num))
 
             # tokenize the text into words
             # we could make this faster by stacking it, but the input file is quite short anyway
-            text = pieces[2]
+            text = pieces[1]
             doc = tokenizer(text)
             words = [x.text for x in doc.sentences[0].words]
 

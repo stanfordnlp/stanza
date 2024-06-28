@@ -68,19 +68,19 @@ def run_forward_checks(model, num_states=1):
 
     shift = parse_transitions.Shift()
     shifts = [shift for _ in range(num_states)]
-    states = parse_transitions.bulk_apply(model, states, shifts)
+    states = model.bulk_apply(states, shifts)
     model(states)
 
     open_transition = parse_transitions.OpenConstituent("NP")
     open_transitions = [open_transition for _ in range(num_states)]
     assert open_transition.is_legal(states[0], model)
-    states = parse_transitions.bulk_apply(model, states, open_transitions)
+    states = model.bulk_apply(states, open_transitions)
     assert states[0].num_opens == 1
     model(states)
 
-    states = parse_transitions.bulk_apply(model, states, shifts)
+    states = model.bulk_apply(states, shifts)
     model(states)
-    states = parse_transitions.bulk_apply(model, states, shifts)
+    states = model.bulk_apply(states, shifts)
     model(states)
     assert states[0].num_opens == 1
     # now should have "mox", "opal" on the constituents
@@ -88,7 +88,7 @@ def run_forward_checks(model, num_states=1):
     close_transition = parse_transitions.CloseConstituent()
     close_transitions = [close_transition for _ in range(num_states)]
     assert close_transition.is_legal(states[0], model)
-    states = parse_transitions.bulk_apply(model, states, close_transitions)
+    states = model.bulk_apply(states, close_transitions)
     assert states[0].num_opens == 0
 
     model(states)
@@ -484,10 +484,10 @@ def check_structure_test(pretrain_file, args1, args2):
     # as the pattn layer inputs are 0, the output values should be equal
     shift = [parse_transitions.Shift()]
     model_states = test_parse_transitions.build_initial_state(model, 1)
-    model_states = parse_transitions.bulk_apply(model, model_states, shift)
+    model_states = model.bulk_apply(model_states, shift)
 
     other_states = test_parse_transitions.build_initial_state(other, 1)
-    other_states = parse_transitions.bulk_apply(other, other_states, shift)
+    other_states = other.bulk_apply(other_states, shift)
 
     for i, j in zip(other_states[0].word_queue, model_states[0].word_queue):
         assert torch.allclose(i.hx, j.hx, atol=1e-07)

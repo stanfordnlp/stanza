@@ -6,7 +6,7 @@ a parse tree out of tagged words.
 """
 
 from abc import ABC, abstractmethod
-from collections import defaultdict, namedtuple
+from collections import defaultdict
 from enum import Enum
 import functools
 import logging
@@ -50,95 +50,6 @@ class TransitionScheme(Enum):
     # score: 0.8166
     IN_ORDER_UNARY     = 6
 
-class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'gold_tree', 'gold_sequence',
-                                 'sentence_length', 'num_opens', 'word_position', 'score'])):
-    """
-    Represents a partially completed transition parse
-
-    Includes stack/buffers for unused words, already executed transitions, and partially build constituents
-    At training time, also keeps track of the gold data we are reparsing
-
-    num_opens is useful for tracking
-       1) if the parser is in a stuck state where it is making infinite opens
-       2) if a close transition is impossible because there are no previous opens
-
-    sentence_length tracks how long the sentence is so we abort if we go infinite
-
-    non-stack information such as sentence_length and num_opens
-    will be copied from the original_state if possible, with the
-    exact arguments overriding the values in the original_state
-
-    gold_tree: the original tree, if made from a gold tree.  might be None
-    gold_sequence: the original transition sequence, if available
-    Note that at runtime, gold values will not be available
-
-    word_position tracks where in the word queue we are.  cheaper than
-      manipulating the list itself.  this can be handled differently
-      from transitions and constituents as it is processed once
-      at the start of parsing
-
-    The word_queue should have both a start and an end word.
-    Those can be None in the case of the endpoints if they are unused.
-    """
-    def empty_word_queue(self):
-        # the first element of each stack is a sentinel with no value
-        # and no parent
-        return self.word_position == self.sentence_length
-
-    def empty_transitions(self):
-        # the first element of each stack is a sentinel with no value
-        # and no parent
-        return self.transitions.parent is None
-
-    def has_one_constituent(self):
-        # a length of 1 represents no constituents
-        return len(self.constituents) == 2
-
-    def num_constituents(self):
-        return len(self.constituents) - 1
-
-    def num_transitions(self):
-        # -1 for the sentinel value
-        return len(self.transitions) - 1
-
-    def get_word(self, pos):
-        # +1 to handle the initial sentinel value
-        # (which you can actually get with pos=-1)
-        return self.word_queue[pos+1]
-
-    def finished(self, model):
-        return self.empty_word_queue() and self.has_one_constituent() and model.get_top_constituent(self.constituents).label in model.get_root_labels()
-
-    def get_tree(self, model):
-        return model.get_top_constituent(self.constituents)
-
-    def all_transitions(self, model):
-        # TODO: rewrite this to be nicer / faster?  or just refactor?
-        all_transitions = []
-        transitions = self.transitions
-        while transitions.parent is not None:
-            all_transitions.append(model.get_top_transition(transitions))
-            transitions = transitions.parent
-        return list(reversed(all_transitions))
-
-    def all_constituents(self, model):
-        # TODO: rewrite this to be nicer / faster?
-        all_constituents = []
-        constituents = self.constituents
-        while constituents.parent is not None:
-            all_constituents.append(model.get_top_constituent(constituents))
-            constituents = constituents.parent
-        return list(reversed(all_constituents))
-
-    def all_words(self, model):
-        return [model.get_word(x) for x in self.word_queue]
-
-    def to_string(self, model):
-        return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s\n  word_position:%d num_opens:%d)" % (str(self.all_words(model)), str(self.all_transitions(model)), str(self.all_constituents(model)), self.word_position, self.num_opens)
-
-    def __str__(self):
-        return "State(\n  buffer:%s\n  transitions:%s\n  constituents:%s)" % (str(self.word_queue), str(self.transitions), str(self.constituents))
-
 @functools.total_ordering
 class Transition(ABC):
     """
@@ -174,7 +85,7 @@ class Transition(ABC):
         convenience method to call bulk_apply, which is significantly
         faster than single operations for an NN based model
         """
-        update = bulk_apply(model, [state], [self])
+        update = model.bulk_apply([state], [self])
         return update[0]
 
     @abstractmethod
@@ -407,7 +318,7 @@ class OpenConstituent(Transition):
             return False
         if model.is_top_down():
             # If the model is top down, you can't Open if there are
-            # no word to eventually eat
+            # no words to eventually eat
             if state.empty_word_queue():
                 return False
             # Also, you can only Open a ROOT iff it is at the root position
@@ -674,78 +585,3 @@ def check_transitions(train_transitions, other_transitions, treebank_name):
             unknown_transitions.add(trans)
     if len(unknown_transitions) > 0:
         logger.warning("Found transitions where the components are all valid transitions, but the complete transition is unknown: %s", sorted(unknown_transitions))
-
-def bulk_apply(model, state_batch, transitions, fail=False):
-    """
-    Apply the given list of Transitions to the given list of States, using the model as a reference
-
-    model: SimpleModel, LSTMModel, or any other form of model
-    state_batch: list of States
-    transitions: list of transitions, one per state
-    fail: throw an exception on a failed transition, as opposed to skipping the tree
-    """
-    remove = set()
-
-    word_positions = []
-    constituents = []
-    new_constituents = []
-    callbacks = defaultdict(list)
-
-    for idx, (tree, transition) in enumerate(zip(state_batch, transitions)):
-        if not transition:
-            error = "Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
-            if fail:
-                raise ValueError(error)
-            else:
-                logger.error(error)
-                remove.add(idx)
-                continue
-
-        if tree.num_transitions() >= len(tree.word_queue) * 20:
-            # too many transitions
-            # x20 is somewhat empirically chosen based on certain
-            # treebanks having deep unary structures, especially early
-            # on when the model is fumbling around
-            if tree.gold_tree:
-                error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(model))
-            else:
-                error = "Went infinite!:\nFinal state:\n{}".format(tree.to_string(model))
-            if fail:
-                raise ValueError(error)
-            else:
-                logger.error(error)
-                remove.add(idx)
-                continue
-
-        wq, c, nc, callback = transition.update_state(tree, model)
-
-        word_positions.append(wq)
-        constituents.append(c)
-        new_constituents.append(nc)
-        if callback:
-            # not `idx` in case something was removed
-            callbacks[callback].append(len(new_constituents)-1)
-
-    for key, idxs in callbacks.items():
-        data = [new_constituents[x] for x in idxs]
-        callback_constituents = key.build_constituents(model, data)
-        for idx, constituent in zip(idxs, callback_constituents):
-            new_constituents[idx] = constituent
-
-    state_batch = [tree for idx, tree in enumerate(state_batch) if idx not in remove]
-    transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
-
-    if len(state_batch) == 0:
-        return state_batch
-
-    new_transitions = model.push_transitions([tree.transitions for tree in state_batch], transitions)
-    new_constituents = model.push_constituents(constituents, new_constituents)
-
-    state_batch = [state._replace(num_opens=state.num_opens + transition.delta_opens(),
-                                 word_position=word_position,
-                                 transitions=transition_stack,
-                                 constituents=constituents)
-                  for (state, transition, word_position, transition_stack, constituents)
-                  in zip(state_batch, transitions, word_positions, new_transitions, new_constituents)]
-
-    return state_batch

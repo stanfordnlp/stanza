@@ -2,14 +2,17 @@
 Collects a few of the conparser utility methods which don't belong elsewhere
 """
 
-from collections import Counter, deque
-import copy
+from collections import Counter
 import logging
 
 import torch.nn as nn
 from torch import optim
 
 from stanza.models.common.doc import TEXT, Document
+from stanza.models.common.utils import get_optimizer
+from stanza.models.constituency.base_model import SimpleModel
+from stanza.models.constituency.parse_transitions import TransitionScheme
+from stanza.models.constituency.parse_tree import Tree
 from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
@@ -19,7 +22,7 @@ DEFAULT_LEARNING_EPS = { "adabelief": 1e-12, "adadelta": 1e-6, "adamw": 1e-8 }
 DEFAULT_LEARNING_RHO = 0.9
 DEFAULT_MOMENTUM = { "madgrad": 0.9, "mirror_madgrad": 0.9, "sgd": 0.9 }
 
-logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.constituency.trainer')
 
 # madgrad experiment for weight decay
 # with learning_rate set to 0.0000007 and momentum 0.9
@@ -36,34 +39,6 @@ logger = logging.getLogger('stanza')
 #  0.000004.out: 0.9596665982603754
 #  0.000005.out: 0.9591620720706487
 DEFAULT_WEIGHT_DECAY = { "adamw": 0.05, "adadelta": 0.02, "sgd": 0.01, "adabelief": 1.2e-6, "madgrad": 2e-6, "mirror_madgrad": 2e-6 }
-
-def replace_tags(tree, tags):
-    if tree.is_leaf():
-        raise ValueError("Must call replace_tags with non-leaf")
-
-    tag_iterator = iter(tags)
-
-    new_tree = copy.deepcopy(tree)
-    queue = deque()
-    queue.append(new_tree)
-    while len(queue) > 0:
-        next_node = queue.pop()
-        if next_node.is_preterminal():
-            try:
-                label = next(tag_iterator)
-            except StopIteration:
-                raise ValueError("Not enough tags in sentence for given tree")
-            next_node.label = label
-        elif next_node.is_leaf():
-            raise ValueError("Got a badly structured tree: {}".format(tree))
-        else:
-            queue.extend(reversed(next_node.children))
-
-    if any(True for _ in tag_iterator):
-        raise ValueError("Too many tags for the given tree")
-
-    return new_tree
-
 
 def retag_tags(doc, pipelines, xpos):
     """
@@ -114,7 +89,9 @@ def retag_trees(trees, pipelines, xpos=True):
 
             for tree_idx, (tree, tags) in enumerate(zip(chunk, tag_lists)):
                 try:
-                    new_tree = replace_tags(tree, tags)
+                    if any(tag is None for tag in tags):
+                        raise RuntimeError("Tagged tree #{} with a None tag!\n{}\n{}".format(tree_idx, tree, tags))
+                    new_tree = tree.replace_tags(tags)
                     new_trees.append(new_tree)
                     pbar.update(1)
                 except ValueError as e:
@@ -212,14 +189,18 @@ def build_optimizer(args, model, build_simple_adadelta=False):
     we build an AdaDelta optimizer instead of whatever was requested
     The build_simple_adadelta parameter controls this
     """
+    bert_learning_rate = 0.0
+    bert_weight_decay = args['bert_weight_decay']
     if build_simple_adadelta:
         optim_type = 'adadelta'
         bert_finetune = args.get('stage1_bert_finetune', False)
         if bert_finetune:
             bert_learning_rate = args['stage1_bert_learning_rate']
+        learning_beta2 = 0.999   # doesn't matter for AdaDelta
         learning_eps = DEFAULT_LEARNING_EPS['adadelta']
         learning_rate = args['stage1_learning_rate']
         learning_rho = DEFAULT_LEARNING_RHO
+        momentum = None    # also doesn't matter for AdaDelta
         weight_decay = DEFAULT_WEIGHT_DECAY['adadelta']
     else:
         optim_type = args['optim'].lower()
@@ -233,57 +214,19 @@ def build_optimizer(args, model, build_simple_adadelta=False):
         momentum = args['learning_momentum']
         weight_decay = args['learning_weight_decay']
 
-    base_parameters = [param for name, param in model.named_parameters() if not model.is_unsaved_module(name) and not name.startswith("bert_model.")]
-    parameters = [
-        {'param_group_name': 'base', 'params': base_parameters},
-    ]
-    if bert_finetune:
-        bert_parameters = [param for name, param in model.named_parameters()
-                           if not model.is_unsaved_module(name) and name.startswith("bert_model.")]
-        logger.debug("Finetuning %d transformer parameters" % len(bert_parameters))
-        if len(bert_parameters) > 0 and args['bert_finetune_layers'] is not None:
-            num_layers = model.bert_model.config.num_hidden_layers
-            start_layer = num_layers - args['bert_finetune_layers']
-            bert_parameters = []
-            for layer_num in range(start_layer, num_layers):
-                #print([name for name, param in model.named_parameters()
-                #       if not model.is_unsaved_module(name) and name.startswith("bert_model.") and "layer.%d." % layer_num in name])
-                bert_parameters.extend([param for name, param in model.named_parameters()
-                                        if not model.is_unsaved_module(name) and name.startswith("bert_model.") and "layer.%d." % layer_num in name])
-        if len(bert_parameters) > 0:
-            parameters.append({'param_group_name': 'bert', 'params': bert_parameters, 'lr': learning_rate * bert_learning_rate, 'weight_decay': weight_decay * args['bert_weight_decay']})
-
-    if optim_type == 'sgd':
-        logger.info("Building SGD with lr=%f, momentum=%f, weight_decay=%f", learning_rate, momentum, weight_decay)
-        optimizer = optim.SGD(parameters, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
-    elif optim_type == 'adadelta':
-        logger.info("Building Adadelta with lr=%f, eps=%f, weight_decay=%f, rho=%f", learning_rate, learning_eps, weight_decay, learning_rho)
-        optimizer = optim.Adadelta(parameters, lr=learning_rate, eps=learning_eps, weight_decay=weight_decay, rho=learning_rho)
-    elif optim_type == 'adamw':
-        logger.info("Building AdamW with lr=%f, beta2=%f, eps=%f, weight_decay=%f", learning_rate, learning_beta2, learning_eps, weight_decay)
-        optimizer = optim.AdamW(parameters, lr=learning_rate, betas=(0.9, learning_beta2), eps=learning_eps, weight_decay=weight_decay)
-    elif optim_type == 'adabelief':
-        try:
-            from adabelief_pytorch import AdaBelief
-        except ModuleNotFoundError as e:
-            raise ModuleNotFoundError("Could not create adabelief optimizer.  Perhaps the adabelief-pytorch package is not installed") from e
-        logger.info("Building AdaBelief with lr=%f, eps=%f, weight_decay=%f", learning_rate, learning_eps, weight_decay)
-        # TODO: make these args
-        optimizer = AdaBelief(parameters, lr=learning_rate, eps=learning_eps, weight_decay=weight_decay, weight_decouple=False, rectify=False)
-    elif optim_type == 'madgrad' or optim_type == 'mirror_madgrad':
-        try:
-            import madgrad
-        except ModuleNotFoundError as e:
-            raise ModuleNotFoundError("Could not create madgrad optimizer.  Perhaps the madgrad package is not installed") from e
-        if optim_type == 'madgrad':
-            logger.info("Building madgrad with lr=%f, weight_decay=%f, momentum=%f", learning_rate, weight_decay, momentum)
-            optimizer = madgrad.MADGRAD(parameters, lr=learning_rate, weight_decay=weight_decay, momentum=momentum)
-        else:
-            logger.info("Building mirror madgrad with lr=%f, weight_decay=%f, momentum=%f", learning_rate, weight_decay, momentum)
-            optimizer = madgrad.MirrorMADGRAD(parameters, lr=learning_rate, weight_decay=weight_decay, momentum=momentum)
-    else:
-        raise ValueError("Unknown optimizer: %s" % optim)
-    return optimizer
+    # TODO: allow rho as an arg for AdaDelta
+    return get_optimizer(name=optim_type,
+                         model=model,
+                         lr=learning_rate,
+                         betas=(0.9, learning_beta2),
+                         eps=learning_eps,
+                         momentum=momentum,
+                         weight_decay=weight_decay,
+                         bert_learning_rate=bert_learning_rate,
+                         bert_weight_decay=weight_decay*bert_weight_decay,
+                         is_peft=args.get('use_peft', False),
+                         bert_finetune_layers=args['bert_finetune_layers'],
+                         opt_logger=tlogger)
 
 def build_scheduler(args, optimizer, first_optimizer=False):
     """
@@ -329,3 +272,97 @@ def add_predict_output_args(parser):
 def postprocess_predict_output_args(args):
     if len(args['predict_format']) <= 2 or (len(args['predict_format']) <= 3 and args['predict_format'].endswith("Vi")):
         args['predict_format'] = "{:" + args['predict_format'] + "}"
+
+
+def get_open_nodes(trees, transition_scheme):
+    """
+    Return a list of all open nodes in the given dataset.
+    Depending on the parameters, may be single or compound open transitions.
+    """
+    if transition_scheme is TransitionScheme.TOP_DOWN_COMPOUND:
+        return Tree.get_compound_constituents(trees)
+    elif transition_scheme is TransitionScheme.IN_ORDER_COMPOUND:
+        return Tree.get_compound_constituents(trees, separate_root=True)
+    else:
+        return [(x,) for x in Tree.get_unique_constituent_labels(trees)]
+
+
+def verify_transitions(trees, sequences, transition_scheme, unary_limit, reverse, name, root_labels):
+    """
+    Given a list of trees and their transition sequences, verify that the sequences rebuild the trees
+    """
+    model = SimpleModel(transition_scheme, unary_limit, reverse, root_labels)
+    tlogger.info("Verifying the transition sequences for %d trees", len(trees))
+
+    data = zip(trees, sequences)
+    if tlogger.getEffectiveLevel() <= logging.INFO:
+        data = tqdm(zip(trees, sequences), total=len(trees))
+
+    for tree_idx, (tree, sequence) in enumerate(data):
+        # TODO: make the SimpleModel have a parse operation?
+        state = model.initial_state_from_gold_trees([tree])[0]
+        for idx, trans in enumerate(sequence):
+            if not trans.is_legal(state, model):
+                raise RuntimeError("Tree {} of {} failed: transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(tree_idx, name, idx, trans, tree, sequence))
+            state = trans.apply(state, model)
+        result = model.get_top_constituent(state.constituents)
+        if reverse:
+            result = result.reverse()
+        if tree != result:
+            raise RuntimeError("Tree {} of {} failed: transition sequence did not match for a tree!\nOriginal tree:{}\nTransitions: {}\nResult tree:{}".format(tree_idx, name, tree, sequence, result))
+
+def check_constituents(train_constituents, trees, treebank_name):
+    """
+    Check that all the constituents in the other dataset are known in the train set
+    """
+    constituents = Tree.get_unique_constituent_labels(trees)
+    for con in constituents:
+        if con not in train_constituents:
+            first_error = None
+            num_errors = 0
+            for tree_idx, tree in enumerate(trees):
+                constituents = Tree.get_unique_constituent_labels(tree)
+                if con in constituents:
+                    num_errors += 1
+                    if first_error is None:
+                        first_error = tree_idx
+            raise RuntimeError("Found constituent label {} in the {} set which don't exist in the train set.  This constituent label occured in {} trees, with the first tree index at {} counting from 1\nThe error tree (which may have POS tags changed from the retagger and may be missing functional tags or empty nodes) is:\n{:P}".format(con, treebank_name, num_errors, (first_error+1), trees[first_error]))
+
+def check_root_labels(root_labels, other_trees, treebank_name):
+    """
+    Check that all the root states in the other dataset are known in the train set
+    """
+    for root_state in Tree.get_root_labels(other_trees):
+        if root_state not in root_labels:
+            raise RuntimeError("Found root state {} in the {} set which is not a ROOT state in the train set".format(root_state, treebank_name))
+
+def remove_duplicate_trees(trees, treebank_name):
+    """
+    Filter duplicates from the given dataset
+    """
+    new_trees = []
+    known_trees = set()
+    for tree in trees:
+        tree_str = "{}".format(tree)
+        if tree_str in known_trees:
+            continue
+        known_trees.add(tree_str)
+        new_trees.append(tree)
+    if len(new_trees) < len(trees):
+        tlogger.info("Filtered %d duplicates from %s dataset", (len(trees) - len(new_trees)), treebank_name)
+    return new_trees
+
+def remove_singleton_trees(trees):
+    """
+    remove trees which are just a root and a single word
+
+    TODO: remove these trees in the conversion instead of here
+    """
+    new_trees = [x for x in trees if
+                 len(x.children) > 1 or
+                 (len(x.children) == 1 and len(x.children[0].children) > 1) or
+                 (len(x.children) == 1 and len(x.children[0].children) == 1 and len(x.children[0].children[0].children) >= 1)]
+    if len(trees) - len(new_trees) > 0:
+        tlogger.info("Eliminated %d trees with missing structure", (len(trees) - len(new_trees)))
+    return new_trees
+

@@ -14,6 +14,8 @@ PACKAGES = "packages"
 # default treebank for languages
 default_treebanks = {
     "af":      "afribooms",
+    # currently not publicly released!  sent to us from the group developing this resource
+    "ang":     "nerthus",
     "ar":      "padt",
     "be":      "hse",
     "bg":      "btb",
@@ -120,6 +122,7 @@ no_pretrain_languages = set([
 # we will eventually do this for all of the pretrains
 specific_default_pretrains = {
     "af":      "fasttextwiki",
+    "ang":     "nerthus",
     "ar":      "conll17",
     "be":      "fasttextwiki",
     "bg":      "conll17",
@@ -271,6 +274,7 @@ ner_pretrains = {
 # default charlms for languages
 default_charlms = {
     "af": "oscar",
+    "ang": "nerthus1024",
     "ar": "ccwiki",
     "bg": "conll17",
     "da": "oscar",
@@ -377,17 +381,18 @@ default_ners = {
 
 # a few languages have sentiment classifier models
 default_sentiment = {
-    "en": "sstplus",
-    "de": "sb10k",
-    "es": "tass2020",
-    "mr": "l3cube",
-    "vi": "vsfc",
-    "zh-hans": "ren",
+    "en": "sstplus_charlm",
+    "de": "sb10k_charlm",
+    "es": "tass2020_charlm",
+    "mr": "l3cube_charlm",
+    "vi": "vsfc_charlm",
+    "zh-hans": "ren_charlm",
 }
 
 # also, a few languages (very few, currently) have constituency parser models
 default_constituency = {
     "da": "arboretum_charlm",
+    "de": "spmrl_charlm",
     "en": "ptb3-revised_charlm",
     "es": "combined_charlm",
     "id": "icon_charlm",
@@ -467,14 +472,38 @@ TRANSFORMERS = {
     # As of April 2022, the bert models available have a weird
     # tokenizer issue where soft hyphen causes it to crash.
     # We attempt to compensate for that in the dev branch
-    # bert-base-german-cased
-    # dev:  2022-04-27 21:21:31 INFO: de_germeval2014 87.59
-    # test: 2022-04-27 21:21:59 INFO: de_germeval2014 86.95
     #
-    # dbmdz/bert-base-german-cased
-    # dev:  2022-04-27 22:24:59 INFO: de_germeval2014 88.22
-    # test: 2022-04-27 22:25:27 INFO: de_germeval2014 87.80
-    "de": "dbmdz/bert-base-german-cased",
+    # NER scores
+    #     model                                       dev      text
+    # xlm-roberta-large                              86.56    85.23
+    # bert-base-german-cased                         87.59    86.95
+    # dbmdz/bert-base-german-cased                   88.27    87.47
+    # german-nlp-group/electra-base-german-uncased   88.60    87.09
+    #
+    # constituency scores w/ peft, March 2024 model, in-order
+    #    model             dev     test
+    #   xlm-roberta-base  95.17   93.34
+    #   xlm-roberta-large 95.86   94.46    (!!!)
+    #   bert-base         95.24   93.24
+    #   dbmdz/bert        95.32   93.33
+    #   german/electra    95.72   94.05
+    #
+    # POS scores
+    #    model             dev     test
+    #   None              88.65   87.28
+    #   xlm-roberta-large 89.21   88.11
+    #   bert-base         89.52   88.42
+    #   dbmdz/bert        89.67   88.54
+    #   german/electra    89.98   88.66
+    #
+    # depparse scores, LAS
+    #    model             dev     test
+    #   None              87.76   84.37
+    #   xlm-roberta-large 89.00   85.79
+    #   bert-base         88.72   85.40
+    #   dbmdz/bert        88.70   85.14
+    #   german/electra    89.21   86.06
+    "de": "german-nlp-group/electra-base-german-uncased",
 
     # experiments on various forms of roberta & electra
     #  https://huggingface.co/roberta-base
@@ -744,7 +773,9 @@ TRANSFORMER_NICKNAMES = {
     "vesteinn/ScandiBERT": "scandibert",
 
     # de
-    "dbmdz/bert-base-german-cased": "bert",
+    "bert-base-german-cased": "bert-base-german-cased",
+    "dbmdz/bert-base-german-cased": "dbmdz-bert-german-cased",
+    "german-nlp-group/electra-base-german-uncased": "german-nlp-electra",
 
     # en
     "bert-base-multilingual-cased": "mbert",
@@ -778,7 +809,7 @@ TRANSFORMER_NICKNAMES = {
     "imvladikon/alephbertgimmel-base-512" : "alephbertgimmel",
 
     # hy
-    "xlm-roberta-base": "roberta",
+    "xlm-roberta-base": "xlm-roberta-base",
 
     # id
     "indolem/indobert-base-uncased":         "indobert",

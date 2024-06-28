@@ -28,6 +28,7 @@ from stanza.utils.conll import CoNLL
 from stanza.models.common.doc import *
 from stanza.models import _training_logging
 
+from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
 from stanza.utils.confusion import confusion_to_weighted_f1, format_confusion
 
 logger = logging.getLogger('stanza')
@@ -78,14 +79,19 @@ def build_argparse():
 
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
+    parser.add_argument('--bert_hidden_layers', type=int, default=None, help="How many layers of hidden state to use from the transformer")
     parser.add_argument('--bert_finetune', default=False, action='store_true', help='Finetune the bert (or other transformer)')
+    parser.add_argument('--gradient_checkpointing', default=False, action='store_true', help='Checkpoint intermediate gradients between layers to save memory at the cost of training steps')
     parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
     parser.add_argument('--bert_learning_rate', default=1.0, type=float, help='Scale the learning rate for transformer finetuning by this much')
+    parser.add_argument('--second_optim', type=str, default=None, help='once first optimizer converged, tune the model again. with: sgd, adagrad, adam or adamax.')
+    parser.add_argument('--second_bert_learning_rate', default=0, type=float, help='Secondary stage transformer finetuning learning rate scale')
 
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='sgd', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=0.1, help='Learning rate.')
     parser.add_argument('--min_lr', type=float, default=1e-4, help='Minimum learning rate to stop training.')
+    parser.add_argument('--second_lr', type=float, default=5e-3, help='Secondary learning rate')
     parser.add_argument('--momentum', type=float, default=0, help='Momentum for SGD.')
     parser.add_argument('--lr_decay', type=float, default=0.5, help="LR decay rate.")
     parser.add_argument('--patience', type=int, default=3, help="Patience for LR decay.")
@@ -96,8 +102,10 @@ def build_argparse():
     parser.add_argument('--ignore_tag_scores', type=str, default=None, help="Which tags to ignore, if any, when scoring dev & test sets")
 
     parser.add_argument('--max_steps', type=int, default=200000)
+    parser.add_argument('--max_steps_no_improve', type=int, default=2500, help='if the model doesn\'t improve after this many steps, give up or switch to new optimizer.')
     parser.add_argument('--eval_interval', type=int, default=500)
     parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--max_batch_words', type=int, default=800, help='Long sentences can overwhelm even a large GPU when finetuning a transformer on otherwise reasonable batch sizes.  This cuts off those batches early')
     parser.add_argument('--max_grad_norm', type=float, default=5.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
@@ -113,7 +121,9 @@ def build_argparse():
 
 def parse_args(args=None):
     parser = build_argparse()
+    add_peft_args(parser)
     args = parser.parse_args(args=args)
+    resolve_peft_args(args, logger)
 
     if args.wandb_name:
         args.wandb = True
@@ -240,7 +250,7 @@ def train(args):
     logger.info("Loaded %d sentences of training data", len(train_doc.sentences))
     if len(train_doc.sentences) == 0:
         raise ValueError("File %s exists but has no usable training data" % args['train_file'])
-    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False, scheme=args.get('train_scheme'))
+    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False, scheme=args.get('train_scheme'), max_batch_words=args['max_batch_words'])
     vocab = train_batch.vocab
     logger.info("Loading dev data from %s", args['eval_file'])
     with open(args['eval_file']) as fin:
@@ -303,9 +313,13 @@ def train(args):
         wandb.init(name=wandb_name, config=args)
         wandb.run.define_metric('train_loss', summary='min')
         wandb.run.define_metric('dev_score', summary='max')
+        # track gradients!
+        wandb.watch(trainer.model, log_freq=4, log="gradients")
 
     # start training
+    last_best_step = 0
     train_loss = 0
+    is_second_optim = False
     while True:
         should_stop = False
         for i, batch in enumerate(train_batch):
@@ -317,9 +331,6 @@ def train(args):
                 duration = time.time() - start_time
                 logger.info(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,
                                               max_steps, loss, duration, current_lr))
-                if args['log_norms']:
-                    trainer.model.log_norms()
-
             if global_step % args['eval_interval'] == 0:
                 # eval on dev
                 logger.info("Evaluating on dev set...")
@@ -338,6 +349,7 @@ def train(args):
                 # save best model
                 if len(dev_score_history) == 0 or dev_score > max(dev_score_history):
                     trainer.save(model_file)
+                    last_best_step = global_step
                     logger.info("New best model saved.")
                     best_dev_preds = dev_preds
 
@@ -348,11 +360,26 @@ def train(args):
                 if scheduler is not None:
                     scheduler.step(dev_score)
             
+                if args['log_norms']:
+                    trainer.model.log_norms()
+
             # check stopping
             current_lr = trainer.optimizer.param_groups[0]['lr']
-            if global_step >= args['max_steps'] or current_lr <= args['min_lr']:
-                should_stop = True
-                break
+            if (global_step - last_best_step) >= args['max_steps_no_improve'] or global_step >= args['max_steps'] or current_lr <= args['min_lr']:
+                if (global_step - last_best_step) >= args['max_steps_no_improve']:
+                    logger.info("{} steps without improvement...".format((global_step - last_best_step)))
+                if not is_second_optim and args['second_optim'] is not None:
+                    logger.info("Switching to second optimizer: {}".format(args['second_optim']))
+                    logger.info('Reloading best model to continue from current local optimum')
+                    trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, device=args['device'],
+                                      train_classifier_only=args['train_classifier_only'], model_file=model_file, second_optim=True)
+                    is_second_optim = True
+                    last_best_step = global_step
+                    current_lr = trainer.optimizer.param_groups[0]['lr']
+                else:
+                    logger.info("stopping...")
+                    should_stop = True
+                    break
 
         if should_stop:
             break
@@ -397,14 +424,21 @@ def evaluate(args):
     model_file = model_file_name(args)
 
     loaded_args, trainer, vocab = load_model(args, model_file)
+    return evaluate_model(loaded_args, trainer, vocab, args['eval_file'])
+
+def evaluate_model(loaded_args, trainer, vocab, eval_file):
+    if loaded_args['log_norms']:
+        trainer.model.log_norms()
+
+    model_file = os.path.join(loaded_args['save_dir'], loaded_args['save_name'])
     logger.debug("Loaded model for eval from %s", model_file)
     logger.debug("Using the %d tagset for evaluation", loaded_args['predict_tagset'])
 
     # load data
-    logger.info("Loading data with batch size {}...".format(args['batch_size']))
-    with open(args['eval_file']) as fin:
+    logger.info("Loading data with batch size {}...".format(loaded_args['batch_size']))
+    with open(eval_file) as fin:
         doc = Document(json.load(fin))
-    batch = DataLoader(doc, args['batch_size'], loaded_args, vocab=vocab, evaluation=True, bert_tokenizer=trainer.model.bert_tokenizer)
+    batch = DataLoader(doc, loaded_args['batch_size'], loaded_args, vocab=vocab, evaluation=True, bert_tokenizer=trainer.model.bert_tokenizer)
     bioes_to_bio = loaded_args['train_scheme'] == 'bio' and loaded_args['scheme'] == 'bioes'
     warn_missing_tags(trainer.vocab['tag'], batch.tags, "eval_file", bioes_to_bio=bioes_to_bio)
 
@@ -417,17 +451,17 @@ def evaluate(args):
     # TODO: might still want to add multiple layers of tag evaluation to the scorer
     gold_tags = [[x[trainer.args['predict_tagset']] for x in tags] for tags in gold_tags]
 
-    _, _, score, entity_f1 = scorer.score_by_entity(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
-    _, _, _, confusion = scorer.score_by_token(preds, gold_tags, ignore_tags=args['ignore_tag_scores'])
+    _, _, score, entity_f1 = scorer.score_by_entity(preds, gold_tags, ignore_tags=loaded_args['ignore_tag_scores'])
+    _, _, _, confusion = scorer.score_by_token(preds, gold_tags, ignore_tags=loaded_args['ignore_tag_scores'])
     logger.info("Weighted f1 for non-O tokens: %5f", confusion_to_weighted_f1(confusion, exclude=["O"]))
 
-    logger.info("NER tagger score: %s %s %s %.2f", args['shorthand'], model_file, args['eval_file'], score*100)
+    logger.info("NER tagger score: %s %s %s %.2f", loaded_args['shorthand'], model_file, eval_file, score*100)
     entity_f1_lines = ["%s: %.2f" % (x, y*100) for x, y in entity_f1.items()]
     logger.info("NER Entity F1 scores:\n  %s", "\n  ".join(entity_f1_lines))
     logger.info("NER token confusion matrix:\n{}".format(format_confusion(confusion)))
 
-    if args['eval_output_file']:
-        write_ner_results(args['eval_output_file'], batch, preds, trainer.args['predict_tagset'])
+    if loaded_args['eval_output_file']:
+        write_ner_results(loaded_args['eval_output_file'], batch, preds, trainer.args['predict_tagset'])
 
     return confusion
 
@@ -446,8 +480,11 @@ def load_model(args, model_file):
 
     # load config
     for k in args:
-        if k.endswith('_dir') or k.endswith('_file') or k in ['shorthand', 'mode', 'scheme']:
+        if k.endswith('_dir') or k.endswith('_file') or k in ['batch_size', 'ignore_tag_scores', 'log_norms', 'mode', 'scheme', 'shorthand']:
             loaded_args[k] = args[k]
+    save_dir, save_name = os.path.split(model_file)
+    args['save_dir'] = save_dir
+    args['save_name'] = save_name
     return loaded_args, trainer, vocab
 
 

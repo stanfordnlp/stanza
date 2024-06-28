@@ -14,16 +14,30 @@ import os
 import shutil
 import tempfile
 
+from stanza.utils.conll import CoNLL
 from stanza.models.common.constant import treebank_to_short_name
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_treebank
 
 from stanza.utils.datasets.contract_mwt import contract_mwt
 
+# languages where the MWTs are always a composition of the words themselves
+KNOWN_COMPOSABLE_MWTS = {"en"}
+
 def copy_conllu(tokenizer_dir, mwt_dir, short_name, dataset, particle):
     input_conllu_tokenizer = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
     input_conllu_mwt = f"{mwt_dir}/{short_name}.{dataset}.{particle}.conllu"
     shutil.copyfile(input_conllu_tokenizer, input_conllu_mwt)
+
+def check_mwt_composition(filename):
+    print("Checking the MWTs in %s" % filename)
+    doc = CoNLL.conll2doc(filename)
+    for sent_idx, sentence in enumerate(doc.sentences):
+        for token_idx, token in enumerate(sentence.tokens):
+            if len(token.words) > 1:
+                expected = "".join(x.text for x in token.words)
+                if token.text != expected:
+                    raise ValueError("Unexpected token composition in sentence %d: %s instead of %s" % (sent_idx, token.text, expected))
 
 def process_treebank(treebank, model_type, paths, args):
     short_name = treebank_to_short_name(treebank)
@@ -50,6 +64,13 @@ def process_treebank(treebank, model_type, paths, args):
             dest_filename = common.mwt_name(mwt_dir, short_name, shard)
             print("Copying from %s to %s" % (source_filename, dest_filename))
             shutil.copyfile(source_filename, dest_filename)
+
+        language = short_name.split("_", 1)[0]
+        if language in KNOWN_COMPOSABLE_MWTS:
+            print("Language %s is known to have all MWT composed of exactly its word pieces.  Checking..." % language)
+            check_mwt_composition(f"{mwt_dir}/{short_name}.train.in.conllu")
+            check_mwt_composition(f"{mwt_dir}/{short_name}.dev.in.conllu")
+            check_mwt_composition(f"{mwt_dir}/{short_name}.test.in.conllu")
 
         contract_mwt(f"{mwt_dir}/{short_name}.dev.gold.conllu",
                      f"{mwt_dir}/{short_name}.dev.in.conllu")

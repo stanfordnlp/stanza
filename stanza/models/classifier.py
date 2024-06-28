@@ -160,7 +160,7 @@ def build_argparse():
 
     parser.add_argument('--load_name', type=str, default=None, help='Name for loading an existing model')
     parser.add_argument('--save_dir', type=str, default='saved_models/classifier', help='Root dir for saving models.')
-    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_{shape}_classifier.pt", help='Name for saving the model')
+    parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_{bert_finetuning}_{classifier_type}_classifier.pt", help='Name for saving the model')
 
     parser.add_argument('--checkpoint_save_name', type=str, default=None, help="File name to save the most recent checkpoint")
     parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
@@ -230,9 +230,10 @@ def build_argparse():
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
     parser.add_argument('--bert_finetune', default=False, action='store_true', help="Finetune the Bert model")
-    parser.add_argument('--use_peft', default=False, action='store_true', help="Finetune Bert using peft")
     parser.add_argument('--bert_learning_rate', default=0.01, type=float, help='Scale the learning rate for transformer finetuning by this much')
     parser.add_argument('--bert_weight_decay', default=0.0001, type=float, help='Scale the weight decay for transformer finetuning by this much')
+    parser.add_argument('--bert_hidden_layers', type=int, default=4, help="How many layers of hidden state to use from the transformer")
+    parser.add_argument('--bert_hidden_layers_original', action='store_const', const=None, dest='bert_hidden_layers', help='Use layers 2,3,4 of the Bert embedding')
 
     parser.add_argument('--bilstm', dest='bilstm', action='store_true', default=True, help="Use a bilstm after the inputs, before the convs.  Using bilstm is about as accurate and significantly faster (because of dim reduction) than going straight to the filters")
     parser.add_argument('--no_bilstm', dest='bilstm', action='store_false', help="Don't use a bilstm after the inputs, before the convs.")
@@ -296,7 +297,7 @@ def build_model_filename(args):
     if args.fc_shapes:
         shape = shape + "_FC_%s_" % "_".join([str(x) for x in args.fc_shapes])
 
-    model_save_file = utils.standard_model_file_name(vars(args), "classifier", shape=shape)
+    model_save_file = utils.standard_model_file_name(vars(args), "classifier", shape=shape, classifier_type=args.model_type.name)
     logger.info("Expanded save_name: %s", model_save_file)
     return model_save_file
 
@@ -307,7 +308,7 @@ def parse_args(args=None):
     """
     parser = build_argparse()
     args = parser.parse_args(args)
-    resolve_peft_args(args)
+    resolve_peft_args(args, tlogger)
 
     if args.wandb_name:
         args.wandb = True
@@ -319,9 +320,6 @@ def parse_args(args=None):
         args.momentum = DEFAULT_MOMENTUM.get(args.optim, None)
     if args.learning_rate is None:
         args.learning_rate = DEFAULT_LEARNING_RATES.get(args.optim, None)
-    if args.use_peft and not args.bert_finetune:
-        logger.info("--use_peft set.  setting --bert_finetune as well")
-        args.bert_finetune = True
 
     return args
 
@@ -509,6 +507,14 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
         wandb.run.define_metric('macro_f1', summary='max')
         wandb.run.define_metric('epoch_loss', summary='min')
 
+    for opt_name, opt in optimizer.items():
+        current_lr = opt.param_groups[0]['lr']
+        logger.info("optimizer %s learning rate: %s", opt_name, current_lr)
+
+    # if this is a brand new training run, and we're saving all intermediate models, save the start model as well
+    if args.save_intermediate_models and trainer.epochs_trained == 0:
+        intermediate_file = intermediate_name(model_file, trainer.epochs_trained, args.dev_eval_scoring, 0.0)
+        trainer.save(intermediate_file, save_optimizer=False)
     for trainer.epochs_trained in range(trainer.epochs_trained, args.max_epochs):
         running_loss = 0.0
         epoch_loss = 0.0
@@ -527,13 +533,15 @@ def train_model(trainer, model_file, checkpoint_file, args, train_set, dev_set, 
             batch_labels = torch.stack([label_tensors[x.sentiment] for x in batch])
 
             # zero the parameter gradients
-            optimizer.zero_grad()
+            for opt in optimizer.values():
+                opt.zero_grad()
 
             outputs = model(batch)
             outputs = process_outputs(outputs)
             batch_loss = loss_function(outputs, batch_labels)
             batch_loss.backward()
-            optimizer.step()
+            for opt in optimizer.values():
+                opt.step()
 
             # print statistics
             running_loss += batch_loss.item()
@@ -594,8 +602,10 @@ def main(args=None):
         logger.info("Training set has %d labels" % len(data.dataset_labels(train_set)))
         tlogger.setLevel(logging.DEBUG)
 
+        tlogger.info("Saving checkpoints: %s", args.checkpoint)
         if args.checkpoint:
             checkpoint_file = utils.checkpoint_name(args.save_dir, save_name, args.checkpoint_save_name)
+            tlogger.info("Checkpoint filename: %s", checkpoint_file)
     elif not args.load_name:
         if save_name:
             args.load_name = save_name

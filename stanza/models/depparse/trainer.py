@@ -8,6 +8,11 @@ import logging
 import torch
 from torch import nn
 
+try:
+    import transformers
+except ImportError:
+    pass
+
 from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common import utils, loss
 from stanza.models.common.foundation_cache import NoTransformerFoundationCache
@@ -67,14 +72,38 @@ class Trainer(BaseTrainer):
             wandb.watch(self.model, log_freq=4, log="all", log_graph=True)
 
     def __init_optim(self):
+        # TODO: can get rid of args.get when models are rebuilt
         if (self.args.get("second_stage", False) and self.args.get('second_optim')):
-            self.optimizer = utils.get_optimizer(self.args['second_optim'], self.model,
-                                                 self.args['second_lr'], betas=(0.9, self.args['beta2']), eps=1e-6,
-                                                 bert_learning_rate=self.args.get('second_bert_learning_rate', 0.0))
+            self.optimizer = utils.get_split_optimizer(self.args['second_optim'], self.model,
+                                                       self.args['second_lr'], betas=(0.9, self.args['beta2']), eps=1e-6,
+                                                       bert_learning_rate=self.args.get('second_bert_learning_rate', 0.0),
+                                                       is_peft=self.args.get('use_peft', False),
+                                                       bert_finetune_layers=self.args.get('bert_finetune_layers', None))
         else:
-            self.optimizer = utils.get_optimizer(self.args['optim'], self.model,
-                                                self.args['lr'], betas=(0.9, self.args['beta2']),
-                                                eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
+            self.optimizer = utils.get_split_optimizer(self.args['optim'], self.model,
+                                                       self.args['lr'], betas=(0.9, self.args['beta2']),
+                                                       eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0),
+                                                       weight_decay=self.args.get('weight_decay', None),
+                                                       bert_weight_decay=self.args.get('bert_weight_decay', 0.0),
+                                                       is_peft=self.args.get('use_peft', False),
+                                                       bert_finetune_layers=self.args.get('bert_finetune_layers', None))
+        self.scheduler = {}
+        if self.args.get("second_stage", False) and self.args.get('second_optim'):
+            if self.args.get('second_warmup_steps', None):
+                for name, optimizer in self.optimizer.items():
+                    name = name + "_scheduler"
+                    warmup_scheduler = transformers.get_constant_schedule_with_warmup(optimizer, self.args['second_warmup_steps'])
+                    self.scheduler[name] = warmup_scheduler
+        else:
+            if "bert_optimizer" in self.optimizer:
+                zero_scheduler = torch.optim.lr_scheduler.ConstantLR(self.optimizer["bert_optimizer"], factor=0, total_iters=self.args['bert_start_finetuning'])
+                warmup_scheduler = transformers.get_constant_schedule_with_warmup(
+                    self.optimizer["bert_optimizer"],
+                    self.args['bert_warmup_steps'])
+                self.scheduler["bert_scheduler"] = torch.optim.lr_scheduler.SequentialLR(
+                    self.optimizer["bert_optimizer"],
+                    schedulers=[zero_scheduler, warmup_scheduler],
+                    milestones=[self.args['bert_start_finetuning']])
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
@@ -85,15 +114,21 @@ class Trainer(BaseTrainer):
             self.model.eval()
         else:
             self.model.train()
-            self.optimizer.zero_grad()
-        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+            for opt in self.optimizer.values():
+                opt.zero_grad()
+        # if there is no bert optimizer, we will tell the model to detach bert so it uses less GPU
+        detach = any(x.startswith("bert") or x.startswith("peft") for x in self.optimizer)
+        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, detach=detach)
         loss_val = loss.data.item()
         if eval:
             return loss_val
 
         loss.backward()
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
-        self.optimizer.step()
+        for opt in self.optimizer.values():
+            opt.step()
+        for scheduler in self.scheduler.values():
+            scheduler.step()
         return loss_val
 
     def predict(self, batch, unsort=True):
@@ -127,9 +162,14 @@ class Trainer(BaseTrainer):
                 'last_best_step': self.last_best_step,
                 'dev_score_history': self.dev_score_history,
                 }
+        if self.args.get('use_peft', False):
+            # Hide import so that peft dependency is optional
+            from peft import get_peft_model_state_dict
+            params["bert_lora"] = get_peft_model_state_dict(self.model.bert_model)
 
         if save_optimizer and self.optimizer is not None:
-            params['optimizer_state_dict'] = self.optimizer.state_dict()
+            params['optimizer_state_dict'] = {k: opt.state_dict() for k, opt in self.optimizer.items()}
+            params['scheduler_state_dict'] = {k: scheduler.state_dict() for k, scheduler in self.scheduler.items()}
 
         try:
             torch.save(params, filename, _use_new_zipfile_serialization=False)
@@ -160,15 +200,31 @@ class Trainer(BaseTrainer):
         if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
             logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
             foundation_cache = NoTransformerFoundationCache(foundation_cache)
-        self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache)
+
+        # if we are set to not finetune bert, but there is an existing
+        # bert in the model, we need to respect that and force it to
+        # be resaved next time the model is saved
+        force_bert_saved = any(x.startswith("bert_model") for x in checkpoint['model'].keys())
+
+        self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, force_bert_saved=force_bert_saved)
         self.model.load_state_dict(checkpoint['model'], strict=False)
+        if self.args.get('use_peft', False):
+            # hide import so that the peft dependency is optional
+            from peft import set_peft_model_state_dict
+            set_peft_model_state_dict(self.model.bert_model, checkpoint['bert_lora'])
         if device is not None:
             self.model = self.model.to(device)
 
         self.__init_optim()
         optim_state_dict = checkpoint.get("optimizer_state_dict")
         if optim_state_dict:
-            self.optimizer.load_state_dict(optim_state_dict)
+            for k, state in optim_state_dict.items():
+                self.optimizer[k].load_state_dict(state)
+
+        scheduler_state_dict = checkpoint.get("scheduler_state_dict")
+        if scheduler_state_dict:
+            for k, state in scheduler_state_dict.items():
+                self.scheduler[k].load_state_dict(state)
 
         self.global_step = checkpoint.get("global_step", 0)
         self.last_best_step = checkpoint.get("last_best_step", 0)

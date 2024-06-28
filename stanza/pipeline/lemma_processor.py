@@ -76,6 +76,9 @@ class LemmaProcessor(UDProcessor):
             if self.config.get('ensemble_dict', False):
                 # skip the seq2seq model when we can
                 skip = self.trainer.skip_seq2seq(batch.doc.get([doc.TEXT, doc.UPOS]))
+                # although there is no explicit use of caseless or lemma_caseless in this processor,
+                # it shows up in the config which gets passed to the DataLoader,
+                # possibly affecting its results
                 seq2seq_batch = DataLoader(document, self.config['batch_size'], self.config, vocab=self.vocab,
                                            evaluation=True, skip=skip)
             else:

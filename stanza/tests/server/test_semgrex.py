@@ -5,8 +5,9 @@ Test the semgrex interface
 import pytest
 import stanza
 import stanza.server.semgrex as semgrex
-from stanza.protobuf import SemgrexRequest
 from stanza.models.common.doc import Document
+from stanza.protobuf import SemgrexRequest
+from stanza.utils.conll import CoNLL
 
 from stanza.tests import *
 
@@ -239,3 +240,43 @@ def test_hand_built_request():
 
     response = semgrex.send_semgrex_request(request)
     check_response(response)
+
+BLANK_DEPENDENCY_SENTENCE = """
+# sent_id = weblog-juancole.com_juancole_20051126063000_ENG_20051126_063000-0007
+# text = You wonder if he was manipulating the market with his bombing targets.
+1	You	you	PRON	PRP	Case=Nom|Person=2|PronType=Prs	2	nsubj	_	_
+2	wonder	wonder	VERB	VBP	Mood=Ind|Number=Sing|Person=2|Tense=Pres|VerbForm=Fin	1	_	_	_
+3	if	if	SCONJ	IN	_	6	mark	_	_
+4	he	he	PRON	PRP	Case=Nom|Gender=Masc|Number=Sing|Person=3|PronType=Prs	6	nsubj	_	_
+5	was	be	AUX	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	6	aux	_	_
+6	manipulating	manipulate	VERB	VBG	Tense=Pres|VerbForm=Part	2	ccomp	_	_
+7	the	the	DET	DT	Definite=Def|PronType=Art	8	det	_	_
+8	market	market	NOUN	NN	Number=Sing	6	obj	_	_
+9	with	with	ADP	IN	_	12	case	_	_
+10	his	his	PRON	PRP$	Case=Gen|Gender=Masc|Number=Sing|Person=3|Poss=Yes|PronType=Prs	12	nmod:poss	_	_
+11	bombing	bombing	NOUN	NN	Number=Sing	12	compound	_	_
+12	targets	target	NOUN	NNS	Number=Plur	6	obl	_	SpaceAfter=No
+13	.	.	PUNCT	.	_	2	punct	_	_
+""".lstrip()
+
+
+def test_blank_dependency():
+    """
+    A user / contributor sent a dependency file with blank dependency labels and twisted up roots
+    """
+    blank_dep_doc = CoNLL.conll2doc(input_str=BLANK_DEPENDENCY_SENTENCE)
+    blank_dep_request = semgrex.build_request(blank_dep_doc, "{}=root <_=edge {}")
+    response = semgrex.send_semgrex_request(blank_dep_request)
+    assert len(response.result) == 1
+    assert len(response.result[0].result) == 1
+    assert len(response.result[0].result[0].match) == 1
+    # there should be a named node...
+    assert len(response.result[0].result[0].match[0].node) == 1
+    assert response.result[0].result[0].match[0].node[0].name == 'root'
+    assert response.result[0].result[0].match[0].node[0].matchIndex == 2
+
+    # ... and a named edge
+    assert len(response.result[0].result[0].match[0].edge) == 1
+    assert response.result[0].result[0].match[0].edge[0].source == 1
+    assert response.result[0].result[0].match[0].edge[0].target == 2
+    assert response.result[0].result[0].match[0].edge[0].reln == "_"

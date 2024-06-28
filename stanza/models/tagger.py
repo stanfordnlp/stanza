@@ -103,6 +103,7 @@ def build_argparse():
             help="Use fixed evaluation interval for all treebanks, otherwise by default the interval will be increased for larger treebanks.")
     parser.add_argument('--max_steps_before_stop', type=int, default=3000, help='Changes learning method or early terminates after this many steps if the dev scores are not improving')
     parser.add_argument('--batch_size', type=int, default=250)
+    parser.add_argument('--batch_maximum_tokens', type=int, default=5000, help='When run in a Pipeline, limit a batch to this many tokens to help avoid OOM for long sentences')
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
@@ -176,7 +177,8 @@ def get_eval_type(dev_batch):
 
 def load_training_data(args, pretrain):
     train_docs = []
-    for train_file in args['train_file'].split(";"):
+    train_files = args['train_file'].split(";")
+    for train_file in train_files:
         logger.info("Reading %s" % train_file)
         # train_data is now a list of sentences, where each sentence is a
         # list of words, in which each word is a dict of conll attributes
@@ -193,6 +195,28 @@ def load_training_data(args, pretrain):
     vocab = Dataset.init_vocab(train_docs, args)
     train_data = [Dataset(i, args, pretrain, vocab=vocab, evaluation=False)
                   for i in train_docs]
+    for train_file, td in zip(train_files, train_data):
+        if not td.has_upos:
+            logger.info("No UPOS in %s" % train_file)
+        if not td.has_xpos:
+            logger.info("No XPOS in %s" % train_file)
+        if not td.has_feats:
+            logger.info("No feats in %s" % train_file)
+
+    # reject partially tagged upos or xpos documents
+    # otherwise, the model will learn to output blanks for some words,
+    # which is probably a confusing result
+    # (and definitely throws off the depparse)
+    # another option would be to treat those as masked out
+    for td_idx, td in enumerate(train_data):
+        if td.has_upos:
+            upos_data = td.doc.get(UPOS, as_sentences=True)
+            for sentence_idx, sentence in enumerate(upos_data):
+                for word_idx, upos in enumerate(sentence):
+                    if upos == '_' or upos is None:
+                        conll = "{:C}".format(td.doc.sentences[sentence_idx])
+                        raise RuntimeError("Found a blank tag in the UPOS at sentence %d word %d of %s.\n%s" % ((sentence_idx+1), (word_idx+1), train_files[td_idx], conll))
+
     # here we make sure the model will learn to output _ for empty columns
     # if *any* dataset has data for the upos, xpos, or feature column,
     # we consider that data enough to train the model on that column
@@ -370,7 +394,6 @@ def train(args):
 
 def evaluate(args):
     # file paths
-    system_pred_file = args['output_file']
     model_file = model_file_name(args)
 
     pretrain = load_pretrain(args)
@@ -381,6 +404,10 @@ def evaluate(args):
     # load model
     logger.info("Loading model from: {}".format(model_file))
     trainer = Trainer(pretrain=pretrain, model_file=model_file, device=args['device'], args=load_args)
+    evaluate_trainer(args, trainer, pretrain)
+
+def evaluate_trainer(args, trainer, pretrain):
+    system_pred_file = args['output_file']
     loaded_args, vocab = trainer.args, trainer.vocab
 
     # load config

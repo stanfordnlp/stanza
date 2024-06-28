@@ -128,7 +128,8 @@ class TreeEmbedding(nn.Module):
 
     @staticmethod
     def model_from_params(params, args, foundation_cache=None):
-        constituency_parser = Trainer.model_from_params(params['constituency'], args, foundation_cache)
+        # TODO: integrate with peft
+        constituency_parser = Trainer.model_from_params(params['constituency'], None, args, foundation_cache)
         model = TreeEmbedding(constituency_parser, params['config'])
         model.load_state_dict(params['model'], strict=False)
         return model

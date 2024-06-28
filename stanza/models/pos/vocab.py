@@ -33,6 +33,9 @@ class WordVocab(BaseVocab):
         self._id2unit = VOCAB_PREFIX + list(sorted(list(counter.keys()), key=lambda k: counter[k], reverse=True))
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
 
+    def __str__(self):
+        return "<{}: {}>".format(type(self), ",".join("|%s|" % x for x in self._id2unit))
+
 class XPOSVocab(CompositeVocab):
     def __init__(self, data=None, lang="", idx=0, sep="", keyed=False):
         super().__init__(data, lang, idx=idx, sep=sep, keyed=keyed)

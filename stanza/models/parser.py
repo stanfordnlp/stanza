@@ -29,6 +29,7 @@ from stanza.models.common import utils
 from stanza.models.common import pretrain
 from stanza.models.common.data import augment_punct
 from stanza.models.common.doc import *
+from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
 from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
 
@@ -43,7 +44,7 @@ def build_argparse():
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
-    parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
+    parser.add_argument('--no_gold_labels', dest='gold_labels', action='store_false', help="Don't score the eval file - perhaps it has no gold labels, for example.  Cannot be used at training time")
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
@@ -55,6 +56,9 @@ def build_argparse():
     parser.add_argument('--word_emb_dim', type=int, default=75)
     parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--tag_emb_dim', type=int, default=50)
+    parser.add_argument('--no_upos', dest='use_upos', action='store_false', default=True, help="Don't use upos tags as part of the tag embedding")
+    parser.add_argument('--no_xpos', dest='use_xpos', action='store_false', default=True, help="Don't use xpos tags as part of the tag embedding")
+    parser.add_argument('--no_ufeats', dest='use_ufeats', action='store_false', default=True, help="Don't use ufeats as part of the tag embedding")
     parser.add_argument('--transformed_dim', type=int, default=125)
     parser.add_argument('--num_layers', type=int, default=3)
     parser.add_argument('--char_num_layers', type=int, default=1)
@@ -75,11 +79,16 @@ def build_argparse():
 
     parser.add_argument('--bert_model', type=str, default=None, help="Use an external bert model (requires the transformers package)")
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
-    parser.add_argument('--bert_hidden_layers', type=int, default=None, help="How many layers of hidden state to use from the transformer")
+    parser.add_argument('--bert_hidden_layers', type=int, default=4, help="How many layers of hidden state to use from the transformer")
+    parser.add_argument('--bert_hidden_layers_original', action='store_const', const=None, dest='bert_hidden_layers', help='Use layers 2,3,4 of the Bert embedding')
     parser.add_argument('--bert_finetune', default=False, action='store_true', help='Finetune the bert (or other transformer)')
     parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
+    parser.add_argument('--bert_finetune_layers', default=None, type=int, help='Only finetune this many layers from the transformer')
     parser.add_argument('--bert_learning_rate', default=1.0, type=float, help='Scale the learning rate for transformer finetuning by this much')
     parser.add_argument('--second_bert_learning_rate', default=1e-3, type=float, help='Secondary stage transformer finetuning learning rate scale')
+    parser.add_argument('--bert_start_finetuning', default=200, type=int, help='When to start finetuning the transformer')
+    parser.add_argument('--bert_warmup_steps', default=200, type=int, help='How many steps for a linear warmup when finetuning the transformer')
+    parser.add_argument('--bert_weight_decay', default=0.0, type=float, help='Weight decay bert parameters by this much')
 
     parser.add_argument('--no_pretrain', dest='pretrain', action='store_false', help="Turn off pretrained embeddings.")
     parser.add_argument('--no_linearization', dest='linearization', action='store_false', help="Turn off linearization term.")
@@ -90,13 +99,17 @@ def build_argparse():
     parser.add_argument('--second_optim', type=str, default=None, help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
     parser.add_argument('--second_lr', type=float, default=3e-4, help='Secondary stage learning rate')
+    parser.add_argument('--weight_decay', type=float, default=None, help='Weight decay for the first optimizer')
     parser.add_argument('--beta2', type=float, default=0.95)
     parser.add_argument('--second_optim_start_step', type=int, default=None, help='If set, switch to the second optimizer when stalled or at this step regardless of performance.  Normally, the optimizer only switches when the dev scores have stalled for --max_steps_before_stop steps')
+    parser.add_argument('--second_warmup_steps', type=int, default=200, help="If set, give the 2nd optimizer a linear warmup.  Idea being that the optimizer won't have a good grasp on the initial gradients and square gradients when it first starts")
 
     parser.add_argument('--max_steps', type=int, default=50000)
     parser.add_argument('--eval_interval', type=int, default=100)
+    parser.add_argument('--checkpoint_interval', type=int, default=500)
     parser.add_argument('--max_steps_before_stop', type=int, default=1000)
     parser.add_argument('--batch_size', type=int, default=5000)
+    parser.add_argument('--second_batch_size', type=int, default=None, help='Use a different batch size for the second optimizer.  Can be relevant for models with different transformer finetuning settings between optimizers, for example, where the larger batch size is impossible for FT the transformer"')
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--log_norms', action='store_true', default=False, help='Log the norms of all the parameters (noisy!)')
@@ -105,6 +118,7 @@ def build_argparse():
     parser.add_argument('--continue_from', type=str, default=None, help="File name to preload the model to continue training from")
 
     parser.add_argument('--seed', type=int, default=1234)
+    add_peft_args(parser)
     utils.add_device_args(parser)
 
     parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%%')
@@ -116,6 +130,7 @@ def build_argparse():
 def parse_args(args=None):
     parser = build_argparse()
     args = parser.parse_args(args=args)
+    resolve_peft_args(args, logger)
 
     if args.wandb_name:
         args.wandb = True
@@ -150,6 +165,15 @@ def load_pretrain(args):
         pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
 
+def predict_dataset(trainer, dev_batch):
+    dev_preds = []
+    if len(dev_batch) > 0:
+        for batch in dev_batch:
+            preds = trainer.predict(batch)
+            dev_preds += preds
+        dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
+    return dev_preds
+
 def train(args):
     model_file = model_file_name(args)
     utils.ensure_dir(os.path.split(model_file)[0])
@@ -182,9 +206,8 @@ def train(args):
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
-    # pred and gold path
+    # pred path
     system_pred_file = args['output_file']
-    gold_file = args['gold_file']
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
@@ -199,6 +222,7 @@ def train(args):
         wandb.run.define_metric('dev_score', summary='max')
 
     logger.info("Training parser...")
+    checkpoint_file = None
     if args.get("checkpoint"):
         # calculate checkpoint file name from the save filename
         checkpoint_file = utils.checkpoint_name(args.get("save_dir"), model_file, args.get("checkpoint_save_name"))
@@ -232,6 +256,9 @@ def train(args):
             trainer.global_step += 1
             loss = trainer.update(batch, eval=False) # update step
             train_loss += loss
+
+            # will checkpoint if we switch optimizers or score a new best score
+            force_checkpoint = False
             if trainer.global_step % args['log_step'] == 0:
                 duration = time.time() - start_time
                 logger.info(format_str.format(trainer.global_step, max_steps, loss, duration, current_lr))
@@ -239,15 +266,11 @@ def train(args):
             if trainer.global_step % args['eval_interval'] == 0:
                 # eval on dev
                 logger.info("Evaluating on dev set...")
-                dev_preds = []
-                for batch in dev_batch:
-                    preds = trainer.predict(batch)
-                    dev_preds += preds
-                dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
+                dev_preds = predict_dataset(trainer, dev_batch)
 
                 dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
                 CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
-                _, _, dev_score = scorer.score(system_pred_file, gold_file)
+                _, _, dev_score = scorer.score(system_pred_file, args['eval_file'])
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
                 logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(trainer.global_step, train_loss, dev_score))
@@ -258,31 +281,47 @@ def train(args):
                 train_loss = 0
 
                 # save best model
-                if len(trainer.dev_score_history) == 0 or dev_score > max(trainer.dev_score_history):
+                trainer.dev_score_history += [dev_score]
+                if dev_score >= max(trainer.dev_score_history):
                     trainer.last_best_step = trainer.global_step
                     trainer.save(model_file)
                     logger.info("new best model saved.")
+                    force_checkpoint = True
 
-                trainer.dev_score_history += [dev_score]
+                for scheduler_name, scheduler in trainer.scheduler.items():
+                    logger.info('scheduler %s learning rate: %s', scheduler_name, scheduler.get_last_lr())
                 if args['log_norms']:
                     trainer.model.log_norms()
 
             if not is_second_stage and args.get('second_optim', None) is not None:
                 if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop'] or (args['second_optim_start_step'] is not None and trainer.global_step >= args['second_optim_start_step']):
                     logger.info("Switching to second optimizer: {}".format(args.get('second_optim', None)))
+                    global_step = trainer.global_step
                     args["second_stage"] = True
                     # if the loader gets a model file, it uses secondary optimizer
+                    # (because of the second_stage = True argument)
                     trainer = Trainer(args=args, vocab=trainer.vocab, pretrain=pretrain,
                                       model_file=model_file, device=args['device'])
                     logger.info('Reloading best model to continue from current local optimum')
+
+                    dev_preds = predict_dataset(trainer, dev_batch)
+                    dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
+                    CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
+                    _, _, dev_score = scorer.score(system_pred_file, args['eval_file'])
+                    logger.info("Reloaded model with dev score %.4f", dev_score)
+
                     is_second_stage = True
-                    trainer.last_best_step = trainer.global_step
+                    trainer.global_step = global_step
+                    trainer.last_best_step = global_step
+                    if args['second_batch_size'] is not None:
+                        train_batch.set_batch_size(args['second_batch_size'])
+                    force_checkpoint = True
             else:
                 if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop']:
                     do_break = True
                     break
 
-            if trainer.global_step % args['eval_interval'] == 0:
+            if trainer.global_step % args['eval_interval'] == 0 or force_checkpoint:
                 # if we need to save checkpoint, do so
                 # (save after switching the optimizer, if applicable, so that
                 # the new optimizer is the optimizer used if a restart happens)
@@ -318,7 +357,6 @@ def train(args):
 def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
-    gold_file = args['gold_file']
 
     model_file = model_file_name(args)
     # load pretrained vectors if needed
@@ -342,25 +380,23 @@ def evaluate(args):
     doc = CoNLL.conll2doc(input_file=args['eval_file'])
     batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
-    if len(batch) > 0:
-        logger.info("Start evaluation...")
-        preds = []
-        for i, b in enumerate(batch):
-            preds += trainer.predict(b)
-    else:
-        # skip eval if dev data does not exist
-        preds = []
-    preds = utils.unsort(preds, batch.data_orig_idx)
+    preds = predict_dataset(trainer, batch)
 
     # write to file and score
     batch.doc.set([HEAD, DEPREL], [y for x in preds for y in x])
     CoNLL.write_doc2conll(batch.doc, system_pred_file)
 
-    if gold_file is not None:
-        gold_doc = CoNLL.conll2doc(input_file=gold_file)
+    if args['gold_labels']:
+        gold_doc = CoNLL.conll2doc(input_file=args['eval_file'])
+
+        # Check for None ... otherwise an inscrutable error occurs later in the scorer
+        for sent_idx, sentence in enumerate(gold_doc.sentences):
+            for word_idx, word in enumerate(sentence.words):
+                if word.deprel is None:
+                    raise ValueError("Gold document {} has a None at sentence {} word {}\n{:C}".format(args['eval_file'], sent_idx, word_idx, sentence))
 
         scorer.score_named_dependencies(batch.doc, gold_doc)
-        _, _, score = scorer.score(system_pred_file, gold_file)
+        _, _, score = scorer.score(system_pred_file, args['eval_file'])
 
         logger.info("Parser score:")
         logger.info("{} {:.2f}".format(args['shorthand'], score*100))

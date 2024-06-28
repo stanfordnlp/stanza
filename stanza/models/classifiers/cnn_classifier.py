@@ -16,7 +16,7 @@ from stanza.models.classifiers.data import SentimentDatum
 from stanza.models.classifiers.utils import ExtraVectors, ModelType, build_output_layers
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.data import get_long_tensor, sort_all
-from stanza.models.common.foundation_cache import load_bert
+from stanza.models.common.utils import attach_bert_model
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 
 """
@@ -53,7 +53,7 @@ tlogger = logging.getLogger('stanza.classifiers.trainer')
 
 class CNNClassifier(BaseClassifier):
     def __init__(self, pretrain, extra_vocab, labels,
-                 charmodel_forward, charmodel_backward, elmo_model, bert_model, bert_tokenizer, force_bert_saved,
+                 charmodel_forward, charmodel_backward, elmo_model, bert_model, bert_tokenizer, force_bert_saved, peft_name,
                  args):
         """
         pretrain is a pretrained word embedding.  should have .emb and .vocab
@@ -77,6 +77,9 @@ class CNNClassifier(BaseClassifier):
         force_bert_saved = force_bert_saved or bert_finetune
         logger.debug("bert_finetune %s / force_bert_saved %s", bert_finetune, force_bert_saved)
 
+        # this may change when loaded in a new Pipeline, so it's not part of the config
+        self.peft_name = peft_name
+
         # we build a separate config out of the args so that we can easily save it in torch
         self.config = SimpleNamespace(filter_channels = args.filter_channels,
                                       filter_sizes = args.filter_sizes,
@@ -95,6 +98,7 @@ class CNNClassifier(BaseClassifier):
                                       elmo_projection = args.elmo_projection,
                                       bert_model = args.bert_model,
                                       bert_finetune = bert_finetune,
+                                      bert_hidden_layers = getattr(args, 'bert_hidden_layers', None),
                                       force_bert_saved = force_bert_saved,
 
                                       use_peft = use_peft,
@@ -130,27 +134,7 @@ class CNNClassifier(BaseClassifier):
             if charmodel_backward.is_forward_lm:
                 raise ValueError("Got a forward charlm as a backward charlm!")
 
-        if self.config.use_peft:
-            # Hide import so that the peft dependency is optional
-            from peft import LoraConfig, get_peft_model
-            logger.info("Creating lora adapter with rank %d and alpha %d", self.config.lora_rank, self.config.lora_alpha)
-            peft_config = LoraConfig(inference_mode=False,
-                                     r=self.config.lora_rank,
-                                     target_modules=self.config.lora_target_modules,
-                                     lora_alpha=self.config.lora_alpha,
-                                     lora_dropout=self.config.lora_dropout,
-                                     modules_to_save=self.config.lora_modules_to_save,
-                                     bias="none")
-
-            bert_model = get_peft_model(bert_model, peft_config)
-            # we use a peft-specific pathway for saving peft weights
-            self.add_unsaved_module('bert_model', bert_model)
-            self.bert_model.train()
-        elif force_bert_saved:
-            self.bert_model = bert_model
-        else:
-            self.add_unsaved_module('bert_model', bert_model)
-        self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
+        attach_bert_model(self, bert_model, bert_tokenizer, self.config.use_peft, force_bert_saved)
 
         # The Pretrain has PAD and UNK already (indices 0 and 1), but we
         # possibly want to train UNK while freezing the rest of the embedding
@@ -227,6 +211,20 @@ class CNNClassifier(BaseClassifier):
                 total_embedding_dim = total_embedding_dim + elmo_dim
 
         if bert_model is not None:
+            if self.config.bert_hidden_layers:
+                # The average will be offset by 1/N so that the default zeros
+                # repressents an average of the N layers
+                if self.config.bert_hidden_layers > bert_model.config.num_hidden_layers:
+                    # limit ourselves to the number of layers actually available
+                    # note that we can +1 because of the initial embedding layer
+                    self.config.bert_hidden_layers = bert_model.config.num_hidden_layers + 1
+                self.bert_layer_mix = nn.Linear(self.config.bert_hidden_layers, 1, bias=False)
+                nn.init.zeros_(self.bert_layer_mix.weight)
+            else:
+                # an average of layers 2, 3, 4 will be used
+                # (for historic reasons)
+                self.bert_layer_mix = None
+
             if bert_tokenizer is None:
                 raise ValueError("Cannot have a bert model without a tokenizer")
             self.bert_dim = self.bert_model.config.hidden_size
@@ -323,7 +321,16 @@ class CNNClassifier(BaseClassifier):
         return char_inputs
 
     def extract_bert_embeddings(self, inputs, max_phrase_len, begin_paddings, device):
-        bert_embeddings = extract_bert_embeddings(self.config.bert_model, self.bert_tokenizer, self.bert_model, inputs, device, keep_endpoints=False, detach=not self.config.bert_finetune)
+        bert_embeddings = extract_bert_embeddings(self.config.bert_model, self.bert_tokenizer, self.bert_model, inputs, device,
+                                                  keep_endpoints=False,
+                                                  num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
+                                                  detach=not self.config.bert_finetune,
+                                                  peft_name=self.peft_name)
+        if self.bert_layer_mix is not None:
+            # add the average so that the default behavior is to
+            # take an average of the N layers, and anything else
+            # other than that needs to be learned
+            bert_embeddings = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in bert_embeddings]
         bert_inputs = torch.zeros((len(inputs), max_phrase_len, bert_embeddings[0].shape[-1]), device=device)
         for idx, rep in enumerate(bert_embeddings):
             start = begin_paddings[idx]
@@ -523,7 +530,7 @@ class CNNClassifier(BaseClassifier):
         if self.config.use_peft:
             # Hide import so that peft dependency is optional
             from peft import get_peft_model_state_dict
-            params["bert_lora"] = get_peft_model_state_dict(self.bert_model)
+            params["bert_lora"] = get_peft_model_state_dict(self.bert_model, adapter_name=self.peft_name)
         return params
 
     def preprocess_data(self, sentences):

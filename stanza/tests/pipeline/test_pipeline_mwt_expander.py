@@ -7,7 +7,7 @@ import stanza
 
 from stanza.tests import *
 
-pytestmark = pytest.mark.pipeline
+pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 # mwt data for testing
 FR_MWT_SENTENCE = "Alors encore inconnu du grand public, Emmanuel Macron devient en 2014 ministre de l'Économie, de " \

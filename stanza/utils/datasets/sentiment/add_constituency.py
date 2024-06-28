@@ -61,6 +61,7 @@ def main():
     pipeline_args = {"lang": args.lang,
                      "processors": "tokenize,pos,constituency",
                      "tokenize_pretokenized": True,
+                     "pos_batch_size": 50,
                      "pos_tqdm": True,
                      "constituency_tqdm": True}
     package = {}

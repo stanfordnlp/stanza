@@ -8,6 +8,7 @@ The main program in this file gives a very short intro to how to use it.
 
 
 import argparse
+from collections import namedtuple
 import copy
 import os
 import re
@@ -22,14 +23,9 @@ from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, D
 
 SSURGEON_JAVA = "edu.stanford.nlp.semgraph.semgrex.ssurgeon.ProcessSsurgeonRequest"
 
-class SsurgeonEdit:
-    def __init__(self, semgrex_pattern, ssurgeon_edits, ssurgeon_id=None, notes=None, language="UniversalEnglish"):
-        # not a named tuple so we can have defaults without requiring a python upgrade
-        self.semgrex_pattern = semgrex_pattern
-        self.ssurgeon_edits = ssurgeon_edits
-        self.ssurgeon_id = ssurgeon_id
-        self.notes = notes
-        self.language = language
+SsurgeonEdit = namedtuple("SsurgeonEdit",
+                          "semgrex_pattern ssurgeon_edits ssurgeon_id notes language",
+                          defaults=[None, None, "UniversalEnglish"])
 
 def parse_ssurgeon_edits(ssurgeon_text):
     ssurgeon_text = ssurgeon_text.strip()

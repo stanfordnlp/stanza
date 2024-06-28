@@ -64,7 +64,7 @@ class DataLoader:
             src = vocab.map(src)
             tgt_in = vocab.map([constant.SOS] + tgt)
             tgt_out = vocab.map(tgt + [constant.EOS])
-            processed += [[src, tgt_in, tgt_out]]
+            processed += [[src, tgt_in, tgt_out, d[0]]]
         return processed
 
     def __len__(self):
@@ -79,7 +79,7 @@ class DataLoader:
         batch = self.data[key]
         batch_size = len(batch)
         batch = list(zip(*batch))
-        assert len(batch) == 3
+        assert len(batch) == 4
 
         # sort all fields by lens for easy RNN operations
         lens = [len(x) for x in batch[0]]
@@ -91,9 +91,10 @@ class DataLoader:
         src_mask = torch.eq(src, constant.PAD_ID)
         tgt_in = get_long_tensor(batch[1], batch_size)
         tgt_out = get_long_tensor(batch[2], batch_size)
+        orig_text = batch[3]
         assert tgt_in.size(1) == tgt_out.size(1), \
                 "Target input and output sequence sizes do not match."
-        return (src, src_mask, tgt_in, tgt_out, orig_idx)
+        return (src, src_mask, tgt_in, tgt_out, orig_text, orig_idx)
 
     def __iter__(self):
         for i in range(self.__len__()):

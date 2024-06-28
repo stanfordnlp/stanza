@@ -38,7 +38,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.maxout_linear import MaxoutLinear
-from stanza.models.common.utils import unsort
+from stanza.models.common.utils import attach_bert_model, unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
 from stanza.models.constituency.label_attention import LabelAttentionModule
@@ -52,6 +52,7 @@ from stanza.models.constituency.tree_stack import TreeStack
 from stanza.models.constituency.utils import build_nonlinearity, initialize_linear
 
 logger = logging.getLogger('stanza')
+tlogger = logging.getLogger('stanza.constituency.trainer')
 
 WordNode = namedtuple("WordNode", ['value', 'hx'])
 
@@ -210,7 +211,7 @@ class ConstituencyComposition(Enum):
     UNTIED_KEY            = 10
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, force_bert_saved, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
+    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, force_bert_saved, peft_name, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
         """
         pretrain: a Pretrain object
         transitions: a list of all possible transitions which will be
@@ -221,7 +222,7 @@ class LSTMModel(BaseModel, nn.Module):
           note that there will be an attempt made to learn UNK words as well,
           and tags by themselves may help UNK words
         rare_words: a list of rare words, used to occasionally replace with UNK
-        root_labels: probably ROOT, although apparently some treebanks like TOP
+        root_labels: probably ROOT, although apparently some treebanks like TOP or even s
         constituent_opens: a list of all possible open nodes which will go on the stack
           - this might be different from constituents if there are nodes
             which represent multiple constituents at once
@@ -233,7 +234,7 @@ class LSTMModel(BaseModel, nn.Module):
         However, that would only work at train time.  At eval or
         pipeline time we will load the lists from the saved model.
         """
-        super().__init__(transition_scheme=args['transition_scheme'], unary_limit=unary_limit, reverse_sentence=args.get('reversed', False))
+        super().__init__(transition_scheme=args['transition_scheme'], unary_limit=unary_limit, reverse_sentence=args.get('reversed', False), root_labels=root_labels)
 
         self.args = args
         self.unsaved_modules = []
@@ -249,7 +250,6 @@ class LSTMModel(BaseModel, nn.Module):
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]
 
-        self.root_labels = sorted(list(root_labels))
         self.constituents = sorted(list(constituents))
 
         self.hidden_size = self.args['hidden_size']
@@ -351,12 +351,10 @@ class LSTMModel(BaseModel, nn.Module):
         # we set up the bert AFTER building word_start and word_end
         # so that we can use the charlm endpoint values rather than
         # try to train our own
-        self.force_bert_saved = force_bert_saved
-        if self.args['bert_finetune'] or self.args['stage1_bert_finetune'] or force_bert_saved:
-            self.bert_model = bert_model
-        else:
-            self.add_unsaved_module('bert_model', bert_model)
-        self.add_unsaved_module('bert_tokenizer', bert_tokenizer)
+        self.force_bert_saved = force_bert_saved or self.args['bert_finetune'] or self.args['stage1_bert_finetune']
+        attach_bert_model(self, bert_model, bert_tokenizer, self.args.get('use_peft', False), self.force_bert_saved)
+        self.peft_name = peft_name
+
         if bert_model is not None:
             if bert_tokenizer is None:
                 raise ValueError("Cannot have a bert model without a tokenizer")
@@ -566,9 +564,6 @@ class LSTMModel(BaseModel, nn.Module):
         self.maxout_k = self.args.get('maxout_k', 0)
         self.output_layers = self.build_output_layers(self.args['num_output_layers'], len(transitions), self.maxout_k)
 
-    def reverse_sentence(self):
-        return self._reverse_sentence
-
     @staticmethod
     def uses_lattn(args):
         return args.get('use_lattn', True) and args.get('lattn_d_proj', 0) > 0 and args.get('lattn_d_l', 0) > 0
@@ -609,7 +604,10 @@ class LSTMModel(BaseModel, nn.Module):
                 new_values[..., :copy_size] = other_parameter.data[..., :copy_size]
                 my_parameter.data.copy_(new_values)
             else:
-                self.get_parameter(name).data.copy_(other_parameter.data)
+                try:
+                    self.get_parameter(name).data.copy_(other_parameter.data)
+                except AttributeError as e:
+                    raise AttributeError("Could not process %s" % name) from e
 
     def build_output_layers(self, num_output_layers, final_layer_size, maxout_k):
         """
@@ -649,15 +647,12 @@ class LSTMModel(BaseModel, nn.Module):
         """
         self.unsaved_modules += [name]
         setattr(self, name, module)
-        if module is not None and name in ('bert_model', 'forward_charlm', 'backward_charlm'):
+        if module is not None and name in ('forward_charlm', 'backward_charlm'):
             for _, parameter in module.named_parameters():
                 parameter.requires_grad = False
 
     def is_unsaved_module(self, name):
         return name.split('.')[0] in self.unsaved_modules
-
-    def get_root_labels(self):
-        return self.root_labels
 
     def get_norms(self):
         lines = []
@@ -678,12 +673,12 @@ class LSTMModel(BaseModel, nn.Module):
         return lines
 
     def log_norms(self):
-        lines = ["NORMS FOR MODEL PARAMTERS"]
+        lines = ["NORMS FOR MODEL PARAMETERS"]
         lines.extend(self.get_norms())
         logger.info("\n".join(lines))
 
     def log_shapes(self):
-        lines = ["NORMS FOR MODEL PARAMTERS"]
+        lines = ["NORMS FOR MODEL PARAMETERS"]
         for name, param in self.named_parameters():
             if param.requires_grad:
                 lines.append("{} {}".format(name, param.shape))
@@ -757,7 +752,8 @@ class LSTMModel(BaseModel, nn.Module):
             bert_embeddings = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, all_word_labels, device,
                                                       keep_endpoints=self.sentence_boundary_vectors is not SentenceBoundary.NONE,
                                                       num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
-                                                      detach=not self.args['bert_finetune'] and not self.args['stage1_bert_finetune'])
+                                                      detach=not self.args['bert_finetune'] and not self.args['stage1_bert_finetune'],
+                                                      peft_name=self.peft_name)
             if self.bert_layer_mix is not None:
                 # add the average so that the default behavior is to
                 # take an average of the N layers, and anything else
@@ -811,7 +807,7 @@ class LSTMModel(BaseModel, nn.Module):
                                    for idx, tag_node in enumerate(tagged_words)]
                 word_queue.append(WordNode(None, self.word_zeros))
 
-            if self.reverse_sentence():
+            if self.reverse_sentence:
                 word_queue = list(reversed(word_queue))
             word_queues.append(word_queue)
 
@@ -1027,9 +1023,8 @@ class LSTMModel(BaseModel, nn.Module):
         sequence, even though it has multiple addition pieces of
         information
         """
-        # TreeStack value -> LSTMTreeStack value -> Constituent value
-        constituent_node = constituents.value.value
-        return constituent_node.value
+        # TreeStack value -> LSTMTreeStack value -> Constituent value -> constituent
+        return constituents.value.value.value
 
     def push_transitions(self, transition_stacks, transitions):
         """
@@ -1047,8 +1042,8 @@ class LSTMModel(BaseModel, nn.Module):
         sequence, even though it has multiple addition pieces of
         information
         """
-        transition_node = transitions.value
-        return transition_node.value
+        # TreeStack value -> LSTMTreeStack value -> transition
+        return transitions.value.value
 
     def forward(self, states):
         """

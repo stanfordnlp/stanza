@@ -164,6 +164,13 @@ zh_ctb-90 is the 9.0 version of CTB
 
   the splits used are the ones from the file docs/ctb9.0-file-list.txt
     included in the CTB 9.0 release
+
+SPMRL adds several treebanks
+  https://www.spmrl.org/
+  https://www.spmrl.org/sancl-posters2014.html
+  Currently only German is converted, the German version being a
+    version of the Tiger Treebank
+  python3 -m stanza.utils.datasets.constituency.prepare_con_dataset de_spmrl  
 """
 
 import argparse
@@ -186,6 +193,7 @@ from stanza.utils.datasets.constituency.convert_cintil import convert_cintil_tre
 import stanza.utils.datasets.constituency.convert_ctb as convert_ctb
 from stanza.utils.datasets.constituency.convert_it_turin import convert_it_turin
 from stanza.utils.datasets.constituency.convert_it_vit import convert_it_vit
+from stanza.utils.datasets.constituency.convert_spmrl import convert_spmrl
 from stanza.utils.datasets.constituency.convert_starlang import read_starlang
 from stanza.utils.datasets.constituency.utils import SHARDS, write_dataset
 import stanza.utils.datasets.constituency.vtb_convert as vtb_convert
@@ -453,8 +461,19 @@ def process_ptb3_revised(paths, dataset_name, *args):
     write_dataset(datasets, output_dir, dataset_name)
 
 
+def process_spmrl(paths, dataset_name, *args):
+    if dataset_name != 'de_spmrl':
+        raise ValueError("SPMRL dataset %s currently not supported" % dataset_name)
+
+    output_directory = paths["CONSTITUENCY_DATA_DIR"]
+    input_directory = os.path.join(paths["CONSTITUENCY_BASE"], "spmrl", "SPMRL_SHARED_2014", "GERMAN_SPMRL", "gold", "ptb")
+
+    convert_spmrl(input_directory, output_directory, dataset_name)
+
 DATASET_MAPPING = {
     'da_arboretum': process_arboretum,
+
+    'de_spmrl':     process_spmrl,
 
     'en_ptb3-revised': process_ptb3_revised,
 

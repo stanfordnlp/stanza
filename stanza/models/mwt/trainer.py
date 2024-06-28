@@ -21,8 +21,9 @@ logger = logging.getLogger('stanza')
 def unpack_batch(batch, device):
     """ Unpack a batch from the data loader. """
     inputs = [b.to(device) if b is not None else None for b in batch[:4]]
-    orig_idx = batch[4]
-    return inputs, orig_idx
+    orig_text = batch[4]
+    orig_idx = batch[5]
+    return inputs, orig_text, orig_idx
 
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
@@ -42,7 +43,10 @@ class Trainer(BaseTrainer):
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
-        inputs, orig_idx = unpack_batch(batch, device)
+        # ignore the original text when training
+        # can try to learn the correct values, even if we eventually
+        # copy directly from the original text
+        inputs, _, orig_idx = unpack_batch(batch, device)
         src, src_mask, tgt_in, tgt_out = inputs
 
         if eval:
@@ -63,7 +67,7 @@ class Trainer(BaseTrainer):
 
     def predict(self, batch, unsort=True):
         device = next(self.model.parameters()).device
-        inputs, orig_idx = unpack_batch(batch, device)
+        inputs, orig_text, orig_idx = unpack_batch(batch, device)
         src, src_mask, tgt, tgt_mask = inputs
 
         self.model.eval()
@@ -71,7 +75,18 @@ class Trainer(BaseTrainer):
         preds, _ = self.model.predict(src, src_mask, self.args['beam_size'])
         pred_seqs = [self.vocab.unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
-        pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
+        if self.args.get('force_exact_pieces', False):
+            # TODO we should be able to do all this with numpy or something similar
+            pred_tokens = []
+            for pred_seq, text in zip(pred_seqs, orig_text):
+                pred_seq = np.array(list(pred_seq))
+                if sum(pred_seq != ' ') == len(text):
+                    pred_seq[pred_seq != ' '] = list(text)
+                    pred_tokens.append("".join(pred_seq))
+                else:
+                    pred_tokens.append("".join(pred_seq))
+        else:
+            pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
         if unsort:
             pred_tokens = utils.unsort(pred_tokens, orig_idx)
         return pred_tokens
@@ -90,16 +105,39 @@ class Trainer(BaseTrainer):
             seen.add(w)
         return
 
+    def dict_expansion(self, word):
+        """
+        Check the expansion dictionary for the word along with a couple common lowercasings of the word
+
+        (Leadingcase and UPPERCASE)
+        """
+        expansion = self.expansion_dict.get(word)
+        if expansion is not None:
+            return expansion
+
+        if word.isupper():
+            expansion = self.expansion_dict.get(word.lower())
+            if expansion is not None:
+                return expansion.upper()
+
+        if word[0].isupper() and word[1:].islower():
+            expansion = self.expansion_dict.get(word.lower())
+            if expansion is not None:
+                return expansion[0].upper() + expansion[1:]
+
+        # could build a truecasing model of some kind to handle cRaZyCaSe...
+        # but that's probably too much effort
+        return None
+
     def predict_dict(self, words):
         """ Predict a list of expansions given words. """
         expansions = []
         for w in words:
-            if w in self.expansion_dict:
-                expansions += [self.expansion_dict[w]]
-            elif w.lower() in self.expansion_dict:
-                expansions += [self.expansion_dict[w.lower()]]
+            expansion = self.dict_expansion(w)
+            if expansion is not None:
+                expansions.append(expansion)
             else:
-                expansions += [w]
+                expansions.append(w)
         return expansions
 
     def ensemble(self, cands, other_preds):
@@ -107,12 +145,11 @@ class Trainer(BaseTrainer):
         expansions = []
         assert len(cands) == len(other_preds)
         for c, pred in zip(cands, other_preds):
-            if c in self.expansion_dict:
-                expansions += [self.expansion_dict[c]]
-            elif c.lower() in self.expansion_dict:
-                expansions += [self.expansion_dict[c.lower()]]
+            expansion = self.dict_expansion(c)
+            if expansion is not None:
+                expansions.append(expansion)
             else:
-                expansions += [pred]
+                expansions.append(pred)
         return expansions
 
     def save(self, filename):

@@ -7,13 +7,15 @@ import logging
 import torch
 from torch import nn
 
-from stanza.models.common.foundation_cache import NoTransformerFoundationCache
+from stanza.models.common.foundation_cache import NoTransformerFoundationCache, load_bert, load_bert_with_peft
+from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common.vocab import VOCAB_PREFIX, VOCAB_PREFIX_SIZE
 from stanza.models.common import utils, loss
 from stanza.models.ner.model import NERTagger
 from stanza.models.ner.vocab import MultiVocab
 from stanza.models.common.crf import viterbi_decode
+
 
 logger = logging.getLogger('stanza')
 
@@ -61,7 +63,7 @@ def fix_singleton_tags(tags):
 class Trainer(BaseTrainer):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, pretrain=None, model_file=None, device=None,
-                 train_classifier_only=False, foundation_cache=None):
+                 train_classifier_only=False, foundation_cache=None, second_optim=False):
         if model_file is not None:
             # load everything from file
             self.load(model_file, pretrain, args, foundation_cache)
@@ -70,7 +72,24 @@ class Trainer(BaseTrainer):
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, foundation_cache=foundation_cache)
+            bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
+            peft_name = None
+            if self.args['use_peft']:
+                # fine tune the bert if we're using peft
+                self.args['bert_finetune'] = True
+                peft_name = "ner"
+                # peft the lovely model
+                bert_model = build_peft_wrapper(bert_model, self.args, logger, adapter_name=peft_name)
+
+            self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=self.args['bert_finetune'], peft_name=peft_name)
+
+            # IMPORTANT: gradient checkpointing BREAKS peft if applied before
+            # 1. Apply PEFT FIRST (looksie! it's above this line)
+            # 2. Run gradient checkpointing
+            # https://github.com/huggingface/peft/issues/742
+            if self.args.get("gradient_checkpointing", False) and self.args.get("bert_finetune", False):
+                self.model.bert_model.gradient_checkpointing_enable()
+
 
         # if this wasn't set anywhere, we use a default of the 0th tagset
         # we don't set this as a default in the options so that
@@ -85,7 +104,10 @@ class Trainer(BaseTrainer):
                 if pname.split('.')[0] not in exclude:
                     p.requires_grad = False
         self.model = self.model.to(device)
-        self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'], momentum=self.args['momentum'], bert_learning_rate=self.args.get('bert_learning_rate', 0.0))
+        if not second_optim:
+            self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'], momentum=self.args['momentum'], bert_learning_rate=self.args.get('bert_learning_rate', 0.0), is_peft=self.args.get("use_peft"))
+        else:
+            self.optimizer = utils.get_optimizer(self.args['second_optim'], self.model, self.args['second_lr'], momentum=self.args['momentum'], bert_learning_rate=self.args.get('second_bert_learning_rate', 0.0), is_peft=self.args.get("use_peft"))
 
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
@@ -158,6 +180,10 @@ class Trainer(BaseTrainer):
                 'vocab': self.vocab.state_dict(),
                 'config': self.args
                 }
+
+        if self.args["use_peft"]:
+            from peft import get_peft_model_state_dict
+            params["bert_lora"] = get_peft_model_state_dict(self.model.bert_model, adapter_name=self.model.peft_name)
         try:
             torch.save(params, filename, _use_new_zipfile_serialization=False)
             logger.info("Model saved to {}".format(filename))
@@ -180,6 +206,11 @@ class Trainer(BaseTrainer):
             if self.args.get(keep_arg, None) is None:
                 self.args[keep_arg] = checkpoint['config'].get(keep_arg, None)
 
+        lora_weights = checkpoint.get('bert_lora')
+        if lora_weights:
+            logger.debug("Found peft weights for NER; loading a peft adapter")
+            self.args["use_peft"] = True
+
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
 
         emb_matrix=None
@@ -187,16 +218,25 @@ class Trainer(BaseTrainer):
             emb_matrix = pretrain.emb
 
         force_bert_saved = False
-        if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
-            logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
-            foundation_cache = NoTransformerFoundationCache(foundation_cache)
+        peft_name = None
+        if self.args.get('use_peft', False):
             force_bert_saved = True
+            bert_model, bert_tokenizer, peft_name = load_bert_with_peft(self.args['bert_model'], "ner", foundation_cache)
+            bert_model = load_peft_wrapper(bert_model, lora_weights, self.args, logger, peft_name)
+            logger.debug("Loaded peft with name %s", peft_name)
+        else:
+            if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
+                logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
+                foundation_cache = NoTransformerFoundationCache(foundation_cache)
+                force_bert_saved = True
+            bert_model, bert_tokenizer = load_bert(self.args.get('bert_model'), foundation_cache)
+
         if any(x.startswith("crit.") for x in checkpoint['model'].keys()):
             logger.debug("Old model format detected.  Updating to the new format with one column of tags")
             checkpoint['model']['crits.0._transitions'] = checkpoint['model'].pop('crit._transitions')
             checkpoint['model']['tag_clfs.0.weight'] = checkpoint['model'].pop('tag_clf.weight')
             checkpoint['model']['tag_clfs.0.bias'] = checkpoint['model'].pop('tag_clf.bias')
-        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, force_bert_saved=force_bert_saved)
+        self.model = NERTagger(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
         self.model.load_state_dict(checkpoint['model'], strict=False)
 
         # there is a possible issue with the delta embeddings.

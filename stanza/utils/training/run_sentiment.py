@@ -57,7 +57,7 @@ def build_model_filename(paths, short_name, command_args, extra_args):
         train_args.extend(["--save_name", command_args.save_name])
     if command_args.save_dir is not None:
         train_args.extend(["--save_dir", command_args.save_dir])
-    args = classifier.parse_args(train_args)
+    args = classifier.parse_args(train_args + extra_args)
     save_name = classifier.build_model_filename(args)
     return save_name
 

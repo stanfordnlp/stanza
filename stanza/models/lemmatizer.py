@@ -165,7 +165,7 @@ def train(args):
     logger.info("Building lemmatizer in %s", model_file)
     trainer = Trainer(args=args, vocab=vocab, device=args['device'])
     logger.info("[Training dictionary-based lemmatizer...]")
-    trainer.train_dict(train_batch.doc.get([TEXT, UPOS, LEMMA]))
+    trainer.train_dict(train_batch.raw_data())
     logger.info("Evaluating on dev set...")
     dev_preds = trainer.predict_dict(dev_batch.doc.get([TEXT, UPOS]))
     dev_batch.doc.set([LEMMA], dev_preds)

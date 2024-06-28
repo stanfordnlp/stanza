@@ -97,7 +97,6 @@ class TestParser:
         args = ["--wordvec_pretrain_file", wordvec_pretrain_file,
                 "--train_file", train_file,
                 "--eval_file", dev_file,
-                "--gold_file", dev_file,
                 "--output_file", pred_file,
                 "--log_step", "10",
                 "--eval_interval", "20",
@@ -105,6 +104,9 @@ class TestParser:
                 "--shorthand", "en_test",
                 "--save_dir", str(tmp_path),
                 "--save_name", save_name,
+                # in case we are doing a bert test
+                "--bert_start_finetuning", "10",
+                "--bert_warmup_steps", "10",
                 "--lang", "en"]
         if not augment_nopunct:
             args.extend(["--augment_nopunct", "0.0"])
@@ -124,11 +126,44 @@ class TestParser:
         """
         self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA)
 
-    def test_with_bert(self, tmp_path, wordvec_pretrain_file):
-        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert'])
-
     def test_with_bert_nlayers(self, tmp_path, wordvec_pretrain_file):
         self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_hidden_layers', '2'])
+
+    def test_with_bert_finetuning(self, tmp_path, wordvec_pretrain_file):
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2'])
+        assert 'bert_optimizer' in trainer.optimizer.keys()
+        assert 'bert_scheduler' in trainer.scheduler.keys()
+
+    def test_with_bert_finetuning_resaved(self, tmp_path, wordvec_pretrain_file):
+        """
+        Check that if we save, then load, then save a model with a finetuned bert, that bert isn't lost
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2'])
+        assert 'bert_optimizer' in trainer.optimizer.keys()
+        assert 'bert_scheduler' in trainer.scheduler.keys()
+
+        save_name = trainer.args['save_name']
+        filename = tmp_path / save_name
+        assert os.path.exists(filename)
+        checkpoint = torch.load(filename, lambda storage, loc: storage)
+        assert any(x.startswith("bert_model") for x in checkpoint['model'].keys())
+
+        # Test loading the saved model, saving it, and still having bert in it
+        # even if we have set bert_finetune to False for this incarnation
+        pt = pretrain.Pretrain(wordvec_pretrain_file)
+        args = {"bert_finetune": False}
+        saved_model = Trainer(pretrain=pt, model_file=filename, args=args)
+
+        saved_model.save(filename)
+
+        # This is the part that would fail if the force_bert_saved option did not exist
+        checkpoint = torch.load(filename, lambda storage, loc: storage)
+        assert any(x.startswith("bert_model") for x in checkpoint['model'].keys())
+
+    def test_with_peft(self, tmp_path, wordvec_pretrain_file):
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2', '--use_peft'])
+        assert 'bert_optimizer' in trainer.optimizer.keys()
+        assert 'bert_scheduler' in trainer.scheduler.keys()
 
     def test_single_optimizer_checkpoint(self, tmp_path, wordvec_pretrain_file):
         trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam'])
@@ -141,12 +176,16 @@ class TestParser:
         assert checkpoint_name is not None
         assert os.path.exists(checkpoint_name)
 
-        assert isinstance(trainer.optimizer, torch.optim.Adam)
+        assert len(trainer.optimizer) == 1
+        for opt in trainer.optimizer.values():
+            assert isinstance(opt, torch.optim.Adam)
 
         pt = pretrain.Pretrain(wordvec_pretrain_file)
         checkpoint = Trainer(args=trainer.args, pretrain=pt, model_file=checkpoint_name)
         assert checkpoint.optimizer is not None
-        assert isinstance(checkpoint.optimizer, torch.optim.Adam)
+        assert len(checkpoint.optimizer) == 1
+        for opt in checkpoint.optimizer.values():
+            assert isinstance(opt, torch.optim.Adam)
 
     def test_two_optimizers_checkpoint(self, tmp_path, wordvec_pretrain_file):
         trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam', '--second_optim', 'sgd', '--second_optim_start_step', '40'])
@@ -159,10 +198,14 @@ class TestParser:
         assert checkpoint_name is not None
         assert os.path.exists(checkpoint_name)
 
-        assert isinstance(trainer.optimizer, torch.optim.SGD)
+        assert len(trainer.optimizer) == 1
+        for opt in trainer.optimizer.values():
+            assert isinstance(opt, torch.optim.SGD)
 
         pt = pretrain.Pretrain(wordvec_pretrain_file)
         checkpoint = Trainer(args=trainer.args, pretrain=pt, model_file=checkpoint_name)
         assert checkpoint.optimizer is not None
-        assert isinstance(checkpoint.optimizer, torch.optim.SGD)
+        assert len(checkpoint.optimizer) == 1
+        for opt in trainer.optimizer.values():
+            assert isinstance(opt, torch.optim.SGD)
 
