@@ -36,7 +36,7 @@ import torch
 import torch.nn as nn
 from torch.nn.utils.rnn import pack_padded_sequence
 
-from stanza.models.common.bert_embedding import extract_bert_embeddings
+from stanza.models.common.bert_embedding import extract_bert_embeddings, BertWordPiece
 from stanza.models.common.maxout_linear import MaxoutLinear
 from stanza.models.common.utils import attach_bert_model, unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
@@ -762,7 +762,8 @@ class LSTMModel(BaseModel, nn.Module):
                                                       keep_endpoints=self.sentence_boundary_vectors is not SentenceBoundary.NONE,
                                                       num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
                                                       detach=not self.args['bert_finetune'] and not self.args['stage1_bert_finetune'],
-                                                      peft_name=self.peft_name)
+                                                      peft_name=self.peft_name,
+                                                      word_piece = self.args.get('bert_word_piece', BertWordPiece.END_PIECE))
             if self.bert_layer_mix is not None:
                 # add the average so that the default behavior is to
                 # take an average of the N layers, and anything else

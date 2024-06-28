@@ -168,6 +168,7 @@ import torch
 import stanza
 from stanza.models.common import constant
 from stanza.models.common import utils
+from stanza.models.common.bert_embedding import BertWordPiece
 from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
 from stanza.models.constituency import parser_training
 from stanza.models.constituency import retagging
@@ -322,6 +323,7 @@ def build_argparse():
     parser.add_argument('--bert_weight_decay', default=0.0001, type=float, help='Scale the weight decay for transformer finetuning by this much')
     parser.add_argument('--stage1_bert_finetune', default=None, action='store_true', help="Finetune the bert (or other transformer) during an AdaDelta warmup, even if the second half doesn't use bert_finetune")
     parser.add_argument('--no_stage1_bert_finetune', dest='stage1_bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer) during an AdaDelta warmup, even if the second half doesn't use bert_finetune")
+    parser.add_argument('--bert_word_piece', default=BertWordPiece.END_PIECE, type=lambda x: BertWordPiece[x.upper()], help="Which word piece to use when extracting transformer embeddings")
 
     add_peft_args(parser)
 
