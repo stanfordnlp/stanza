@@ -1,3 +1,4 @@
+from enum import Enum
 import math
 import logging
 import numpy as np
@@ -12,6 +13,10 @@ BERT_ARGS = {
     "vinai/phobert-base": { "use_fast": True },
     "vinai/phobert-large": { "use_fast": True },
 }
+
+class BertWordPiece(Enum):
+    END_PIECE      = 1
+    START_PIECE    = 2
 
 class TextTooLongError(ValueError):
     """
@@ -392,7 +397,7 @@ def build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_lay
     return slices
 
 
-def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach):
+def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach, word_piece):
     data = fix_blank_tokens(tokenizer, data)
 
     #add add_prefix_space = True for RoBerTa-- error if not
@@ -404,8 +409,13 @@ def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_end
         for pos, offset in enumerate(offsets):
             if offset is None:
                 continue
-            # this uses the last token piece for any offset by overwriting the previous value
-            list_offsets[idx][offset+1] = pos
+            if word_piece is BertWordPiece.END_PIECE:
+                # this uses the last token piece for any offset by overwriting the previous value
+                list_offsets[idx][offset+1] = pos
+            elif word_piece is BertWordPiece.START_PIECE:
+                # this uses the first token piece for any offset by not overwriting
+                if list_offsets[idx][offset+1] is None:
+                    list_offsets[idx][offset+1] = pos
         list_offsets[idx][0] = 0
         list_offsets[idx][-1] = list_offsets[idx][-2] + 1
         if any(x is None for x in list_offsets[idx]):
@@ -436,7 +446,7 @@ def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_end
 
     return processed
 
-def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers=None, detach=True, peft_name=None):
+def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers=None, detach=True, peft_name=None, word_piece=BertWordPiece.END_PIECE):
     """
     Extract transformer embeddings using a generic roberta extraction
 
@@ -466,5 +476,5 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
     if "xlnet" in model_name:
         return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
 
-    return extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+    return extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach, word_piece)
 
