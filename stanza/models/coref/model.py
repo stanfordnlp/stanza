@@ -34,30 +34,6 @@ from torch.utils.data import Dataset
 from functools import lru_cache, wraps
 import weakref
 
-def partial_self_lru(maxsize=1024):
-    "self is not hashable to be memoized, so we need to cache a pointer to self"
-
-    def decorator(f):
-
-        @lru_cache(maxsize, False)
-        def _func_deref_memoized(self_ptr, *args):
-            # this will panic if self is not allocated, but
-            # hopefully it always is when the method is caled
-            return f(self_ptr(), *args)
-
-        @wraps(f)
-        def wrapper(self, *args):
-            # this make the function call its memoized version, which can now
-            # hash the pointer to self now so it can be successfully
-            # memoized
-            return _func_deref_memoized(weakref.ref(self), *args)
-
-        return wrapper
-
-    return decorator
-
-   
-
 from peft import LoraConfig, get_peft_model, get_peft_model_state_dict, set_peft_model_state_dict
 
 from stanza.utils.get_tqdm import get_tqdm   # type: ignore
@@ -83,36 +59,37 @@ class CorefDataset(Dataset):
             with open(path, encoding="utf-8") as fin:
                 text = "[" + ",\n".join(fin) + "]"
             data_f = json.loads(text)
-        logger.info("Loaded %d docs from %s", len(data_f), path)
+        logger.info("Processing %d docs from %s...", len(data_f), path)
         self.__raw = data_f
         self.__avg_span = sum(len(doc["head2span"]) for doc in self.__raw) / len(self.__raw)
+        self.__out = []
+        for doc in self.__raw:
+            doc["span_clusters"] = [[tuple(mention) for mention in cluster]
+                                for cluster in doc["span_clusters"]]
+            word2subword = []
+            subwords = []
+            word_id = []
+            for i, word in enumerate(doc["cased_words"]):
+                tokenized_word = self.__token_map.get(word, self.tokenizer.tokenize(word))
+                tokenized_word = list(filter(self.__filter_func, tokenized_word))
+                word2subword.append((len(subwords), len(subwords) + len(tokenized_word)))
+                subwords.extend(tokenized_word)
+                word_id.extend([i] * len(tokenized_word))
+            doc["word2subword"] = word2subword
+            doc["subwords"] = subwords
+            doc["word_id"] = word_id
+            self.__out.append(doc)
+        logger.info("Loaded %d docs from %s.", len(data_f), path)
 
     @property
     def avg_span(self):
         return self.__avg_span
 
-    @partial_self_lru()
     def __getitem__(self, x):
-        doc = self.__raw[x]
-        doc["span_clusters"] = [[tuple(mention) for mention in cluster]
-                            for cluster in doc["span_clusters"]]
-        word2subword = []
-        subwords = []
-        word_id = []
-        for i, word in enumerate(doc["cased_words"]):
-            tokenized_word = self.__token_map.get(word, self.tokenizer.tokenize(word))
-            tokenized_word = list(filter(self.__filter_func, tokenized_word))
-            word2subword.append((len(subwords), len(subwords) + len(tokenized_word)))
-            subwords.extend(tokenized_word)
-            word_id.extend([i] * len(tokenized_word))
-        doc["word2subword"] = word2subword
-        doc["subwords"] = subwords
-        doc["word_id"] = word_id
-
-        return doc
+        return self.__out[x]
 
     def __len__(self):
-        return len(self.__raw)
+        return len(self.__out)
 
 class CorefModel:  # pylint: disable=too-many-instance-attributes
     """Combines all coref modules together to find coreferent spans.
@@ -157,7 +134,6 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         self.optimizers = {}
         self.schedulers = {}
 
-        # TODO make this actually configurable
         if hasattr(self.config, 'lora') and self.config.lora:
             logger.debug("Creating lora adapter with rank %d", self.config.lora_rank)
             self.__peft_config = LoraConfig(inference_mode=False,
@@ -203,6 +179,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         Args:
             data_split (str): one of 'dev'/'test'/'train'
             word_level_conll (bool): if True, outputs conll files on word-level
+            eval_lang (str): which language to evaluate
 
         Returns:
             mean loss
@@ -215,24 +192,14 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         running_loss = 0.0
         s_correct = 0
         s_total = 0
-        running_rough_prec = 0.0
-        running_rough_recc = 0.0
-
-        running_not_dummy_p = 0.0
-        running_not_dummy_r = 0.0
 
         with conll.open_(self.config, self.epochs_trained, data_split) \
                 as (gold_f, pred_f):
             pbar = tqdm(docs, unit="docs", ncols=0)
             for doc in pbar:
-                # doc 1072 has.... 17771 words?
-#                 if len(doc["subwords"]) > 5000:
-                    # logger.warning(f"EVAL: skipping document with {len(doc['subwords'])} subwords...")
-                    # continue
-
                 if eval_lang and doc.get("lang", "") != eval_lang:
-                    # logger.warning(f"Skipping document with language {doc['lang']}... ")
-                    # skip that document, only used for ablation
+                    # skip that document, only used for ablation where we only
+                    # want to test evaluation on one language
                     continue
  
                 res = self.run(doc)
@@ -242,7 +209,6 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     continue
 
                 running_loss += self._coref_criterion(res.coref_scores, res.coref_y).item()
-                running_loss += self._rough_criterion(res.rough_scores, res.rough_y).item()
 
                 if res.span_y:
                     pred_starts = res.span_scores[:, :, 0].argmax(dim=1)
@@ -263,40 +229,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 s_checker.add_predictions(doc["span_clusters"], res.span_clusters)
                 s_lea = s_checker.total_lea
 
-                if len(res.rough_y) == 0:
-                    continue
-
-                topk = res.rough_scores.topk(k=min(self.config.rough_k, 
-                                                   res.rough_scores.shape[1])).indices
-                captured_any = 0
-                captured_all = 0
-                for i in range(res.rough_y.shape[0]):
-                    if topk[i] in res.rough_y[i].nonzero():
-                        captured_any += 1
-                for i,j in res.rough_y.nonzero():
-                    if j in topk[i]:
-                        captured_all += 1
-                rough_prec = captured_all/(topk.shape[0]*topk.shape[1])
-                running_rough_prec += rough_prec
-
-                # metric: "is overall correct" 
-                rough_recc = captured_all/len(res.rough_y.nonzero())
-                running_rough_recc += rough_recc
-
-                # percentage of coreferent words miscategorized as a dummy
-                not_dummy = (res.coref_y.argmax(dim=1)!=0)
-                tp = sum((res.coref_scores.argmax(dim=1)!=0) & not_dummy)
-                fp = sum((res.coref_scores.argmax(dim=1)!=0) & ~not_dummy)
-                fn = sum((res.coref_scores.argmax(dim=1)==0) & not_dummy)
-
-                running_not_dummy_p += tp/(tp+fp)
-                running_not_dummy_r += tp/(tp+fn)
-
-                # alternative metric: "gave a scorer a shot"
-                # rough_recc = captured_any/topk.shape[0]
-                # running_rough_recc += rough_recc
-
                 del res
+
                 pbar.set_description(
                     f"{data_split}:"
                     f" | WL: "
@@ -309,16 +243,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     f" f1: {s_lea[0]:.5f},"
                     f" p: {s_lea[1]:.5f},"
                     f" r: {s_lea[2]:<.5f}"
-                    # f" | ROUGH: "
-                    # f" p: {rough_prec:.5f},"
-                    # f" r: {rough_recc:<.5f}"
-
                 )
-
-            logger.info(f"ROUGH: p: {running_rough_prec/len(docs):.5f} | r: {running_rough_recc/len(docs):.5f}")
-            # p = running_not_dummy_p/len(docs)
-            # r = running_not_dummy_r/len(docs)
-            # logger.info(f"NON-DUMMY: p: {p:.5f} | r: {r:.5f} | f: {(2*p*r)/(p+r):.5f}")
             logger.info(f"BAKE!: {w_checker.bakeoff:.5f}")
 
         return (running_loss / len(docs), *s_checker.total_lea, *w_checker.total_lea, *s_checker.mbc, *w_checker.mbc, w_checker.bakeoff, s_checker.bakeoff)
@@ -479,8 +404,6 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 pw_batch=pw_batch, top_rough_scores_batch=top_rough_scores_batch
             )
             a_scores_lst.append(a_scores_batch)
-            # del pw_batch, words_batch, top_indices_batch, top_rough_scores_batch
-            # torch.cuda.empty_cache()
 
         res = CorefResult()
 
@@ -489,19 +412,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
         res.coref_y = self._get_ground_truth(
             cluster_ids, top_indices, (top_rough_scores > float("-inf")),
-            self.config.clusters_starts_are_singletons)
-        ground_truth = self._get_ground_truth(
-            cluster_ids, 
-            torch.arange(0, 
-                         rough_scores.shape[0]).repeat(rough_scores.shape[0],1), 
-            (rough_scores > float("-inf")),
-            self.config.clusters_starts_are_singletons)[:,2:] # chop away dummy and start
-        # crop the loss to only where de have something to backprop
-        # i.e. there is an actual coref
-        res.rough_y = ground_truth[ground_truth.sum(dim=1) > 0]
-        res.rough_scores = rough_scores[ground_truth.sum(dim=1) > 0]
+            self.config.clusters_starts_are_singletons,
+            self.config.singletons)
 
-        res.word_clusters = self._clusterize(doc, res.coref_scores, top_indices)
+        res.word_clusters = self._clusterize(doc, res.coref_scores, top_indices,
+                                             self.config.singletons)
 
         res.span_scores, res.span_y = self.sp.get_training_data(doc, words)
 
@@ -568,15 +483,13 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 self.log_norms()
             running_c_loss = 0.0
             running_s_loss = 0.0
-            running_r_loss = 0.0
             random.shuffle(docs_ids)
             pbar = tqdm(docs_ids, unit="docs", ncols=0)
             for doc_indx, doc_id in enumerate(pbar):
                 doc = docs[doc_id]
 
-                # doc 1072 has.... 17771 words?
+                # skip very long documents during training time
                 if len(doc["subwords"]) > 5000:
-                    logger.warning(f"Skipping document {doc_id} with {len(doc['subwords'])} subwords... ")
                     continue
 
                 for optim in self.optimizers.values():
@@ -584,35 +497,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 res = self.run(doc)
 
-                # we want to calculate on equal parts dummy/not dummy
-                # otherwise, we will be overbiasing the model to produce
-                # dummies only
-                # so we first figure out who the dummies are
-                is_dummy = (res.coref_y.argmax(dim=1) == 1)
-                dummy_indicies = is_dummy.nonzero().squeeze(1)
-                non_dummy_indicies = (~is_dummy).nonzero().squeeze(1)
-                # we track the count of non-dummies
-                non_dummy_count = sum(~is_dummy)
-                # 
-                # shuffle the dummy indicies and then take
-                # equal parts as non dummy
-                dummy_indicies = is_dummy.nonzero().squeeze(1)
-                dummy_indicies = dummy_indicies[torch.randperm(dummy_indicies.size(0))[:int(non_dummy_count*self.config.dummy_mix)]]
+                c_loss = self._coref_criterion(res.coref_scores, res.coref_y)
 
-                # get the indicies to actually calcuclate
-                ref_indicies = torch.cat([non_dummy_indicies, dummy_indicies])
-
-                if len(ref_indicies) != 0:
-                    c_loss = self._coref_criterion(res.coref_scores[ref_indicies], res.coref_y[ref_indicies])
-                else:
-                    c_loss = self._coref_criterion(res.coref_scores, res.coref_y)
-
-                if torch.isnan(c_loss).any():
-                    breakpoint()
-                if res.rough_y.sum() > 0:
-                    r_loss = self._rough_criterion(res.rough_scores, res.rough_y)
-                else:
-                    r_loss = torch.zeros_like(c_loss)
                 if res.span_y:
                     s_loss = (self._span_criterion(res.span_scores[:, :, 0], res.span_y[0])
                               + self._span_criterion(res.span_scores[:, :, 1], res.span_y[1])) / avg_spans / 2
@@ -621,25 +507,18 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 del res
 
-                loss = c_loss + s_loss
-                if self.config.supervise_rough:
-                    loss += r_loss*0.5
-                loss.backward()
-                # breakpoint()
-                # self.bert.encoder.layer[0].attention.self.query.lora_A.default.weight.grad
+                (c_loss + s_loss).backward()
 
                 running_c_loss += c_loss.item()
                 running_s_loss += s_loss.item()
-                running_r_loss += r_loss.item()
 
-                # log every 50 docs
+                # log every 100 docs
                 if log and doc_indx % 100 == 0:
                     wandb.log({'train_c_loss': c_loss.item(),
-                               'train_s_loss': s_loss.item(),
-                               'train_r_loss': r_loss.item()})
+                               'train_s_loss': s_loss.item()})
 
 
-                del c_loss, s_loss, r_loss
+                del c_loss, s_loss
 
                 for optim in self.optimizers.values():
                     optim.step()
@@ -651,7 +530,6 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     f" {doc['document_id']:26}"
                     f" c_loss: {running_c_loss / (pbar.n + 1):<.5f}"
                     f" s_loss: {running_s_loss / (pbar.n + 1):<.5f}"
-                    f" r_loss: {running_r_loss / (pbar.n + 1):<.5f}"
                 )
 
             self.epochs_trained += 1
@@ -688,50 +566,39 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     def _bertify(self, doc: Doc) -> torch.Tensor:
         all_batches = bert.get_subwords_batches(doc, self.config, self.tokenizer)
 
-        # collect results
+        # we index the batches n at a time to prevent oom
         result = []
+        for i in range(0, all_batches.shape[0], 1024):
+            subwords_batches = all_batches[i:i+1024]
 
-        # we index the batches two at a time to prevent oom
-        # we back off the batch size until it can fit
-        bs = 1024
-        try:
-            result = []
-            for i in range(0, all_batches.shape[0], bs):
-                subwords_batches = all_batches[i:i+bs]
+            special_tokens = np.array([self.tokenizer.cls_token_id,
+                                    self.tokenizer.sep_token_id,
+                                    self.tokenizer.pad_token_id,
+                                    self.tokenizer.eos_token_id])
+            subword_mask = ~(np.isin(subwords_batches, special_tokens))
 
-                special_tokens = np.array([self.tokenizer.cls_token_id,
-                                        self.tokenizer.sep_token_id,
-                                        self.tokenizer.pad_token_id,
-                                        self.tokenizer.eos_token_id])
-                subword_mask = ~(np.isin(subwords_batches, special_tokens))
+            subwords_batches_tensor = torch.tensor(subwords_batches,
+                                                device=self.config.device,
+                                                dtype=torch.long)
+            subword_mask_tensor = torch.tensor(subword_mask,
+                                            device=self.config.device)
 
-                subwords_batches_tensor = torch.tensor(subwords_batches,
-                                                    device=self.config.device,
-                                                    dtype=torch.long)
-                subword_mask_tensor = torch.tensor(subword_mask,
-                                                device=self.config.device)
+            # Obtain bert output for selected batches only
+            attention_mask = (subwords_batches != self.tokenizer.pad_token_id)
+            if "t5" in self.config.bert_model:
+                out = self.bert.encoder(
+                        input_ids=subwords_batches_tensor,
+                        attention_mask=torch.tensor(
+                            attention_mask, device=self.config.device))
+            else:
+                out = self.bert(
+                        subwords_batches_tensor,
+                        attention_mask=torch.tensor(
+                            attention_mask, device=self.config.device))
 
-                # Obtain bert output for selected batches only
-                attention_mask = (subwords_batches != self.tokenizer.pad_token_id)
-                if "t5" in self.config.bert_model:
-                    out = self.bert.encoder(
-                            input_ids=subwords_batches_tensor,
-                            attention_mask=torch.tensor(
-                                attention_mask, device=self.config.device))
-                else:
-                    out = self.bert(
-                            subwords_batches_tensor,
-                            attention_mask=torch.tensor(
-                                attention_mask, device=self.config.device))
-
-                out = out['last_hidden_state']
-                # [n_subwords, bert_emb]
-                result.append(out[subword_mask_tensor])
-        except RuntimeError:
-            orig = bs
-            torch.cuda.empty_cache()
-            bs = max(2, int(bs//2))
-            logger.warning(f"Bert clusters batch size {orig} oomed; backing off to {bs}")
+            out = out['last_hidden_state']
+            # [n_subwords, bert_emb]
+            result.append(out[subword_mask_tensor])
 
         # stack returns and return
         return torch.cat(result)
@@ -799,11 +666,16 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 0, n_docs * self.config.train_epochs
             )
 
-    def _clusterize(self, doc: Doc, scores: torch.Tensor, top_indices: torch.Tensor):
-        antecedents = scores[:,1:].argmax(dim=1) - 1
+    def _clusterize(self, doc: Doc, scores: torch.Tensor, top_indices: torch.Tensor,
+                    singletons: bool = True):
+        if singletons:
+            antecedents = scores[:,1:].argmax(dim=1) - 1
+            # set the dummy values to -1, so that they are not coref to themselves
+            is_start = (scores[:, :2].argmax(dim=1) == 0)
+        else:
+            antecedents = scores.argmax(dim=1) - 1
+
         not_dummy = antecedents >= 0
-        # set the dummy values to -1, so that they are not coref to themselves
-        is_start = (scores[:, :2].argmax(dim=1) == 0)
         coref_span_heads = torch.arange(0, len(scores), device=not_dummy.device)[not_dummy]
         antecedents = top_indices[coref_span_heads, antecedents[not_dummy]]
 
@@ -829,11 +701,12 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     visited[i] = True
                 clusters.append(sorted(cluster))
 
-        # go through the is_start nodes; if no clusters contain that node
-        # i.e. visited[i] == False, we add it as a singleton
-        for indx, i in enumerate(is_start):
-            if i and not visited.get(indx, False):
-                clusters.append([indx])
+        if singletons:
+            # go through the is_start nodes; if no clusters contain that node
+            # i.e. visited[i] == False, we add it as a singleton
+            for indx, i in enumerate(is_start):
+                if i and not visited.get(indx, False):
+                    clusters.append([indx])
 
         return sorted(clusters)
 
@@ -846,7 +719,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     def _get_ground_truth(cluster_ids: torch.Tensor,
                           top_indices: torch.Tensor,
                           valid_pair_map: torch.Tensor,
-                          cluster_starts: bool) -> torch.Tensor:
+                          cluster_starts: bool,
+                          singletons:bool = True) -> torch.Tensor:
         """
         Args:
             cluster_ids: tensor of shape [n_words], containing cluster indices
@@ -865,31 +739,34 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         y[y == 0] = -1                                 # -1 for non-gold words
         y = utils.add_dummy(y)                         # [n_words, n_cands + 1]
 
-        if not cluster_starts:
-            unique, counts = cluster_ids.unique(return_counts=True)
-            singleton_clusters = unique[(counts == 1) & (unique != 0)]
-            first_corefs = [(cluster_ids == i).nonzero().flatten()[0] for i in singleton_clusters]
-            if len(first_corefs) > 0:
-                first_coref = torch.stack(first_corefs)
+        if singletons:
+            if not cluster_starts:
+                unique, counts = cluster_ids.unique(return_counts=True)
+                singleton_clusters = unique[(counts == 1) & (unique != 0)]
+                first_corefs = [(cluster_ids == i).nonzero().flatten()[0] for i in singleton_clusters]
+                if len(first_corefs) > 0:
+                    first_coref = torch.stack(first_corefs)
+                else:
+                    first_coref = torch.tensor([]).to(cluster_ids.device).long()
             else:
-                first_coref = torch.tensor([]).to(cluster_ids.device).long()
-        else:
-            # I apologize for this abuse of everything that's good about PyTorch.
-            # in essence, this line finds the INDEX of FIRST OCCURENCE of each NON-ZERO value
-            # from cluster_ids. We need this information because we use it to mark the
-            # special "is-start-of-ref" marker used to detect singletons.
-            first_coref = (cluster_ids ==
-                           cluster_ids.unique().sort().values[1:].unsqueeze(1)
-                           ).float().topk(k=1, dim=1).indices.squeeze()
+                # I apologize for this abuse of everything that's good about PyTorch.
+                # in essence, this line finds the INDEX of FIRST OCCURENCE of each NON-ZERO value
+                # from cluster_ids. We need this information because we use it to mark the
+                # special "is-start-of-ref" marker used to detect singletons.
+                first_coref = (cluster_ids ==
+                            cluster_ids.unique().sort().values[1:].unsqueeze(1)
+                            ).float().topk(k=1, dim=1).indices.squeeze()
         y = (y == cluster_ids.unsqueeze(1))            # True if coreferent
         # For all rows with no gold antecedents setting dummy to True
         y[y.sum(dim=1) == 0, 0] = True
-        # add another dummy for firts coref
-        y = utils.add_dummy(y)                         # [n_words, n_cands + 2]
-        # for all rows that's a first coref, setting its dummy to True and unset the
-        # non-coref dummy to false
-        y[first_coref, 0] = True
-        y[first_coref, 1] = False
+
+        if singletons:
+            # add another dummy for firts coref
+            y = utils.add_dummy(y)                         # [n_words, n_cands + 2]
+            # for all rows that's a first coref, setting its dummy to True and unset the
+            # non-coref dummy to false
+            y[first_coref, 0] = True
+            y[first_coref, 1] = False
         return y.to(torch.float)
 
     @staticmethod

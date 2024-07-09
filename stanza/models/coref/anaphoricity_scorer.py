@@ -24,15 +24,21 @@ class AnaphoricityScorer(torch.nn.Module):
                            torch.nn.Dropout(config.dropout_rate)])
         self.hidden = torch.nn.Sequential(*layers)
         self.out = torch.nn.Linear(hidden_size, out_features=1)
-        # map to whether or not this is a start of a coref given all the
-        # anticidents
-        self.start_map = torch.nn.Linear(config.rough_k, out_features=1, bias=False)
+
+        # are we going to predict singletons
+        self.predict_singletons = config.singletons
+
+        if self.predict_singletons:
+            # map to whether or not this is a start of a coref given all the
+            # antecedents; not used when config.singletons = False because
+            # we only need to know this for predicting singletons
+            self.start_map = torch.nn.Linear(config.rough_k, out_features=1, bias=False)
+
 
     def forward(self, *,  # type: ignore  # pylint: disable=arguments-differ  #35566 in pytorch
                 top_mentions: torch.Tensor,
                 mentions_batch: torch.Tensor,
                 pw_batch: torch.Tensor,
-                # top_indices_batch: torch.Tensor,
                 top_rough_scores_batch: torch.Tensor,
                 ) -> torch.Tensor:
         """ Builds a pairwise matrix, scores the pairs and returns the scores.
@@ -48,18 +54,19 @@ class AnaphoricityScorer(torch.nn.Module):
             torch.Tensor [batch_size, n_ants + 1]
                 anaphoricity scores for the pairs + a dummy column
         """
-        # t = torch.cuda.get_device_properties(0).total_memory
-        # a = torch.cuda.memory_allocated(0)
-        # print((t-a)*1e-9)
         # [batch_size, n_ants, pair_emb]
         pair_matrix = self._get_pair_matrix(mentions_batch, pw_batch, top_mentions)
 
         # [batch_size, n_ants] vs [batch_size, 1]
         # first is coref scores, the second is whether its the start of a coref
-        scores, start = self._ffnn(pair_matrix)
-        scores = utils.add_dummy(scores+top_rough_scores_batch, eps=True)
+        if self.predict_singletons:
+            scores, start = self._ffnn(pair_matrix)
+            scores = utils.add_dummy(scores+top_rough_scores_batch, eps=True)
 
-        return torch.cat([start, scores], dim=1)
+            return torch.cat([start, scores], dim=1)
+        else:
+            scores = self._ffnn(pair_matrix)
+            return utils.add_dummy(scores+top_rough_scores_batch, eps=True)
 
     def _ffnn(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -73,6 +80,10 @@ class AnaphoricityScorer(torch.nn.Module):
         """
         x = self.out(self.hidden(x))
         x = x.squeeze(2)
+
+        if not self.predict_singletons:
+            return x
+
         # because sometimes we only have the first 49 anaphoricities
         start = x @ self.start_map.weight[:,:x.shape[1]].T
         return x, start

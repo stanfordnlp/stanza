@@ -54,12 +54,6 @@ bert_model = "bert-large-cased"
 # Must be less than or equal to 512
 bert_window_size = 512
 
-# should be >=1, how many dummies to track loss per non dummy
-dummy_mix = 5.0
-
-# whether to directly supervise rough scorer
-supervise_rough = false
-
 # General model settings =============
 
 # Controls the dimensionality of feature embeddings
@@ -77,6 +71,8 @@ a_scoring_batch_size = 128
 hidden_size = 1024
 n_hidden_layers = 1
 
+# Do you want to support singletons?
+singletons = true
 
 
 # Mention extraction settings ========
@@ -159,6 +155,11 @@ bert_learning_rate = 0.00005
 lora = true
 lora_targets = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_fully_tune = [ "pooler" ]
+
+[xlm_roberta]
+bert_model = "FacebookAI/xlm-roberta-large"
+bert_learning_rate = 0.00001
+bert_finetune = true
 
 [xlm_roberta_lora]
 bert_model = "FacebookAI/xlm-roberta-large"

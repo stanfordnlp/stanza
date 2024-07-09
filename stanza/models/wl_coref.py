@@ -88,6 +88,8 @@ if __name__ == "__main__":
                            help="Adjust to override the config value of anaphoricity "
                                 "batch size if you are experiencing out-of-memory "
                                 "issues")
+    argparser.add_argument("--disable_singletons", action="store_true",
+                           help="don't predict singletons")
     argparser.add_argument("--hidden_size", type=int,
                            help="Adjust the anaphoricity scorer hidden size")
     argparser.add_argument("--rough_k", type=int,
@@ -153,6 +155,8 @@ if __name__ == "__main__":
         config.rough_k = args.rough_k
     if args.log_norms is not None:
         config.log_norms = args.log_norms
+    if args.disable_singletons:
+        config.singletons = False
     # if wandb, generate wandb configuration 
     if args.mode == "train":
         if args.wandb:
