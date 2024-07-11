@@ -1039,10 +1039,12 @@ def build_combined_hebrew_dataset(paths, model_type, dataset):
 
     dev and test sets will be those from IAHLT
     """
-    udbase_dir = paths["UDBASE"]
+    # currently need to use UDBASE_GIT for both, since as of July 2024
+    # the knesset dataset is not part of UD git
+    udbase_dir = paths["UDBASE_GIT"]
     udbase_git_dir = paths["UDBASE_GIT"]
 
-    treebanks = ["UD_Hebrew-IAHLTwiki"]
+    treebanks = ["UD_Hebrew-IAHLTwiki", "UD_Hebrew-IAHLTknesset"]
     if dataset == 'train':
         sents = []
         for treebank in treebanks:
