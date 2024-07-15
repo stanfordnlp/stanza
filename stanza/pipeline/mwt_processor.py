@@ -28,10 +28,9 @@ class MWTProcessor(UDProcessor):
         # process the rest
         expansions = batch.doc.get_mwt_expansions(evaluation=True)
         if len(batch) > 0:
-            dict_preds = self.trainer.predict_dict(expansions)
             # decide trainer type and run eval
             if self.config['dict_only']:
-                preds = dict_preds
+                preds = self.trainer.predict_dict(expansions)
             else:
                 with torch.no_grad():
                     preds = []
