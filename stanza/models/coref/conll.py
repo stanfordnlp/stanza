@@ -13,11 +13,15 @@ from stanza.models.coref.const import Doc, Span
 # pylint: disable=too-many-locals
 def write_conll(doc: Doc,
                 clusters: List[List[Span]],
+                heads: List[int],
                 f_obj: TextIO):
     """ Writes span/cluster information to f_obj, which is assumed to be a file
     object open for writing """
-    placeholder = "  -" * 7
-    doc_id = doc["document_id"]
+    placeholder = list("\t_" * 7)
+    # the nth token needs to be a number
+    placeholder[9] = "0"
+    placeholder = "".join(placeholder)
+    doc_id = doc["document_id"].replace("-", "_").replace("/", "_").replace(".","_")
     words = doc["cased_words"]
     part_id = doc["part_id"]
     sents = doc["sent_id"]
@@ -29,37 +33,62 @@ def write_conll(doc: Doc,
     single_word = defaultdict(lambda: [])
 
     for cluster_id, cluster in enumerate(clusters):
-        for start, end in cluster:
+        if len(heads[cluster_id]) != len(cluster):
+            # TODO debug this fact and why it occurs
+            # print(f"cluster {cluster_id} doesn't have the same number of elements for word and span levels, skipping...")
+            continue
+        for cluster_part, (start, end) in enumerate(cluster):
             if end - start == 1:
-                single_word[start].append(cluster_id)
+                single_word[start].append((cluster_part, cluster_id))
             else:
-                starts[start].append(cluster_id)
-                ends[end - 1].append(cluster_id)
+                starts[start].append((cluster_part, cluster_id))
+                ends[end - 1].append((cluster_part, cluster_id))
 
-    f_obj.write(f"#begin document ({doc_id}); part {part_id:0>3d}\n")
+    f_obj.write(f"# newdoc id = {doc_id}\n# global.Entity = eid-head\n")
 
     word_number = 0
+    sent_id = 0
     for word_id, word in enumerate(words):
 
         cluster_info_lst = []
-        for cluster_marker in starts[word_id]:
-            cluster_info_lst.append(f"({cluster_marker}")
-        for cluster_marker in single_word[word_id]:
-            cluster_info_lst.append(f"({cluster_marker})")
-        for cluster_marker in ends[word_id]:
-            cluster_info_lst.append(f"{cluster_marker})")
-        cluster_info = "|".join(cluster_info_lst) if cluster_info_lst else "-"
+        for part, cluster_marker in starts[word_id]:
+            start, end = clusters[cluster_marker][part]
+            cluster_info_lst.append(f"(e{cluster_marker}-{min(heads[cluster_marker][part], end-start)}")
+        for part, cluster_marker in single_word[word_id]:
+            start, end = clusters[cluster_marker][part]
+            cluster_info_lst.append(f"(e{cluster_marker}-{min(heads[cluster_marker][part], end-start)})")
+        for part, cluster_marker in ends[word_id]:
+            cluster_info_lst.append(f"e{cluster_marker})")
+
+
+        # we need our clusters to be ordered such that the one that closest first is listed last
+        def compare_sort(x):
+            split = x.split("-")
+            if len(split) > 1: 
+                try:
+                    return int(split[-1].replace(")", "").strip())  
+                except ValueError:
+                    breakpoint()
+            else: 
+                # we want everything that's a closer to be first
+                return 1000000000
+
+        cluster_info_lst = sorted(cluster_info_lst, key=compare_sort, reverse=True)
+        cluster_info = "".join(cluster_info_lst) if cluster_info_lst else "_"
 
         if word_id == 0 or sents[word_id] != sents[word_id - 1]:
-            f_obj.write("\n")
+            f_obj.write(f"# sent_id = {doc_id}-{sent_id}\n")
             word_number = 0
+            sent_id += 1
 
-        f_obj.write(f"{doc_id}  {part_id}  {word_number:>2}"
-                    f"  {word:>{max_word_len}}{placeholder}  {cluster_info}\n")
+        if cluster_info != "_":
+            cluster_info = f"Entity={cluster_info}"
+
+        f_obj.write(f"{word_id}\t{word}{placeholder}\t{cluster_info}\n")
 
         word_number += 1
 
-    f_obj.write("#end document\n\n")
+    f_obj.write("\n")
 
 
 @contextmanager

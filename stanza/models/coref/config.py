@@ -40,9 +40,12 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
     lora_rank: int
     lora_dropout: float
 
+    full_pairwise: bool
+
     lora_targets: List[str]
     lora_fully_tune: List[str]
 
+    clusters_starts_are_singletons: bool
     bert_finetune: bool
     dropout_rate: float
     learning_rate: float
@@ -58,4 +61,5 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
 
     save_each_checkpoint: bool
     log_norms: bool
-
+    singletons: bool
+    

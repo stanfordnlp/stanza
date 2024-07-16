@@ -87,10 +87,6 @@ class Trainer(BaseTrainer):
                     pred_tokens.append("".join(pred_seq))
         else:
             pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
-            # if any tokens are predicted to expand to blank,
-            # that is likely an error.  use the original text
-            # this originally came up with the Spanish model turning 's' into a blank
-            pred_tokens = [x if x else y for x, y in zip(pred_tokens, orig_text)]
         if unsort:
             pred_tokens = utils.unsort(pred_tokens, orig_idx)
         return pred_tokens
