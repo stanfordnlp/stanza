@@ -27,7 +27,9 @@ To build and customize the pipeline, you can specify the options in the table be
 | device  | `str` | None | Which device to use for the Pipeline.  Can be used to put the pipeline on `cuda:1` instead of `cuda:0`, for example |
 | kwargs | - | - | Options for each of the individual processors. See the individual processor pages for descriptions. |
 | {processor}_model_path | - | - | Path to load an alternate model.  For example, `pos_model_path=xyz.pt` to load `xyz.pt` for the pos processor. |
-| {processor}_pretrain_path | - | - | For processors which use word vectors, path to load an alternate set of word vectors.  For example, `pos_pretrain_path=abc.pt` to load the `abc.pt` pretrain for the pos processor. Will not work for NER, which has the vectors saved with the model. |
+| {processor}_pretrain_path | - | - | For processors which use word vectors, path to load an alternate set of word vectors.  For example, `pos_pretrain_path=abc.pt` to load the `abc.pt` pretrain for the pos processor. |
+| {processor}_forward_charlm_path | - | - | For processors which use the pretrained charlm, path to load an alternate forward model.  For example, `pos_forward_charlm_path=abc.pt` to load the `abc.pt` pretrained forward charlm for the pos processor. |
+| {processor}_backward_charlm_path | - | - | For processors which use the pretrained charlm, path to load an alternate backward model.  For example, `pos_backward_charlm_path=abc.pt` to load the `abc.pt` pretrained backward charlm for the pos processor. |
 
 ## Processors
 
