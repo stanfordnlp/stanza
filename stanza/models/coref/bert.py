@@ -32,6 +32,10 @@ def get_subwords_batches(doc: Doc,
     start, end = 0, 0
 
     while end < len(subwords):
+        # to prevent the case where a batch_size step forward
+        # doesn't capture more than 1 sentence, we will just cut
+        # that sequence
+        prev_end = end
         end = min(end + batch_size, len(subwords))
 
         # Move back till we hit a sentence end
@@ -40,14 +44,23 @@ def get_subwords_batches(doc: Doc,
             while end and doc["sent_id"][doc["word_id"][end - 1]] == sent_id:
                 end -= 1
 
+        # this occurs IFF there was no sentence end found throughout
+        # the forward scan; this means that our sentence was waay too
+        # long (i.e. longer than the max length of the transformer.
+        #
+        # if so, we give up and just chop the sentence off at the max length
+        # that was given
+        if end == prev_end:
+            end = min(end + batch_size, len(subwords))
+
         length = end - start
-        batch = [tok.cls_token] + subwords[start:end] + [tok.sep_token]
-        batch_ids = [-1] + list(range(start, end)) + [-1]
+        if tok.cls_token == None or tok.sep_token == None:
+            batch = [tok.eos_token] + subwords[start:end] + [tok.eos_token]
+        else:
+            batch = [tok.cls_token] + subwords[start:end] + [tok.sep_token]
 
         # Padding to desired length
-        # -1 means the token is a special token
         batch += [tok.pad_token] * (batch_size - length)
-        batch_ids += [-1] * (batch_size - length)
 
         subwords_batches.append([tok.convert_tokens_to_ids(token)
                                  for token in batch])

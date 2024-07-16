@@ -149,12 +149,14 @@ class CoNLL:
         current_doc_id = None
         for doc, comments, empty in zip(doc_dict, doc_comments, doc_empty):
             for comment in comments:
-                if comment.startswith("# doc_id ="):
+                if comment.startswith("# doc_id =") or comment.startswith("# newdoc id ="):
                     doc_id = comment.split("=", maxsplit=1)[1]
                     if len(current_doc) == 0:
                         current_doc_id = doc_id
                     elif doc_id != current_doc_id:
                         new_doc = Document(current_doc, text=None, comments=current_comments, empty_sentences=current_empty)
+                        for i in new_doc.sentences:
+                            i.doc_id = current_doc_id.strip()
                         docs.append(new_doc)
                         current_doc_id = doc_id
                     else:
@@ -169,7 +171,11 @@ class CoNLL:
                 current_empty.append(empty)
         if len(current_doc) > 0:
             new_doc = Document(current_doc, text=None, comments=current_comments, empty_sentences=current_empty)
+            for i in new_doc.sentences:
+                i.doc_id = current_doc_id.strip()
             docs.append(new_doc)
+            current_doc_id = doc_id
+
         return docs
 
     @staticmethod
