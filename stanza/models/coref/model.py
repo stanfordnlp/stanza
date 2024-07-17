@@ -470,7 +470,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             import wandb
             wandb.watch((self.bert, self.pw,
                          self.a_scorer, self.we,
-                         self.rough_scorer, self.sp), log_freq=4, log="all")
+                         self.rough_scorer, self.sp))
 
         docs = self._get_docs(self.config.train_data)
         docs_ids = list(range(len(docs)))
