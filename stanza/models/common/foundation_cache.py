@@ -59,22 +59,6 @@ class FoundationCache:
             peft_name = "%s_%d" % (peft_name, bert_record.peft_ids[peft_name])
             return bert_record.model, bert_record.tokenizer, peft_name
 
-    def load_bert_copy(self, transformer_name):
-        """
-        If the transformer is already in the FoundationCache, return a copy of the transformer
-
-        Uses a lock for thread safety
-        """
-        if transformer_name is None:
-            return None, None
-        with self.lock:
-            if transformer_name not in self.bert:
-                model, tokenizer = bert_embedding.load_bert(transformer_name)
-                return model, tokenizer
-            model, tokenizer, _ = self.bert[transformer_name]
-            return deepcopy(model), deepcopy(tokenizer)
-
-
     def load_charlm(self, filename):
         if not filename:
             return None
@@ -120,9 +104,6 @@ class NoTransformerFoundationCache(FoundationCache):
     def load_bert_with_peft(self, transformer_name, peft_name):
         return load_bert_with_peft(transformer_name, peft_name)
 
-    def load_bert_copy(self, transformer_name):
-        return load_bert_copy(transformer_name)
-
 def load_bert(model_name, foundation_cache=None):
     """
     Load a bert, possibly using a foundation cache, ignoring the cache if None
@@ -137,25 +118,6 @@ def load_bert_with_peft(model_name, peft_name, foundation_cache=None):
         m, t = bert_embedding.load_bert(model_name)
         return m, t, peft_name
     return foundation_cache.load_bert_with_peft(model_name, peft_name)
-
-def load_bert_copy(model_name, foundation_cache=None):
-    """Load a bert, possibly using a foundation cache, and then return a COPY so that mutations such as adapters can be applied
-
-    There is a limitation here that if models are loaded such that the
-    first model loaded needs a copy for peft or some other reason, and
-    the second one does, there will be 2x the needed load time from
-    disk which could have been avoided if we loaded models in the
-    other order.  Keeping track of which models will need which
-    transformers would save some loading time in that case.
-
-    Still, trying to use this is strictly better than using load_bert
-    in the case where the transformer will be modified, such as
-    putting a peft adapter on top of the model
-    """
-    if foundation_cache is None:
-        return bert_embedding.load_bert(model_name)
-    else:
-        return foundation_cache.load_bert_copy(model_name)
 
 def load_charlm(charlm_file, foundation_cache=None, finetune=False):
     if not charlm_file:
