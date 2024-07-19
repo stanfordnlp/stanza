@@ -43,8 +43,6 @@ allowed_empty_languages = [
     "th",
     # only tokenize and NER for Myanmar right now (soon...)
     "my",
-    # currently only tokenize and NER for SD as well
-    "sd",
 ]
 
 # map processor name to file ending
