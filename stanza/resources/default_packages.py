@@ -724,6 +724,9 @@ TRANSFORMERS = {
     # neuralmind/bert-large-portuguese-cased: 0.9343
     "pt": "neuralmind/bert-large-portuguese-cased",
 
+    # hope is actually to build our own using a large text collection
+    "sd": "google/muril-large-cased",
+
     # Tamil options: quite a few, need to run a bunch of experiments
     #                               dev pos    dev depparse las
     # no transformer                 82.82        69.12
