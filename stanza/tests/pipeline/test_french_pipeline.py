@@ -96,7 +96,7 @@ EXPECTED_RESULT = """
       "upos": "NOUN",
       "feats": "Gender=Masc|Number=Sing",
       "head": 3,
-      "deprel": "obl:mod",
+      "deprel": "obl:arg",
       "start_char": 30,
       "end_char": 36,
       "misc": "SpaceAfter=No"
@@ -291,7 +291,7 @@ EXPECTED_RESULT = """
       "id": 25,
       "text": "Numérique",
       "lemma": "numérique",
-      "upos": "PROPN",
+      "upos": "NOUN",
       "feats": "Gender=Masc|Number=Sing",
       "head": 17,
       "deprel": "conj",
