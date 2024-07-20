@@ -368,7 +368,7 @@ class Document(StanzaObject):
                     idx_w_end = idx_w + len(expanded) - 1
                     if token.misc:  # None can happen when using a prebuilt doc
                         token.misc = None if token.misc == 'MWT=Yes' else '|'.join([x for x in token.misc.split('|') if x != 'MWT=Yes'])
-                    token.id = (idx_w, idx_w_end)
+                    token.id = (idx_w, idx_w_end) if len(expanded) > 1 else (idx_w,)
                     token.words = []
                     for i, e_word in enumerate(expanded):
                         token.words.append(Word(sentence, {ID: idx_w + i, TEXT: e_word}))
