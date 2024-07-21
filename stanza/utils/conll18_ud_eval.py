@@ -155,8 +155,10 @@ def process_enhanced_deps(deps) :
             edeps.append((hd,steps))   # (3,['conj:en','obj:voor'])
     return edeps
 
-# Load given CoNLL-U file into internal representation
-def load_conllu(file, treebank_type):
+# Load given CoNLL-U file into internal representation.
+# The file parameter is the open file object.
+# The path parameter is needed only for diagnostic messages.
+def load_conllu(file, path, treebank_type):
     # Internal representation classes
     class UDRepresentation:
         def __init__(self):
@@ -169,12 +171,16 @@ def load_conllu(file, treebank_type):
             self.words = []
             # List of UDSpan instances with start&end indices into `characters`.
             self.sentences = []
+            # File path may be needed in error messages.
+            self.path = ''
     class UDSpan:
-        def __init__(self, start, end):
+        def __init__(self, start, end, line):
             self.start = start
             # Note that self.end marks the first position **after the end** of span,
             # so we can use characters[start:end] or range(start, end).
             self.end = end
+            # Line number (1-based) will be useful if we need to report an error later.
+            self.line = line
     class UDWord:
         def __init__(self, span, columns, is_multiword):
             # Span of this word (or MWT, see below) within ud_representation.characters.
@@ -203,11 +209,12 @@ def load_conllu(file, treebank_type):
     ud = UDRepresentation()
 
     # Load the CoNLL-U file
+    ud.path = path
     index, sentence_start = 0, None
     line_idx = 0
     while True:
         line = file.readline()
-        line_idx += 1  # errors will be displayed indexed from 1
+        line_idx += 1 # errors will be displayed indexed from 1
         if not line:
             break
         line = _decode(line.rstrip("\r\n"))
@@ -218,7 +225,7 @@ def load_conllu(file, treebank_type):
             if line.startswith("#"):
                 continue
             # Start a new sentence
-            ud.sentences.append(UDSpan(index, 0))
+            ud.sentences.append(UDSpan(index, 0, line_idx))
             sentence_start = len(ud.words)
         if not line:
             # Add parent and children UDWord links and check there are no cycles
@@ -234,7 +241,6 @@ def load_conllu(file, treebank_type):
                         word.parent = "remapping"
                         process_word(parent)
                         word.parent = parent
-
 
             position = sentence_start # need to incrementally keep track of current position for loop detection in relcl
             for word in ud.words[sentence_start:]:
@@ -385,7 +391,7 @@ def load_conllu(file, treebank_type):
 
         # Save token
         ud.characters.extend(columns[FORM])
-        ud.tokens.append(UDSpan(index, index + len(columns[FORM])))
+        ud.tokens.append(UDSpan(index, index + len(columns[FORM]), line_idx))
         index += len(columns[FORM])
 
         # Handle multi-word tokens to save word(s)
@@ -484,7 +490,7 @@ def evaluate(gold_ud, system_ud):
         def gold_aligned_gold(word):
             return word
         def gold_aligned_system(word):
-            return alignment.matched_words_map.get(word, "NotAligned") if word is not None else None
+            return alignment.matched_words_map.get(word, 'NotAligned') if word is not None else None
         correct = 0
         for words in alignment.matched_words:
             if filter_fn is None or filter_fn(words.gold_word):
@@ -604,15 +610,43 @@ def evaluate(gold_ud, system_ud):
 
         return alignment
 
-    # Check that the underlying character sequences do match.
+    # Check that the underlying character sequences match.
     if gold_ud.characters != system_ud.characters:
+        # Identify the surrounding tokens and line numbers so the error is easier to debug.
         index = 0
         while index < len(gold_ud.characters) and index < len(system_ud.characters) and \
                 gold_ud.characters[index] == system_ud.characters[index]:
             index += 1
-
+        gtindex = 0
+        while gtindex < len(gold_ud.tokens) and gold_ud.tokens[gtindex].end-1 < index:
+            gtindex += 1
+        stindex = 0
+        while stindex < len(system_ud.tokens) and system_ud.tokens[stindex].end-1 < index:
+            stindex += 1
+        gtokenreport = "The error occurs right at the beginning of the two files.\n"
+        stokenreport = ""
+        if gtindex > 0:
+            nprev = 10 if gtindex >= 10 else gtindex
+            nnext = 10 if gtindex + 10 <= len(gold_ud.tokens) else len(gold_ud.tokens) - gtindex
+            nfirst = gtindex - nprev
+            prevtokens = ' '.join([''.join(gold_ud.characters[t.start:t.end]) for t in gold_ud.tokens[nfirst:gtindex]])
+            nexttokens = ' '.join([''.join(gold_ud.characters[t.start:t.end]) for t in gold_ud.tokens[gtindex:gtindex + nnext]])
+            gtokenreport = "File '{}':\n".format(gold_ud.path)
+            gtokenreport += "  Token no. {} on line no. {} is the last one with all characters reproduced in the other file.\n".format(gtindex, gold_ud.tokens[gtindex-1].line)
+            gtokenreport += "  The previous {} tokens are '{}'.\n".format(nprev, prevtokens)
+            gtokenreport += "  The next {} tokens are '{}'.\n".format(nnext, nexttokens)
+        if stindex > 0:
+            nprev = 10 if stindex >= 10 else stindex
+            nnext = 10 if stindex + 10 <= len(system_ud.tokens) else len(system_ud.tokens) - stindex
+            nfirst = stindex - nprev
+            prevtokens = ' '.join([''.join(system_ud.characters[t.start:t.end]) for t in system_ud.tokens[nfirst:stindex]])
+            nexttokens = ' '.join([''.join(system_ud.characters[t.start:t.end]) for t in system_ud.tokens[stindex:stindex + nnext]])
+            stokenreport = "File '{}':\n".format(system_ud.path)
+            stokenreport += "  Token no. {} on line no. {} is the last one with all characters reproduced in the other file.\n".format(stindex, system_ud.tokens[stindex-1].line)
+            stokenreport += "  The previous {} tokens are '{}'.\n".format(nprev, prevtokens)
+            stokenreport += "  The next {} tokens are '{}'.\n".format(nnext, nexttokens)
         raise UDError(
-            "The concatenation of tokens in gold file and in system file differ!\n" +
+            "The concatenation of tokens in gold file and in system file differ!\n" + gtokenreport + stokenreport +
             "First 20 differing characters in gold file: '{}' and system file: '{}'".format(
                 "".join(map(_encode, gold_ud.characters[index:index + 20])),
                 "".join(map(_encode, system_ud.characters[index:index + 20]))
@@ -647,13 +681,11 @@ def evaluate(gold_ud, system_ud):
                                 filter_fn=lambda w: w.is_content_deprel),
     }
 
-
 def load_conllu_file(path, treebank_type=None):
     if treebank_type is None:
         treebank_type = {}
-
     _file = open(path, mode="r", **({"encoding": "utf-8"} if sys.version_info >= (3, 0) else {}))
-    return load_conllu(_file,treebank_type)
+    return load_conllu(_file, path, treebank_type)
 
 def evaluate_wrapper(args):
     treebank_type = {}
