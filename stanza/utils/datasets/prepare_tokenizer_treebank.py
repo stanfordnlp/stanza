@@ -998,15 +998,17 @@ def build_combined_spanish_dataset(paths, model_type, dataset):
         for treebank in treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
             new_sents = read_sentences_from_conllu(conllu_file)
+            print("Read %d sentences from %s" % (len(new_sents), conllu_file))
             if treebank.endswith("GSD"):
                 new_sents = replace_semicolons(new_sents)
             sents.extend(new_sents)
 
         if model_type in (common.ModelType.TOKENIZER, common.ModelType.MWT, common.ModelType.LEMMA):
-            extra_spanish = os.path.join(handparsed_dir, "spanish-mwt", "handpicked.mwt")
+            extra_spanish = os.path.join(handparsed_dir, "spanish-mwt", "infinitives.mwt")
             if not os.path.exists(extra_spanish):
                 raise FileNotFoundError("Cannot find the extra dataset 'handpicked.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
             extra_sents = read_sentences_from_conllu(extra_spanish)
+            print("Read %d sentences from %s" % (len(extra_sents), extra_spanish))
             sents.extend(extra_sents)
     else:
         conllu_file = common.find_treebank_dataset_file("UD_Spanish-AnCora", udbase_dir, dataset, "conllu", fail=True)
