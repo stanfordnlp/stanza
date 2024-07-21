@@ -70,6 +70,7 @@ def build_argparse():
     parser.add_argument('--feat_unit_dropout', type=float, default=0.33, help="The whole feature of units dropout probability")
     parser.add_argument('--tok_noise', type=float, default=0.02, help="Probability to induce noise to the input of the higher RNN")
     parser.add_argument('--sent_drop_prob', type=float, default=0.2, help="Probability to drop sentences at the end of batches during training uniformly at random.  Idea is to fake paragraph endings.")
+    parser.add_argument('--last_char_drop_prob', type=float, default=0.2, help="Probability to drop the last char of a block of text during training, uniformly at random.  Idea is to fake a document ending w/o sentence final punctuation, hopefully to avoid the tokenizer learning to always tokenize the last character as a period")
     parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")
     parser.add_argument('--max_seqlen', type=int, default=100, help="Maximum sequence length to consider at a time")
     parser.add_argument('--batch_size', type=int, default=32, help="Batch size to use")

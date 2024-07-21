@@ -275,6 +275,7 @@ class DataLoader(TokenizationDataset):
             sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
 
             drop_sents = False if self.eval or (self.args.get('sent_drop_prob', 0) == 0) else (random.random() < self.args.get('sent_drop_prob', 0))
+            drop_last_char = False if self.eval or (self.args.get('last_char_drop_prob', 0) == 0) else (random.random() < self.args.get('last_char_drop_prob', 0))
             total_len = len(sentences[0][0])
 
             assert self.eval or total_len <= self.args['max_seqlen'], 'The maximum sequence length {} is less than that of the longest sentence length ({}) in the data, consider increasing it! {}'.format(self.args['max_seqlen'], total_len, ' '.join(["{}/{}".format(*x) for x in zip(self.sentences[pid][sid])]))
@@ -310,6 +311,15 @@ class DataLoader(TokenizationDataset):
             if not self.eval:
                 cutoff = self.args['max_seqlen']
                 units, labels, feats, raw_units = units[:cutoff], labels[:cutoff], feats[:cutoff], raw_units[:cutoff]
+
+            if drop_last_char:  # can only happen in non-eval mode
+                if len(labels) > 1 and labels[-1] == 2 and labels[-2] in (1, 3):
+                    # training text ended with a sentence end position
+                    # and that word was a single character
+                    # and the previous character ended the word
+                    units, labels, feats, raw_units = units[:-1], labels[:-1], feats[:-1], raw_units[:-1]
+                    # word end -> sentence end, mwt end -> sentence mwt end
+                    labels[-1] = labels[-1] + 1
 
             return units, labels, feats, raw_units
 
