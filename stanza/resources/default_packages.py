@@ -360,6 +360,7 @@ default_ners = {
     "fa": "arman",
     "fi": "turku",
     "fr": "wikiner",
+    "he": "iahlt_charlm",
     "hu": "combined",
     "hy": "armtdp",
     "it": "fbk",
