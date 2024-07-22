@@ -427,6 +427,12 @@ AQMAR is a small dataset of Arabic Wikipedia articles
   - currently, running the following reproduces the random split:
     python3 stanza/utils/datasets/ner/prepare_ner_dataset.py ar_aqmar
 
+IAHLT contains NER for Hebrew in the knesset treebank
+  - as of UD 2.14, it is only in the git repo
+  - download that git repo to $UDBASE_GIT:
+    https://github.com/UniversalDependencies/UD_Hebrew-IAHLTknesset
+  - change to the dev branch in that repo
+    python3 stanza/utils/datasets/ner/prepare_ner_dataset.py he_iahlt
 """
 
 import glob
@@ -450,6 +456,7 @@ import stanza.utils.datasets.ner.convert_bsf_to_beios as convert_bsf_to_beios
 import stanza.utils.datasets.ner.convert_bsnlp as convert_bsnlp
 import stanza.utils.datasets.ner.convert_en_conll03 as convert_en_conll03
 import stanza.utils.datasets.ner.convert_fire_2013 as convert_fire_2013
+import stanza.utils.datasets.ner.convert_he_iahlt as convert_he_iahlt
 import stanza.utils.datasets.ner.convert_ijc as convert_ijc
 import stanza.utils.datasets.ner.convert_kk_kazNERD as convert_kk_kazNERD
 import stanza.utils.datasets.ner.convert_lst20 as convert_lst20
@@ -1186,6 +1193,14 @@ def process_ar_aqmar(paths, short_name):
     base_output_path = paths["NER_DATA_DIR"]
     convert_ar_aqmar.convert_shuffle(base_input_path, base_output_path, short_name)
 
+def process_he_iahlt(paths, short_name):
+    assert short_name == 'he_iahlt'
+    # for now, need to use UDBASE_GIT until IAHLTknesset is added to UD
+    udbase = paths["UDBASE_GIT"]
+    base_output_path = paths["NER_DATA_DIR"]
+    convert_he_iahlt.convert_iahlt(udbase, base_output_path, "he_iahlt")
+
+
 DATASET_MAPPING = {
     "ar_aqmar":          process_ar_aqmar,
     "bn_daffodil":       process_bn_daffodil,
@@ -1204,6 +1219,7 @@ DATASET_MAPPING = {
     "hi_hiner":          process_hiner,
     "hi_hinercollapsed": process_hinercollapsed,
     "hi_ijc":            process_ijc,
+    "he_iahlt":          process_he_iahlt,
     "hu_nytk":           process_nytk,
     "hu_combined":       process_hu_combined,
     "hy_armtdp":         process_armtdp,
