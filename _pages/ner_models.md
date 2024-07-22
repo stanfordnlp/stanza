@@ -34,6 +34,7 @@ The Ukrainian model and its score [was provided by gawy](https://github.com/stan
 | French            |   fr   | WikiNER         | 4         | 92.9  | <i class="fas fa-check" style="color:#33a02c"></i> |                                    | [<i class="fas fa-file-alt"></i>](https://figshare.com/articles/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500) |
 | German            |   de   | CoNLL03         | 4         | 81.9  | <i class="fas fa-check" style="color:#33a02c"></i> |                                    | [<i class="fas fa-file-alt"></i>](https://dl.acm.org/citation.cfm?id=1119195) |
 | German            |   de   | GermEval2014    | 4         | 85.2  | <i class="fas fa-minus" style="color:#a0332c"></i> |                                    | [<i class="fas fa-file-alt"></i>](https://sites.google.com/site/germeval2014ner/data) |
+| Hebrew            |   he   | IAHLT           | 12        | 83.9  | <i class="fas fa-minus" style="color:#a0332c"></i> | soon!                              | [<i class="fas fa-file-alt"></i>](https://github.com/UniversalDependencies/UD_Hebrew-IAHLTknesset/tree/dev) [<i class="fas fa-file-alt"></i>](https://arxiv.org/abs/2210.07873) |
 | Hungarian         |   hu   | Combined        | 4         | -     | <i class="fas fa-check" style="color:#33a02c"></i> | 1.2.1                              | [<i class="fas fa-file-alt"></i>](https://rgai.inf.u-szeged.hu/node/130)  [<i class="fas fa-file-alt"></i>](https://github.com/nytud/NYTK-NerKor) |
 | Italian           |   it   | FBK             | 3         | 87.92 | <i class="fas fa-check" style="color:#33a02c"></i> | 1.2.3                              | [<i class="fas fa-file-alt"></i>](https://dh.fbk.eu/) |
 | Japanese          |   ja   | GSD             | 22        | 81.01 | <i class="fas fa-check" style="color:#33a02c"></i> | <b style="color:#33a02c">1.4.0</b> | [<i class="fas fa-file-alt"></i>](https://github.com/megagonlabs/UD_Japanese-GSD) |
@@ -67,6 +68,8 @@ We have provided links to all NER datasets used to train the released models on 
 
 - **Finnish**: The Turku dataset used for Finnish NER training can be found on [the Turku NLP website](https://turkunlp.org/fin-ner.html), and they also provide [a Turku NER dataset description paper](http://www.lrec-conf.org/proceedings/lrec2020/pdf/2020.lrec-1.567.pdf).
 
+- **Hebrew**: The IAHLT corpus has labels on the knesset portion of its UD dataset.  The labels are actually to be released as part of UD 2.15, but as of July 2024, they are available [in the github].  Zeldes, Amir, Nick Howell, Noam Ordan and Yifat Ben Moshe (2022) [A Second Wave of UD Hebrew Treebanking and Cross-Domain Parsing](https://arxiv.org/abs/2210.07873). In: Proceedings of EMNLP 2022. Abu Dhabi, UAE, 4331-4344,
+
 - **Hungarian**: The dataset used for training our Hungarian NER system is a combination of 3 separate datasets: Business, Criminal, and NYTK. Two of these datasets can be found from [this Szeged page](https://rgai.inf.u-szeged.hu/node/130), and the third can be found in [this NYTK-NerKor github repo](https://github.com/nytud/NYTK-NerKor). A dataset description paper can also be found [here](http://www.inf.u-szeged.hu/projectdirs/hlt/papers/lrec_ne-corpus.pdf).
 
 - **Italian**: The Italian FBK dataset was licensed to us from [FBK](https://dh.fbk.eu/).  Paccosi T. and Palmero Aprosio A.  KIND: an Italian Multi-Domain Dataset for Named Entity Recognition.  LREC 2022
@@ -87,6 +90,7 @@ We have provided links to all NER datasets used to train the released models on 
     - The Vietnamese VLSP model spells out the entire tag, though: PERSON, LOCATION, ORGANIZATION, MISCELLANEOUS.
 - For packages with 18 named entity types, supported types include `PERSON`, `NORP` (Nationalities/religious/political group), `FAC` (Facility), `ORG` (Organization), `GPE` (Countries/cities/states), `LOC` (Location), `PRODUCT`,`EVENT`, `WORK_OF_ART`, `LAW`, `LANGUAGE`, `DATE`, `TIME`, `PERCENT`, `MONEY`, `QUANTITY`, `ORDINAL` and `CARDINAL` (details can be found on page 21 of this [OntoNotes documentation](https://catalog.ldc.upenn.edu/docs/LDC2013T19/OntoNotes-Release-5.0.pdf)).
 - The BSNLP19 dataset(s) use `EVENT`, `LOCATION`, `ORGANIZATION`, `PERSON`, `PRODUCT`.
+- The Hebrew IAHLT dataset uses `ANG` (Language), `DUC` (Product), `EVE` (Event), `FAC` (Facility), `GPE`, `LOC`, `ORG`, `PER`, `TIMEX`, `TTL` (Title), `WOA` (Work of Art), and `MISC`
 - The Italian FBK dataset uses `LOC`, `ORG`, `PER`
 - The Marathi L3Cube dataset uses `ED` (Designation), `NED` (Date), `NEL` (Location), `NEM` (Measure), `NEO` (Organization), `NEP` (Person), `NETI` (Time)
 - The Myanmar UCSY dataset uses `LOC` (Location), `NE` (Misc), `ORG` (Organization), `PNAME` (Person), `RACE`, `TIME`, `NUM`
