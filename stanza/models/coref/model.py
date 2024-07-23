@@ -29,67 +29,12 @@ from stanza.models.coref.span_predictor import SpanPredictor
 from stanza.models.coref.tokenizer_customization import TOKENIZER_FILTERS, TOKENIZER_MAPS
 from stanza.models.coref.utils import GraphNode
 from stanza.models.coref.word_encoder import WordEncoder
+from stanza.models.coref.dataset import CorefDataset
 
 from torch.utils.data import Dataset
-from functools import lru_cache, wraps
-import weakref
 
 from peft import LoraConfig, get_peft_model, get_peft_model_state_dict, set_peft_model_state_dict
 
-from stanza.utils.get_tqdm import get_tqdm   # type: ignore
-tqdm = get_tqdm()
-
-logger = logging.getLogger('stanza')
-
-class CorefDataset(Dataset):
-
-    def __init__(self, path, config, tokenizer):
-        self.config = config
-        self.tokenizer = tokenizer
-
-        self.__filter_func = TOKENIZER_FILTERS.get(self.config.bert_model,
-                                                   lambda _: True)
-        self.__token_map = TOKENIZER_MAPS.get(self.config.bert_model, {})
-
-        try:
-            with open(path, encoding="utf-8") as fin:
-                data_f = json.load(fin)
-        except json.decoder.JSONDecodeError:
-            # read the old jsonlines format if necessary
-            with open(path, encoding="utf-8") as fin:
-                text = "[" + ",\n".join(fin) + "]"
-            data_f = json.loads(text)
-        logger.info("Processing %d docs from %s...", len(data_f), path)
-        self.__raw = data_f
-        self.__avg_span = sum(len(doc["head2span"]) for doc in self.__raw) / len(self.__raw)
-        self.__out = []
-        for doc in self.__raw:
-            doc["span_clusters"] = [[tuple(mention) for mention in cluster]
-                                for cluster in doc["span_clusters"]]
-            word2subword = []
-            subwords = []
-            word_id = []
-            for i, word in enumerate(doc["cased_words"]):
-                tokenized_word = self.__token_map.get(word, self.tokenizer.tokenize(word))
-                tokenized_word = list(filter(self.__filter_func, tokenized_word))
-                word2subword.append((len(subwords), len(subwords) + len(tokenized_word)))
-                subwords.extend(tokenized_word)
-                word_id.extend([i] * len(tokenized_word))
-            doc["word2subword"] = word2subword
-            doc["subwords"] = subwords
-            doc["word_id"] = word_id
-            self.__out.append(doc)
-        logger.info("Loaded %d docs from %s.", len(data_f), path)
-
-    @property
-    def avg_span(self):
-        return self.__avg_span
-
-    def __getitem__(self, x):
-        return self.__out[x]
-
-    def __len__(self):
-        return len(self.__out)
 
 class CorefModel:  # pylint: disable=too-many-instance-attributes
     """Combines all coref modules together to find coreferent spans.
@@ -144,15 +89,19 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                                             modules_to_save=self.config.lora_fully_tune,
                                             bias="none")
 
-            self.bert.train()
             self.bert = get_peft_model(self.bert, self.__peft_config)
+            self.bert.train()
             self.trainable["bert"] = self.bert
 
         if build_optimizers:
             self._build_optimizers()
         self._set_training(False)
+
+        # final coreference resolution score
         self._coref_criterion = CorefLoss(self.config.bce_loss_weight)
+        # score simply for the top-k choices out of the rough scorer
         self._rough_criterion = CorefLoss(0)
+        # exact span matches
         self._span_criterion = torch.nn.CrossEntropyLoss(reduction="sum")
 
     @property
@@ -172,7 +121,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     def evaluate(self,
                  data_split: str = "dev",
                  word_level_conll: bool = False, 
-                 eval_lang=None
+                 eval_lang: Optional[str] = None
                  ) -> Tuple[float, Tuple[float, float, float]]:
         """ Evaluates the modes on the data split provided.
 
@@ -244,7 +193,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     f" p: {s_lea[1]:.5f},"
                     f" r: {s_lea[2]:<.5f}"
                 )
-            logger.info(f"BAKE!: {w_checker.bakeoff:.5f}")
+            logger.info(f"CoNLL-2012 3-Score Average : {w_checker.bakeoff:.5f}")
 
         return (running_loss / len(docs), *s_checker.total_lea, *w_checker.total_lea, *s_checker.mbc, *w_checker.mbc, w_checker.bakeoff, s_checker.bakeoff)
 
@@ -572,9 +521,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             subwords_batches = all_batches[i:i+1024]
 
             special_tokens = np.array([self.tokenizer.cls_token_id,
-                                    self.tokenizer.sep_token_id,
-                                    self.tokenizer.pad_token_id,
-                                    self.tokenizer.eos_token_id])
+                                       self.tokenizer.sep_token_id,
+                                       self.tokenizer.pad_token_id,
+                                       self.tokenizer.eos_token_id])
             subword_mask = ~(np.isin(subwords_batches, special_tokens))
 
             subwords_batches_tensor = torch.tensor(subwords_batches,
@@ -761,7 +710,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         y[y.sum(dim=1) == 0, 0] = True
 
         if singletons:
-            # add another dummy for firts coref
+            # add another dummy for first coref
             y = utils.add_dummy(y)                         # [n_words, n_cands + 2]
             # for all rows that's a first coref, setting its dummy to True and unset the
             # non-coref dummy to false
