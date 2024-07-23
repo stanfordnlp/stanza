@@ -977,7 +977,6 @@ def build_combined_spanish_dataset(paths, model_type, dataset):
     TODO: consider mixing in PUD?
     """
     udbase_dir = paths["UDBASE"]
-    tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
     handparsed_dir = paths["HANDPARSED_DIR"]
 
     treebanks = ["UD_Spanish-AnCora", "UD_Spanish-GSD"]
@@ -1018,6 +1017,7 @@ def build_combined_spanish_dataset(paths, model_type, dataset):
 
 def build_combined_french_dataset(paths, model_type, dataset):
     udbase_dir = paths["UDBASE_GIT"]
+    handparsed_dir = paths["HANDPARSED_DIR"]
     if dataset == 'train':
         train_treebanks = ["UD_French-GSD", "UD_French-ParisStories", "UD_French-Rhapsodie", "UD_French-Sequoia"]
         sents = []
@@ -1026,6 +1026,13 @@ def build_combined_french_dataset(paths, model_type, dataset):
             new_sents = read_sentences_from_conllu(conllu_file)
             print("Read %d sentences from %s" % (len(new_sents), conllu_file))
             sents.extend(new_sents)
+
+        extra_french = os.path.join(handparsed_dir, "french-handparsed", "handparsed_deps.conllu")
+        if not os.path.exists(extra_french):
+            raise FileNotFoundError("Cannot find the extra dataset 'handparsed_deps.conllu' which includes various dependency fixes, expected {}".format(extra_italian))
+        extra_sents = read_sentences_from_conllu(extra_french)
+        print("Read %d sentences from %s" % (len(extra_sents), extra_french))
+        sents.extend(extra_sents)
     else:
         gsd_conllu = common.find_treebank_dataset_file("UD_French-GSD", udbase_dir, dataset, "conllu")
         sents = read_sentences_from_conllu(gsd_conllu)
