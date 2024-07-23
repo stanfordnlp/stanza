@@ -23,7 +23,7 @@ for i in raw:
 min_lang_count = min(lang_counts.values())
 
 # sample 20% of the smallest amount for test set
-# this will look like an obsurdly small number, but
+# this will look like an absurdly small number, but
 # remember this is DOCUMENTS not TOKENS or UTTERANCES
 # so its actually decent
 # also its per language
