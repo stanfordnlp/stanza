@@ -3,7 +3,7 @@ layout: page
 title: Retrain models for an NER dataset
 keywords: stanza, ner model training
 permalink: '/retrain_ner.html'
-nav_order: 9
+nav_order: 11
 parent: Training
 ---
 

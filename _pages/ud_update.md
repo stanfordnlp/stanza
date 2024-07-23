@@ -3,7 +3,7 @@ layout: page
 title: Retrain models for a new UD release
 keywords: stanza, model training
 permalink: '/update_ud.html'
-nav_order: 8
+nav_order: 10
 parent: Training
 ---
 
