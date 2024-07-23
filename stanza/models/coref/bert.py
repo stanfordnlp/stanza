@@ -44,8 +44,12 @@ def get_subwords_batches(doc: Doc,
             while end and doc["sent_id"][doc["word_id"][end - 1]] == sent_id:
                 end -= 1
 
-        # if we ended up at prev end, well, looks like we will
-        # just chop off the sentence
+        # this occurs IFF there was no sentence end found throughout
+        # the forward scan; this means that our sentence was waay too
+        # long (i.e. longer than the max length of the transformer.
+        #
+        # if so, we give up and just chop the sentence off at the max length
+        # that was given
         if end == prev_end:
             end = min(end + batch_size, len(subwords))
 

@@ -17,23 +17,23 @@ class ClusterChecker:
     Can be used to retrieve weighted LEA-score for them.
     """
     def __init__(self):
-        self._p = 0.0
-        self._r = 0.0
-        self._p_weight = 0.0
-        self._r_weight = 0.0
+        self._lea_precision = 0.0
+        self._lea_recall = 0.0
+        self._lea_precision_weighting = 0.0
+        self._lea_recall_weighting = 0.0
         self._num_preds = 0.0
 
         # muc
-        self._mp = 0.0
-        self._mr = 0.0
+        self._muc_precision = 0.0
+        self._muc_recall = 0.0
 
         # b3
-        self._bp = 0.0
-        self._br = 0.0
+        self._b3_precision = 0.0
+        self._b3_recall = 0.0
 
         # ceafe
-        self._cp = 0.0
-        self._cr = 0.0
+        self._ceafe_precision = 0.0
+        self._ceafe_recall = 0.0
 
     @staticmethod
     def _f1(p,r):
@@ -58,24 +58,24 @@ class ClusterChecker:
         recall, r_weight = ClusterChecker._lea(gold_clusters, pred_clusters)
         precision, p_weight = ClusterChecker._lea(pred_clusters, gold_clusters)
 
-        self._mr +=  ClusterChecker._muc(gold_clusters, pred_clusters)
-        self._mp += ClusterChecker._muc(pred_clusters, gold_clusters)
+        self._muc_recall +=  ClusterChecker._muc(gold_clusters, pred_clusters)
+        self._muc_precision += ClusterChecker._muc(pred_clusters, gold_clusters)
 
-        self._br += ClusterChecker._b3(gold_clusters, pred_clusters)
-        self._bp += ClusterChecker._b3(pred_clusters, gold_clusters)
+        self._b3_recall += ClusterChecker._b3(gold_clusters, pred_clusters)
+        self._b3_precision += ClusterChecker._b3(pred_clusters, gold_clusters)
 
         ceafe_precision, ceafe_recall = ClusterChecker._ceafe(pred_clusters, gold_clusters)
         if math.isnan(ceafe_precision) and len(gold_clusters) > 0:
             # because our model predicted no clusters
             ceafe_precision = 0.0
 
-        self._cp += ceafe_precision
-        self._cr += ceafe_recall
+        self._ceafe_precision += ceafe_precision
+        self._ceafe_recall += ceafe_recall
 
-        self._r += recall
-        self._r_weight += r_weight
-        self._p += precision
-        self._p_weight += p_weight
+        self._lea_recall += recall
+        self._lea_recall_weighting += r_weight
+        self._lea_precision += precision
+        self._lea_precision_weighting += p_weight
 
         doc_precision = precision / (p_weight + EPSILON)
         doc_recall = recall / (r_weight + EPSILON)
@@ -91,10 +91,10 @@ class ClusterChecker:
     @property
     def mbc(self):
         """ Get the F1 average score of (muc, b3, ceafe) over docs """
-        avg_precisions = [self._mp, self._bp, self._cp]
+        avg_precisions = [self._muc_precision, self._b3_precision, self._ceafe_precision]
         avg_precisions = [i/(self._num_preds + EPSILON) for i in avg_precisions]
 
-        avg_recalls = [self._mr, self._br, self._cr]
+        avg_recalls = [self._muc_recall, self._b3_recall, self._ceafe_recall]
         avg_recalls = [i/(self._num_preds + EPSILON) for i in avg_recalls]
 
         avg_f1s = [self._f1(p,r) for p,r in zip(avg_precisions, avg_recalls)]
@@ -105,8 +105,8 @@ class ClusterChecker:
     def total_lea(self):
         """ Returns weighted LEA for all the documents as
         (f1, precision, recall) """
-        precision = self._p / (self._p_weight + EPSILON)
-        recall = self._r / (self._r_weight + EPSILON)
+        precision = self._lea_precision / (self._lea_precision_weighting + EPSILON)
+        recall = self._lea_recall / (self._lea_recall_weighting + EPSILON)
         f1 = self._f1(precision, recall)
         return f1, precision, recall
 

@@ -29,7 +29,6 @@ class RoughScorer(torch.nn.Module):
         Returns rough anaphoricity scores for candidates, which consist of
         the bilinear output of the current model summed with mention scores.
         """
-
         # [n_mentions, n_mentions]
         pair_mask = torch.arange(mentions.shape[0])
         pair_mask = pair_mask.unsqueeze(1) - pair_mask.unsqueeze(0)

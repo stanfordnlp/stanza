@@ -61,17 +61,15 @@ def write_conll(doc: Doc,
             cluster_info_lst.append(f"e{cluster_marker})")
 
 
-        # we need our clusters to be ordered such that the one that closest first is listed last
+        # we need our clusters to be ordered such that the one that is closest the first change
+        # is listed last in the chains
         def compare_sort(x):
             split = x.split("-")
             if len(split) > 1: 
-                try:
-                    return int(split[-1].replace(")", "").strip())  
-                except ValueError:
-                    breakpoint()
+                return int(split[-1].replace(")", "").strip())  
             else: 
                 # we want everything that's a closer to be first
-                return 1000000000
+                return float("inf")
 
         cluster_info_lst = sorted(cluster_info_lst, key=compare_sort, reverse=True)
         cluster_info = "".join(cluster_info_lst) if cluster_info_lst else "_"

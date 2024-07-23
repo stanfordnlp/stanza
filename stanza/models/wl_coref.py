@@ -90,6 +90,8 @@ if __name__ == "__main__":
                                 "issues")
     argparser.add_argument("--disable_singletons", action="store_true",
                            help="don't predict singletons")
+    argparser.add_argument("--full_pairwise", action="store_true",
+                           help="use speaker and document embeddings")
     argparser.add_argument("--hidden_size", type=int,
                            help="Adjust the anaphoricity scorer hidden size")
     argparser.add_argument("--rough_k", type=int,
@@ -155,6 +157,8 @@ if __name__ == "__main__":
         config.rough_k = args.rough_k
     if args.log_norms is not None:
         config.log_norms = args.log_norms
+    if args.full_pairwise:
+        config.full_pairwise = args.full_pairwise
     if args.disable_singletons:
         config.singletons = False
     # if wandb, generate wandb configuration 
