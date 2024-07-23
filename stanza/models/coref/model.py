@@ -16,6 +16,8 @@ except ImportError:
 import torch
 import transformers     # type: ignore
 
+from stanza.utils.get_tqdm import get_tqdm   # type: ignore
+tqdm = get_tqdm()
 
 from stanza.models.coref import bert, conll, utils
 from stanza.models.coref.anaphoricity_scorer import AnaphoricityScorer
@@ -26,15 +28,13 @@ from stanza.models.coref.loss import CorefLoss
 from stanza.models.coref.pairwise_encoder import PairwiseEncoder
 from stanza.models.coref.rough_scorer import RoughScorer
 from stanza.models.coref.span_predictor import SpanPredictor
-from stanza.models.coref.tokenizer_customization import TOKENIZER_FILTERS, TOKENIZER_MAPS
 from stanza.models.coref.utils import GraphNode
 from stanza.models.coref.word_encoder import WordEncoder
 from stanza.models.coref.dataset import CorefDataset
 
-from torch.utils.data import Dataset
-
 from peft import LoraConfig, get_peft_model, get_peft_model_state_dict, set_peft_model_state_dict
 
+logger = logging.getLogger('stanza')
 
 class CorefModel:  # pylint: disable=too-many-instance-attributes
     """Combines all coref modules together to find coreferent spans.
