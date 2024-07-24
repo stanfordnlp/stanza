@@ -69,13 +69,10 @@ def get_subwords_batches(doc: Doc,
     return np.array(subwords_batches)
 
 
-def load_bert(config: Config) -> Tuple[AutoModel, AutoTokenizer]:
+def get_tokenizer(config: Config) -> Tuple[AutoModel, AutoTokenizer]:
     """
-    Loads bert and bert tokenizer as pytorch modules.
-
-    Bert model is loaded to the device specified in config.device
+    Loads bert tokenizer as pytorch modules.
     """
-    logger.debug(f"Loading {config.bert_model}...")
 
     base_bert_name = config.bert_model.split("/")[-1]
     tokenizer_kwargs = config.tokenizer_kwargs.get(base_bert_name, {})
@@ -84,8 +81,4 @@ def load_bert(config: Config) -> Tuple[AutoModel, AutoTokenizer]:
     tokenizer = AutoTokenizer.from_pretrained(config.bert_model,
                                               **tokenizer_kwargs)
 
-    model = AutoModel.from_pretrained(config.bert_model).to(config.device)
-
-    logger.debug("Bert successfully loaded.")
-
-    return model, tokenizer
+    return tokenizer

@@ -110,7 +110,7 @@ def load_peft_wrapper(bert_model, lora_params, args, logger, adapter_name):
 
     try:
         bert_model.load_adapter(adapter_name=adapter_name, peft_config=peft_config, adapter_state_dict=lora_params)
-    except ValueError:
+    except (ValueError, TypeError) as _:
         from peft import set_peft_model_state_dict
         # this can happen if the adapter already exists...
         # in that case, try setting the adapter weights?

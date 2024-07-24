@@ -31,8 +31,10 @@ from stanza.models.coref.span_predictor import SpanPredictor
 from stanza.models.coref.utils import GraphNode
 from stanza.models.coref.word_encoder import WordEncoder
 from stanza.models.coref.dataset import CorefDataset
+from stanza.models.coref.tokenizer_customization import *
 
-from peft import LoraConfig, get_peft_model, get_peft_model_state_dict, set_peft_model_state_dict
+from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, NoTransformerFoundationCache
+from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 
 logger = logging.getLogger('stanza')
 
@@ -59,7 +61,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     def __init__(self,
                  epochs_trained: int = 0,
                  build_optimizers: bool = True,
-                 config: Optional[dict] = None):
+                 config: Optional[dict] = None,
+                 foundation_cache=None):
         """
         A newly created model is set to evaluation mode.
 
@@ -74,24 +77,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         self.config = config
         self.epochs_trained = epochs_trained
         self._docs: Dict[str, List[Doc]] = {}
-        self._build_model()
+        self._build_model(foundation_cache)
 
         self.optimizers = {}
         self.schedulers = {}
-
-        if hasattr(self.config, 'lora') and self.config.lora:
-            logger.debug("Creating lora adapter with rank %d", self.config.lora_rank)
-            self.__peft_config = LoraConfig(inference_mode=False,
-                                            r=self.config.lora_rank,
-                                            target_modules=self.config.lora_targets,
-                                            lora_alpha=self.config.lora_alpha,
-                                            lora_dropout=self.config.lora_dropout,
-                                            modules_to_save=self.config.lora_fully_tune,
-                                            bias="none")
-
-            self.bert = get_peft_model(self.bert, self.__peft_config)
-            self.bert.train()
-            self.trainable["bert"] = self.bert
 
         if build_optimizers:
             self._build_optimizers()
@@ -255,10 +244,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     self.optimizers[key].load_state_dict(state_dict)
                 elif key.endswith("_scheduler"):
                     self.schedulers[key].load_state_dict(state_dict)
-                elif key.endswith("_lora"):
+                elif key == "bert_lora":
                     assert self.config.lora, "Unable to load state dict of LoRA model into model initialized without LoRA!"
-                    set_peft_model_state_dict(self.trainable[key.split("_")[0]],
-                                              state_dict)
+                    self.bert = load_peft_wrapper(self.bert, state_dict, vars(self.config), logger, "coref")
                 else:
                     self.trainable[key].load_state_dict(state_dict, strict=False)
                 logger.debug(f"Loaded {key}")
@@ -390,7 +378,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                                      f"_e{self.epochs_trained}_{time}.pt")
         savedict = {name: module.state_dict() for name, module in to_save}
         if self.config.lora:
-            savedict["bert_lora"] = get_peft_model_state_dict(self.bert)
+            # so that this dependency remains optional
+            from peft import get_peft_model_state_dict
+            savedict["bert_lora"] = get_peft_model_state_dict(self.bert, adapter_name="coref")
         savedict["epochs_trained"] = self.epochs_trained  # type: ignore
         savedict["config"] = self.config
         save_dir = os.path.split(save_path)[0]
@@ -552,8 +542,23 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         # stack returns and return
         return torch.cat(result)
 
-    def _build_model(self):
-        self.bert, self.tokenizer = bert.load_bert(self.config)
+    def _build_model(self, foundation_cache):
+        if hasattr(self.config, 'lora') and self.config.lora:
+            self.bert, self.tokenizer, peft_name = load_bert_with_peft(self.config.bert_model, "coref", foundation_cache)
+            # vars() converts a dataclass to a dict, used for being able to index things like args["lora_*"]
+            self.bert = build_peft_wrapper(self.bert, vars(self.config), logger, adapter_name=peft_name)
+        else:
+            if self.config.bert_finetune:
+                logger.debug("Coref model requested a finetuned transformer; we are not using the foundation model cache to prevent we accidentally leak the finetuning weights elsewhere.")
+                foundation_cache = NoTransformerFoundationCache(foundation_cache)
+            self.bert, self.tokenizer = load_bert(self.config.bert_model, foundation_cache)
+
+        self.tokenizer = bert.get_tokenizer(self.config)
+
+        if self.config.bert_finetune or (hasattr(self.config, 'lora') and self.config.lora):
+            self.bert = self.bert.train()
+
+        self.bert = self.bert.to(self.config.device)
         self.pw = PairwiseEncoder(self.config).to(self.config.device)
 
         bert_emb = self.bert.config.hidden_size

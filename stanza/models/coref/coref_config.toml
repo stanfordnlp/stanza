@@ -84,8 +84,8 @@ lora = false
 lora_alpha = 128
 lora_dropout = 0.1
 lora_rank = 64
-lora_targets = []
-lora_fully_tune = []
+lora_target_modules = []
+lora_modules_to_save = []
 
 
 # Training settings ==================
@@ -141,8 +141,8 @@ bert_model = "roberta-large"
 bert_model = "roberta-large"
 bert_learning_rate = 0.00005
 lora = true
-lora_targets = [ "query", "value", "output.dense", "intermediate.dense" ]
-lora_fully_tune = [ "pooler" ]
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
 
 [xlm_roberta]
 bert_model = "FacebookAI/xlm-roberta-large"
@@ -153,15 +153,15 @@ bert_finetune = true
 bert_model = "FacebookAI/xlm-roberta-large"
 bert_learning_rate = 0.000025
 lora = true
-lora_targets = [ "query", "value", "output.dense", "intermediate.dense" ]
-lora_fully_tune = [ "pooler" ]
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
 
 [deberta_lora]
 bert_model = "microsoft/deberta-v3-large"
 bert_learning_rate = 0.00001
 lora = true
-lora_targets = [ "query_proj", "value_proj", "output.dense" ]
-lora_fully_tune = [  ]
+lora_target_modules = [ "query_proj", "value_proj", "output.dense" ]
+lora_modules_to_save = [  ]
 
 [electra]
 bert_model = "google/electra-large-discriminator"
@@ -171,16 +171,16 @@ bert_learning_rate = 0.00002
 bert_model = "google/electra-large-discriminator"
 bert_learning_rate = 0.000025
 lora = true
-lora_targets = [ "query", "value", "output.dense", "intermediate.dense" ]
-lora_fully_tune = [  ]
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [  ]
 
 [t5_lora]
 bert_model = "google-t5/t5-large"
 bert_learning_rate = 0.000025
 bert_window_size = 1024
 lora = true
-lora_targets = [ "q", "v", "o", "wi", "wo" ]
-lora_fully_tune = [  ]
+lora_target_modules = [ "q", "v", "o", "wi", "wo" ]
+lora_modules_to_save = [  ]
 
 [mt5_lora]
 bert_model = "google/mt5-base"
@@ -188,15 +188,15 @@ bert_learning_rate = 0.000025
 lora_alpha = 64
 lora_rank = 32
 lora = true
-lora_targets = [ "q", "v", "o", "wi", "wo" ]
-lora_fully_tune = [  ]
+lora_target_modules = [ "q", "v", "o", "wi", "wo" ]
+lora_modules_to_save = [  ]
 
 [deepnarrow_t5_xl_lora]
 bert_model = "google/t5-efficient-xl"
 bert_learning_rate = 0.00025
 lora = true
-lora_targets = [ "q", "v", "o", "wi", "wo" ]
-lora_fully_tune = [  ]
+lora_target_modules = [ "q", "v", "o", "wi", "wo" ]
+lora_modules_to_save = [  ]
 
 [roberta_no_finetune]
 bert_model = "roberta-large"

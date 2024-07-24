@@ -42,8 +42,8 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
 
     full_pairwise: bool
 
-    lora_targets: List[str]
-    lora_fully_tune: List[str]
+    lora_target_modules: List[str]
+    lora_modules_to_save: List[str]
 
     clusters_starts_are_singletons: bool
     bert_finetune: bool
