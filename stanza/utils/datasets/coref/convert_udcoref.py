@@ -10,20 +10,44 @@ from stanza.utils.datasets.coref.utils import find_cconj_head
 
 from stanza.utils.conll import CoNLL
 
+from random import Random
+
+import argparse
+
+R = Random(7)
+
 tqdm = get_tqdm()
 IS_UDCOREF_FORMAT = True
 UDCOREF_ADDN = 0 if not IS_UDCOREF_FORMAT else 1
 
-def process_documents(docs):
+def process_documents(docs, augment=False):
     processed_section = []
 
     for idx, (doc, doc_id, lang) in enumerate(tqdm(docs)):
+        # drop the last token 10% of the time
+        if augment:
+            for i in doc.sentences:
+                if len(i.words) > 1:
+                    if R.random() < 0.1:
+                        i.tokens = i.tokens[:-1]
+                        i.words = i.words[:-1]
+
         # extract the entities
         # get sentence words and lengths
         sentences = [[j.text for j in i.words]
                     for i in doc.sentences]
         sentence_lens = [len(x.words) for x in doc.sentences]
-        cased_words = [y for x in sentences for y in x]
+
+        cased_words = [] 
+        for x in sentences:
+            if augment:
+                # modify case of the first word with 50% chance
+                if R.random() < 0.5:
+                    x[0] = x[0].lower()
+
+            for y in x:
+                cased_words.append(y)
+
         sent_id = [y for idx, sent_len in enumerate(sentence_lens) for y in [idx] * sent_len]
 
         word_total = 0
@@ -135,15 +159,11 @@ def process_documents(docs):
         processed_section.append(processed)
     return processed_section
 
-SECTION_NAMES = ["train", "dev"]
-# , "test"
-SHORT_NAME = "corefud_concat_v1_0_langid"
-LANGUAGE = "multi"
 CONCAT = True
 
-def process_dataset(short_name, conllu_path, coref_output_path):
+def process_dataset(short_name, conllu_path, coref_output_path, section_names):
 
-    for section in SECTION_NAMES:
+    for section in section_names:
         if not CONCAT:
             load = os.path.join(conllu_path, f"{short_name}-{section}.conllu")
             print("Processing %s from %s" % (section, load))
@@ -163,7 +183,7 @@ def process_dataset(short_name, conllu_path, coref_output_path):
                     input_file.append((i, i.sentences[0].doc_id, lang))
             print("Ingested %d documents" % len(input_file))
 
-        converted_section = process_documents(input_file)
+        converted_section = process_documents(input_file, augment=(section=="train"))
 
         output_filename = os.path.join(coref_output_path, "%s.%s.json" % (short_name, section))
         with open(output_filename, "w", encoding="utf-8") as fout:
@@ -171,10 +191,16 @@ def process_dataset(short_name, conllu_path, coref_output_path):
 
 def main():
     paths = get_default_paths()
+    parser = argparse.ArgumentParser(
+            prog='Convert UDCoref Data',
+    )
+    parser.add_argument('project', type=str, help="the name of the subfolder for data conversion")
+    parser.add_argument('-s','--sections', action='append', help='sections of data available', default=["train", "dev"])
+    args = parser.parse_args()
     coref_input_path = paths['COREF_BASE']
-    conll_path = os.path.join(coref_input_path, LANGUAGE, SHORT_NAME)
+    conll_path = os.path.join(coref_input_path, args.project)
     coref_output_path = paths['COREF_DATA_DIR']
-    process_dataset(SHORT_NAME, conll_path, coref_output_path)
+    process_dataset(args.project, conll_path, coref_output_path, args.sections)
 
 if __name__ == '__main__':
     main()
