@@ -113,7 +113,9 @@ setup(
         'tokenizers': [
             'jieba',
             'pythainlp',
+            'python-crfsuite',
             'spacy',
+            'sudachidict_core',
             'sudachipy',
         ],
         'visualization': [
