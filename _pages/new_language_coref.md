@@ -7,6 +7,8 @@ nav_order: 8
 parent: Training
 ---
 
+**NOTE: coreference is a feature under active development; these instructions may be subject to change until release.**
+
 ## Training a new Coreference Model
 
 Here, we present a complete end-to-end example on how to build and use your very own coreference resolution model. We will use the [CorefUD](https://ufal.mff.cuni.cz/corefud) format and data for this example, but you are free to use any other datasets which will be suitable to your use as long as they are [annotated in the CorefUD format](https://ufal.mff.cuni.cz/~popel/corefud-1.0/corefud-1.0-format.pdf).
