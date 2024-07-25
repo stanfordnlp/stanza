@@ -25,7 +25,8 @@ jobs:
           echo CORENLP_HOME=$CORENLP_HOME
           echo CLASSPATH=$CLASSPATH
           # install from stanza repo being evaluated
-          pwd
+          echo PWD: $pwd
+          echo PATH: $PATH
           pip3 install -e .
           pip3 install -e .[test]
           pip3 install -e .[transformers]
