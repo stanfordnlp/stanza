@@ -30,6 +30,7 @@ jobs:
           pip3 install -e .
           pip3 install -e .[test]
           pip3 install -e .[transformers]
+          pip3 install -e .[tokenizers]
           # set up for tests
           echo "Running stanza test set up..."
           rm -rf $STANZA_TEST_HOME

@@ -110,6 +110,12 @@ setup(
         'datasets': [
             'datasets',
         ],
+        'tokenizers': [
+            'jieba',
+            'pythainlp',
+            'spacy',
+            'sudachipy',
+        ],
         'visualization': [
             'spacy',
             'streamlit',
