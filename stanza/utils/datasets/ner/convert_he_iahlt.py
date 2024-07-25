@@ -13,7 +13,11 @@ def extract_sentences(doc):
             text = word.text
             misc = word.misc
             if misc is None:
-                words.append((text, current_entity))
+                if current_entity == 'O':
+                    entity = 'O'
+                else:
+                    entity = "I-" + current_entity
+                words.append((text, entity))
                 continue
             pieces = misc.split("|")
             for piece in pieces:
@@ -21,21 +25,28 @@ def extract_sentences(doc):
                     entity = piece.split("=", maxsplit=1)[1]
                     if entity.startswith("(") and entity.endswith(")"):
                         assert current_entity == 'O'
-                        entity = entity[1:-1]
+                        entity = "B-" + entity[1:-1]
                     elif entity.startswith("("):
                         assert current_entity == 'O'
                         entity = entity[1:]
                         current_entity = entity
+                        entity = "B-" + entity
                     elif entity.endswith(")"):
                         entity = entity[:-1]
                         assert current_entity == entity
+                        entity = "I-" + entity
                         current_entity = "O"
                     else:
                         assert current_entity == entity
+                        entity = "I-" + entity
                     words.append((text, entity))
                     break
             else: # closes for loop
-                words.append((text, current_entity))
+                if current_entity == 'O':
+                    entity = 'O'
+                else:
+                    entity = "I-" + current_entity
+                words.append((text, entity))
         sentences.append(words)
 
     return sentences
