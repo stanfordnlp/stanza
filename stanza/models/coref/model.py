@@ -286,7 +286,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
     def load_model(path: str,
                    map_location: str = "cpu",
                    ignore: Optional[Set[str]] = None,
-                   config_update: Optional[dict] = None):
+                   config_update: Optional[dict] = None,
+                   foundation_cache = None):
         state_dicts = torch.load(path, map_location=map_location)
         epochs_trained = state_dicts.pop("epochs_trained", 0)
         config = state_dicts.pop('config', None)
@@ -295,7 +296,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         if config_update:
             for key, value in config_update.items():
                 setattr(config, key, value)
-        model = CorefModel(config=config, build_optimizers=False, epochs_trained=epochs_trained)
+        model = CorefModel(config=config, build_optimizers=False,
+                           epochs_trained=epochs_trained, foundation_cache=foundation_cache)
         model.load_state_dicts(state_dicts, ignore)
         return model
 
