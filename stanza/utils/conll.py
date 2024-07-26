@@ -155,8 +155,9 @@ class CoNLL:
                         current_doc_id = doc_id
                     elif doc_id != current_doc_id:
                         new_doc = Document(current_doc, text=None, comments=current_comments, empty_sentences=current_empty)
-                        for i in new_doc.sentences:
-                            i.doc_id = current_doc_id.strip()
+                        if current_doc_id != None:
+                            for i in new_doc.sentences:
+                                i.doc_id = current_doc_id.strip()
                         docs.append(new_doc)
                         current_doc_id = doc_id
                     else:
@@ -171,8 +172,9 @@ class CoNLL:
                 current_empty.append(empty)
         if len(current_doc) > 0:
             new_doc = Document(current_doc, text=None, comments=current_comments, empty_sentences=current_empty)
-            for i in new_doc.sentences:
-                i.doc_id = current_doc_id.strip()
+            if current_doc_id != None:
+                for i in new_doc.sentences:
+                    i.doc_id = current_doc_id.strip()
             docs.append(new_doc)
             current_doc_id = doc_id
 
