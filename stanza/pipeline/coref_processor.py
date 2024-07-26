@@ -72,7 +72,8 @@ class CorefProcessor(UDProcessor):
         model = CorefModel.load_model(path=config['model_path'],
                                       ignore={"bert_optimizer", "general_optimizer",
                                               "bert_scheduler", "general_scheduler"},
-                                      config_update=config_update)
+                                      config_update=config_update,
+                                      foundation_cache=pipeline.foundation_cache)
         if config.get('batch_size', None):
             model.config.a_scoring_batch_size = int(config['batch_size'])
         model.training = False
