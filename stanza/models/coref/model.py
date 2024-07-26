@@ -246,7 +246,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     self.schedulers[key].load_state_dict(state_dict)
                 elif key == "bert_lora":
                     assert self.config.lora, "Unable to load state dict of LoRA model into model initialized without LoRA!"
-                    self.bert = load_peft_wrapper(self.bert, state_dict, vars(self.config), logger, "coref")
+                    self.bert = load_peft_wrapper(self.bert, state_dict, vars(self.config), logger, self.peft_name)
                 else:
                     self.trainable[key].load_state_dict(state_dict, strict=False)
                 logger.debug(f"Loaded {key}")
@@ -549,6 +549,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             self.bert, self.tokenizer, peft_name = load_bert_with_peft(self.config.bert_model, "coref", foundation_cache)
             # vars() converts a dataclass to a dict, used for being able to index things like args["lora_*"]
             self.bert = build_peft_wrapper(self.bert, vars(self.config), logger, adapter_name=peft_name)
+            self.peft_name = peft_name
         else:
             if self.config.bert_finetune:
                 logger.debug("Coref model requested a finetuned transformer; we are not using the foundation model cache to prevent we accidentally leak the finetuning weights elsewhere.")
