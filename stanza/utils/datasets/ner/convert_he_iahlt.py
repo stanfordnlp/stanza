@@ -1,3 +1,4 @@
+from collections import defaultdict
 import os
 
 from stanza.utils.conll import CoNLL
@@ -53,17 +54,20 @@ def extract_sentences(doc):
 
 def convert_iahlt(udbase, output_dir, short_name):
     shards = ("train", "dev", "test")
-    ud_dataset = os.path.join(udbase, "UD_Hebrew-IAHLTknesset")
-    base_filename = "he_iahltknesset-ud-%s.conllu"
-    datasets = []
+    ud_datasets = ["UD_Hebrew-IAHLTknesset"]
+    base_filenames = ["he_iahltknesset-ud-%s.conllu"]
+    datasets = defaultdict(list)
 
-    for shard in shards:
-        filename = os.path.join(ud_dataset, base_filename % shard)
-        doc = CoNLL.conll2doc(filename)
-        sentences = extract_sentences(doc)
-        print("Read %d sentences from %s" % (len(sentences), filename))
-        datasets.append(sentences)
+    for ud_dataset, base_filename in zip(ud_datasets, base_filenames):
+        ud_dataset_path = os.path.join(udbase, ud_dataset)
+        for shard in shards:
+            filename = os.path.join(ud_dataset_path, base_filename % shard)
+            doc = CoNLL.conll2doc(filename)
+            sentences = extract_sentences(doc)
+            print("Read %d sentences from %s" % (len(sentences), filename))
+            datasets[shard].extend(sentences)
 
+    datasets = [datasets[x] for x in shards]
     write_dataset(datasets, output_dir, short_name)
 
 def main():
