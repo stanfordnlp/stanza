@@ -12,16 +12,13 @@ def extract_single_sentence(sentence):
         text = word.text
         misc = word.misc
         if misc is None:
-            if current_entity == 'O':
-                entity = 'O'
-            else:
-                entity = "I-" + current_entity
-            words.append((text, entity))
-            continue
-        pieces = misc.split("|")
+            pieces = []
+        else:
+            pieces = misc.split("|")
         for piece in pieces:
             if piece.startswith("Entity="):
                 entity = piece.split("=", maxsplit=1)[1]
+                #print(entity)
                 assert '(' not in entity[1:] and ')' not in entity[:-1]
                 if entity.startswith("(") and entity.endswith(")"):
                     assert current_entity == 'O'
