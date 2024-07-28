@@ -1,12 +1,13 @@
 from collections import defaultdict
 import os
+import re
 
 from stanza.utils.conll import CoNLL
 import stanza.utils.default_paths as default_paths
 from stanza.utils.datasets.ner.utils import write_dataset
 
 def extract_single_sentence(sentence):
-    current_entity = "O"
+    current_entity = []
     words = []
     for word in sentence.words:
         text = word.text
@@ -15,35 +16,43 @@ def extract_single_sentence(sentence):
             pieces = []
         else:
             pieces = misc.split("|")
+
+        closes = []
+        first_entity = False
         for piece in pieces:
             if piece.startswith("Entity="):
                 entity = piece.split("=", maxsplit=1)[1]
                 #print(entity)
-                assert '(' not in entity[1:] and ')' not in entity[:-1]
-                if entity.startswith("(") and entity.endswith(")"):
-                    assert current_entity == 'O'
-                    entity = "B-" + entity[1:-1]
-                elif entity.startswith("("):
-                    assert current_entity == 'O'
-                    entity = entity[1:]
-                    current_entity = entity
-                    entity = "B-" + entity
-                elif entity.endswith(")"):
-                    entity = entity[:-1]
-                    assert current_entity == entity
-                    entity = "I-" + entity
-                    current_entity = "O"
-                else:
-                    assert current_entity == entity
-                    entity = "I-" + entity
-                words.append((text, entity))
-                break
-        else: # closes for loop
-            if current_entity == 'O':
-                entity = 'O'
-            else:
-                entity = "I-" + current_entity
-            words.append((text, entity))
+                entity_pieces = re.split(r"([()])", entity)
+                entity_pieces = [x for x in entity_pieces if x]   # remove blanks from re.split
+                entity_idx = 0
+                while entity_idx < len(entity_pieces):
+                    if entity_pieces[entity_idx] == '(':
+                        assert len(entity_pieces) > entity_idx + 1, "Opening an unspecified entity"
+                        if len(current_entity) == 0:
+                            first_entity = True
+                        current_entity.append(entity_pieces[entity_idx + 1])
+                        entity_idx += 2
+                    elif entity_pieces[entity_idx] == ')':
+                        assert entity_idx != 0, "Closing an unspecified entity"
+                        closes.append(entity_pieces[entity_idx-1])
+                        entity_idx += 1
+                    else:
+                        # the entities themselves get added or removed via the ()
+                        entity_idx += 1
+
+        if len(current_entity) == 0:
+            entity = 'O'
+        else:
+            entity = current_entity[0]
+            entity = "B-" + entity if first_entity else "I-" + entity
+        words.append((text, entity))
+
+        assert len(current_entity) >= len(closes), "Too many closes for the current open entities"
+        for close_entity in closes:
+            # TODO: check the close is closing the right thing
+            assert close_entity == current_entity[-1], "Closed the wrong entity: %s vs %s" % (close_entity, current_entity[-1])
+            current_entity = current_entity[:-1]
     return words
 
 def extract_sentences(doc):
