@@ -61,8 +61,8 @@ def extract_sentences(doc):
         try:
             words = extract_single_sentence(sentence)
             sentences.append(words)
-        except AssertionError:
-            print("Skipping sentence %s" % sentence.sent_id)
+        except AssertionError as e:
+            print("Skipping sentence %s  ... %s" % (sentence.sent_id, str(e)))
 
     return sentences
 
