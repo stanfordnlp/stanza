@@ -174,6 +174,27 @@ SPMRL adds several treebanks
   Currently only German is converted, the German version being a
     version of the Tiger Treebank
   python3 -m stanza.utils.datasets.constituency.prepare_con_dataset de_spmrl  
+
+en_mctb is a multidomain test set covering five domains other than newswire
+  https://github.com/RingoS/multi-domain-parsing-analysis
+  Challenges to Open-Domain Constituency Parsing
+
+  @inproceedings{yang-etal-2022-challenges,
+    title = "Challenges to Open-Domain Constituency Parsing",
+    author = "Yang, Sen  and
+      Cui, Leyang and
+      Ning, Ruoxi and
+      Wu, Di and
+      Zhang, Yue",
+    booktitle = "Findings of the Association for Computational Linguistics: ACL 2022",
+    month = may,
+    year = "2022",
+    address = "Dublin, Ireland",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2022.findings-acl.11",
+    doi = "10.18653/v1/2022.findings-acl.11",
+    pages = "112--127",
+  }
 """
 
 import argparse
@@ -475,6 +496,26 @@ def process_ptb3_revised(paths, dataset_name, *args):
     datasets = [train_trees, dev_trees, test_trees]
     write_dataset(datasets, output_dir, dataset_name)
 
+def process_en_mctb(paths, dataset_name, *args):
+    """
+    Converts the following blocks:
+
+    dialogue.cleaned.txt  forum.cleaned.txt  law.cleaned.txt  literature.cleaned.txt  review.cleaned.txt
+    """
+    base_path = os.path.join(paths["CONSTITUENCY_BASE"], "english", "multi-domain-parsing-analysis", "data", "MCTB_en")
+    if not os.path.exists(base_path):
+        raise FileNotFoundError("Please download multi-domain-parsing-analysis to %s" % base_path)
+    def tree_callback(tree):
+        return parse_tree.Tree("ROOT", tree.children)
+
+    filenames = ["dialogue.cleaned.txt", "forum.cleaned.txt", "law.cleaned.txt", "literature.cleaned.txt", "review.cleaned.txt"]
+    for filename in filenames:
+        trees = tree_reader.read_tree_file(os.path.join(base_path, filename), tree_callback=tree_callback)
+        print("%d trees in %s" % (len(trees), filename))
+        output_filename = "%s-%s.mrg" % (dataset_name, filename.split(".")[0])
+        output_filename = os.path.join(paths["CONSTITUENCY_DATA_DIR"], output_filename)
+        print("Writing trees to %s" % output_filename)
+        parse_tree.Tree.write_treebank(trees, output_filename)
 
 def process_spmrl(paths, dataset_name, *args):
     if dataset_name != 'de_spmrl':
@@ -491,6 +532,7 @@ DATASET_MAPPING = {
     'de_spmrl':     process_spmrl,
 
     'en_ptb3-revised': process_ptb3_revised,
+    'en_mctb':      process_en_mctb,
 
     'id_icon':      process_id_icon,
 
