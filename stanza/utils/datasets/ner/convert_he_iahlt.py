@@ -6,6 +6,19 @@ from stanza.utils.conll import CoNLL
 import stanza.utils.default_paths as default_paths
 from stanza.utils.datasets.ner.utils import write_dataset
 
+def output_entities(sentence):
+    for word in sentence.words:
+        misc = word.misc
+        if misc is None:
+            continue
+
+        pieces = misc.split("|")
+        for piece in pieces:
+            if piece.startswith("Entity="):
+                entity = piece.split("=", maxsplit=1)[1]
+                print("  " + entity)
+                break
+
 def extract_single_sentence(sentence):
     current_entity = []
     words = []
@@ -22,7 +35,6 @@ def extract_single_sentence(sentence):
         for piece in pieces:
             if piece.startswith("Entity="):
                 entity = piece.split("=", maxsplit=1)[1]
-                #print(entity)
                 entity_pieces = re.split(r"([()])", entity)
                 entity_pieces = [x for x in entity_pieces if x]   # remove blanks from re.split
                 entity_idx = 0
@@ -63,6 +75,7 @@ def extract_sentences(doc):
             sentences.append(words)
         except AssertionError as e:
             print("Skipping sentence %s  ... %s" % (sentence.sent_id, str(e)))
+            output_entities(sentence)
 
     return sentences
 
