@@ -195,6 +195,9 @@ en_mctb is a multidomain test set covering five domains other than newswire
     doi = "10.18653/v1/2022.findings-acl.11",
     pages = "112--127",
   }
+
+  This conversion replaces the top bracket from top -> ROOT and puts an extra S
+    bracket on any roots with more than one node.
 """
 
 import argparse
@@ -506,13 +509,16 @@ def process_en_mctb(paths, dataset_name, *args):
     if not os.path.exists(base_path):
         raise FileNotFoundError("Please download multi-domain-parsing-analysis to %s" % base_path)
     def tree_callback(tree):
+        if len(tree.children) > 1:
+            tree = parse_tree.Tree("S", tree.children)
+            return parse_tree.Tree("ROOT", [tree])
         return parse_tree.Tree("ROOT", tree.children)
 
     filenames = ["dialogue.cleaned.txt", "forum.cleaned.txt", "law.cleaned.txt", "literature.cleaned.txt", "review.cleaned.txt"]
     for filename in filenames:
         trees = tree_reader.read_tree_file(os.path.join(base_path, filename), tree_callback=tree_callback)
         print("%d trees in %s" % (len(trees), filename))
-        output_filename = "%s-%s.mrg" % (dataset_name, filename.split(".")[0])
+        output_filename = "%s-%s_test.mrg" % (dataset_name, filename.split(".")[0])
         output_filename = os.path.join(paths["CONSTITUENCY_DATA_DIR"], output_filename)
         print("Writing trees to %s" % output_filename)
         parse_tree.Tree.write_treebank(trees, output_filename)
