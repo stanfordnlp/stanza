@@ -422,7 +422,11 @@ default_tokenizer = {
 #}
 
 optional_coref = {
-    "en": "ontonotes_electra-large",
+    "ca": "udcoref_xlm-roberta-lora",
+    "de": "udcoref_xlm-roberta-lora",
+    "en": "udcoref_xlm-roberta-lora",
+    "es": "udcoref_xlm-roberta-lora",
+    "fr": "udcoref_xlm-roberta-lora",
 }
 
 """
