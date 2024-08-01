@@ -16,14 +16,14 @@ Here, we present a complete end-to-end example on how to build and use your very
 ### Grab Your Tools
 
 - **OS**: we will use POSIX-standard tooling (Linux, macOS) for this example, but most steps can be reproduced on Windows with only difference in environment.
-- **Python**: Stanza only support Python 3.6 or later.
+- **Python**: Stanza only support Python 3.8 or later.
 
 To begin, clone our repository:
 
 <!-- TODO CHANGE THIS TO DEV UPON RELEASE -->
 
 ```bash
-git clone git@github.com:stanfordnlp/stanza.git -b coref-engineering
+git clone git@github.com:stanfordnlp/stanza.git -b dev
 cd stanza
 ```
 
