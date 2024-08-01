@@ -126,6 +126,11 @@ if __name__ == "__main__":
                            help="only score a particular language for eval")
     argparser.add_argument("--log_norms", action="store_true", default=None,
                            help="If set, log all of the trainable norms each epoch.  Very noisy!")
+
+    argparser.add_argument("--train_data", default=None, help="File to use for train data")
+    argparser.add_argument("--dev_data", default=None, help="File to use for dev data")
+    argparser.add_argument("--test_data", default=None, help="File to use for test data")
+
     argparser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name', default=False)
     argparser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
 
@@ -161,6 +166,12 @@ if __name__ == "__main__":
         config.full_pairwise = args.full_pairwise
     if args.disable_singletons:
         config.singletons = False
+    if args.train_data:
+        config.train_data = args.train_data
+    if args.dev_data:
+        config.dev_data = args.dev_data
+    if args.test_data:
+        config.test_data = args.test_data
     # if wandb, generate wandb configuration 
     if args.mode == "train":
         if args.wandb:
