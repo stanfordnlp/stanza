@@ -156,6 +156,13 @@ lora = true
 lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_modules_to_save = [ "pooler" ]
 
+[deeppavlov_slavic_bert_lora]
+bert_model = "DeepPavlov/bert-base-bg-cs-pl-ru-cased"
+bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
 [deberta_lora]
 bert_model = "microsoft/deberta-v3-large"
 bert_learning_rate = 0.00001
