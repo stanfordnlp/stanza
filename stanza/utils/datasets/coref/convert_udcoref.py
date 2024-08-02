@@ -184,10 +184,9 @@ def process_dataset(short_name, conllu_path, coref_output_path, split_test):
                 test_section = []
                 train_section = []
                 for i in docs:
-                    # TODO: want to reseed for each doc so that we can attempt to keep things stable in the event
+                    # reseed for each doc so that we can attempt to keep things stable in the event
                     # of different file orderings or some change to the number of documents
-                    # split_random = Random(i.sentences[0].doc_id)
-                    # however, RU in particular seems to have all the same docid...
+                    split_random = Random(i.sentences[0].doc_id + i.sentences[0].text)
                     if split_random.random() < split_test:
                         test_section.append((i, i.sentences[0].doc_id, lang))
                     else:
