@@ -14,7 +14,8 @@ from random import Random
 
 import argparse
 
-R = Random(7)
+augment_random = Random(7)
+split_random = Random(8)
 
 tqdm = get_tqdm()
 IS_UDCOREF_FORMAT = True
@@ -28,7 +29,7 @@ def process_documents(docs, augment=False):
         if augment:
             for i in doc.sentences:
                 if len(i.words) > 1:
-                    if R.random() < 0.1:
+                    if augment_random.random() < 0.1:
                         i.tokens = i.tokens[:-1]
                         i.words = i.words[:-1]
 
@@ -42,7 +43,7 @@ def process_documents(docs, augment=False):
         for x in sentences:
             if augment:
                 # modify case of the first word with 50% chance
-                if R.random() < 0.5:
+                if augment_random.random() < 0.5:
                     x[0] = x[0].lower()
 
             for y in x:
@@ -67,7 +68,7 @@ def process_documents(docs, augment=False):
         word_clusters = defaultdict(list)
         head2span = []
         word_total = 0
-        SPANS = re.compile("(\(\w+|[%\w]+\))")
+        SPANS = re.compile(r"(\(\w+|[%\w]+\))")
         for parsed_sentence in doc.sentences:
             # spans regex
             # parse the misc column, leaving on "Entity" entries
@@ -161,31 +162,63 @@ def process_documents(docs, augment=False):
 
 CONCAT = True
 
-def process_dataset(short_name, conllu_path, coref_output_path, section_names):
+def process_dataset(short_name, conllu_path, coref_output_path, split_test):
+    sections = []
+    section_names = ('train', 'dev')
+
+    test_sections = []
 
     for section in section_names:
         if not CONCAT:
-            load = os.path.join(conllu_path, f"{short_name}-{section}.conllu")
-            print("Processing %s from %s" % (section, load))
-            input_file = CoNLL.conll2multi_docs(load)
-            lang = load.split("/")[-1].split("_")[0]
-            input_file = (input_file,
-                          input_file.sentences[0].doc_id,
-                          lang)
+            filenames = [os.path.join(conllu_path, f"{short_name}-{section}.conllu")]
         else:
-            loads = glob.glob(os.path.join(conllu_path, f"*{section}.conllu"))
-            input_file = []
-            for load in loads:
-                lang = load.split("/")[-1].split("_")[0]
-                print("Ingesting %s from %s of lang %s" % (section, load, lang))
-                docs = CoNLL.conll2multi_docs(load)
+            filenames = glob.glob(os.path.join(conllu_path, f"*{section}.conllu"))
+
+        input_file = []
+        for load in filenames:
+            lang = load.split("/")[-1].split("_")[0]
+            print("Ingesting %s from %s of lang %s" % (section, load, lang))
+            docs = CoNLL.conll2multi_docs(load)
+            print("  Ingested %d documents" % len(docs))
+            if split_test and section == 'train':
+                test_section = []
+                train_section = []
+                for i in docs:
+                    # TODO: want to reseed for each doc so that we can attempt to keep things stable in the event
+                    # of different file orderings or some change to the number of documents
+                    # split_random = Random(i.sentences[0].doc_id)
+                    # however, RU in particular seems to have all the same docid...
+                    if split_random.random() < split_test:
+                        test_section.append((i, i.sentences[0].doc_id, lang))
+                    else:
+                        train_section.append((i, i.sentences[0].doc_id, lang))
+                if len(test_section) == 0 and len(train_section) >= 2:
+                    idx = split_random.randint(0, len(train_section) - 1)
+                    test_section = [train_section[idx]]
+                    train_section = train_section[:idx] + train_section[idx+1:]
+                print("  Splitting %d documents from %s for test" % (len(test_section), load))
+                input_file.extend(train_section)
+                test_sections.append(test_section)
+            else:
                 for i in docs:
                     input_file.append((i, i.sentences[0].doc_id, lang))
-            print("Ingested %d documents" % len(input_file))
+        print("Ingested %d total documents" % len(input_file))
+        sections.append(input_file)
 
-        converted_section = process_documents(input_file, augment=(section=="train"))
+    if split_test:
+        section_names = ('train', 'dev', 'test')
+        full_test_section = []
+        for filename, test_section in zip(filenames, test_sections):
+            # TODO: could write dataset-specific test sections as well
+            full_test_section.extend(test_section)
+        sections.append(full_test_section)
 
-        output_filename = os.path.join(coref_output_path, "%s.%s.json" % (short_name, section))
+
+    for section_data, section_name in zip(sections, section_names):
+        converted_section = process_documents(section_data, augment=(section_name=="train"))
+
+        os.makedirs(coref_output_path, exist_ok=True)
+        output_filename = os.path.join(coref_output_path, "%s.%s.json" % (short_name, section_name))
         with open(output_filename, "w", encoding="utf-8") as fout:
             json.dump(converted_section, fout, indent=2)
 
@@ -195,12 +228,12 @@ def main():
             prog='Convert UDCoref Data',
     )
     parser.add_argument('project', type=str, help="the name of the subfolder for data conversion")
-    parser.add_argument('-s','--sections', action='append', help='sections of data available', default=["train", "dev"])
+    parser.add_argument('--split_test', default=None, type=float, help='How much of the data to randomly split from train to make a test set')
     args = parser.parse_args()
     coref_input_path = paths['COREF_BASE']
     conll_path = os.path.join(coref_input_path, args.project)
     coref_output_path = paths['COREF_DATA_DIR']
-    process_dataset(args.project, conll_path, coref_output_path, args.sections)
+    process_dataset(args.project, conll_path, coref_output_path, args.split_test)
 
 if __name__ == '__main__':
     main()
