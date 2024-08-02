@@ -215,6 +215,17 @@ def process_dataset(short_name, coref_output_path, split_test, train_files, dev_
         with open(output_filename, "w", encoding="utf-8") as fout:
             json.dump(converted_section, fout, indent=2)
 
+def get_dataset_by_language(coref_input_path, langs):
+    conll_path = os.path.join(coref_input_path, "CorefUD-1.2-public", "data")
+    train_filenames = []
+    dev_filenames = []
+    for lang in langs:
+        train_filenames.extend(glob.glob(os.path.join(conll_path, "*%s*" % lang, "*train.conllu")))
+        dev_filenames.extend(glob.glob(os.path.join(conll_path, "*%s*" % lang, "*dev.conllu")))
+    train_filenames = sorted(train_filenames)
+    dev_filenames = sorted(dev_filenames)
+    return train_filenames, dev_filenames
+
 def main():
     paths = get_default_paths()
     parser = argparse.ArgumentParser(
@@ -225,6 +236,7 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--project', type=str, help="the name of the subfolder for data conversion")
     group.add_argument('--slavic', action='store_true', help="Look for and use a set of Slavic datasets from UDCoref")
+    group.add_argument('--hungarian', action='store_true', help="Look for and use a set of Hungarian datasets from UDCoref")
 
     args = parser.parse_args()
     coref_input_path = paths['COREF_BASE']
@@ -232,15 +244,12 @@ def main():
 
     if args.slavic:
         project = "slavic_udcoref"
-        conll_path = os.path.join(coref_input_path, "CorefUD-1.2-public", "data")
-        print(conll_path)
-        train_filenames = []
-        dev_filenames = []
-        for lang in ('Polish', 'Russian', 'Czech'):
-            train_filenames.extend(glob.glob(os.path.join(conll_path, "*%s*" % lang, "*train.conllu")))
-            dev_filenames.extend(glob.glob(os.path.join(conll_path, "*%s*" % lang, "*dev.conllu")))
-        train_filenames = sorted(train_filenames)
-        dev_filenames = sorted(dev_filenames)
+        langs = ('Polish', 'Russian', 'Czech')
+        train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
+    elif args.hungarian:
+        project = "hu_udcoref"
+        langs = ('Hungarian',)
+        train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
     else:
         project = args.project
         conll_path = os.path.join(coref_input_path, project)
