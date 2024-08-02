@@ -126,6 +126,8 @@ if __name__ == "__main__":
                            help="only score a particular language for eval")
     argparser.add_argument("--log_norms", action="store_true", default=None,
                            help="If set, log all of the trainable norms each epoch.  Very noisy!")
+    argparser.add_argument("--seed", type=int, default=2020,
+                           help="Random seed to set")
 
     argparser.add_argument("--train_data", default=None, help="File to use for train data")
     argparser.add_argument("--dev_data", default=None, help="File to use for dev data")
@@ -139,7 +141,7 @@ if __name__ == "__main__":
     if args.warm_start and args.weights is not None:
         raise ValueError("The following options are incompatible: '--warm_start' and '--weights'")
 
-    set_random_seed(2020)
+    set_random_seed(args.seed)
     deterministic()
     config = CorefModel._load_config(args.config_file, args.experiment)
     if args.batch_size:
