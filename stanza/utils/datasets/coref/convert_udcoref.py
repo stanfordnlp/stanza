@@ -160,20 +160,14 @@ def process_documents(docs, augment=False):
         processed_section.append(processed)
     return processed_section
 
-CONCAT = True
-
-def process_dataset(short_name, conllu_path, coref_output_path, split_test):
-    sections = []
+def process_dataset(short_name, coref_output_path, split_test, train_files, dev_files):
     section_names = ('train', 'dev')
+    section_filenames = [train_files, dev_files]
+    sections = []
 
     test_sections = []
 
-    for section in section_names:
-        if not CONCAT:
-            filenames = [os.path.join(conllu_path, f"{short_name}-{section}.conllu")]
-        else:
-            filenames = glob.glob(os.path.join(conllu_path, f"*{section}.conllu"))
-
+    for section, filenames in zip(section_names, section_filenames):
         input_file = []
         for load in filenames:
             lang = load.split("/")[-1].split("_")[0]
@@ -232,7 +226,9 @@ def main():
     coref_input_path = paths['COREF_BASE']
     conll_path = os.path.join(coref_input_path, args.project)
     coref_output_path = paths['COREF_DATA_DIR']
-    process_dataset(args.project, conll_path, coref_output_path, args.split_test)
+    train_filenames = sorted(glob.glob(os.path.join(conll_path, f"*train.conllu")))
+    dev_filenames = sorted(glob.glob(os.path.join(conll_path, f"*dev.conllu")))
+    process_dataset(args.project, coref_output_path, args.split_test, train_filenames, dev_filenames)
 
 if __name__ == '__main__':
     main()
