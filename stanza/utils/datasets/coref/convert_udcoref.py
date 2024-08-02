@@ -220,15 +220,33 @@ def main():
     parser = argparse.ArgumentParser(
             prog='Convert UDCoref Data',
     )
-    parser.add_argument('project', type=str, help="the name of the subfolder for data conversion")
     parser.add_argument('--split_test', default=None, type=float, help='How much of the data to randomly split from train to make a test set')
+
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument('--project', type=str, help="the name of the subfolder for data conversion")
+    group.add_argument('--slavic', action='store_true', help="Look for and use a set of Slavic datasets from UDCoref")
+
     args = parser.parse_args()
     coref_input_path = paths['COREF_BASE']
-    conll_path = os.path.join(coref_input_path, args.project)
     coref_output_path = paths['COREF_DATA_DIR']
-    train_filenames = sorted(glob.glob(os.path.join(conll_path, f"*train.conllu")))
-    dev_filenames = sorted(glob.glob(os.path.join(conll_path, f"*dev.conllu")))
-    process_dataset(args.project, coref_output_path, args.split_test, train_filenames, dev_filenames)
+
+    if args.slavic:
+        project = "slavic_udcoref"
+        conll_path = os.path.join(coref_input_path, "CorefUD-1.2-public", "data")
+        print(conll_path)
+        train_filenames = []
+        dev_filenames = []
+        for lang in ('Polish', 'Russian', 'Czech'):
+            train_filenames.extend(glob.glob(os.path.join(conll_path, "*%s*" % lang, "*train.conllu")))
+            dev_filenames.extend(glob.glob(os.path.join(conll_path, "*%s*" % lang, "*dev.conllu")))
+        train_filenames = sorted(train_filenames)
+        dev_filenames = sorted(dev_filenames)
+    else:
+        project = args.project
+        conll_path = os.path.join(coref_input_path, project)
+        train_filenames = sorted(glob.glob(os.path.join(conll_path, f"*train.conllu")))
+        dev_filenames = sorted(glob.glob(os.path.join(conll_path, f"*dev.conllu")))
+    process_dataset(project, coref_output_path, args.split_test, train_filenames, dev_filenames)
 
 if __name__ == '__main__':
     main()
