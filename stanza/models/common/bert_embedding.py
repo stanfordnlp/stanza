@@ -24,7 +24,12 @@ class TextTooLongError(ValueError):
 
 
 def update_max_length(model_name, tokenizer):
-    if model_name in ('google/muril-base-cased', 'google/muril-large-cased', 'airesearch/wangchanberta-base-att-spm-uncased', 'camembert/camembert-large', 'hfl/chinese-electra-180g-large-discriminator'):
+    if model_name in ('google/muril-base-cased',
+                      'google/muril-large-cased',
+                      'airesearch/wangchanberta-base-att-spm-uncased',
+                      'camembert/camembert-large',
+                      'hfl/chinese-electra-180g-large-discriminator',
+                      'NYTK/electra-small-discriminator-hungarian'):
         tokenizer.model_max_length = 512
 
 def load_tokenizer(model_name, tokenizer_kwargs=None):
