@@ -199,9 +199,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         Assumes files are named like {configuration}_(e{epoch}_{time})*.pt.
         """
         if path is None:
-            # pattern = rf"{self.config.section}_\(e(\d+)_[^()]*\).*\.pt"
+            # pattern = rf"{self.config.save_name}_\(e(\d+)_[^()]*\).*\.pt"
             # tries to load the last checkpoint in the same dir
-            pattern = rf"{self.config.section}.*?\.checkpoint\.pt"
+            pattern = rf"{self.config.save_name}.*?\.checkpoint\.pt"
             files = []
             os.makedirs(self.config.save_dir, exist_ok=True)
             for f in os.listdir(self.config.save_dir):
@@ -377,7 +377,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         time = datetime.strftime(datetime.now(), "%Y.%m.%d_%H.%M")
         if save_path is None:
             save_path = os.path.join(self.config.save_dir,
-                                     f"{self.config.section}"
+                                     f"{self.config.save_name}"
                                      f"_e{self.epochs_trained}_{time}.pt")
         savedict = {name: module.state_dict() for name, module in to_save}
         if self.config.lora:
@@ -488,15 +488,14 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 else:
                     logger.info("Saving new best model: F1 %.4f > %.4f", scores[1], best_f1)
                 best_f1 = scores[1]
-                # TODO: choose a different default save dir
                 save_path = os.path.join(self.config.save_dir,
-                                         f"{self.config.section}.pt")
+                                         f"{self.config.save_name}.pt")
                 self.save_weights(save_path, save_optimizers=False)
             if self.config.save_each_checkpoint:
                 self.save_weights()
             else:
                 checkpoint_path = os.path.join(self.config.save_dir,
-                                               f"{self.config.section}.checkpoint.pt")
+                                               f"{self.config.save_name}.checkpoint.pt")
                 self.save_weights(checkpoint_path)
             if prev_best_f1 is not None and prev_best_f1 != best_f1:
                 logger.info("Epoch %d finished.\nSentence F1 %.5f p %.5f r %.5f\nBest F1 %.5f\nPrevious best F1 %.5f", self.epochs_trained, scores[1], scores[2], scores[3], best_f1, prev_best_f1)
