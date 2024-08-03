@@ -67,18 +67,3 @@ def get_subwords_batches(doc: Doc,
         start += length
 
     return np.array(subwords_batches)
-
-
-def get_tokenizer(config: Config) -> AutoTokenizer:
-    """
-    Loads bert tokenizer as pytorch modules.
-    """
-
-    base_bert_name = config.bert_model.split("/")[-1]
-    tokenizer_kwargs = config.tokenizer_kwargs.get(base_bert_name, {})
-    if tokenizer_kwargs:
-        logger.debug(f"Using tokenizer kwargs: {tokenizer_kwargs}")
-    tokenizer = AutoTokenizer.from_pretrained(config.bert_model,
-                                              **tokenizer_kwargs)
-
-    return tokenizer
