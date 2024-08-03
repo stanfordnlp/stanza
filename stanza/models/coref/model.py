@@ -33,6 +33,7 @@ from stanza.models.coref.word_encoder import WordEncoder
 from stanza.models.coref.dataset import CorefDataset
 from stanza.models.coref.tokenizer_customization import *
 
+from stanza.models.common.bert_embedding import load_tokenizer
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, NoTransformerFoundationCache
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 
@@ -556,7 +557,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 foundation_cache = NoTransformerFoundationCache(foundation_cache)
             self.bert, self.tokenizer = load_bert(self.config.bert_model, foundation_cache)
 
-        self.tokenizer = bert.get_tokenizer(self.config)
+        base_bert_name = self.config.bert_model.split("/")[-1]
+        tokenizer_kwargs = self.config.tokenizer_kwargs.get(base_bert_name, {})
+        if tokenizer_kwargs:
+            logger.debug(f"Using tokenizer kwargs: {tokenizer_kwargs}")
+        self.tokenizer = load_tokenizer(self.config.bert_model, tokenizer_kwargs)
 
         if self.config.bert_finetune or (hasattr(self.config, 'lora') and self.config.lora):
             self.bert = self.bert.train()

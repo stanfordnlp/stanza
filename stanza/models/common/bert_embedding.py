@@ -27,7 +27,7 @@ def update_max_length(model_name, tokenizer):
     if model_name in ('google/muril-base-cased', 'google/muril-large-cased', 'airesearch/wangchanberta-base-att-spm-uncased', 'camembert/camembert-large', 'hfl/chinese-electra-180g-large-discriminator'):
         tokenizer.model_max_length = 512
 
-def load_tokenizer(model_name):
+def load_tokenizer(model_name, tokenizer_kwargs=None):
     if model_name:
         # note that use_fast is the default
         try:
@@ -37,6 +37,8 @@ def load_tokenizer(model_name):
         bert_args = BERT_ARGS.get(model_name, dict())
         if not model_name.startswith("vinai/phobert"):
             bert_args["add_prefix_space"] = True
+        if tokenizer_kwargs:
+            bert_args.update(tokenizer_kwargs)
         bert_tokenizer = AutoTokenizer.from_pretrained(model_name, **bert_args)
         update_max_length(model_name, bert_tokenizer)
         return bert_tokenizer
