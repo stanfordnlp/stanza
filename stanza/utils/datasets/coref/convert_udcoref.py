@@ -234,24 +234,24 @@ def main():
     parser.add_argument('--split_test', default=None, type=float, help='How much of the data to randomly split from train to make a test set')
 
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('--project', type=str, help="the name of the subfolder for data conversion")
-    group.add_argument('--slavic', action='store_true', help="Look for and use a set of Slavic datasets from UDCoref")
-    group.add_argument('--hungarian', action='store_true', help="Look for and use a set of Hungarian datasets from UDCoref")
+    group.add_argument('--directory', type=str, help="the name of the subfolder for data conversion")
+    group.add_argument('--project', type=str, help="Look for and use a set of datasets for data conversion - Slavic or Hungarian")
 
     args = parser.parse_args()
     coref_input_path = paths['COREF_BASE']
     coref_output_path = paths['COREF_DATA_DIR']
 
-    if args.slavic:
-        project = "slavic_udcoref"
-        langs = ('Polish', 'Russian', 'Czech')
-        train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
-    elif args.hungarian:
-        project = "hu_udcoref"
-        langs = ('Hungarian',)
-        train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
+    if args.project:
+        if args.project == 'slavic':
+            project = "slavic_udcoref"
+            langs = ('Polish', 'Russian', 'Czech')
+            train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
+        elif args.project == 'hungarian':
+            project = "hu_udcoref"
+            langs = ('Hungarian',)
+            train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
     else:
-        project = args.project
+        project = args.directory
         conll_path = os.path.join(coref_input_path, project)
         train_filenames = sorted(glob.glob(os.path.join(conll_path, f"*train.conllu")))
         dev_filenames = sorted(glob.glob(os.path.join(conll_path, f"*dev.conllu")))
