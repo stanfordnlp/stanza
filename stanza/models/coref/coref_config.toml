@@ -183,6 +183,8 @@ lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_modules_to_save = [  ]
 
 [hungarian_electra_lora]
+# TODO: experiment with tokenizer options for this to see if that's
+# why the results are so low using this transformer
 bert_model = "NYTK/electra-small-discriminator-hungarian"
 bert_learning_rate = 0.000025
 lora = true
