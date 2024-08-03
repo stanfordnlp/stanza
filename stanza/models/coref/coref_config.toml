@@ -9,6 +9,7 @@ data_dir = "data/coref"
 
 # where to put checkpoints and final models
 save_dir = "saved_models/coref"
+save_name = "bert-large-cased"
 
 # Train, dev and test jsonlines
 # train_data = "data/coref/en_gum-ud.train.nosgl.json"

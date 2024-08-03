@@ -122,6 +122,8 @@ if __name__ == "__main__":
                            help="If set, update the learning rate for the transformer")
     argparser.add_argument("--save_dir", default=None,
                            help="If set, update the save directory for writing models")
+    argparser.add_argument("--save_name", default=None,
+                           help="If set, update the save name for writing models (otherwise, section name)")
     argparser.add_argument("--score_lang", default=None,
                            help="only score a particular language for eval")
     argparser.add_argument("--log_norms", action="store_true", default=None,
@@ -158,8 +160,14 @@ if __name__ == "__main__":
         config.bert_finetune_begin_epoch = args.bert_finetune_begin_epoch
     if args.dummy_mix is not None:
         config.dummy_mix = args.dummy_mix
+
     if args.save_dir is not None:
         config.save_dir = args.save_dir
+    if args.save_name:
+        config.save_name = args.save_name
+    else:
+        config.save_name = args.experiment
+
     if args.rough_k is not None:
         config.rough_k = args.rough_k
     if args.log_norms is not None:
@@ -174,6 +182,7 @@ if __name__ == "__main__":
         config.dev_data = args.dev_data
     if args.test_data:
         config.test_data = args.test_data
+
     # if wandb, generate wandb configuration 
     if args.mode == "train":
         if args.wandb:

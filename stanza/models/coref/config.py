@@ -15,6 +15,7 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
     # TODO: can either eliminate data_dir or use it for the train/dev/test data
     data_dir: str
     save_dir: str
+    save_name: str
 
     train_data: str
     dev_data: str
