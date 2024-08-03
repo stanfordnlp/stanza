@@ -69,7 +69,7 @@ def get_subwords_batches(doc: Doc,
     return np.array(subwords_batches)
 
 
-def get_tokenizer(config: Config) -> Tuple[AutoModel, AutoTokenizer]:
+def get_tokenizer(config: Config) -> AutoTokenizer:
     """
     Loads bert tokenizer as pytorch modules.
     """
