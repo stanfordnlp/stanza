@@ -229,7 +229,7 @@ def get_dataset_by_language(coref_input_path, langs):
 def main():
     paths = get_default_paths()
     parser = argparse.ArgumentParser(
-            prog='Convert UDCoref Data',
+        prog='Convert UDCoref Data',
     )
     parser.add_argument('--split_test', default=None, type=float, help='How much of the data to randomly split from train to make a test set')
 
