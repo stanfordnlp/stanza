@@ -40,7 +40,7 @@ class DownloadMethod(Enum):
     """
     Determines a couple options on how to download resources for the pipeline.
 
-    NONE will not download anything, probably resulting in failure if the resources aren't already in place.
+    NONE will not download anything, including HF transformers, probably resulting in failure if the resources aren't already in place.
     REUSE_RESOURCES will reuse the existing resources.json and models, but will download any missing models.
     DOWNLOAD_RESOURCES will download a new resources.json and will overwrite any out of date models.
     """
@@ -201,16 +201,9 @@ class Pipeline:
         # set global logging level
         set_logging_level(logging_level, verbose)
 
-        # processors can use this to save on the effort of loading
-        # large sub-models, such as pretrained embeddings, bert, etc
-        if foundation_cache is None:
-            self.foundation_cache = FoundationCache()
-        else:
-            self.foundation_cache = foundation_cache
-
-        download_method = normalize_download_method(download_method)
-        if (download_method is DownloadMethod.DOWNLOAD_RESOURCES or
-            (download_method is DownloadMethod.REUSE_RESOURCES and not os.path.exists(os.path.join(self.dir, "resources.json")))):
+        self.download_method = normalize_download_method(download_method)
+        if (self.download_method is DownloadMethod.DOWNLOAD_RESOURCES or
+            (self.download_method is DownloadMethod.REUSE_RESOURCES and not os.path.exists(os.path.join(self.dir, "resources.json")))):
             logger.info("Checking for updates to resources.json in case models have been updated.  Note: this behavior can be turned off with download_method=None or download_method=DownloadMethod.REUSE_RESOURCES")
             download_resources_json(self.dir,
                                     resources_url=resources_url,
@@ -218,6 +211,13 @@ class Pipeline:
                                     resources_version=resources_version,
                                     resources_filepath=resources_filepath,
                                     proxies=proxies)
+
+        # processors can use this to save on the effort of loading
+        # large sub-models, such as pretrained embeddings, bert, etc
+        if foundation_cache is None:
+            self.foundation_cache = FoundationCache(local_files_only=(self.download_method is DownloadMethod.NONE))
+        else:
+            self.foundation_cache = FoundationCache(foundation_cache, local_files_only=(self.download_method is DownloadMethod.NONE))
 
         # process different pipeline parameters
         lang, self.dir, package, processors = process_pipeline_parameters(lang, self.dir, package, processors)
@@ -241,7 +241,7 @@ class Pipeline:
         if lang in resources:
             self.load_list = maintain_processor_list(resources, lang, package, processors, maybe_add_mwt=(not kwargs.get("tokenize_pretokenized")))
             self.load_list = add_dependencies(resources, lang, self.load_list)
-            if download_method is not DownloadMethod.NONE:
+            if self.download_method is not DownloadMethod.NONE:
                 # skip processors which aren't downloaded from our collection
                 download_list = [x for x in self.load_list if x[0] in resources.get(lang, {})]
                 # skip variants

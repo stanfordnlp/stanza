@@ -32,7 +32,7 @@ def update_max_length(model_name, tokenizer):
                       'NYTK/electra-small-discriminator-hungarian'):
         tokenizer.model_max_length = 512
 
-def load_tokenizer(model_name, tokenizer_kwargs=None):
+def load_tokenizer(model_name, tokenizer_kwargs=None, local_files_only=False):
     if model_name:
         # note that use_fast is the default
         try:
@@ -44,20 +44,21 @@ def load_tokenizer(model_name, tokenizer_kwargs=None):
             bert_args["add_prefix_space"] = True
         if tokenizer_kwargs:
             bert_args.update(tokenizer_kwargs)
+        bert_args['local_files_only'] = local_files_only
         bert_tokenizer = AutoTokenizer.from_pretrained(model_name, **bert_args)
         update_max_length(model_name, bert_tokenizer)
         return bert_tokenizer
     return None
 
-def load_bert(model_name):
+def load_bert(model_name, tokenizer_kwargs=None, local_files_only=False):
     if model_name:
         # such as: "vinai/phobert-base"
         try:
             from transformers import AutoModel
         except ImportError:
             raise ImportError("Please install transformers library for BERT support! Try `pip install transformers`.")
-        bert_model = AutoModel.from_pretrained(model_name)
-        bert_tokenizer = load_tokenizer(model_name)
+        bert_model = AutoModel.from_pretrained(model_name, local_files_only=local_files_only)
+        bert_tokenizer = load_tokenizer(model_name, tokenizer_kwargs=tokenizer_kwargs, local_files_only=local_files_only)
         return bert_model, bert_tokenizer
     return None, None
 

@@ -16,7 +16,7 @@ logger = logging.getLogger('stanza')
 BertRecord = namedtuple('BertRecord', ['model', 'tokenizer', 'peft_ids'])
 
 class FoundationCache:
-    def __init__(self, other=None):
+    def __init__(self, other=None, local_files_only=False):
         if other is None:
             self.bert = {}
             self.charlms = {}
@@ -29,12 +29,13 @@ class FoundationCache:
             self.charlms = other.charlms
             self.pretrains = other.pretrains
             self.lock = other.lock
+        self.local_files_only=local_files_only
 
-    def load_bert(self, transformer_name):
-        m, t, _ = self.load_bert_with_peft(transformer_name, None)
+    def load_bert(self, transformer_name, local_files_only=None):
+        m, t, _ = self.load_bert_with_peft(transformer_name, None, local_files_only=local_files_only)
         return m, t
 
-    def load_bert_with_peft(self, transformer_name, peft_name):
+    def load_bert_with_peft(self, transformer_name, peft_name, local_files_only=None):
         """
         Load a transformer only once
 
@@ -44,7 +45,9 @@ class FoundationCache:
             return None, None, None
         with self.lock:
             if transformer_name not in self.bert:
-                model, tokenizer = bert_embedding.load_bert(transformer_name)
+                if local_files_only is None:
+                    local_files_only = self.local_files_only
+                model, tokenizer = bert_embedding.load_bert(transformer_name, local_files_only=local_files_only)
                 self.bert[transformer_name] = BertRecord(model, tokenizer, {})
             else:
                 logger.debug("Reusing bert %s", transformer_name)
@@ -98,26 +101,26 @@ class NoTransformerFoundationCache(FoundationCache):
     since it will then have the finetuned weights for other models
     which don't want them
     """
-    def load_bert(self, transformer_name):
-        return load_bert(transformer_name)
+    def load_bert(self, transformer_name, local_files_only=None):
+        return load_bert(transformer_name, local_files_only=self.local_files_only if local_files_only is None else local_files_only)
 
-    def load_bert_with_peft(self, transformer_name, peft_name):
-        return load_bert_with_peft(transformer_name, peft_name)
+    def load_bert_with_peft(self, transformer_name, peft_name, local_files_only=None):
+        return load_bert_with_peft(transformer_name, peft_name, local_files_only=self.local_files_only if local_files_only is None else local_files_only)
 
-def load_bert(model_name, foundation_cache=None):
+def load_bert(model_name, foundation_cache=None, local_files_only=None):
     """
     Load a bert, possibly using a foundation cache, ignoring the cache if None
     """
     if foundation_cache is None:
-        return bert_embedding.load_bert(model_name)
+        return bert_embedding.load_bert(model_name, local_files_only=local_files_only)
     else:
-        return foundation_cache.load_bert(model_name)
+        return foundation_cache.load_bert(model_name, local_files_only=local_files_only)
 
-def load_bert_with_peft(model_name, peft_name, foundation_cache=None):
+def load_bert_with_peft(model_name, peft_name, foundation_cache=None, local_files_only=None):
     if foundation_cache is None:
-        m, t = bert_embedding.load_bert(model_name)
+        m, t = bert_embedding.load_bert(model_name, local_files_only=local_files_only)
         return m, t, peft_name
-    return foundation_cache.load_bert_with_peft(model_name, peft_name)
+    return foundation_cache.load_bert_with_peft(model_name, peft_name, local_files_only=local_files_only)
 
 def load_charlm(charlm_file, foundation_cache=None, finetune=False):
     if not charlm_file:
