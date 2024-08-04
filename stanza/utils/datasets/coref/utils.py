@@ -1,3 +1,4 @@
+from collections import defaultdict
 from functools import lru_cache
 
 class DynamicDepth():
@@ -55,3 +56,84 @@ def find_cconj_head(heads, upos, start, end):
         return cc_indexes[0] + start
     return None
 
+def process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_speakers):
+    sentence_lens = [len(x) for x in sentences]
+    speaker = [y for x, sent_len in zip(sentence_speakers, sentence_lens) for y in [x] * sent_len]
+
+    cased_words = [y for x in sentences for y in x]
+    sent_id = [y for idx, sent_len in enumerate(sentence_lens) for y in [idx] * sent_len]
+
+    # use the trees to get the xpos tags
+    # alternatively, could translate the pos_tags field,
+    # but those have numbers, which is annoying
+    #tree_text = "\n".join(x['parse_tree'] for x in paragraph)
+    #trees = tree_reader.read_trees(tree_text)
+    #pos = [x.label for tree in trees for x in tree.yield_preterminals()]
+    # actually, the downstream code doesn't use pos at all.  maybe we can skip?
+
+    doc = pipe(sentences)
+    word_total = 0
+    heads = []
+    # TODO: does SD vs UD matter?
+    deprel = []
+    for sentence in doc.sentences:
+        for word in sentence.words:
+            deprel.append(word.deprel)
+            if word.head == 0:
+                heads.append("null")
+            else:
+                heads.append(word.head - 1 + word_total)
+        word_total += len(sentence.words)
+
+    span_clusters = defaultdict(list)
+    word_clusters = defaultdict(list)
+    head2span = []
+    word_total = 0
+    for parsed_sentence, ontonotes_coref, ontonotes_words in zip(doc.sentences, coref_spans, sentences):
+        sentence_upos = [x.upos for x in parsed_sentence.words]
+        sentence_heads = [x.head - 1 if x.head > 0 else None for x in parsed_sentence.words]
+        for span in ontonotes_coref:
+            # input is expected to be start word, end word + 1
+            # counting from 0
+            # whereas the OntoNotes coref_span is [start_word, end_word] inclusive
+            span_start = span[1] + word_total
+            span_end = span[2] + word_total + 1
+            candidate_head = find_cconj_head(sentence_heads, sentence_upos, span[1], span[2]+1)
+            if candidate_head is None:
+                for candidate_head in range(span[1], span[2] + 1):
+                    # stanza uses 0 to mark the head, whereas OntoNotes is counting
+                    # words from 0, so we have to subtract 1 from the stanza heads
+                    #print(span, candidate_head, parsed_sentence.words[candidate_head].head - 1)
+                    # treat the head of the phrase as the first word that has a head outside the phrase
+                    if (parsed_sentence.words[candidate_head].head - 1 < span[1] or
+                        parsed_sentence.words[candidate_head].head - 1 > span[2]):
+                        break
+                else:
+                    # if none have a head outside the phrase (circular??)
+                    # then just take the first word
+                    candidate_head = span[1]
+            #print("----> %d" % candidate_head)
+            candidate_head += word_total
+            span_clusters[span[0]].append((span_start, span_end))
+            word_clusters[span[0]].append(candidate_head)
+            head2span.append((candidate_head, span_start, span_end))
+        word_total += len(ontonotes_words)
+    span_clusters = sorted([sorted(values) for _, values in span_clusters.items()])
+    word_clusters = sorted([sorted(values) for _, values in word_clusters.items()])
+    head2span = sorted(head2span)
+
+    processed = {
+        "document_id": doc_id,
+        "part_id": part_id,
+        "cased_words": cased_words,
+        "sent_id": sent_id,
+        "part_id": part_id,
+        "speaker": speaker,
+        #"pos": pos,
+        "deprel": deprel,
+        "head": heads,
+        "span_clusters": span_clusters,
+        "word_clusters": word_clusters,
+        "head2span": head2span,
+    }
+    return processed
