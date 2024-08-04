@@ -560,7 +560,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         tokenizer_kwargs = self.config.tokenizer_kwargs.get(base_bert_name, {})
         if tokenizer_kwargs:
             logger.debug(f"Using tokenizer kwargs: {tokenizer_kwargs}")
-        self.tokenizer = load_tokenizer(self.config.bert_model, tokenizer_kwargs)
+        # we just downloaded the tokenizer, so for simplicity, we don't make another request to HF
+        self.tokenizer = load_tokenizer(self.config.bert_model, tokenizer_kwargs, local_files_only=True)
 
         if self.config.bert_finetune or (hasattr(self.config, 'lora') and self.config.lora):
             self.bert = self.bert.train()
