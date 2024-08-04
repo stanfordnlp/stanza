@@ -32,10 +32,14 @@ def convert_dataset_section(pipe, section):
 
     for idx, (doc_id, part_id, paragraph) in enumerate(tqdm(section)):
         sentences = [x['words'] for x in paragraph]
+        coref_spans = [x['coref_spans'] for x in paragraph]
+        sentence_speakers = [x['speaker'] for x in paragraph]
+
         sentence_lens = [len(x) for x in sentences]
+        speaker = [y for x, sent_len in zip(sentence_speakers, sentence_lens) for y in [x] * sent_len]
+
         cased_words = [y for x in sentences for y in x]
         sent_id = [y for idx, sent_len in enumerate(sentence_lens) for y in [idx] * sent_len]
-        speaker = [y for x, sent_len in zip(paragraph, sentence_lens) for y in [x['speaker']] * sent_len]
 
         # use the trees to get the xpos tags
         # alternatively, could translate the pos_tags field,
@@ -63,11 +67,10 @@ def convert_dataset_section(pipe, section):
         word_clusters = defaultdict(list)
         head2span = []
         word_total = 0
-        for parsed_sentence, ontonotes_sentence in zip(doc.sentences, paragraph):
-            coref_spans = ontonotes_sentence['coref_spans']
+        for parsed_sentence, ontonotes_coref, ontonotes_words in zip(doc.sentences, coref_spans, sentences):
             sentence_upos = [x.upos for x in parsed_sentence.words]
             sentence_heads = [x.head - 1 if x.head > 0 else None for x in parsed_sentence.words]
-            for span in coref_spans:
+            for span in ontonotes_coref:
                 # input is expected to be start word, end word + 1
                 # counting from 0
                 # whereas the OntoNotes coref_span is [start_word, end_word] inclusive
@@ -92,7 +95,7 @@ def convert_dataset_section(pipe, section):
                 span_clusters[span[0]].append((span_start, span_end))
                 word_clusters[span[0]].append(candidate_head)
                 head2span.append((candidate_head, span_start, span_end))
-            word_total += len(ontonotes_sentence['words'])
+            word_total += len(ontonotes_words)
         span_clusters = sorted([sorted(values) for _, values in span_clusters.items()])
         word_clusters = sorted([sorted(values) for _, values in word_clusters.items()])
         head2span = sorted(head2span)
