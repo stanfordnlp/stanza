@@ -185,7 +185,9 @@ class Document(StanzaObject):
             except IndexError as e:
                 raise IndexError("Could not process document at sentence %d" % sent_idx) from e
             except ValueError as e:
-                raise ValueError("Could not process document at sentence %d" % sent_idx) from e
+                tokens = ["|%s|" % t for t in tokens]
+                tokens = ", ".join(tokens)
+                raise ValueError("Could not process document at sentence %d\n  Raw tokens: %s" % (sent_idx, tokens)) from e
             self.sentences.append(sentence)
             begin_idx, end_idx = sentence.tokens[0].start_char, sentence.tokens[-1].end_char
             if all((self.text is not None, begin_idx is not None, end_idx is not None)): sentence.text = self.text[begin_idx: end_idx]

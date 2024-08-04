@@ -57,8 +57,16 @@ def find_cconj_head(heads, upos, start, end):
     return None
 
 def process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_speakers):
+    """
+    coref_spans: a list of lists
+    one list per sentence
+    each sentence has a list of spans, where each span is (span_index, span_start, span_end)
+    """
     sentence_lens = [len(x) for x in sentences]
-    speaker = [y for x, sent_len in zip(sentence_speakers, sentence_lens) for y in [x] * sent_len]
+    if all(isinstance(x, list) for x in sentence_speakers):
+        speaker = [y for x in sentence_speakers for y in x]
+    else:
+        speaker = [y for x, sent_len in zip(sentence_speakers, sentence_lens) for y in [x] * sent_len]
 
     cased_words = [y for x in sentences for y in x]
     sent_id = [y for idx, sent_len in enumerate(sentence_lens) for y in [idx] * sent_len]
@@ -127,7 +135,6 @@ def process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_spe
         "part_id": part_id,
         "cased_words": cased_words,
         "sent_id": sent_id,
-        "part_id": part_id,
         "speaker": speaker,
         #"pos": pos,
         "deprel": deprel,
@@ -136,4 +143,6 @@ def process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_spe
         "word_clusters": word_clusters,
         "head2span": head2span,
     }
+    if part_id is not None:
+        processed["part_id"] = part_id
     return processed
