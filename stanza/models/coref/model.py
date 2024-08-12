@@ -289,6 +289,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                    ignore: Optional[Set[str]] = None,
                    config_update: Optional[dict] = None,
                    foundation_cache = None):
+        if not path:
+            raise FileNotFoundError("coref model got an invalid path |%s|" % path)
+        if not os.path.exists(path):
+            raise FileNotFoundError("coref model file %s not found" % path)
         state_dicts = torch.load(path, map_location=map_location)
         epochs_trained = state_dicts.pop("epochs_trained", 0)
         config = state_dicts.pop('config', None)
