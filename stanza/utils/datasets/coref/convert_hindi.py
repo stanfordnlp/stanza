@@ -119,30 +119,18 @@ def main():
     coref_input_path = paths["COREF_BASE"]
     hindi_base_path = os.path.join(coref_input_path, "hindi", "dataset")
 
-    train_filename = os.path.join(hindi_base_path, "train.hindi.jsonlines")
-    train_dataset = read_json_file(train_filename)
-
-    dev_filename = os.path.join(hindi_base_path, "dev.hindi.jsonlines")
-    dev_dataset = read_json_file(dev_filename)
-
-    test_filename = os.path.join(hindi_base_path, "test.hindi.jsonlines")
-    test_dataset = read_json_file(test_filename)
-
     pipe = stanza.Pipeline("hi", processors="tokenize,pos,lemma,depparse", package="default_accurate", tokenize_pretokenized=True, download_method=None)
 
     os.makedirs(paths["COREF_DATA_DIR"], exist_ok=True)
 
-    train_filename = os.path.join(paths["COREF_DATA_DIR"], "hi_iith.train.json")
-    converted_train = convert_dataset_section(pipe, train_dataset, use_cconj_heads=args.use_cconj_heads)
-    write_json_file(train_filename, converted_train)
+    sections = ("train", "dev", "test")
+    for section in sections:
+        input_filename = os.path.join(hindi_base_path, "%s.hindi.jsonlines" % section)
+        dataset = read_json_file(input_filename)
 
-    dev_filename = os.path.join(paths["COREF_DATA_DIR"], "hi_iith.dev.json")
-    converted_dev = convert_dataset_section(pipe, dev_dataset, use_cconj_heads=args.use_cconj_heads)
-    write_json_file(dev_filename, converted_dev)
-
-    test_filename = os.path.join(paths["COREF_DATA_DIR"], "hi_iith.test.json")
-    converted_test = convert_dataset_section(pipe, test_dataset, use_cconj_heads=args.use_cconj_heads)
-    write_json_file(test_filename, converted_test)
+        output_filename = os.path.join(paths["COREF_DATA_DIR"], "hi_iith.%s.json" % section)
+        converted_section = convert_dataset_section(pipe, dataset, use_cconj_heads=args.use_cconj_heads)
+        write_json_file(output_filename, converted_section)
 
 if __name__ == '__main__':
     main()
