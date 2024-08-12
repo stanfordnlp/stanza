@@ -1,3 +1,4 @@
+import argparse
 import json
 from operator import itemgetter
 import os
@@ -75,7 +76,7 @@ def arrange_spans_by_sentence(coref_spans, sentences):
         current_index = end_index
     return sentence_spans
 
-def convert_dataset_section(pipe, section):
+def convert_dataset_section(pipe, section, use_cconj_heads):
     processed_section = []
 
     for idx, doc in enumerate(tqdm(section)):
@@ -89,7 +90,7 @@ def convert_dataset_section(pipe, section):
         coref_spans = flatten_spans(coref_spans)
         coref_spans = arrange_spans_by_sentence(coref_spans, sentences)
 
-        processed = process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_speakers)
+        processed = process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_speakers, use_cconj_heads=use_cconj_heads)
         processed_section.append(processed)
     return processed_section
 
@@ -108,6 +109,12 @@ def write_json_file(output_filename, converted_section):
         json.dump(converted_section, fout, indent=2)
 
 def main():
+    parser = argparse.ArgumentParser(
+        prog='Convert Hindi Coref Data',
+    )
+    parser.add_argument('--no_use_cconj_heads', dest='use_cconj_heads', action='store_false', help="Don't use the conjunction-aware transformation")
+    args = parser.parse_args()
+
     paths = get_default_paths()
     coref_input_path = paths["COREF_BASE"]
     hindi_base_path = os.path.join(coref_input_path, "hindi", "dataset")
@@ -126,15 +133,15 @@ def main():
     os.makedirs(paths["COREF_DATA_DIR"], exist_ok=True)
 
     train_filename = os.path.join(paths["COREF_DATA_DIR"], "hi_iith.train.json")
-    converted_train = convert_dataset_section(pipe, train_dataset)
+    converted_train = convert_dataset_section(pipe, train_dataset, use_cconj_heads=args.use_cconj_heads)
     write_json_file(train_filename, converted_train)
 
     dev_filename = os.path.join(paths["COREF_DATA_DIR"], "hi_iith.dev.json")
-    converted_dev = convert_dataset_section(pipe, dev_dataset)
+    converted_dev = convert_dataset_section(pipe, dev_dataset, use_cconj_heads=args.use_cconj_heads)
     write_json_file(dev_filename, converted_dev)
 
     test_filename = os.path.join(paths["COREF_DATA_DIR"], "hi_iith.test.json")
-    converted_test = convert_dataset_section(pipe, test_dataset)
+    converted_test = convert_dataset_section(pipe, test_dataset, use_cconj_heads=args.use_cconj_heads)
     write_json_file(test_filename, converted_test)
 
 if __name__ == '__main__':
