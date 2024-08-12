@@ -636,6 +636,13 @@ TRANSFORMERS = {
     #  94.29 92.30 88.99 88.38 88.99
     "he": "imvladikon/alephbertgimmel-base-512",
 
+    # can also experiment with xlm-roberta
+    # on a coref dataset from IITH, span F1:
+    #                         dev      test
+    #  xlm-roberta-large   0.63635   0.66579
+    #  muril-large         0.65369   0.68290
+    "hi": "google/muril-large-cased",
+
     # https://huggingface.co/xlm-roberta-base
     # Scores by entity for armtdp NER on 18 labels:
     # no bert : 86.68
