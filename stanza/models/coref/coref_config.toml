@@ -191,6 +191,14 @@ lora = true
 lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_modules_to_save = [  ]
 
+[muril_large_cased_lora]
+bert_model = "google/muril-large-cased"
+bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
+
 [t5_lora]
 bert_model = "google-t5/t5-large"
 bert_learning_rate = 0.000025
