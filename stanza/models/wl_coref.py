@@ -204,6 +204,9 @@ if __name__ == "__main__":
         config_update = {
             'log_norms': args.log_norms if args.log_norms is not None else False
         }
+        if args.test_data:
+            config_update['test_data'] = args.test_data
+
         if args.weights is None and config.save_name is not None:
             args.weights = config.save_name
         if not os.path.exists(args.weights) and os.path.exists(args.weights + ".pt"):
