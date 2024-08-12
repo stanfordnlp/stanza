@@ -56,7 +56,7 @@ def find_cconj_head(heads, upos, start, end):
         return cc_indexes[0] + start
     return None
 
-def process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_speakers):
+def process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_speakers, use_cconj_heads=True):
     """
     coref_spans: a list of lists
     one list per sentence
@@ -106,7 +106,7 @@ def process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_spe
             # whereas the OntoNotes coref_span is [start_word, end_word] inclusive
             span_start = span[1] + word_total
             span_end = span[2] + word_total + 1
-            candidate_head = find_cconj_head(sentence_heads, sentence_upos, span[1], span[2]+1)
+            candidate_head = find_cconj_head(sentence_heads, sentence_upos, span[1], span[2]+1) if use_cconj_heads else None
             if candidate_head is None:
                 for candidate_head in range(span[1], span[2] + 1):
                     # stanza uses 0 to mark the head, whereas OntoNotes is counting
