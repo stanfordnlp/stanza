@@ -42,6 +42,7 @@ import argparse
 from contextlib import contextmanager
 import datetime
 import logging
+import os
 import random
 import sys
 import dataclasses
@@ -203,6 +204,14 @@ if __name__ == "__main__":
         config_update = {
             'log_norms': args.log_norms if args.log_norms is not None else False
         }
+        if args.weights is None and config.save_name is not None:
+            args.weights = config.save_name
+        if not os.path.exists(args.weights) and os.path.exists(args.weights + ".pt"):
+            args.weights = args.weights + ".pt"
+        elif not os.path.exists(args.weights) and config.save_dir and os.path.exists(os.path.join(config.save_dir, args.weights)):
+            args.weights = os.path.join(config.save_dir, args.weights)
+        elif not os.path.exists(args.weights) and config.save_dir and os.path.exists(os.path.join(config.save_dir, args.weights + ".pt")):
+            args.weights = os.path.join(config.save_dir, args.weights + ".pt")
         model = CorefModel.load_model(path=args.weights, map_location="cpu",
                                       ignore={"bert_optimizer", "general_optimizer",
                                               "bert_scheduler", "general_scheduler"},
