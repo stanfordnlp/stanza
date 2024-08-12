@@ -12,6 +12,9 @@ from stanza.utils.datasets.coref.utils import process_document
 tqdm = get_tqdm()
 
 def flatten_spans(coref_spans):
+    """
+    Put span IDs on each span, then flatten them into a single list sorted by first word
+    """
     # put span indices on the spans
     #   [[[38, 39], [42, 43], [41, 41], [180, 180], [300, 300]], [[60, 68],
     #   -->
@@ -77,6 +80,13 @@ def arrange_spans_by_sentence(coref_spans, sentences):
     return sentence_spans
 
 def convert_dataset_section(pipe, section, use_cconj_heads):
+    """
+    Reprocess the original data into a format compatible with previous conversion utilities
+
+    - remove blank and NULL words
+    - rearrange the spans into spans per sentence instead of a list of indices for each span
+    - process the document using a Hindi pipeline
+    """
     processed_section = []
 
     for idx, doc in enumerate(tqdm(section)):
@@ -93,6 +103,18 @@ def convert_dataset_section(pipe, section, use_cconj_heads):
         processed = process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_speakers, use_cconj_heads=use_cconj_heads)
         processed_section.append(processed)
     return processed_section
+
+def remove_nulls_dataset_section(section):
+    processed_section = []
+    for doc in section:
+        sentences = doc['sentences']
+        coref_spans = doc['clusters']
+        coref_spans, sentences = remove_nulls(coref_spans, sentences)
+        doc['sentences'] = sentences
+        doc['clusters'] = coref_spans
+        processed_section.append(doc)
+    return processed_section
+
 
 def read_json_file(filename):
     with open(filename, encoding="utf-8") as fin:
@@ -113,24 +135,36 @@ def main():
         prog='Convert Hindi Coref Data',
     )
     parser.add_argument('--no_use_cconj_heads', dest='use_cconj_heads', action='store_false', help="Don't use the conjunction-aware transformation")
+    parser.add_argument('--remove_nulls', action='store_true', help="The only action is to remove the NULLs and blank tokens")
     args = parser.parse_args()
 
     paths = get_default_paths()
     coref_input_path = paths["COREF_BASE"]
     hindi_base_path = os.path.join(coref_input_path, "hindi", "dataset")
 
-    pipe = stanza.Pipeline("hi", processors="tokenize,pos,lemma,depparse", package="default_accurate", tokenize_pretokenized=True, download_method=None)
-
-    os.makedirs(paths["COREF_DATA_DIR"], exist_ok=True)
-
     sections = ("train", "dev", "test")
-    for section in sections:
-        input_filename = os.path.join(hindi_base_path, "%s.hindi.jsonlines" % section)
-        dataset = read_json_file(input_filename)
+    if args.remove_nulls:
+        for section in sections:
+            input_filename = os.path.join(hindi_base_path, "%s.hindi.jsonlines" % section)
+            dataset = read_json_file(input_filename)
+            dataset = remove_nulls_dataset_section(dataset)
+            output_filename = os.path.join(hindi_base_path, "hi_iith.%s.nonulls.json" % section)
+            with open(output_filename, "w", encoding="utf-8") as fout:
+                for doc in dataset:
+                    json.dump(doc, fout, ensure_ascii=False)
+                    fout.write("\n")
+    else:
+        pipe = stanza.Pipeline("hi", processors="tokenize,pos,lemma,depparse", package="default_accurate", tokenize_pretokenized=True, download_method=None)
 
-        output_filename = os.path.join(paths["COREF_DATA_DIR"], "hi_iith.%s.json" % section)
-        converted_section = convert_dataset_section(pipe, dataset, use_cconj_heads=args.use_cconj_heads)
-        write_json_file(output_filename, converted_section)
+        os.makedirs(paths["COREF_DATA_DIR"], exist_ok=True)
+
+        for section in sections:
+            input_filename = os.path.join(hindi_base_path, "%s.hindi.jsonlines" % section)
+            dataset = read_json_file(input_filename)
+
+            output_filename = os.path.join(paths["COREF_DATA_DIR"], "hi_iith.%s.json" % section)
+            converted_section = convert_dataset_section(pipe, dataset, use_cconj_heads=args.use_cconj_heads)
+            write_json_file(output_filename, converted_section)
 
 if __name__ == '__main__':
     main()
