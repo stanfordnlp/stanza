@@ -127,7 +127,12 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         self.training = False
         w_checker = ClusterChecker()
         s_checker = ClusterChecker()
-        docs = self._get_docs(self.config.__dict__[f"{data_split}_data"])
+        try:
+            data_split_data = f"{data_split}_data"
+            data_path = self.config.__dict__[data_split_data]
+            docs = self._get_docs(data_path)
+        except FileNotFoundError as e:
+            raise FileNotFoundError("Unable to find data split %s at file %s" % (data_split_data, data_path)) from e
         running_loss = 0.0
         s_correct = 0
         s_total = 0
