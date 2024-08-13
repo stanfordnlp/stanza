@@ -423,11 +423,14 @@ default_tokenizer = {
 
 optional_coref = {
     "ca": "udcoref_xlm-roberta-lora",
+    "cs": "udcoref_xlm-roberta-lora",
     "de": "udcoref_xlm-roberta-lora",
     "en": "udcoref_xlm-roberta-lora",
     "es": "udcoref_xlm-roberta-lora",
     "fr": "udcoref_xlm-roberta-lora",
     "hi": "iith_muril-large-cased-lora",
+    "pl": "udcoref_xlm-roberta-lora",
+    "ru": "udcoref_xlm-roberta-lora",
 }
 
 """
