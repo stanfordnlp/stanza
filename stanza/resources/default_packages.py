@@ -427,6 +427,7 @@ optional_coref = {
     "en": "udcoref_xlm-roberta-lora",
     "es": "udcoref_xlm-roberta-lora",
     "fr": "udcoref_xlm-roberta-lora",
+    "hi": "iith_muril-large-cased-lora",
 }
 
 """
