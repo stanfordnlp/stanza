@@ -497,14 +497,22 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 else:
                     logger.info("Saving new best model: F1 %.4f > %.4f", scores[1], best_f1)
                 best_f1 = scores[1]
-                save_path = os.path.join(self.config.save_dir,
-                                         f"{self.config.save_name}.pt")
+                if self.config.save_name.endswith(".pt"):
+                    save_path = os.path.join(self.config.save_dir,
+                                             f"{self.config.save_name}")
+                else:
+                    save_path = os.path.join(self.config.save_dir,
+                                             f"{self.config.save_name}.pt")
                 self.save_weights(save_path, save_optimizers=False)
             if self.config.save_each_checkpoint:
                 self.save_weights()
             else:
-                checkpoint_path = os.path.join(self.config.save_dir,
-                                               f"{self.config.save_name}.checkpoint.pt")
+                if self.config.save_name.endswith(".pt"):
+                    checkpoint_path = os.path.join(self.config.save_dir,
+                                                   f"{self.config.save_name[:-3]}.checkpoint.pt")
+                else:
+                    checkpoint_path = os.path.join(self.config.save_dir,
+                                                   f"{self.config.save_name}.checkpoint.pt")
                 self.save_weights(checkpoint_path)
             if prev_best_f1 is not None and prev_best_f1 != best_f1:
                 logger.info("Epoch %d finished.\nSentence F1 %.5f p %.5f r %.5f\nBest F1 %.5f\nPrevious best F1 %.5f", self.epochs_trained, scores[1], scores[2], scores[3], best_f1, prev_best_f1)
