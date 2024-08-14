@@ -253,6 +253,8 @@ def main():
     else:
         project = args.directory
         conll_path = os.path.join(coref_input_path, project)
+        if not os.path.exists(conll_path) and os.path.exists(project):
+            conll_path = args.directory
         train_filenames = sorted(glob.glob(os.path.join(conll_path, f"*train.conllu")))
         dev_filenames = sorted(glob.glob(os.path.join(conll_path, f"*dev.conllu")))
     process_dataset(project, coref_output_path, args.split_test, train_filenames, dev_filenames)
