@@ -250,6 +250,18 @@ def main():
             project = "hu_udcoref"
             langs = ('Hungarian',)
             train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
+        elif args.project == 'gerrom':
+            project = "gerrom_udcoref"
+            langs = ('Catalan', 'English', 'French', 'German', 'Norwegian', 'Spanish')
+            train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
+        elif args.project == 'germanic':
+            project = "germanic_udcoref"
+            langs = ('English', 'German', 'Norwegian')
+            train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
+        elif args.project == 'norwegian':
+            project = "norwegian_udcoref"
+            langs = ('Norwegian',)
+            train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
     else:
         project = args.directory
         conll_path = os.path.join(coref_input_path, project)
