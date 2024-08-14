@@ -145,6 +145,13 @@ lora = true
 lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_modules_to_save = [ "pooler" ]
 
+[scandibert_lora]
+bert_model = "vesteinn/ScandiBERT"
+bert_learning_rate = 0.00005
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
 [xlm_roberta]
 bert_model = "FacebookAI/xlm-roberta-large"
 bert_learning_rate = 0.00001
