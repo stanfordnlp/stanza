@@ -1003,7 +1003,7 @@ def build_combined_spanish_dataset(paths, model_type, dataset):
             sents.extend(new_sents)
 
         if model_type in (common.ModelType.TOKENIZER, common.ModelType.MWT, common.ModelType.LEMMA):
-            extra_spanish = os.path.join(handparsed_dir, "spanish-mwt", "infinitives.mwt")
+            extra_spanish = os.path.join(handparsed_dir, "spanish-mwt", "adjectives.conllu")
             if not os.path.exists(extra_spanish):
                 raise FileNotFoundError("Cannot find the extra dataset 'handpicked.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
             extra_sents = read_sentences_from_conllu(extra_spanish)
