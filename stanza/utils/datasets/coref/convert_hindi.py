@@ -148,13 +148,13 @@ def main():
             input_filename = os.path.join(hindi_base_path, "%s.hindi.jsonlines" % section)
             dataset = read_json_file(input_filename)
             dataset = remove_nulls_dataset_section(dataset)
-            output_filename = os.path.join(hindi_base_path, "hi_iith.%s.nonulls.json" % section)
+            output_filename = os.path.join(hindi_base_path, "hi_deeph.%s.nonulls.json" % section)
             with open(output_filename, "w", encoding="utf-8") as fout:
                 for doc in dataset:
                     json.dump(doc, fout, ensure_ascii=False)
                     fout.write("\n")
     else:
-        pipe = stanza.Pipeline("hi", processors="tokenize,pos,lemma,depparse", package="default_accurate", tokenize_pretokenized=True, download_method=None)
+        pipe = stanza.Pipeline("hi", processors="tokenize,pos,lemma,depparse", package="default_accurate", tokenize_pretokenized=True)
 
         os.makedirs(paths["COREF_DATA_DIR"], exist_ok=True)
 
@@ -162,7 +162,7 @@ def main():
             input_filename = os.path.join(hindi_base_path, "%s.hindi.jsonlines" % section)
             dataset = read_json_file(input_filename)
 
-            output_filename = os.path.join(paths["COREF_DATA_DIR"], "hi_iith.%s.json" % section)
+            output_filename = os.path.join(paths["COREF_DATA_DIR"], "hi_deeph.%s.json" % section)
             converted_section = convert_dataset_section(pipe, dataset, use_cconj_heads=args.use_cconj_heads)
             write_json_file(output_filename, converted_section)
 
