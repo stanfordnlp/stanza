@@ -205,6 +205,29 @@ lora = true
 lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_modules_to_save = [ "pooler" ]
 
+[indic_bert_lora]
+bert_model = "ai4bharat/indic-bert"
+bert_learning_rate = 0.0005
+lora = true
+# indic-bert is an albert with repeating layers of different names
+lora_target_modules = [ "query", "value", "dense", "ffn", "full_layer" ]
+lora_modules_to_save = [ "pooler" ]
+
+[bert_multilingual_cased_lora]
+# LR sweep on a Hindi dataset
+# 0.00001:  0.53238
+# 0.00002:  0.54012
+# 0.000025: 0.54206
+# 0.00003:  0.54050
+# 0.00004:  0.55081
+# 0.00005:  0.55135
+# 0.000075: 0.54482
+# 0.0001:   0.53888
+bert_model = "google-bert/bert-base-multilingual-cased"
+bert_learning_rate = 0.00005
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
 
 [t5_lora]
 bert_model = "google-t5/t5-large"
