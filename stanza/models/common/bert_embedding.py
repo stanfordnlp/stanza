@@ -416,21 +416,35 @@ def convert_to_position_list(sentence, offsets):
     return list_offsets
 
 def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach):
-    data = fix_blank_tokens(tokenizer, data)
-
     #add add_prefix_space = True for RoBerTa-- error if not
     # using attention masks makes contextual embeddings much more useful for downstream tasks
     tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=True)
     list_offsets = []
     for idx in range(len(data)):
         converted_offsets = convert_to_position_list(data[idx], tokenized.word_ids(batch_index=idx))
-        if any(x is None for x in converted_offsets):
-            raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
         list_offsets.append(converted_offsets)
 
         #if list_offsets[idx][-1] > tokenizer.model_max_length - 1:
         #    logger.error("Invalid size, max size: %d, got %d.\nTokens: %s\nTokenized: %s", tokenizer.model_max_length, len(offsets), data[idx][:1000], offsets[:1000])
         #    raise TextTooLongError(len(offsets), tokenizer.model_max_length, idx, " ".join(data[idx]))
+
+    if any(any(x is None for x in converted_offsets) for converted_offsets in list_offsets):
+        # at least one of the tokens in the data is composed entirely of characters the tokenizer doesn't know about
+        # one possible approach would be to retokenize only those sentences
+        # however, in that case the attention mask might be of a different length,
+        # as would the token ids, and it would be a pain to fix those
+        # easiest to just retokenize the whole thing, hopefully a rare event
+        data = fix_blank_tokens(tokenizer, data)
+
+        tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=True)
+        list_offsets = []
+        for idx in range(len(data)):
+            converted_offsets = convert_to_position_list(data[idx], tokenized.word_ids(batch_index=idx))
+            list_offsets.append(converted_offsets)
+
+    if any(any(x is None for x in converted_offsets) for converted_offsets in list_offsets):
+        raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
+
 
     features = []
     for i in range(int(math.ceil(len(data)/128))):
