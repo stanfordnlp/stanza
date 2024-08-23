@@ -13,6 +13,7 @@ from torch import nn
 from stanza.models.common import utils
 from stanza.models.common.foundation_cache import FoundationCache, NoTransformerFoundationCache
 from stanza.models.common.large_margin_loss import LargeMarginInSoftmaxLoss
+from stanza.models.common.utils import sort_with_indices, unsort
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
@@ -680,8 +681,10 @@ def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None):
     num_generate = args.get('num_generate', 0)
     keep_scores = num_generate > 0
 
-    tree_iterator = iter(tqdm(retagged_trees))
+    sorted_trees, original_indices = sort_with_indices(retagged_trees, key=len, reverse=True)
+    tree_iterator = iter(tqdm(sorted_trees))
     treebank = model.parse_sentences_no_grad(tree_iterator, model.build_batch_from_trees, args['eval_batch_size'], model.predict, keep_scores=keep_scores)
+    treebank = unsort(treebank, original_indices)
     full_results = treebank
 
     if num_generate > 0:
