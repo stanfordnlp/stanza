@@ -400,24 +400,33 @@ def build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_lay
     return slices
 
 
+def convert_to_position_list(sentence, offsets):
+    """
+    Convert a transformers-tokenized sentence's offsets to a list of word to position
+    """
+    # +2 for the beginning and end
+    list_offsets = [None] * (len(sentence) + 2)
+    for pos, offset in enumerate(offsets):
+        if offset is None:
+            continue
+        # this uses the last token piece for any offset by overwriting the previous value
+        list_offsets[offset+1] = pos
+    list_offsets[0] = 0
+    list_offsets[-1] = list_offsets[-2] + 1
+    return list_offsets
+
 def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach):
     data = fix_blank_tokens(tokenizer, data)
 
     #add add_prefix_space = True for RoBerTa-- error if not
     # using attention masks makes contextual embeddings much more useful for downstream tasks
     tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=True)
-    list_offsets = [[None] * (len(sentence)+2) for sentence in data]
+    list_offsets = []
     for idx in range(len(data)):
-        offsets = tokenized.word_ids(batch_index=idx)
-        for pos, offset in enumerate(offsets):
-            if offset is None:
-                continue
-            # this uses the last token piece for any offset by overwriting the previous value
-            list_offsets[idx][offset+1] = pos
-        list_offsets[idx][0] = 0
-        list_offsets[idx][-1] = list_offsets[idx][-2] + 1
-        if any(x is None for x in list_offsets[idx]):
+        converted_offsets = convert_to_position_list(data[idx], tokenized.word_ids(batch_index=idx))
+        if any(x is None for x in converted_offsets):
             raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
+        list_offsets.append(converted_offsets)
 
         #if list_offsets[idx][-1] > tokenizer.model_max_length - 1:
         #    logger.error("Invalid size, max size: %d, got %d.\nTokens: %s\nTokenized: %s", tokenizer.model_max_length, len(offsets), data[idx][:1000], offsets[:1000])
