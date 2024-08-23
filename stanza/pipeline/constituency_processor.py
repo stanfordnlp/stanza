@@ -5,6 +5,7 @@ Processor that attaches a constituency tree to a sentence
 from stanza.models.constituency.trainer import Trainer
 
 from stanza.models.common import doc
+from stanza.models.common.utils import sort_with_indices, unsort
 from stanza.utils.get_tqdm import get_tqdm
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
@@ -54,10 +55,12 @@ class ConstituencyProcessor(UDProcessor):
             words = [[(w.text, w.xpos) for w in s.words] for s in sentences]
         else:
             words = [[(w.text, w.upos) for w in s.words] for s in sentences]
+        words, original_indices = sort_with_indices(words, key=len, reverse=True)
         if self._tqdm:
             words = tqdm(words)
 
         trees = self._model.parse_tagged_words(words, self._batch_size)
+        trees = unsort(trees, original_indices)
         document.set(CONSTITUENCY, trees, to_sentence=True)
         return document
 
