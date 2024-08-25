@@ -553,6 +553,9 @@ def build_argparse():
     parser.add_argument('--learning_rate_min_lr', default=None, type=float, help='Plateau learning rate minimum')
     parser.add_argument('--stage1_learning_rate_min_lr', default=None, type=float, help='Plateau learning rate minimum (stage 1)')
 
+    parser.add_argument('--contrastive_initial_epoch', default=1, type=int, help='When to start contrastive learning')
+    parser.add_argument('--contrastive_learning_rate', default=0.0, type=float, help='Multiplicative factor for constrastive learning')
+
     parser.add_argument('--grad_clipping', default=None, type=float, help='Clip abs(grad) to this amount.  Use --no_grad_clipping to turn off grad clipping')
     parser.add_argument('--no_grad_clipping', action='store_const', const=None, dest='grad_clipping', help='Use --no_grad_clipping to turn off grad clipping')
 
@@ -770,6 +773,8 @@ def build_model_filename(args):
                                                oracle_level=args['oracle_level'],
                                                embedding=embedding,
                                                finetune=maybe_finetune,
+                                               contrastive_learning_rate=args['contrastive_learning_rate'],
+                                               contrastive_initial_epoch=args['contrastive_initial_epoch'],
                                                transformer_finetune_begin=transformer_finetune_begin,
                                                transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
                                                tscheme=args['transition_scheme'].short_name,
