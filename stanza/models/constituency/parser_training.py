@@ -596,8 +596,9 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
             if pred_transition == gold_transition:
                 transitions_correct[gold_transition.short_name()] += 1
                 if state.num_transitions + 1 < len(state.gold_sequence):
-                    if oracle is not None and random.random() < args['oracle_forced_errors']:
+                    if oracle is not None and epoch >= args['oracle_initial_epoch'] and random.random() < args['oracle_forced_errors']:
                         # TODO: could randomly choose from the legal transitions
+                        # perhaps the second best scored transition
                         fake_transition = random.choice(model.transitions)
                         if fake_transition.is_legal(state, model):
                             _, new_sequence = oracle.fix_error(fake_transition, model, state)
