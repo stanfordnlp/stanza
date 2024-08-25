@@ -79,13 +79,10 @@ class POSProcessor(UDProcessor):
         idx = []
         with torch.no_grad():
             if self._tqdm:
-                for i, b in enumerate(tqdm(batch)):
-                    idx.extend(b[-1])
-                    preds += self.trainer.predict(b)
-            else:
-                for i, b in enumerate(batch):
-                    idx.extend(b[-1])
-                    preds += self.trainer.predict(b)
+                batch = tqdm(batch)
+            for i, b in enumerate(batch):
+                idx.extend(b[-1])
+                preds += self.trainer.predict(b)
 
         preds = unsort(preds, idx)
         dataset.doc.set([doc.UPOS, doc.XPOS, doc.FEATS], [y for x in preds for y in x])
