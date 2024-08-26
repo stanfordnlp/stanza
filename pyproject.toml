@@ -87,7 +87,7 @@ visualization = [
 include-package-data = true
 
 [tool.setuptools.package-data]
-"" = ["*.pl"]
+"" = ["*.pl", "Cargo.toml"]
 
 [tool.setuptools.packages.find]
 exclude = ["data", "docs", "extern_data", "figures", "saved_models"]
