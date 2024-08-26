@@ -1,0 +1,17 @@
+# Rust dependencies and the single source of the package version number.
+
+[package]
+name = "stanza"
+version = "1.9.0"
+edition = "2021"
+
+[package.metadata]
+resources-version = "1.9.0"
+
+[lib]
+name = "_core"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = "0.22.0"
+
