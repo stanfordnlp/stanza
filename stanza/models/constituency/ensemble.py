@@ -131,8 +131,9 @@ class Ensemble(nn.Module):
     def has_unary_transitions(self):
         return self.models[0].has_unary_transitions()
 
+    @property
     def is_top_down(self):
-        return self.models[0].is_top_down()
+        return self.models[0].is_top_down
 
     @property
     def reverse_sentence(self):

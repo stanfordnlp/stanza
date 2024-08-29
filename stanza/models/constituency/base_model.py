@@ -54,6 +54,10 @@ class BaseModel(ABC):
         self._reverse_sentence = reverse_sentence
         self._root_labels = sorted(list(root_labels))
 
+        self._is_top_down = (self._transition_scheme is TransitionScheme.TOP_DOWN or
+                             self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY or
+                             self._transition_scheme is TransitionScheme.TOP_DOWN_COMPOUND)
+
     @abstractmethod
     def initial_word_queues(self, tagged_word_lists):
         """
@@ -158,13 +162,12 @@ class BaseModel(ABC):
         """
         return self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY
 
+    @property
     def is_top_down(self):
         """
         Whether or not this model is TOP_DOWN
         """
-        return (self._transition_scheme is TransitionScheme.TOP_DOWN or
-                self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY or
-                self._transition_scheme is TransitionScheme.TOP_DOWN_COMPOUND)
+        return self._is_top_down
 
     @property
     def reverse_sentence(self):
@@ -447,8 +450,9 @@ class BaseModel(ABC):
             for idx, constituent in zip(idxs, callback_constituents):
                 new_constituents[idx] = constituent
 
-        state_batch = [tree for idx, tree in enumerate(state_batch) if idx not in remove]
-        transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
+        if len(remove) > 0:
+            state_batch = [tree for idx, tree in enumerate(state_batch) if idx not in remove]
+            transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
 
         if len(state_batch) == 0:
             return state_batch
@@ -457,9 +461,9 @@ class BaseModel(ABC):
         new_constituents = self.push_constituents(constituents, new_constituents)
 
         state_batch = [state._replace(num_opens=state.num_opens + transition.delta_opens(),
-                                     word_position=word_position,
-                                     transitions=transition_stack,
-                                     constituents=constituents)
+                                      word_position=word_position,
+                                      transitions=transition_stack,
+                                      constituents=constituents)
                       for (state, transition, word_position, transition_stack, constituents)
                       in zip(state_batch, transitions, word_positions, new_transitions, new_constituents)]
 

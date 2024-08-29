@@ -44,6 +44,10 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
         # a length of 1 represents no constituents
         return len(self.constituents) == 2
 
+    @property
+    def empty_constituents(self):
+        return self.constituents.parent is None
+
     def num_constituents(self):
         return len(self.constituents) - 1
 
@@ -96,6 +100,10 @@ class MultiState(namedtuple('MultiState', ['states', 'gold_tree', 'gold_sequence
 
     def get_tree(self, ensemble):
         return self.states[0].get_tree(ensemble.models[0])
+
+    @property
+    def empty_constituents(self):
+        return self.states[0].empty_constituents
 
     def num_constituents(self):
         return len(self.states[0].constituents) - 1

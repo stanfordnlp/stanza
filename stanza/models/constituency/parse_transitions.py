@@ -157,7 +157,7 @@ class Shift(Transition):
         """
         if state.empty_word_queue():
             return False
-        if model.is_top_down():
+        if model.is_top_down:
             # top down transition sequences cannot shift if there are currently no
             # Open transitions on the stack.  in such a case, the new constituent
             # will never be reduced
@@ -186,7 +186,7 @@ class Shift(Transition):
             # As long as there is one or more open transitions,
             # everything can be eaten
             if state.num_opens == 0:
-                if state.num_constituents() > 0:
+                if not state.empty_constituents:
                     return False
         return True
 
@@ -342,7 +342,7 @@ class OpenConstituent(Transition):
             # fudge a bit so we don't miss root nodes etc in very small trees
             # also there's one really deep tree in CTB 9.0
             return False
-        if model.is_top_down():
+        if model.is_top_down:
             # If the model is top down, you can't Open if there are
             # no words to eventually eat
             if state.empty_word_queue():
@@ -363,7 +363,7 @@ class OpenConstituent(Transition):
             # since closing the in-order involves removing one more
             # item before the open, and it can close at any time
             # (a close immediately after the open represents a unary)
-            if state.num_constituents() == 0:
+            if state.empty_constituents:
                 return False
             if isinstance(model.get_top_transition(state.transitions), OpenConstituent):
                 # consecutive Opens don't make sense in the context of in-order
@@ -491,7 +491,7 @@ class CloseConstituent(Transition):
         label = model.get_top_constituent(constituents).label
         # pop past the Dummy as well
         constituents = constituents.pop()
-        if not model.is_top_down():
+        if not model.is_top_down:
             # the alternative to TOP_DOWN_... is IN_ORDER
             # in which case we want to pop one more constituent
             children.append(constituents.value)
@@ -524,7 +524,7 @@ class CloseConstituent(Transition):
         """
         if state.num_opens <= 0:
             return False
-        if model.is_top_down():
+        if model.is_top_down:
             if isinstance(model.get_top_transition(state.transitions), OpenConstituent):
                 return False
             if state.num_opens <= 1 and not state.empty_word_queue():
