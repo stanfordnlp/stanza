@@ -541,7 +541,7 @@ class CloseConstituent(Transition):
                 # under the ROOT open if unary transitions are not possible
                 if state.num_opens == 2 and not state.empty_word_queue():
                     return False
-        elif model.transition_scheme() == TransitionScheme.IN_ORDER:
+        elif model.transition_scheme() is TransitionScheme.IN_ORDER:
             if not isinstance(model.get_top_transition(state.transitions), OpenConstituent):
                 # we're not stuck in a loop of unaries
                 return True
