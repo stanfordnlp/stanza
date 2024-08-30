@@ -42,19 +42,19 @@ class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'g
 
     def has_one_constituent(self):
         # a length of 1 represents no constituents
-        return len(self.constituents) == 2
+        return self.constituents.length == 2
 
     @property
     def empty_constituents(self):
         return self.constituents.parent is None
 
     def num_constituents(self):
-        return len(self.constituents) - 1
+        return self.constituents.length - 1
 
     @property
     def num_transitions(self):
         # -1 for the sentinel value
-        return len(self.transitions) - 1
+        return self.transitions.length - 1
 
     def get_word(self, pos):
         # +1 to handle the initial sentinel value

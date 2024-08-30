@@ -368,8 +368,8 @@ class OpenConstituent(Transition):
             if isinstance(model.get_top_transition(state.transitions), OpenConstituent):
                 # consecutive Opens don't make sense in the context of in-order
                 return False
-            if (model.transition_scheme() is TransitionScheme.IN_ORDER_UNARY or
-                model.transition_scheme() is TransitionScheme.IN_ORDER_COMPOUND):
+            if not model.transition_scheme() is TransitionScheme.IN_ORDER:
+                # eg, IN_ORDER_UNARY or IN_ORDER_COMPOUND
                 # if compound unary opens are used
                 # or the unary transitions are via CompoundUnary
                 # can always open as long as the word queue isn't empty
