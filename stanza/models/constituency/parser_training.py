@@ -449,6 +449,13 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
                     if watch_regex.search(n):
                         wandb.log({n: torch.linalg.norm(p)})
 
+        if args['early_dropout'] > 0 and trainer.epochs_trained >= args['early_dropout']:
+            if any(x > 0.0 for x in (trainer.model.word_dropout.p, trainer.model.predict_dropout.p, trainer.model.lstm_input_dropout.p)):
+                tlogger.info("Setting dropout to 0.0 at epoch %d", trainer.epochs_trained)
+            trainer.model.word_dropout.p = 0
+            trainer.model.predict_dropout.p = 0
+            trainer.model.lstm_input_dropout.p = 0
+
         # recreate the optimizer and alter the model as needed if we hit a new multistage split
         if args['multistage'] and trainer.epochs_trained in multistage_splits:
             # we may be loading a save model from an earlier epoch if the scores stopped increasing

@@ -5,6 +5,7 @@ import tempfile
 
 import pytest
 import torch
+from torch import nn
 from torch import optim
 
 from stanza import Pipeline
@@ -252,6 +253,29 @@ class TestTrainer:
         """
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             self.run_train_test(wordvec_pretrain_file, tmpdirname)
+
+    def test_early_dropout(self, wordvec_pretrain_file):
+        """
+        Test the whole thing for a few iterations on the fake data
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            args = ['--early_dropout', '3']
+            _, model = self.run_train_test(wordvec_pretrain_file, tmpdirname, num_epochs=6, extra_args=args)
+            model = model.model
+            dropouts = [(name, module) for name, module in model.named_children() if isinstance(module, nn.Dropout)]
+            assert len(dropouts) > 0, "Didn't find any dropouts in the model!"
+            for name, module in dropouts:
+                assert module.p == 0.0, "Dropout module %s was not set to 0 with early_dropout"
+
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            # test that when turned off, early_dropout doesn't happen
+            args = ['--early_dropout', '-1']
+            _, model = self.run_train_test(wordvec_pretrain_file, tmpdirname, num_epochs=6, extra_args=args)
+            model = model.model
+            dropouts = [(name, module) for name, module in model.named_children() if isinstance(module, nn.Dropout)]
+            assert len(dropouts) > 0, "Didn't find any dropouts in the model!"
+            if all(module.p == 0.0 for _, module in dropouts):
+                raise AssertionError("All dropouts were 0 after training even though early_dropout was set to -1")
 
     def test_train_silver(self, wordvec_pretrain_file):
         """
