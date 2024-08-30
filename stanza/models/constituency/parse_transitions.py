@@ -545,13 +545,6 @@ class CloseConstituent(Transition):
             if not isinstance(model.get_top_transition(state.transitions), OpenConstituent):
                 # we're not stuck in a loop of unaries
                 return True
-            # in both of these cases, we cannot do open/close
-            # IN_ORDER_COMPOUND will use compound opens and preterminal unaries
-            # IN_ORDER_UNARY will use compound unaries
-            if (isinstance(model.get_top_transition(state.transitions), OpenConstituent) and
-                (model.transition_scheme() is TransitionScheme.IN_ORDER_UNARY or
-                 model.transition_scheme() is TransitionScheme.IN_ORDER_COMPOUND)):
-                return False
             if state.num_opens > 1 or state.empty_word_queue():
                 # in either of these cases, the corresponding Open should be eliminated
                 # if we're stuck in a loop of unaries
@@ -566,11 +559,15 @@ class CloseConstituent(Transition):
                 # this means we'll be stuck having to open again if we do close
                 # this node, so instead we make the Close illegal
                 return False
-        elif model.transition_scheme() == TransitionScheme.IN_ORDER_COMPOUND:
-            # the only restriction here is that we can't close
-            # immediately after an open
-            # internal unaries are handled by the opens being compound
-            # preterminal unaries are handled with CompoundUnary
+        else:
+            # model.transition_scheme() == TransitionScheme.IN_ORDER_COMPOUND or
+            # model.transition_scheme() == TransitionScheme.IN_ORDER_UNARY:
+            # in both of these cases, we cannot do open/close
+            #   IN_ORDER_COMPOUND will use compound opens and preterminal unaries
+            #   IN_ORDER_UNARY will use compound unaries
+            # the only restriction here is that we can't close immediately after an open
+            #   internal unaries are handled by the opens being compound
+            #   preterminal unaries are handled with CompoundUnary
             if isinstance(model.get_top_transition(state.transitions), OpenConstituent):
                 return False
         return True
