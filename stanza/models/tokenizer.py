@@ -27,6 +27,8 @@ from stanza.models.common import utils
 from stanza.models.tokenization.trainer import Trainer
 from stanza.models.tokenization.data import DataLoader, TokenizationDataset
 from stanza.models.tokenization.utils import load_mwt_dict, eval_model, output_predictions, load_lexicon, create_dictionary
+from stanza.models.common import pretrain
+
 from stanza.models import _training_logging
 
 logger = logging.getLogger('stanza')
@@ -46,6 +48,13 @@ def build_argparse():
     parser.add_argument('--lang', type=str, help="Language")
     parser.add_argument('--shorthand', type=str, help="UD treebank shorthand")
 
+    parser.add_argument('--wordvec_dir', type=str, default='extern_data/wordvec', help='Directory of word vectors.')
+    parser.add_argument('--wordvec_file', type=str, default=None, help='Word vectors filename.')
+    parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
+    parser.add_argument('--pretrain_max_vocab', type=int, default=250000)
+
+    parser.add_argument('--sentence-analyzer-kernel', type=int, default=4)
+
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--skip_newline', action='store_true', help="Whether to skip newline characters in input. Particularly useful for languages like Chinese.")
 
@@ -54,6 +63,7 @@ def build_argparse():
     parser.add_argument('--conv_filters', type=str, default="1,9", help="Configuration of conv filters. ,, separates layers and , separates filter sizes in the same layer.")
     parser.add_argument('--no-residual', dest='residual', action='store_false', help="Add linear residual connections")
     parser.add_argument('--no-hierarchical', dest='hierarchical', action='store_false', help="\"Hierarchical\" RNN tokenizer")
+    parser.add_argument('--no-sentence-second-pass', dest='sentence_second_pass', action='store_false', help="predict the sentences together with tokens instead of after")
     parser.add_argument('--hier_invtemp', type=float, default=0.5, help="Inverse temperature used in propagating tokenization predictions between RNN layers")
     parser.add_argument('--input_dropout', action='store_true', help="Dropout input embeddings as well")
     parser.add_argument('--conv_res', type=str, default=None, help="Convolutional residual layers for the RNN")
@@ -113,6 +123,17 @@ def model_file_name(args):
         return save_name
     return os.path.join(args['save_dir'], save_name)
 
+def load_pretrain(args):
+    pt = None
+    if args['sentence_second_pass']:
+        pretrain_file = pretrain.find_pretrain_file(args['wordvec_pretrain_file'], args['save_dir'], args['shorthand'], args['lang'])
+        if os.path.exists(pretrain_file):
+            vec_file = None
+        else:
+            vec_file = args['wordvec_file'] if args['wordvec_file'] else utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
+        pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
+    return pt
+
 def main(args=None):
     args = parse_args(args=args)
 
@@ -164,7 +185,9 @@ def train(args):
         args['use_mwt'] = train_batches.has_mwt()
         logger.info("Found {}mwts in the training data.  Setting use_mwt to {}".format(("" if args['use_mwt'] else "no "), args['use_mwt']))
 
-    trainer = Trainer(args=args, vocab=vocab, lexicon=lexicon, dictionary=dictionary, device=args['device'])
+    # load pretrained vectors if needed
+    pretrain = load_pretrain(args)
+    trainer = Trainer(args=args, vocab=vocab, lexicon=lexicon, dictionary=dictionary, device=args['device'], pretrain=pretrain)
 
     if args['load_name'] is not None:
         load_name = os.path.join(args['save_dir'], args['load_name'])
@@ -234,7 +257,8 @@ def train(args):
 
 def evaluate(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
-    trainer = Trainer(model_file=args['load_name'] or args['save_name'], device=args['device'])
+    pretrain = load_pretrain(args)
+    trainer = Trainer(model_file=args['load_name'] or args['save_name'], device=args['device'], pretrain=pretrain)
     loaded_args, vocab = trainer.args, trainer.vocab
 
     for k in loaded_args:

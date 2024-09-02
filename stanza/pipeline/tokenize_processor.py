@@ -37,11 +37,14 @@ class TokenizeProcessor(UDProcessor):
     MAX_SEQ_LENGTH_DEFAULT = 1000
 
     def _set_up_model(self, config, pipeline, device):
+        # get pretrained word vectors
+        self._pretrain = pipeline.foundation_cache.load_pretrain(config['pretrain_path']) if 'pretrain_path' in config else None
+
         # set up trainer
         if config.get('pretokenized'):
             self._trainer = None
         else:
-            self._trainer = Trainer(model_file=config['model_path'], device=device)
+            self._trainer = Trainer(model_file=config['model_path'], device=device, pretrain=self.pretrain)
 
         # get and typecheck the postprocessor
         postprocessor = config.get('postprocessor')

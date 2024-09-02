@@ -14,7 +14,10 @@ from .vocab import Vocab
 logger = logging.getLogger('stanza')
 
 class Trainer(BaseTrainer):
-    def __init__(self, args=None, vocab=None, lexicon=None, dictionary=None, model_file=None, device=None):
+    def __init__(self, args=None, vocab=None, lexicon=None, dictionary=None, model_file=None, device=None, pretrain=None):
+        if args["sentence_second_pass"]:
+            assert bool(pretrain), "context-aware sentence analysis requires pretrained wordvectors; download them!"
+
         if model_file is not None:
             # load everything from file
             self.load(model_file)
@@ -24,23 +27,24 @@ class Trainer(BaseTrainer):
             self.vocab = vocab
             self.lexicon = lexicon
             self.dictionary = dictionary
-            self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
+            self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'], pretrain=pretrain)
         self.model = self.model.to(device)
         self.criterion = nn.CrossEntropyLoss(ignore_index=-1).to(device)
         self.optimizer = utils.get_optimizer("adam", self.model, lr=self.args['lr0'], betas=(.9, .9), weight_decay=self.args['weight_decay'])
         self.feat_funcs = self.args.get('feat_funcs', None)
         self.lang = self.args['lang'] # language determines how token normalization is done
+        self.pretrain = pretrain
 
     def update(self, inputs):
         self.model.train()
-        units, labels, features, _ = inputs
+        units, labels, features, text = inputs
 
         device = next(self.model.parameters()).device
         units = units.to(device)
         labels = labels.to(device)
         features = features.to(device)
 
-        pred = self.model(units, features)
+        pred = self.model(units, features, text)
 
         self.optimizer.zero_grad()
         classes = pred.size(2)
@@ -54,13 +58,13 @@ class Trainer(BaseTrainer):
 
     def predict(self, inputs):
         self.model.eval()
-        units, _, features, _ = inputs
+        units, _, features, text = inputs
 
         device = next(self.model.parameters()).device
         units = units.to(device)
         features = features.to(device)
 
-        pred = self.model(units, features)
+        pred = self.model(units, features, text)
 
         return pred.data.cpu().numpy()
 
