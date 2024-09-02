@@ -138,7 +138,10 @@ class Tokenizer(nn.Module):
         if self.args["sentence_second_pass"]:
             # these are the draft predictions for only token-level decisinos
             # which we can use to slice the text
-            draft_preds = torch.cat([nontok, tok+nonmwt, tok+mwt], 2).argmax(dim=2)
+            if self.args['use_mwt']:
+                draft_preds = torch.cat([nontok, tok+nonmwt, tok+mwt], 2).argmax(dim=2)
+            else:
+                draft_preds = torch.cat([nontok, tok], 2).argmax(dim=2)
             draft_preds = (draft_preds > 0)
             # we add a prefix zero
             # TODO inefficient / how to parallelize this?
