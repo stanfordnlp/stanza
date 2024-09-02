@@ -32,7 +32,7 @@ class SentenceAnalyzer(nn.Module):
 
     def forward(self, x):
         # map the vocab to pretrain IDs
-        embs = self.embeddings(torch.tensor([[self.vocab[j] for j in i] for i in x],
+        embs = self.embeddings(torch.tensor([[self.vocab[j.strip()] for j in i] for i in x],
                                            device=self.device))
         net = self.emb_proj(embs)
         net = self.conv(net.permute(0,2,1)).permute(0,2,1)
