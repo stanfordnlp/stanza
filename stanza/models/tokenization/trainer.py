@@ -15,9 +15,7 @@ logger = logging.getLogger('stanza')
 
 class Trainer(BaseTrainer):
     def __init__(self, args=None, vocab=None, lexicon=None, dictionary=None, model_file=None, device=None, pretrain=None):
-        if args["sentence_second_pass"]:
-            assert bool(pretrain), "context-aware sentence analysis requires pretrained wordvectors; download them!"
-
+        self.pretrain = pretrain
         if model_file is not None:
             # load everything from file
             self.load(model_file)
@@ -28,6 +26,10 @@ class Trainer(BaseTrainer):
             self.lexicon = lexicon
             self.dictionary = dictionary
             self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'], pretrain=pretrain)
+
+        if self.args["sentence_second_pass"]:
+            assert bool(pretrain), "context-aware sentence analysis requires pretrained wordvectors; download them!"
+
         self.model = self.model.to(device)
         self.criterion = nn.CrossEntropyLoss(ignore_index=-1).to(device)
         self.optimizer = utils.get_optimizer("adam", self.model, lr=self.args['lr0'], betas=(.9, .9), weight_decay=self.args['weight_decay'])
@@ -92,7 +94,7 @@ class Trainer(BaseTrainer):
             # Default to True as many currently saved models
             # were built with mwt layers
             self.args['use_mwt'] = True
-        self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
+        self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'], pretrain=self.pretrain)
         self.model.load_state_dict(checkpoint['model'])
         self.vocab = Vocab.load_state_dict(checkpoint['vocab'])
         self.lexicon = checkpoint['lexicon']
