@@ -142,7 +142,9 @@ class Tokenizer(nn.Module):
             draft_preds = (draft_preds > 0)
             # we add a prefix zero
             # TODO inefficient / how to parallelize this?
-            token_locations = [[-1] + i.nonzero().squeeze(1).cpu().tolist()
+            front_pad = torch.tensor([-1]).to(draft_preds.device)
+            back_pad = torch.tensor([len(text[0])-1]).to(draft_preds.device)
+            token_locations = [torch.cat([front_pad, i.nonzero().squeeze(1).detach(), back_pad])
                                for i in draft_preds]
 
             # both: batch x seq x [variable: text token count]
@@ -155,7 +157,7 @@ class Tokenizer(nn.Module):
                 # the model should put a token at the end of each sentence so this
                 # should be less of a problem
 
-                a,b = tee(location+[len(chars)-1])
+                a,b = tee(location)
                 tokens = []
                 tokenid_locations = []
                 next(b) # because we want to start iterating on the NEXT id to create pairs
@@ -163,7 +165,7 @@ class Tokenizer(nn.Module):
                 for i,j in zip(a,b):
                     split = chars[i+1:j+1]
                     # if the entire unit is UNK, leave as UNK into the predictor
-                    is_unk = ((toks[i+1:j+1]) == UNK_ID).all().cpu().item()
+                    is_unk = ((toks[i+1:j+1]) == UNK_ID).all()
                     if set(split) == set([PAD]):
                         continue
                     tokenid_locations.append(j)
