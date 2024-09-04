@@ -425,7 +425,15 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             trainer.save(args['save_name'], save_optimizer=False)
         if epoch_stats.nans > 0:
             tlogger.warning("Had to ignore %d batches with NaN", epoch_stats.nans)
-        tlogger.info("Epoch %d finished\n  Transitions correct: %s\n  Transitions incorrect: %s\n  Total loss for epoch: %.5f\n  Dev score      (%5d): %8f\n  Best dev score (%5d): %8f", trainer.epochs_trained, epoch_stats.transitions_correct, epoch_stats.transitions_incorrect, epoch_stats.epoch_loss, trainer.epochs_trained, f1, trainer.best_epoch, trainer.best_f1)
+        stats_log_lines = [
+            "Epoch %d finished" % trainer.epochs_trained,
+            "Transitions correct: %s" % epoch_stats.transitions_correct,
+            "Transitions incorrect: %s" % epoch_stats.transitions_incorrect,
+            "Total loss for epoch: %.5f" % epoch_stats.epoch_loss,
+            "Dev score      (%5d): %8f" % (trainer.epochs_trained, f1),
+            "Best dev score (%5d): %8f" % (trainer.best_epoch, trainer.best_f1)
+        ]
+        tlogger.info("\n  ".join(stats_log_lines))
 
         old_lr = trainer.optimizer.param_groups[0]['lr']
         trainer.scheduler.step(f1)
