@@ -73,6 +73,11 @@ class BaseVocab:
     def unmap(self, ids):
         return [self.id2unit(x) for x in ids]
 
+    def __str__(self):
+        lang_str = "(%s)" % self.lang if self.lang else ""
+        name = str(type(self)) + lang_str
+        return "<%s: %s>" % (name, self._id2unit)
+
     def __len__(self):
         return len(self._id2unit)
 
