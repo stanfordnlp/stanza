@@ -23,7 +23,7 @@ class MWTProcessor(UDProcessor):
         self._trainer = Trainer(model_file=config['model_path'], device=device)
 
     def process(self, document):
-        batch = DataLoader(document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
+        batch = DataLoader(document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True, expand_unk_vocab=True)
 
         # process the rest
         expansions = batch.doc.get_mwt_expansions(evaluation=True)
@@ -35,7 +35,7 @@ class MWTProcessor(UDProcessor):
                 with torch.no_grad():
                     preds = []
                     for i, b in enumerate(batch):
-                        preds += self.trainer.predict(b, never_decode_unk=True)
+                        preds += self.trainer.predict(b, never_decode_unk=True, vocab=batch.vocab)
 
                 if self.config.get('ensemble_dict', False):
                     preds = self.trainer.ensemble(expansions, preds)

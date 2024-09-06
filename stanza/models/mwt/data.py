@@ -7,13 +7,13 @@ import torch
 
 import stanza.models.common.seq2seq_constant as constant
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from stanza.models.mwt.vocab import Vocab
+from stanza.models.mwt.vocab import Vocab, MWTDeltaVocab
 from stanza.models.common.doc import Document
 
 logger = logging.getLogger('stanza')
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, vocab=None, evaluation=False):
+    def __init__(self, doc, batch_size, args, vocab=None, evaluation=False, expand_unk_vocab=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -25,6 +25,8 @@ class DataLoader:
         # handle vocab
         if vocab is None:
             self.vocab = self.init_vocab(data)
+        elif expand_unk_vocab:
+            self.vocab = MWTDeltaVocab(data, vocab)
         else:
             self.vocab = vocab
 
