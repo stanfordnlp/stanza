@@ -65,14 +65,14 @@ class Trainer(BaseTrainer):
         self.optimizer.step()
         return loss_val
 
-    def predict(self, batch, unsort=True):
+    def predict(self, batch, unsort=True, never_decode_unk=False):
         device = next(self.model.parameters()).device
         inputs, orig_text, orig_idx = unpack_batch(batch, device)
         src, src_mask, tgt, tgt_mask = inputs
 
         self.model.eval()
         batch_size = src.size(0)
-        preds, _ = self.model.predict(src, src_mask, self.args['beam_size'])
+        preds, _ = self.model.predict(src, src_mask, self.args['beam_size'], never_decode_unk=never_decode_unk)
         pred_seqs = [self.vocab.unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         if self.args.get('force_exact_pieces', False):
