@@ -7,7 +7,8 @@ import torch
 
 import stanza.models.common.seq2seq_constant as constant
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from stanza.models.mwt.vocab import Vocab, MWTDeltaVocab
+from stanza.models.common.vocab import DeltaVocab
+from stanza.models.mwt.vocab import Vocab
 from stanza.models.common.doc import Document
 
 logger = logging.getLogger('stanza')
@@ -26,7 +27,7 @@ class DataLoader:
         if vocab is None:
             self.vocab = self.init_vocab(data)
         elif expand_unk_vocab:
-            self.vocab = MWTDeltaVocab(data, vocab)
+            self.vocab = DeltaVocab(data, vocab)
         else:
             self.vocab = vocab
 
