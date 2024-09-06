@@ -12,6 +12,7 @@ import stanza.models.common.seq2seq_constant as constant
 from stanza.models.common import utils
 from stanza.models.common.seq2seq_modules import LSTMAttention
 from stanza.models.common.beam import Beam
+from stanza.models.common.seq2seq_constant import UNK_ID
 
 logger = logging.getLogger('stanza')
 
@@ -130,7 +131,7 @@ class Seq2SeqModel(nn.Module):
         cn = torch.cat((cn[-1], cn[-2]), 1)
         return h_in, (hn, cn)
 
-    def decode(self, dec_inputs, hn, cn, ctx, ctx_mask=None, src=None):
+    def decode(self, dec_inputs, hn, cn, ctx, ctx_mask=None, src=None, never_decode_unk=False):
         """ Decode a step, based on context encoding and source context states."""
         dec_hidden = (hn, cn)
         decoder_output = self.decoder(dec_inputs, dec_hidden, ctx, ctx_mask, return_logattn=self.copy)
@@ -170,6 +171,8 @@ class Seq2SeqModel(nn.Module):
             log_probs = log_probs + log_nocopy_prob
             log_probs = torch.logsumexp(torch.stack([log_copied_vocab_prob, log_probs]), 0)
 
+        if never_decode_unk:
+            log_probs[:, :, UNK_ID] = float("-inf")
         return log_probs, dec_hidden
 
     def embed(self, src, src_mask, pos, raw):
@@ -214,7 +217,7 @@ class Seq2SeqModel(nn.Module):
             return log_probs
         return log_probs.view(logits.size(0), logits.size(1), logits.size(2))
 
-    def predict_greedy(self, src, src_mask, pos=None, raw=None):
+    def predict_greedy(self, src, src_mask, pos=None, raw=None, never_decode_unk=False):
         """ Predict with greedy decoding. """
         enc_inputs, batch_size, src_lens, src_mask = self.embed(src, src_mask, pos, raw)
 
@@ -236,7 +239,7 @@ class Seq2SeqModel(nn.Module):
         output_seqs = [[] for _ in range(batch_size)]
 
         while total_done < batch_size and max_len < self.max_dec_len:
-            log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask, src=src)
+            log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask, src=src, never_decode_unk=never_decode_unk)
             assert log_probs.size(1) == 1, "Output must have 1-step of output."
             _, preds = log_probs.squeeze(1).max(1, keepdim=True)
             dec_inputs = self.embedding(preds) # update decoder inputs
@@ -251,10 +254,10 @@ class Seq2SeqModel(nn.Module):
                         output_seqs[i].append(token)
         return output_seqs, edit_logits
 
-    def predict(self, src, src_mask, pos=None, beam_size=5, raw=None):
+    def predict(self, src, src_mask, pos=None, beam_size=5, raw=None, never_decode_unk=False):
         """ Predict with beam search. """
         if beam_size == 1:
-            return self.predict_greedy(src, src_mask, pos, raw)
+            return self.predict_greedy(src, src_mask, pos, raw, never_decode_unk=never_decode_unk)
 
         enc_inputs, batch_size, src_lens, src_mask = self.embed(src, src_mask, pos, raw)
 
@@ -287,7 +290,7 @@ class Seq2SeqModel(nn.Module):
         for i in range(self.max_dec_len):
             dec_inputs = torch.stack([b.get_current_state() for b in beam]).t().contiguous().view(-1, 1)
             dec_inputs = self.embedding(dec_inputs)
-            log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask, src=src)
+            log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask, src=src, never_decode_unk=never_decode_unk)
             log_probs = log_probs.view(beam_size, batch_size, -1).transpose(0,1)\
                     .contiguous() # [batch, beam, V]
 
