@@ -158,16 +158,51 @@ class Seq2SeqModel(nn.Module):
             # scatter logsumexp
             mx = log_copy_prob.max(-1, keepdim=True)[0]
             log_copy_prob = log_copy_prob - mx
+            # here we make space in the log probs for vocab items
+            # which might be copied from the encoder side, but which
+            # were not known at training time
+            # note that such an item cannot possibly be predicted by
+            # the model as a raw output token
+            # however, the copy gate might score high on copying a
+            # previously unknown vocab item
             copy_prob = torch.exp(log_copy_prob)
-            copied_vocab_prob = log_probs.new_zeros(log_probs.size()).scatter_add(-1,
-                src.unsqueeze(1).expand(src.size(0), copy_prob.size(1), src.size(1)),
-                copy_prob)
+            copied_vocab_shape = list(log_probs.size())
+            if torch.max(src) >= copied_vocab_shape[-1]:
+                copied_vocab_shape[-1] = torch.max(src) + 1
+            copied_vocab_prob = log_probs.new_zeros(copied_vocab_shape)
+            scattered_copy = src.unsqueeze(1).expand(src.size(0), copy_prob.size(1), src.size(1))
+            # fill in the copy tensor with the copy probs of each character
+            # the rest of the copy tensor will be filled with -largenumber
+            copied_vocab_prob = copied_vocab_prob.scatter_add(-1, scattered_copy, copy_prob)
             zero_mask = (copied_vocab_prob == 0)
             log_copied_vocab_prob = torch.log(copied_vocab_prob.masked_fill(zero_mask, 1e-12)) + mx
             log_copied_vocab_prob = log_copied_vocab_prob.masked_fill(zero_mask, -1e12)
 
             # combine with normal vocab probability
             log_nocopy_prob = -torch.log(1 + torch.exp(copy_logit))
+            if log_probs.shape[-1] < copied_vocab_shape[-1]:
+                # for previously unknown vocab items which are in the encoder,
+                # we reuse the UNK_ID prediction
+                # this gives a baseline number which we can combine with
+                # the copy gate prediction
+                # technically this makes log_probs no longer represent
+                # a probability distribution when looking at unknown vocab
+                # this is probably not a serious problem
+                # an example of this usage is in the Lemmatizer, such as a
+                # plural word in English with the character "ã" in it instead of "a"
+                # if "ã" is not known in the training data, the lemmatizer would
+                # ordinarily be unable to output it, and thus the seq2seq model
+                # would have no chance to depluralize "ãntennae" -> "ãntenna"
+                # however, if we temporarily add "ã" to the encoder vocab,
+                # then let the copy gate accept that letter, we find the Lemmatizer
+                # seq2seq model will want to copy that particular vocab item
+                # this allows the Lemmatizer to produce "ã" instead of requiring
+                # that it produces UNK, then going back to the input text to
+                # figure out which UNK it intended to produce
+                new_log_probs = log_probs.new_zeros(copied_vocab_shape)
+                new_log_probs[:, :, :log_probs.shape[-1]] = log_probs
+                new_log_probs[:, :, log_probs.shape[-1]:] = new_log_probs[:, :, UNK_ID].unsqueeze(2)
+                log_probs = new_log_probs
             log_probs = log_probs + log_nocopy_prob
             log_probs = torch.logsumexp(torch.stack([log_copied_vocab_prob, log_probs]), 0)
 
@@ -176,7 +211,9 @@ class Seq2SeqModel(nn.Module):
         return log_probs, dec_hidden
 
     def embed(self, src, src_mask, pos, raw):
-        enc_inputs = self.emb_drop(self.embedding(src))
+        embed_src = src.clone()
+        embed_src[embed_src >= self.vocab_size] = UNK_ID
+        enc_inputs = self.emb_drop(self.embedding(embed_src))
         batch_size = enc_inputs.size(0)
         if self.use_pos:
             assert pos is not None, "Missing POS input for seq2seq lemmatizer."
@@ -289,10 +326,12 @@ class Seq2SeqModel(nn.Module):
         # (3) main loop
         for i in range(self.max_dec_len):
             dec_inputs = torch.stack([b.get_current_state() for b in beam]).t().contiguous().view(-1, 1)
+            # if a unlearned character is predicted via the copy mechanism,
+            # use the UNK embedding for it
+            dec_inputs[dec_inputs >= self.vocab_size] = UNK_ID
             dec_inputs = self.embedding(dec_inputs)
             log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask, src=src, never_decode_unk=never_decode_unk)
-            log_probs = log_probs.view(beam_size, batch_size, -1).transpose(0,1)\
-                    .contiguous() # [batch, beam, V]
+            log_probs = log_probs.view(beam_size, batch_size, -1).transpose(0,1).contiguous() # [batch, beam, V]
 
             # advance each beam
             done = []
