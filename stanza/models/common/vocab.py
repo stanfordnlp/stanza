@@ -96,6 +96,32 @@ class BaseVocab:
     def size(self):
         return len(self)
 
+class DeltaVocab(BaseVocab):
+    """
+    A vocab that starts off with a BaseVocab, then possibly adds more tokens based on the text in the given data
+
+    Currently meant only for characters, such as built by MWT
+
+    Expected data format is a list of list of strings
+    """
+    def __init__(self, data, orig_vocab):
+        self.orig_vocab = orig_vocab
+        super().__init__(data=data, lang=orig_vocab.lang, idx=orig_vocab.idx, cutoff=orig_vocab.cutoff, lower=orig_vocab.lower)
+
+    def build_vocab(self):
+        allchars = "".join([word for sentence in self.data for word in sentence])
+
+        unk = [c for c in allchars if c not in self.orig_vocab._unit2id]
+        if len(unk) > 0:
+            unk = sorted(set(unk))
+            self._id2unit = self.orig_vocab._id2unit + unk
+            self._unit2id = dict(self.orig_vocab._unit2id)
+            for c in unk:
+                self._unit2id[c] = len(self._unit2id)
+        else:
+            self._id2unit = self.orig_vocab._id2unit
+            self._unit2id = self.orig_vocab._unit2id
+
 class CompositeVocab(BaseVocab):
     ''' Vocabulary class that handles parsing and printing composite values such as
     compositional XPOS and universal morphological features (UFeats).
