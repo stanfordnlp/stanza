@@ -82,3 +82,21 @@ def test_mwt():
          for sent in doc.sentences for word in sent.words]).strip()
     assert token_to_words == FR_MWT_TOKEN_TO_WORDS_GOLD
     assert word_to_token == FR_MWT_WORD_TO_TOKEN_GOLD
+
+def test_unknown_character():
+    """
+    The MWT processor has a mechanism to temporarily add unknown characters to the vocab
+
+    Here we check that it is properly adding the characters from a test case a user sent us
+    """
+    pipeline = stanza.Pipeline(processors='tokenize,mwt', dir=TEST_MODELS_DIR, lang='en', download_method=None)
+    text = "Björkängshallen's"
+    mwt_processor = pipeline.processors["mwt"]
+    trainer = mwt_processor.trainer
+    # verify that the test case is still valid
+    # (perhaps an updated MWT model will have all of these characters in the future)
+    assert not all(x in trainer.vocab._unit2id for x in text)
+    doc = pipeline(text)
+    batch = mwt_processor.build_batch(doc)
+    # the vocab used in this batch should have the missing characters
+    assert all(x in batch.vocab._unit2id for x in text)

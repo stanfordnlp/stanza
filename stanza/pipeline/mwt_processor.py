@@ -22,8 +22,11 @@ class MWTProcessor(UDProcessor):
     def _set_up_model(self, config, pipeline, device):
         self._trainer = Trainer(model_file=config['model_path'], device=device)
 
+    def build_batch(self, document):
+        return DataLoader(document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True, expand_unk_vocab=True)
+
     def process(self, document):
-        batch = DataLoader(document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True, expand_unk_vocab=True)
+        batch = self.build_batch(document)
 
         # process the rest
         expansions = batch.doc.get_mwt_expansions(evaluation=True)
