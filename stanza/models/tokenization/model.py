@@ -17,11 +17,15 @@ class SentenceAnalyzer(nn.Module):
             torch.from_numpy(pretrain.emb), freeze=True)
 
         self.emb_proj = nn.Linear(pretrain.emb.shape[1], hidden_dim)
-        self.conv = nn.Conv1d(hidden_dim, hidden_dim,
-                              args["sentence_analyzer_kernel"], padding="same",
-                              padding_mode="circular")
+        self.lstm = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True,
+                              batch_first=True, num_layers=args['rnn_layers'])
+
+        # standard up and down projection a la transformers
         self.ffnn = nn.Sequential(
-            nn.Linear(hidden_dim, hidden_dim),
+            nn.Linear(hidden_dim*2, hidden_dim*4),
+            nn.ReLU(),
+            nn.Linear(hidden_dim*4, hidden_dim),
+            nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Linear(hidden_dim, 1)
         )
@@ -35,7 +39,7 @@ class SentenceAnalyzer(nn.Module):
         embs = self.embeddings(torch.tensor([[self.vocab[j.strip()] for j in i] for i in x],
                                            device=self.device))
         net = self.emb_proj(embs)
-        net = self.conv(net.permute(0,2,1)).permute(0,2,1)
+        net = self.lstm(net)[0]
         return self.ffnn(net)
 
 
