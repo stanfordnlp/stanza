@@ -133,16 +133,21 @@ class Tokenizer(nn.Module):
             nonmwt = F.logsigmoid(-mwt0)
             mwt = F.logsigmoid(mwt0)
 
+        nonsent = F.logsigmoid(-sent0)
+        sent = F.logsigmoid(sent0)
+
         # use the rough predictions from the char tokenizer to create word tokens
         # then use those word tokens + contextual/fixed word embeddings to refine
         # sentence predictions
+
         if self.args["sentence_second_pass"]:
             # these are the draft predictions for only token-level decisinos
             # which we can use to slice the text
             if self.args['use_mwt']:
-                draft_preds = torch.cat([nontok, tok+nonmwt, tok+mwt], 2).argmax(dim=2)
+                draft_preds = torch.cat([nontok, tok+nonsent+nonmwt, tok+sent+nonmwt, tok+nonsent+mwt, tok+sent+mwt], 2).argmax(dim=2)
             else:
-                draft_preds = torch.cat([nontok, tok], 2).argmax(dim=2)
+                draft_preds = torch.cat([nontok, tok+nonsent, tok+sent], 2).argmax(dim=2)
+
             draft_preds = (draft_preds > 0)
             # these boolean indicies are *inclusive*, so predict it or not
             # we need to split on the last token if we want to keep the
@@ -191,11 +196,13 @@ class Tokenizer(nn.Module):
             second_pass_chars_align = torch.zeros_like(sent0)
             second_pass_chars_align[draft_preds] = second_pass_scores[pad_mask]
 
-            mix = F.sigmoid(self.sent_2nd_mix)
             smoothed = self.sent_2nd_smoother(
                 second_pass_chars_align.permute(0,2,1)
             ).permute(0,2,1)
 
+            mix = F.sigmoid(self.sent_2nd_mix)
+
+            # update sent0 value
             if detach_2nd_pass:
                 sent0 = (1-mix.detach())*sent0 + mix.detach()*smoothed.detach()
             else:
