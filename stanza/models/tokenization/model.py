@@ -21,7 +21,10 @@ class SentenceAnalyzer(nn.Module):
         self.lstm = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True,
                               batch_first=True, num_layers=args['rnn_layers'])
 
-        self.ffnn = nn.Linear(hidden_dim*2, 1, bias=False)
+        # this is zero-initialized to make the second pass initially the id
+        # function; and then it could change only as needed but would otherwise
+        # be zero
+        self.final_proj = nn.Parameter(torch.zeros(hidden_dim*2, 1), requires_grad=True)
 
     @property
     def device(self):
@@ -33,7 +36,7 @@ class SentenceAnalyzer(nn.Module):
         embs = self.embeddings(torch.tensor(token_ids, device=self.device))
         net = self.emb_proj(embs) 
         net = self.lstm(net)[0]
-        return self.ffnn(net)
+        return self.final_proj @ net
 
 
 class Tokenizer(nn.Module):
@@ -73,7 +76,6 @@ class Tokenizer(nn.Module):
 
         if args['sentence_second_pass']:
             self.sent_2nd_pass_clf = SentenceAnalyzer(args, pretrain, hidden_dim)
-            self.sent_2nd_smoother = nn.Conv1d(1, 1, args["sentence_analyzer_kernel"], padding="same", padding_mode="replicate")
             # initially, don't use 2nd pass that much (this is near 0, meaning it will pretty much
             # not be mixed in
             self.sent_2nd_mix = nn.Parameter(torch.full((1,), -5.0), requires_grad=True)
@@ -192,14 +194,10 @@ class Tokenizer(nn.Module):
             second_pass_chars_align[draft_preds] = second_pass_scores[pad_mask]
 
             mix = F.sigmoid(self.sent_2nd_mix)
-            smoothed = self.sent_2nd_smoother(
-                second_pass_chars_align.permute(0,2,1)
-            ).permute(0,2,1)
-
             if detach_2nd_pass:
-                sent0 = (1-mix.detach())*sent0 + mix.detach()*smoothed.detach()
+                sent0 = (1-mix.detach())*sent0 + mix.detach()*second_pass_chars_align.detach()
             else:
-                sent0 = (1-mix)*sent0 + mix*smoothed
+                sent0 = (1-mix)*sent0 + mix*second_pass_chars_align
 
         nonsent = F.logsigmoid(-sent0)
         sent = F.logsigmoid(sent0)
