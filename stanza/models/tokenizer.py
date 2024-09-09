@@ -64,7 +64,7 @@ def build_argparse():
     parser.add_argument('--no-residual', dest='residual', action='store_false', help="Add linear residual connections")
     parser.add_argument('--no-hierarchical', dest='hierarchical', action='store_false', help="\"Hierarchical\" RNN tokenizer")
     parser.add_argument('--no_sentence_second_pass', dest='sentence_second_pass', action='store_false', help="predict the sentences together with tokens instead of after")
-    parser.add_argument('--second_pass_start_steps', type=int, help="when (how many steps) to start training the second pass classifier", default=256)
+    parser.add_argument('--second_pass_start_steps', type=int, help="when (how many steps) to start training the second pass classifier", default=5000)
     parser.add_argument('--hier_invtemp', type=float, default=0.5, help="Inverse temperature used in propagating tokenization predictions between RNN layers")
     parser.add_argument('--input_dropout', action='store_true', help="Dropout input embeddings as well")
     parser.add_argument('--conv_res', type=str, default=None, help="Convolutional residual layers for the RNN")
