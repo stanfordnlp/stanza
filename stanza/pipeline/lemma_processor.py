@@ -65,7 +65,7 @@ class LemmaProcessor(UDProcessor):
 
     def process(self, document):
         if not self.use_identity:
-            batch = DataLoader(document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True)
+            batch = DataLoader(document, self.config['batch_size'], self.config, vocab=self.vocab, evaluation=True, expand_unk_vocab=True)
         else:
             batch = DataLoader(document, self.config['batch_size'], self.config, evaluation=True, conll_only=True)
         if self.use_identity:
@@ -80,7 +80,7 @@ class LemmaProcessor(UDProcessor):
                 # it shows up in the config which gets passed to the DataLoader,
                 # possibly affecting its results
                 seq2seq_batch = DataLoader(document, self.config['batch_size'], self.config, vocab=self.vocab,
-                                           evaluation=True, skip=skip)
+                                           evaluation=True, skip=skip, expand_unk_vocab=True)
             else:
                 seq2seq_batch = batch
 
@@ -88,7 +88,7 @@ class LemmaProcessor(UDProcessor):
                 preds = []
                 edits = []
                 for i, b in enumerate(seq2seq_batch):
-                    ps, es = self.trainer.predict(b, self.config['beam_size'])
+                    ps, es = self.trainer.predict(b, self.config['beam_size'], seq2seq_batch.vocab)
                     preds += ps
                     if es is not None:
                         edits += es

@@ -100,16 +100,19 @@ class DeltaVocab(BaseVocab):
     """
     A vocab that starts off with a BaseVocab, then possibly adds more tokens based on the text in the given data
 
-    Currently meant only for characters, such as built by MWT
+    Currently meant only for characters, such as built by MWT or Lemma
 
-    Expected data format is a list of list of strings
+    Expected data format is either a list of strings, or a list of list of strings
     """
     def __init__(self, data, orig_vocab):
         self.orig_vocab = orig_vocab
         super().__init__(data=data, lang=orig_vocab.lang, idx=orig_vocab.idx, cutoff=orig_vocab.cutoff, lower=orig_vocab.lower)
 
     def build_vocab(self):
-        allchars = "".join([word for sentence in self.data for word in sentence])
+        if all(isinstance(word, str) for word in self.data):
+            allchars = "".join(self.data)
+        else:
+            allchars = "".join([word for sentence in self.data for word in sentence])
 
         unk = [c for c in allchars if c not in self.orig_vocab._unit2id]
         if len(unk) > 0:

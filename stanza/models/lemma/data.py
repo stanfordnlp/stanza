@@ -7,6 +7,7 @@ import torch
 
 import stanza.models.common.seq2seq_constant as constant
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from stanza.models.common.vocab import DeltaVocab
 from stanza.models.lemma.vocab import Vocab, MultiVocab
 from stanza.models.lemma import edit
 from stanza.models.common.doc import *
@@ -14,7 +15,7 @@ from stanza.models.common.doc import *
 logger = logging.getLogger('stanza')
 
 class DataLoader:
-    def __init__(self, doc, batch_size, args, vocab=None, evaluation=False, conll_only=False, skip=None):
+    def __init__(self, doc, batch_size, args, vocab=None, evaluation=False, conll_only=False, skip=None, expand_unk_vocab=False):
         self.batch_size = batch_size
         self.args = args
         self.eval = evaluation
@@ -32,7 +33,12 @@ class DataLoader:
 
         # handle vocab
         if vocab is not None:
-            self.vocab = vocab
+            if expand_unk_vocab:
+                pos_vocab = vocab['pos']
+                char_vocab = DeltaVocab(data, vocab['char'])
+                self.vocab = MultiVocab({'char': char_vocab, 'pos': pos_vocab})
+            else:
+                self.vocab = vocab
         else:
             self.vocab = dict()
             char_vocab, pos_vocab = self.init_vocab(data)
