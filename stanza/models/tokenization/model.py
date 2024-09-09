@@ -36,7 +36,7 @@ class SentenceAnalyzer(nn.Module):
         embs = self.embeddings(torch.tensor(token_ids, device=self.device))
         net = self.emb_proj(embs) 
         net = self.lstm(net)[0]
-        return self.final_proj @ net
+        return net @ self.final_proj
 
 
 class Tokenizer(nn.Module):
