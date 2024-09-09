@@ -98,7 +98,10 @@ class Trainer(object):
         self.optimizer.step()
         return loss_val
 
-    def predict(self, batch, beam_size=1):
+    def predict(self, batch, beam_size=1, vocab=None):
+        if vocab is None:
+            vocab = self.vocab
+
         device = next(self.model.parameters()).device
         inputs, orig_idx, text = unpack_batch(batch, device)
         src, src_mask, tgt, tgt_mask, pos, edits = inputs
@@ -106,7 +109,7 @@ class Trainer(object):
         self.model.eval()
         batch_size = src.size(0)
         preds, edit_logits = self.model.predict(src, src_mask, pos=pos, beam_size=beam_size, raw=text)
-        pred_seqs = [self.vocab['char'].unmap(ids) for ids in preds] # unmap to tokens
+        pred_seqs = [vocab['char'].unmap(ids) for ids in preds] # unmap to tokens
         pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
         pred_tokens = utils.unsort(pred_tokens, orig_idx)

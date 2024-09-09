@@ -279,7 +279,11 @@ class Seq2SeqModel(nn.Module):
             log_probs, (hn, cn) = self.decode(dec_inputs, hn, cn, h_in, src_mask, src=src, never_decode_unk=never_decode_unk)
             assert log_probs.size(1) == 1, "Output must have 1-step of output."
             _, preds = log_probs.squeeze(1).max(1, keepdim=True)
-            dec_inputs = self.embedding(preds) # update decoder inputs
+            # if a unlearned character is predicted via the copy mechanism,
+            # use the UNK embedding for it
+            dec_inputs = preds.clone()
+            dec_inputs[dec_inputs >= self.vocab_size] = UNK_ID
+            dec_inputs = self.embedding(dec_inputs) # update decoder inputs
             max_len += 1
             for i in range(batch_size):
                 if not done[i]:
