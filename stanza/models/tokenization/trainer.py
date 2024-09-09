@@ -36,8 +36,15 @@ class Trainer(BaseTrainer):
         self.feat_funcs = self.args.get('feat_funcs', None)
         self.lang = self.args['lang'] # language determines how token normalization is done
         self.pretrain = pretrain
+        self.global_step_counter_ = 0
+        self.train_2nd_pass = False
+
+    @property
+    def steps(self):
+        return self.global_step_counter_
 
     def update(self, inputs):
+        self.global_step_counter_ += 1
         self.model.train()
         units, labels, features, text = inputs
 
@@ -46,7 +53,8 @@ class Trainer(BaseTrainer):
         labels = labels.to(device)
         features = features.to(device)
 
-        pred = self.model(units, features, text)
+        # we detach 2nd pass if we are not training second pass
+        pred = self.model(units, features, text, not self.train_2nd_pass)
 
         self.optimizer.zero_grad()
         classes = pred.size(2)
@@ -75,7 +83,8 @@ class Trainer(BaseTrainer):
             'model': self.model.state_dict() if self.model is not None else None,
             'vocab': self.vocab.state_dict(),
             'lexicon': self.lexicon,
-            'config': self.args
+            'config': self.args,
+            'steps': self.global_step_counter_
         }
         try:
             torch.save(params, filename, _use_new_zipfile_serialization=False)
@@ -98,6 +107,8 @@ class Trainer(BaseTrainer):
         self.model.load_state_dict(checkpoint['model'])
         self.vocab = Vocab.load_state_dict(checkpoint['vocab'])
         self.lexicon = checkpoint['lexicon']
+
+        self.global_step_counter_ = checkpoint.get("steps", 0)
 
         if self.lexicon is not None:
             self.dictionary = create_dictionary(self.lexicon)

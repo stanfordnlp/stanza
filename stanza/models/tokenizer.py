@@ -64,6 +64,7 @@ def build_argparse():
     parser.add_argument('--no-residual', dest='residual', action='store_false', help="Add linear residual connections")
     parser.add_argument('--no-hierarchical', dest='hierarchical', action='store_false', help="\"Hierarchical\" RNN tokenizer")
     parser.add_argument('--no_sentence_second_pass', dest='sentence_second_pass', action='store_false', help="predict the sentences together with tokens instead of after")
+    parser.add_argument('--second_pass_start_steps', type=int, help="when (how many steps) to start training the second pass classifier", default=256)
     parser.add_argument('--hier_invtemp', type=float, default=0.5, help="Inverse temperature used in propagating tokenization predictions between RNN layers")
     parser.add_argument('--input_dropout', action='store_true', help="Dropout input embeddings as well")
     parser.add_argument('--conv_res', type=str, default=None, help="Convolutional residual layers for the RNN")
@@ -214,6 +215,10 @@ def train(args):
         batch = train_batches.next(unit_dropout=args['unit_dropout'], feat_unit_dropout = args['feat_unit_dropout'])
 
         loss = trainer.update(batch)
+
+        if trainer.steps > args["second_pass_start_steps"]:
+            trainer.train_2nd_pass = True
+
         if step % args['report_steps'] == 0:
             logger.info("Step {:6d}/{:6d} Loss: {:.3f}".format(step, steps, loss))
             if args['wandb']:
