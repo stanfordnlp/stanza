@@ -20,26 +20,16 @@ class SentenceAnalyzer(nn.Module):
         self.lstm = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True,
                               batch_first=True, num_layers=args['rnn_layers'])
 
-        self.ffnn = nn.Sequential(
-            nn.Linear(hidden_dim*2, hidden_dim*4),
-            nn.ReLU(),
-            nn.Linear(hidden_dim*4, hidden_dim),
-            nn.LayerNorm(hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, 1)
-        )
+        self.ffnn = nn.Linear(hidden_dim*2, 1, bias=False)
 
     @property
     def device(self):
         return next(self.parameters()).device
 
-    def forward(self, x):
+    def forward(self, x, s0):
         # map the vocab to pretrain IDs
         token_ids = [[self.vocab[j.strip()] for j in i] for i in x]
-        embs = self.embeddings(torch.tensor(token_ids,
-                                           device=self.device))
+        embs = self.embeddings(torch.tensor(token_ids, device=self.device))
         net = self.emb_proj(embs)
         net = self.lstm(net)[0]
         return self.ffnn(net)
@@ -82,6 +72,8 @@ class Tokenizer(nn.Module):
 
         if args['sentence_second_pass']:
             self.sent_2nd_pass_clf = SentenceAnalyzer(args, pretrain, hidden_dim)
+            self.sent_2nd_smoother = nn.Conv1d(1, 1, args["sentence_analyzer_kernel"], padding="same", padding_mode="replicate")
+            self.sent_2nd_mix = nn.Parameter(torch.full((1,), 0.0), requires_grad=True)
 
         self.dropout = nn.Dropout(dropout)
         self.dropout_feat = nn.Dropout(feat_dropout)
@@ -187,7 +179,7 @@ class Tokenizer(nn.Module):
                 batch_tokens_isntpad.append([True for _ in range(len(i))] +
                                             [False for _ in range(max_size-len(i))])
 
-            second_pass_scores = self.sent_2nd_pass_clf(batch_tokens_padded)
+            second_pass_scores = self.sent_2nd_pass_clf(batch_tokens_padded, sent0[draft_preds])
 
             # # we only add scores for slots for which we have a possible word ending
             # # i.e. its not padding and its also not a middle of rough score's resulting
@@ -195,7 +187,12 @@ class Tokenizer(nn.Module):
             second_pass_chars_align = torch.zeros_like(sent0)
             second_pass_chars_align[draft_preds] = second_pass_scores[torch.tensor(batch_tokens_isntpad)]
 
-            sent0 += second_pass_chars_align
+            mix = F.sigmoid(self.sent_2nd_mix)
+            smoothed = self.sent_2nd_smoother(
+                second_pass_chars_align.permute(0,2,1)
+            ).permute(0,2,1)
+
+            sent0 = (1-mix)*sent0 + mix*smoothed
 
         nonsent = F.logsigmoid(-sent0)
         sent = F.logsigmoid(sent0)

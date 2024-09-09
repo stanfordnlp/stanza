@@ -53,7 +53,7 @@ def build_argparse():
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--pretrain_max_vocab', type=int, default=250000)
 
-    parser.add_argument('--sentence-analyzer-kernel', type=int, default=4)
+    parser.add_argument('--sentence_analyzer_kernel', type=int, default=4)
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--skip_newline', action='store_true', help="Whether to skip newline characters in input. Particularly useful for languages like Chinese.")
@@ -63,7 +63,7 @@ def build_argparse():
     parser.add_argument('--conv_filters', type=str, default="1,9", help="Configuration of conv filters. ,, separates layers and , separates filter sizes in the same layer.")
     parser.add_argument('--no-residual', dest='residual', action='store_false', help="Add linear residual connections")
     parser.add_argument('--no-hierarchical', dest='hierarchical', action='store_false', help="\"Hierarchical\" RNN tokenizer")
-    parser.add_argument('--no-sentence-second-pass', dest='sentence_second_pass', action='store_false', help="predict the sentences together with tokens instead of after")
+    parser.add_argument('--no_sentence_second_pass', dest='sentence_second_pass', action='store_false', help="predict the sentences together with tokens instead of after")
     parser.add_argument('--hier_invtemp', type=float, default=0.5, help="Inverse temperature used in propagating tokenization predictions between RNN layers")
     parser.add_argument('--input_dropout', action='store_true', help="Dropout input embeddings as well")
     parser.add_argument('--conv_res', type=str, default=None, help="Convolutional residual layers for the RNN")
