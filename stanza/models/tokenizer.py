@@ -214,10 +214,10 @@ def train(args):
     for step in range(1, steps+1):
         batch = train_batches.next(unit_dropout=args['unit_dropout'], feat_unit_dropout = args['feat_unit_dropout'])
 
-        loss = trainer.update(batch)
-
         if trainer.steps > args["second_pass_start_steps"]:
             trainer.train_2nd_pass = True
+
+        loss = trainer.update(batch)
 
         if step % args['report_steps'] == 0:
             logger.info("Step {:6d}/{:6d} Loss: {:.3f}".format(step, steps, loss))

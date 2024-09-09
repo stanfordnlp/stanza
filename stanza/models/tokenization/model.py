@@ -27,13 +27,12 @@ class SentenceAnalyzer(nn.Module):
     def device(self):
         return next(self.parameters()).device
 
-    def forward(self, x, inp0, pad_mask):
+    def forward(self, x):
         # map the vocab to pretrain IDs
         token_ids = [[self.vocab[j.strip()] for j in i] for i in x]
         embs = self.embeddings(torch.tensor(token_ids, device=self.device))
         net = self.emb_proj(embs) 
         net = self.lstm(net)[0]
-        net[pad_mask] += inp0
         return self.ffnn(net)
 
 
@@ -184,7 +183,7 @@ class Tokenizer(nn.Module):
                                             [False for _ in range(max_size-len(i))])
 
             pad_mask = torch.tensor(batch_tokens_isntpad)
-            second_pass_scores = self.sent_2nd_pass_clf(batch_tokens_padded, inp[draft_preds], pad_mask)
+            second_pass_scores = self.sent_2nd_pass_clf(batch_tokens_padded)
 
             # # we only add scores for slots for which we have a possible word ending
             # # i.e. its not padding and its also not a middle of rough score's resulting
