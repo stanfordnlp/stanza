@@ -60,15 +60,19 @@ class DataLoader:
         for d in data:
             src = list(d[0])
             src = [constant.SOS] + src + [constant.EOS]
-            if self.eval:
-                tgt = src # as a placeholder
-            else:
-                tgt = list(d[1])
+            tgt_in, tgt_out = self.prepare_target(vocab, d)
             src = vocab.map(src)
-            tgt_in = vocab.map([constant.SOS] + tgt)
-            tgt_out = vocab.map(tgt + [constant.EOS])
             processed += [[src, tgt_in, tgt_out, d[0]]]
         return processed
+
+    def prepare_target(self, vocab, datum):
+        if self.eval:
+            tgt = list(datum[0])  # as a placeholder
+        else:
+            tgt = list(datum[1])
+        tgt_in = vocab.map([constant.SOS] + tgt)
+        tgt_out = vocab.map(tgt + [constant.EOS])
+        return tgt_in, tgt_out
 
     def __len__(self):
         return len(self.data)
@@ -107,4 +111,25 @@ class DataLoader:
         data = doc.get_mwt_expansions(evaluation)
         if evaluation: data = [[e] for e in data]
         return data
+
+class BinaryDataLoader(DataLoader):
+    """
+    This version of the DataLoader performs the same tasks as the regular DataLoader,
+    except the targets are arrays of 0/1 indicating if the character is the location
+    of an MWT split
+    """
+    def prepare_target(self, vocab, datum):
+        src = datum[0] if self.eval else datum[1]
+        binary = [0]
+        has_space = False
+        for char in src:
+            if char == ' ':
+                has_space = True
+            elif has_space:
+                has_space = False
+                binary.append(1)
+            else:
+                binary.append(0)
+        binary.append(0)
+        return binary, binary
 

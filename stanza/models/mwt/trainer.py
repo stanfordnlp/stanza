@@ -14,6 +14,7 @@ import stanza.models.common.seq2seq_constant as constant
 from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common.seq2seq_model import Seq2SeqModel
 from stanza.models.common import utils, loss
+from stanza.models.mwt.character_classifier import CharacterClassifier
 from stanza.models.mwt.vocab import Vocab
 
 logger = logging.getLogger('stanza')
@@ -33,12 +34,20 @@ class Trainer(BaseTrainer):
             self.load(model_file)
         else:
             self.args = args
-            self.model = None if args['dict_only'] else Seq2SeqModel(args, emb_matrix=emb_matrix)
+            if args['dict_only']:
+                self.model = None
+            elif args.get('force_exact_pieces', False):
+                self.model = CharacterClassifier(args)
+            else:
+                self.model = Seq2SeqModel(args, emb_matrix=emb_matrix)
             self.vocab = vocab
             self.expansion_dict = dict()
         if not self.args['dict_only']:
             self.model = self.model.to(device)
-            self.crit = loss.SequenceLoss(self.vocab.size).to(device)
+            if self.args.get('force_exact_pieces', False):
+                self.crit = nn.CrossEntropyLoss()
+            else:
+                self.crit = loss.SequenceLoss(self.vocab.size).to(device)
             self.optimizer = utils.get_optimizer(self.args['optim'], self.model, self.args['lr'])
 
     def update(self, batch, eval=False):
@@ -54,8 +63,15 @@ class Trainer(BaseTrainer):
         else:
             self.model.train()
             self.optimizer.zero_grad()
-        log_probs, _ = self.model(src, src_mask, tgt_in)
-        loss = self.crit(log_probs.view(-1, self.vocab.size), tgt_out.view(-1))
+        if self.args.get('force_exact_pieces', False):
+            log_probs = self.model(src, src_mask)
+            src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
+            packed_output = nn.utils.rnn.pack_padded_sequence(log_probs, src_lens, batch_first=True)
+            packed_tgt = nn.utils.rnn.pack_padded_sequence(tgt_in, src_lens, batch_first=True)
+            loss = self.crit(packed_output.data, packed_tgt.data)
+        else:
+            log_probs, _ = self.model(src, src_mask, tgt_in)
+            loss = self.crit(log_probs.view(-1, self.vocab.size), tgt_out.view(-1))
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -75,20 +91,25 @@ class Trainer(BaseTrainer):
 
         self.model.eval()
         batch_size = src.size(0)
-        preds, _ = self.model.predict(src, src_mask, self.args['beam_size'], never_decode_unk=never_decode_unk)
-        pred_seqs = [vocab.unmap(ids) for ids in preds] # unmap to tokens
-        pred_seqs = utils.prune_decoded_seqs(pred_seqs)
         if self.args.get('force_exact_pieces', False):
-            # TODO we should be able to do all this with numpy or something similar
+            log_probs = self.model(src, src_mask)
+            cuts = log_probs[:, :, 1] > log_probs[:, :, 0]
+            src_lens = list(src_mask.data.eq(constant.PAD_ID).long().sum(1))
             pred_tokens = []
-            for pred_seq, text in zip(pred_seqs, orig_text):
-                pred_seq = np.array(list(pred_seq))
-                if sum(pred_seq != ' ') == len(text):
-                    pred_seq[pred_seq != ' '] = list(text)
-                    pred_tokens.append("".join(pred_seq))
-                else:
-                    pred_tokens.append("".join(pred_seq))
+            for src_ids, cut, src_len in zip(src, cuts, src_lens):
+                src_chars = vocab.unmap(src_ids)
+                pred_seq = []
+                for char_idx in range(1, src_len-1):
+                    if cut[char_idx]:
+                        pred_seq.append(' ')
+                    pred_seq.append(src_chars[char_idx])
+                pred_seq = "".join(pred_seq).strip()
+                pred_tokens.append(pred_seq)
         else:
+            preds, _ = self.model.predict(src, src_mask, self.args['beam_size'], never_decode_unk=never_decode_unk)
+            pred_seqs = [vocab.unmap(ids) for ids in preds] # unmap to tokens
+            pred_seqs = utils.prune_decoded_seqs(pred_seqs)
+
             pred_tokens = ["".join(seq) for seq in pred_seqs] # join chars to be tokens
             # if any tokens are predicted to expand to blank,
             # that is likely an error.  use the original text
@@ -181,7 +202,10 @@ class Trainer(BaseTrainer):
         self.args = checkpoint['config']
         self.expansion_dict = checkpoint['dict']
         if not self.args['dict_only']:
-            self.model = Seq2SeqModel(self.args)
+            if self.args.get('force_exact_pieces', False):
+                self.model = CharacterClassifier(self.args)
+            else:
+                self.model = Seq2SeqModel(self.args)
             # could remove strict=False after rebuilding all models,
             # or could switch to 1.6.0 torch with the buffer in seq2seq persistent=False
             self.model.load_state_dict(checkpoint['model'], strict=False)
