@@ -3,7 +3,10 @@ Entry point for training and evaluating a multi-word token (MWT) expander.
 
 This MWT expander combines a neural sequence-to-sequence architecture with a dictionary
 to decode the token into multiple words.
-For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf.
+For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal.pdf
+
+In the case of a dataset where all of the MWT exactly split into the words
+composing the MWT, a classifier over the characters is used instead of the seq2seq
 """
 
 import sys
@@ -19,7 +22,7 @@ import torch
 from torch import nn, optim
 import copy
 
-from stanza.models.mwt.data import DataLoader
+from stanza.models.mwt.data import DataLoader, BinaryDataLoader
 from stanza.models.mwt.utils import mwts_composed_of_words
 from stanza.models.mwt.vocab import Vocab
 from stanza.models.mwt.trainer import Trainer
@@ -130,6 +133,20 @@ def train(args):
         logger.warning("Training data available, but dev data has no MWTs.  Only training a dict based MWT")
         args['dict_only'] = True
 
+    if args['force_exact_pieces'] is None and mwts_composed_of_words(train_doc):
+        # the force_exact_pieces mechanism trains a separate version of the MWT expander in the Trainer
+        # (the training loop here does not need to change)
+        # in this model, a classifier distinguishes whether or not a location is a split
+        # and the text is copied exactly from the input rather than created via seq2seq
+        # this behavior can be turned off at training time with --no_force_exact_pieces
+        logger.info("Train MWTs entirely composed of their subwords.  Training the MWT to match that paradigm as closely as possible")
+        args['force_exact_pieces'] = True
+        logger.info("Reconverting to BinaryDataLoader")
+        train_batch = BinaryDataLoader(train_doc, args['batch_size'], args, evaluation=False)
+        vocab = train_batch.vocab
+        args['vocab_size'] = vocab.size
+        dev_batch = BinaryDataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
+
     # train a dictionary-based MWT expander
     trainer = Trainer(args=args, vocab=vocab, device=args['device'])
     logger.info("Training dictionary-based MWT expander...")
@@ -148,9 +165,6 @@ def train(args):
     else:
         # train a seq2seq model
         logger.info("Training seq2seq-based MWT expander...")
-        if args['force_exact_pieces'] is None and mwts_composed_of_words(train_doc):
-            logger.info("Train MWTs entirely composed of their subwords.  Training the MWT to match that paradigm as closely as possible")
-            args['force_exact_pieces'] = True
         global_step = 0
         max_steps = len(train_batch) * args['num_epoch']
         dev_score_history = []
