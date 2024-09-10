@@ -6,7 +6,7 @@ from itertools import tee
 from stanza.models.common.seq2seq_constant import PAD, UNK, UNK_ID
 
 class SentenceAnalyzer(nn.Module):
-    def __init__(self, args, pretrain, hidden_dim, device=None, dropout=0):
+    def __init__(self, args, pretrain, hidden_dim, device=None):
         super().__init__()
 
         assert pretrain != None, "2nd pass sentence anayzer is missing pretrain word vectors"
@@ -17,11 +17,10 @@ class SentenceAnalyzer(nn.Module):
             torch.from_numpy(pretrain.emb), freeze=True)
 
         self.emb_proj = nn.Linear(pretrain.emb.shape[1], hidden_dim)
-        self.tok_proj = nn.Linear(hidden_dim*2, hidden_dim)
-        self.lstm = nn.LSTM(hidden_dim, hidden_dim, bidirectional=True,
+        self.lstm = nn.LSTM(hidden_dim*3, hidden_dim, bidirectional=True,
                               batch_first=True, num_layers=args['rnn_layers'])
 
-        self.dropout = nn.Dropout(dropout)
+        self.hidden = hidden_dim
 
         # this is zero-initialized to make the second pass initially the id
         # function; and then it could change only as needed but would otherwise
@@ -32,12 +31,22 @@ class SentenceAnalyzer(nn.Module):
     def device(self):
         return next(self.parameters()).device
 
-    def forward(self, x):
+    def forward(self, words, tok_embeds, word_tok_mapping, padding_mask):
         # map the vocab to pretrain IDs
-        token_ids = [[self.vocab[j.strip()] for j in i] for i in x]
+        token_ids = [[self.vocab[j.strip()] for j in i] for i in words]
         embs = self.embeddings(torch.tensor(token_ids, device=self.device))
-        net = self.dropout(self.emb_proj(embs))
-        net = self.lstm(net)[0]
+        net = self.emb_proj(embs)
+        # we want to now concatenate token embeddings with the word embeddings
+        final_inp = torch.zeros(tok_embeds.size(0), tok_embeds.size(1),
+                                self.hidden*3).to(tok_embeds.device)
+        final_inp[:,:,:tok_embeds.size(2)] = tok_embeds
+        # because we want to set the values for that's relavent to the word token embedding
+        # to True, but everything else to False (including the slots for tok_embs)
+        final_inp_second_idx = word_tok_mapping.unsqueeze(-1).repeat(1,1,self.hidden*3)
+        final_inp_second_idx[:,:,:tok_embeds.size(2)] = False
+        final_inp[final_inp_second_idx] = net[padding_mask].view(-1)
+
+        net = self.lstm(final_inp)[0]
         return net @ self.final_proj
 
 
@@ -77,7 +86,7 @@ class Tokenizer(nn.Module):
                 self.mwt_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
 
         if args['sentence_second_pass']:
-            self.sent_2nd_pass_clf = SentenceAnalyzer(args, pretrain, hidden_dim, dropout)
+            self.sent_2nd_pass_clf = SentenceAnalyzer(args, pretrain, hidden_dim)
             # initially, don't use 2nd pass that much (this is near 0, meaning it will pretty much
             # not be mixed in
             self.sent_2nd_mix = nn.Parameter(torch.full((1,), -5.0), requires_grad=True)
@@ -148,15 +157,15 @@ class Tokenizer(nn.Module):
             # these are the draft predictions for only token-level decisinos
             # which we can use to slice the text
             if self.args['use_mwt']:
-                draft_preds = torch.cat([nontok, tok+nonsent+nonmwt, tok+sent+nonmwt, tok+nonsent+mwt, tok+sent+mwt], 2).argmax(dim=2)
+                draft_pred_locs = torch.cat([nontok, tok+nonsent+nonmwt, tok+sent+nonmwt, tok+nonsent+mwt, tok+sent+mwt], 2).argmax(dim=2)
             else:
-                draft_preds = torch.cat([nontok, tok+nonsent, tok+sent], 2).argmax(dim=2)
+                draft_pred_locs = torch.cat([nontok, tok+nonsent, tok+sent], 2).argmax(dim=2)
 
-            draft_preds = (draft_preds > 0)
+            draft_pred_locs = (draft_pred_locs > 0)
             # these boolean indicies are *inclusive*, so predict it or not
             # we need to split on the last token if we want to keep the
             # final word
-            draft_preds[:,-1] = True
+            draft_pred_locs[:,-1] = True
 
             # both: batch x [variable: text token count] 
             extracted_tokens = []
@@ -164,7 +173,7 @@ class Tokenizer(nn.Module):
             last = 0
             last_batch = -1
 
-            nonzero = draft_preds.nonzero().cpu().tolist()
+            nonzero = draft_pred_locs.nonzero().cpu().tolist()
             for i,j in nonzero:
                 if i != last_batch:
                     last_batch = i
@@ -190,23 +199,19 @@ class Tokenizer(nn.Module):
                 batch_tokens_padded.append(i + [PAD for _ in range(max_size-len(i))])
                 batch_tokens_isntpad.append([True for _ in range(len(i))] +
                                             [False for _ in range(max_size-len(i))])
-
             pad_mask = torch.tensor(batch_tokens_isntpad)
-            second_pass_scores = self.sent_2nd_pass_clf(batch_tokens_padded)
 
-            # # we only add scores for slots for which we have a possible word ending
-            # # i.e. its not padding and its also not a middle of rough score's resulting
-            # # words
-            second_pass_chars_align = torch.zeros_like(sent0)
-            second_pass_chars_align[draft_preds] = second_pass_scores[pad_mask]
+
+            # pass the aligned result to the second pass classifier
+            second_pass_scores = self.sent_2nd_pass_clf(batch_tokens_padded, inp, draft_pred_locs, pad_mask)
 
             mix = F.sigmoid(self.sent_2nd_mix)
 
             # update sent0 value
             if detach_2nd_pass:
-                sent0 = (1-mix.detach())*sent0 + mix.detach()*second_pass_chars_align.detach()
+                sent0 = (1-mix.detach())*sent0 + mix.detach()*second_pass_scores.detach()
             else:
-                sent0 = (1-mix)*sent0 + mix*second_pass_chars_align
+                sent0 = (1-mix)*sent0 + mix*second_pass_scores
 
         nonsent = F.logsigmoid(-sent0)
         sent = F.logsigmoid(sent0)
