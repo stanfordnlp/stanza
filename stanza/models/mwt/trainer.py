@@ -114,7 +114,10 @@ class Trainer(BaseTrainer):
             # if any tokens are predicted to expand to blank,
             # that is likely an error.  use the original text
             # this originally came up with the Spanish model turning 's' into a blank
-            pred_tokens = [x if x else y for x, y in zip(pred_tokens, orig_text)]
+            # furthermore, if there are no spaces predicted by the seq2seq,
+            # might as well use the original in case the seq2seq went crazy
+            # this particular error came up training a Hebrew MWT
+            pred_tokens = [x if x and ' ' in x else y for x, y in zip(pred_tokens, orig_text)]
         if unsort:
             pred_tokens = utils.unsort(pred_tokens, orig_idx)
         return pred_tokens
