@@ -258,8 +258,9 @@ def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
     gold_file = args['gold_file']
-    save_name = args['save_name'] if args['save_name'] else '{}_mwt_expander.pt'.format(args['shorthand'])
-    model_file = os.path.join(args['save_dir'], save_name)
+    model_file = args['save_name'] if args['save_name'] else '{}_mwt_expander.pt'.format(args['shorthand'])
+    if args['save_dir'] and not model_file.startswith(args['save_dir']) and not os.path.exists(model_file):
+        model_file = os.path.join(args['save_dir'], model_file)
 
     # load model
     trainer = Trainer(model_file=model_file, device=args['device'])
