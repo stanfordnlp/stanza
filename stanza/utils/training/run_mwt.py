@@ -55,6 +55,14 @@ def run_treebank(mode, paths, treebank, short_name,
     dev_json         = f"{mwt_dir}/{short_name}-ud-dev-mwt.json"
     test_json        = f"{mwt_dir}/{short_name}-ud-test-mwt.json"
 
+    eval_file = None
+    if '--eval_file' in extra_args:
+        eval_file = extra_args[extra_args.index('--eval_file') + 1]
+
+    gold_file = None
+    if '--gold_file' in extra_args:
+        gold_file = extra_args[extra_args.index('--gold_file') + 1]
+
     if not check_mwt(train_file):
         logger.info("No training MWTS found for %s.  Skipping" % treebank)
         return
@@ -67,9 +75,9 @@ def run_treebank(mode, paths, treebank, short_name,
         max_mwt_len = math.ceil(max_mwt_length([train_json, dev_json]) * 1.1 + 1)
         logger.info("Max len: %f" % max_mwt_len)
         train_args = ['--train_file', train_file,
-                      '--eval_file', dev_in_file,
+                      '--eval_file', eval_file if eval_file else dev_in_file,
                       '--output_file', dev_output_file,
-                      '--gold_file', dev_gold_file,
+                      '--gold_file', gold_file if gold_file else dev_gold_file,
                       '--lang', short_language,
                       '--shorthand', short_name,
                       '--mode', 'train',
@@ -79,9 +87,9 @@ def run_treebank(mode, paths, treebank, short_name,
         mwt_expander.main(train_args)
 
     if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
-        dev_args = ['--eval_file', dev_in_file,
+        dev_args = ['--eval_file', eval_file if eval_file else dev_in_file,
                     '--output_file', dev_output_file,
-                    '--gold_file', dev_gold_file,
+                    '--gold_file', gold_file if gold_file else dev_gold_file,
                     '--lang', short_language,
                     '--shorthand', short_name,
                     '--mode', 'predict']
@@ -89,13 +97,13 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running dev step with args: {}".format(dev_args))
         mwt_expander.main(dev_args)
 
-        results = common.run_eval_script_mwt(dev_gold_file, dev_output_file)
+        results = common.run_eval_script_mwt(gold_file if gold_file else dev_gold_file, dev_output_file)
         logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
 
     if mode == Mode.SCORE_TEST:
-        test_args = ['--eval_file', test_in_file,
+        test_args = ['--eval_file', eval_file if eval_file else test_in_file,
                      '--output_file', test_output_file,
-                     '--gold_file', test_gold_file,
+                     '--gold_file', gold_file if gold_file else test_gold_file,
                      '--lang', short_language,
                      '--shorthand', short_name,
                      '--mode', 'predict']
@@ -103,7 +111,7 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Running test step with args: {}".format(test_args))
         mwt_expander.main(test_args)
 
-        results = common.run_eval_script_mwt(test_gold_file, test_output_file)
+        results = common.run_eval_script_mwt(gold_file if gold_file else test_gold_file, test_output_file)
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
 
 def main():
