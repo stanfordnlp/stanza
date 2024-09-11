@@ -800,3 +800,17 @@ def attach_bert_model(model, bert_model, bert_tokenizer, use_peft, force_bert_sa
     else:
         model.bert_model = None
     model.add_unsaved_module('bert_tokenizer', bert_tokenizer)
+
+def build_save_each_filename(base_filename):
+    """
+    If the given name doesn't have %d in it, add %4d at the end of the filename
+
+    This way, there's something to count how many models have been saved
+    """
+    try:
+        base_filename % 1
+    except TypeError:
+        # so models.pt -> models_0001.pt, etc
+        pieces = os.path.splitext(model_save_each_file)
+        base_filename = pieces[0] + "_%04d" + pieces[1]
+    return base_filename
