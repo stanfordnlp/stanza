@@ -790,12 +790,7 @@ def parse_args(args=None):
 
     if args['save_each_name']:
         model_save_each_file = os.path.join(args['save_dir'], args['save_each_name'])
-        try:
-            model_save_each_file % 1
-        except TypeError:
-            # so models.pt -> models_0001.pt, etc
-            pieces = os.path.splitext(model_save_each_file)
-            model_save_each_file = pieces[0] + "_%04d" + pieces[1]
+        model_save_each_file = utils.build_save_each_filename(model_save_each_file)
         args['save_each_name'] = model_save_each_file
     else:
         # in the event that there is a start epoch setting,
