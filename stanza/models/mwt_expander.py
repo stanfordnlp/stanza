@@ -75,6 +75,7 @@ def build_argparse():
     parser.add_argument('--log_step', type=int, default=20, help='Print log every k steps.')
     parser.add_argument('--save_dir', type=str, default='saved_models/mwt', help='Root dir for saving models.')
     parser.add_argument('--save_name', type=str, default=None, help="File name to save the model")
+    parser.add_argument('--save_each_name', type=str, default=None, help="Save each model in sequence to this pattern.  Mostly for testing")
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
@@ -119,6 +120,11 @@ def train(args):
     utils.ensure_dir(args['save_dir'])
     save_name = args['save_name'] if args['save_name'] else '{}_mwt_expander.pt'.format(args['shorthand'])
     model_file = os.path.join(args['save_dir'], save_name)
+
+    save_each_name = None
+    if args['save_each_name']:
+        save_each_name = os.path.join(args['save_dir'], args['save_each_name'])
+        save_each_name = utils.build_save_each_filename(save_each_name)
 
     # pred and gold path
     system_pred_file = args['output_file']
@@ -192,6 +198,10 @@ def train(args):
                     duration = time.time() - start_time
                     logger.info(format_str.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), global_step,\
                                                   max_steps, epoch, args['num_epoch'], loss, duration, current_lr))
+
+            if save_each_name:
+                trainer.save(save_each_name % epoch)
+                logger.info("Saved epoch %d model to %s" % (epoch, save_each_name % epoch))
 
             # eval on dev
             logger.info("Evaluating on dev set...")
