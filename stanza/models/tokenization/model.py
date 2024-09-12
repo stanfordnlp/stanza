@@ -6,7 +6,7 @@ from itertools import tee
 from stanza.models.common.seq2seq_constant import PAD, UNK, UNK_ID
 
 class SentenceAnalyzer(nn.Module):
-    def __init__(self, args, pretrain, hidden_dim, device=None):
+    def __init__(self, args, pretrain, hidden_dim, device=None, dropout=0):
         super().__init__()
 
         assert pretrain != None, "2nd pass sentence anayzer is missing pretrain word vectors"
@@ -19,6 +19,8 @@ class SentenceAnalyzer(nn.Module):
         self.emb_proj = nn.Linear(pretrain.emb.shape[1], hidden_dim)
         self.lstm = nn.LSTM(hidden_dim*3, hidden_dim, bidirectional=True,
                               batch_first=True, num_layers=args['rnn_layers'])
+
+        self.dropout = nn.Dropout(dropout)
 
         self.hidden = hidden_dim
 
@@ -46,7 +48,7 @@ class SentenceAnalyzer(nn.Module):
         final_inp_second_idx[:,:,:tok_embeds.size(2)] = False
         final_inp[final_inp_second_idx] = net[padding_mask].view(-1)
 
-        net = self.lstm(final_inp)[0]
+        net = self.lstm(self.dropout(final_inp))[0]
         return net @ self.final_proj
 
 
@@ -86,7 +88,7 @@ class Tokenizer(nn.Module):
                 self.mwt_clf2 = nn.Linear(hidden_dim * 2, 1, bias=False)
 
         if args['sentence_second_pass']:
-            self.sent_2nd_pass_clf = SentenceAnalyzer(args, pretrain, hidden_dim)
+            self.sent_2nd_pass_clf = SentenceAnalyzer(args, pretrain, hidden_dim, dropout)
             # initially, don't use 2nd pass that much (this is near 0, meaning it will pretty much
             # not be mixed in
             self.sent_2nd_mix = nn.Parameter(torch.full((1,), -5.0), requires_grad=True)
