@@ -53,7 +53,7 @@ def build_argparse():
 
     parser.add_argument('--hidden_dim', type=int, default=100)
     parser.add_argument('--emb_dim', type=int, default=50)
-    parser.add_argument('--num_layers', type=int, default=1)
+    parser.add_argument('--num_layers', type=int, default=None, help='Number of layers in model encoder.  Defaults to 1 for seq2seq, 2 for classifier')
     parser.add_argument('--emb_dropout', type=float, default=0.5)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--max_dec_len', type=int, default=50)
@@ -152,6 +152,12 @@ def train(args):
         vocab = train_batch.vocab
         args['vocab_size'] = vocab.size
         dev_batch = BinaryDataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
+
+    if args['num_layers'] is None:
+        if args['force_exact_pieces']:
+            args['num_layers'] = 2
+        else:
+            args['num_layers'] = 1
 
     # train a dictionary-based MWT expander
     trainer = Trainer(args=args, vocab=vocab, device=args['device'])
