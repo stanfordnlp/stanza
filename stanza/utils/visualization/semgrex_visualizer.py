@@ -15,7 +15,7 @@ from IPython.display import display, HTML
 import typing
 from typing import List, Tuple, Any
 
-from utils import find_nth, round_base
+from stanza.utils.visualization.utils import find_nth, round_base
 
 
 def get_sentences_html(doc: Any, language: str, visualize_xpos: bool = False) -> List[str]:
