@@ -213,6 +213,7 @@ import stanza.utils.default_paths as default_paths
 from stanza.models.constituency import tree_reader
 from stanza.models.constituency.parse_tree import Tree
 from stanza.server import tsurgeon
+from stanza.utils.datasets.common import UnknownDatasetError
 from stanza.utils.datasets.constituency import utils
 from stanza.utils.datasets.constituency.convert_alt import convert_alt
 from stanza.utils.datasets.constituency.convert_arboretum import convert_tiger_treebank
@@ -225,11 +226,6 @@ from stanza.utils.datasets.constituency.convert_starlang import read_starlang
 from stanza.utils.datasets.constituency.utils import SHARDS, write_dataset
 import stanza.utils.datasets.constituency.vtb_convert as vtb_convert
 import stanza.utils.datasets.constituency.vtb_split as vtb_split
-
-class UnknownDatasetError(ValueError):
-    def __init__(self, dataset, text):
-        super().__init__(text)
-        self.dataset = dataset
 
 def process_it_turin(paths, dataset_name, *args):
     """

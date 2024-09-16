@@ -446,6 +446,7 @@ import tempfile
 from stanza.models.common.constant import treebank_to_short_name, lcode2lang, lang_to_langcode, two_to_three_letters
 import stanza.utils.default_paths as default_paths
 
+from stanza.utils.datasets.common import UnknownDatasetError
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
 from stanza.utils.datasets.ner.split_wikiner import split_wikiner
 import stanza.utils.datasets.ner.build_en_combined as build_en_combined
@@ -478,11 +479,6 @@ import stanza.utils.datasets.ner.convert_hy_armtdp as convert_hy_armtdp
 from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset, random_shuffle_by_prefixes, read_prefix_file, combine_files
 
 SHARDS = ('train', 'dev', 'test')
-
-class UnknownDatasetError(ValueError):
-    def __init__(self, dataset, text):
-        super().__init__(text)
-        self.dataset = dataset
 
 def process_turku(paths, short_name):
     assert short_name == 'fi_turku'

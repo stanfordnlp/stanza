@@ -32,6 +32,11 @@ class ModelType(Enum):
     LEMMA            = 4
     DEPPARSE         = 5
 
+class UnknownDatasetError(ValueError):
+    def __init__(self, dataset, text):
+        super().__init__(text)
+        self.dataset = dataset
+
 def convert_conllu_to_txt(tokenizer_dir, short_name, shards=("train", "dev", "test")):
     """
     Uses the udtools perl script to convert a conllu file to txt
