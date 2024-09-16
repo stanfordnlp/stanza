@@ -67,8 +67,26 @@ def process_ar_padt(paths, short_name):
 
     process_treebank(paths, short_name, word, upos, allowed_lemmas)
 
+def process_el_gdt(paths, short_name):
+    """
+    All of the Greek lemmas for these words are εγώ or μου
+
+    τους PRON Counter({'μου': 118, 'εγώ': 32})
+    μας PRON Counter({'μου': 89, 'εγώ': 32})
+    του PRON Counter({'μου': 82, 'εγώ': 8})
+    της PRON Counter({'μου': 80, 'εγώ': 2})
+    σας PRON Counter({'μου': 34, 'εγώ': 24})
+    μου PRON Counter({'μου': 45, 'εγώ': 10})
+    """
+    word = "τους|μας|του|της|σας|μου"
+    upos = "PRON"
+    allowed_lemmas = None
+
+    process_treebank(paths, short_name, word, upos, allowed_lemmas)
+
 DATASET_MAPPING = {
     "ar_padt":           process_ar_padt,
+    "el_gdt":            process_el_gdt,
     "fa_perdt":          process_fa_perdt,
     "hi_hdtb":           process_hi_hdtb,
     "ja_gsd":            process_ja_gsd,

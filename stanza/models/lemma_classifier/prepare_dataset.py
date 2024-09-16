@@ -25,12 +25,13 @@ class DataProcessor():
 
     def __init__(self, target_word: str, target_upos: List[str], allowed_lemmas: str):
         self.target_word = target_word
+        self.target_word_regex = re.compile(target_word)
         self.target_upos = target_upos
         self.allowed_lemmas = re.compile(allowed_lemmas)
 
     def keep_sentence(self, sentence):
         for word in sentence.words:
-            if self.target_word == word.text and word.upos in self.target_upos:
+            if self.target_word_regex.fullmatch(word.text) and word.upos in self.target_upos:
                 return True
         return False
 
@@ -40,7 +41,7 @@ class DataProcessor():
         """
         occurrences = []
         for idx, token in enumerate(sentence.words):
-            if token.text == self.target_word and token.upos in self.target_upos:
+            if self.target_word_regex.fullmatch(token.text) and token.upos in self.target_upos:
                 occurrences.append(idx)
         return occurrences
 
