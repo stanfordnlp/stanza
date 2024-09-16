@@ -33,7 +33,7 @@ class DataProcessor():
         """
         occurrences = []
         for idx, token in enumerate(sentence.words):
-            if token.text == self.target_word and token.upos in self.target_upos:
+            if self.target_word.fullmatch(token.text) and token.upos in self.target_upos:
                 occurrences.append(idx)
         return occurrences
 
@@ -112,7 +112,7 @@ def main(args=None):
     args = parser.parse_args(args)
 
     conll_path = args.conll_path
-    target_word = args.target_word
+    target_word = re.compile(args.target_word)
     target_upos = args.target_upos
     output_path = args.output_path
     allowed_lemmas = args.allowed_lemmas
@@ -126,8 +126,8 @@ def main(args=None):
 
     def keep_sentence(sentence):
         for word in sentence.words:
-            if word.text == target_word and word.upos == target_upos:
-                return True 
+            if target_word.fullmatch(word.text) and word.upos == target_upos:
+                return True
         return False
 
     processor.process_document(doc, keep_sentence, output_path)
