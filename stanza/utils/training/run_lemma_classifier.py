@@ -39,6 +39,10 @@ def run_treebank(mode, paths, treebank, short_name,
             else:
                 raise ValueError("--bert_model not specified, so cannot figure out which transformer to use for language %s" % short_language)
 
+    extra_train_args = []
+    if command_args.force:
+        extra_train_args.append('--force')
+
     if mode == Mode.TRAIN:
         train_args = []
         if "--train_file" not in extra_args:
@@ -47,7 +51,7 @@ def run_treebank(mode, paths, treebank, short_name,
         if "--eval_file" not in extra_args:
             eval_file = os.path.join("data", "lemma_classifier", "%s.dev.lemma" % short_name)
             train_args += ['--eval_file', eval_file]
-        train_args = base_args + train_args + extra_args
+        train_args = base_args + train_args + extra_args + extra_train_args
 
         if command_args.model_type == ModelType.LSTM:
             train_args = embedding_args + train_args
