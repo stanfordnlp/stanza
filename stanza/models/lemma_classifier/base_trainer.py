@@ -67,7 +67,7 @@ class BaseLemmaClassifierTrainer(ABC):
         self.model.to(device)
         logger.info(f"Training model on device: {device}. {next(self.model.parameters()).device}")
 
-        if os.path.exists(save_name):
+        if os.path.exists(save_name) and not args.get('force', False):
             raise FileExistsError(f"Save name {save_name} already exists; training would overwrite previous file contents. Aborting...")
 
         if self.weighted_loss:

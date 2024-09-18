@@ -88,6 +88,7 @@ def main(args=None, predefined_args=None):
     parser.add_argument("--batch_size", type=int, default=DEFAULT_BATCH_SIZE, help="Number of examples to include in each batch")
     parser.add_argument("--eval_file", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_sets", "combined_dev.txt"), help="Path to dev file used to evaluate model for saves")
     parser.add_argument("--lr", type=float, default=0.001, help="Learning rate for the optimizer.")
+    parser.add_argument("--force", action='store_true', default=False, help='Whether or not to clobber an existing save file')
 
     args = parser.parse_args(args) if predefined_args is None else predefined_args
 
@@ -110,7 +111,7 @@ def main(args=None, predefined_args=None):
     else:
         raise ValueError("Unknown model type " + args['model_type'])
 
-    if os.path.exists(save_name):
+    if os.path.exists(save_name) and not args.get('force', False):
         raise FileExistsError(f"Save name {save_name} already exists. Training would override existing data. Aborting...")
     if not os.path.exists(train_file):
         raise FileNotFoundError(f"Training file {train_file} not found. Try again with a valid path.")

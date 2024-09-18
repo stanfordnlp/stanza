@@ -94,6 +94,7 @@ def build_argparse():
     parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(__file__), "data", "processed_ud_en", "combined_train.txt"), help="Full path to training file")
     parser.add_argument("--weighted_loss", action='store_true', dest='weighted_loss', default=False, help="Whether to use weighted loss during training.")
     parser.add_argument("--eval_file", type=str, default=os.path.join(os.path.dirname(__file__), "data", "processed_ud_en", "combined_dev.txt"), help="Path to dev file used to evaluate model for saves")
+    parser.add_argument("--force", action='store_true', default=False, help='Whether or not to clobber an existing save file')
     return parser
 
 def main(args=None, predefined_args=None):
@@ -116,7 +117,7 @@ def main(args=None, predefined_args=None):
 
     args = vars(args)
 
-    if os.path.exists(save_name):
+    if os.path.exists(save_name) and not args.get('force', False):
         raise FileExistsError(f"Save name {save_name} already exists. Training would override existing data. Aborting...")
     if not os.path.exists(train_file):
         raise FileNotFoundError(f"Training file {train_file} not found. Try again with a valid path.")
