@@ -45,6 +45,10 @@ class Dataset:
 
         logger.debug("Final label decoder: %s  Should be strings to ints", label_decoder)
 
+        # words which we are analyzing
+        target_words = set()
+
+        # all known words in the dataset, not just target words
         known_words = set()
 
         with open(data_path, "r+", encoding="utf-8") as fin:
@@ -52,6 +56,7 @@ class Dataset:
 
             input_json = json.load(fin)
             sentences_data = input_json['sentences']
+            self.target_upos = input_json['upos']
 
             for idx, sentence in enumerate(sentences_data):
                 # TODO Could replace this with sentence.values(), but need to know if Stanza requires Python 3.7 or later for backward compatability reasons
@@ -77,6 +82,7 @@ class Dataset:
                 if get_counts:
                     counts[label_decoder[label]] += 1
 
+                target_words.add(words[target_idx])
                 known_words.update(words)
 
         self.sentences = sentences
@@ -92,6 +98,7 @@ class Dataset:
         self.shuffle = shuffle
 
         self.known_words = [x.lower() for x in sorted(known_words)]
+        self.target_words = set(x.lower() for x in target_words)
 
     def __len__(self):
         """
