@@ -18,6 +18,7 @@ from stanza.models.common.char_model import CharacterLanguageModelWordAdapter
 from stanza.models.common import utils, loss
 from stanza.models.lemma import edit
 from stanza.models.lemma.vocab import MultiVocab
+from stanza.models.lemma_classifier.base_model import LemmaClassifier
 
 logger = logging.getLogger('stanza')
 
@@ -45,6 +46,7 @@ class Trainer(object):
             # dict-based components
             self.word_dict = dict()
             self.composite_dict = dict()
+            self.contextual_lemmatizers = []
 
         self.caseless = self.args.get('caseless', False)
 
@@ -228,8 +230,11 @@ class Trainer(object):
             'model': model_state,
             'dicts': (self.word_dict, self.composite_dict),
             'vocab': self.vocab.state_dict(),
-            'config': self.args
+            'config': self.args,
+            'contextual': [],
         }
+        for contextual in self.contextual_lemmatizers:
+            params['contextual'].append(contextual.get_save_dict())
         save_dir = os.path.split(filename)[0]
         if save_dir:
             os.makedirs(os.path.split(filename)[0], exist_ok=True)
@@ -255,3 +260,6 @@ class Trainer(object):
         else:
             self.model = None
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
+        self.contextual_lemmatizers = []
+        for contextual in checkpoint.get('contextual', []):
+            self.contextual_lemmatizers.append(LemmaClassifier.from_checkpoint(contextual))
