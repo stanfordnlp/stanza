@@ -45,6 +45,10 @@ class Dataset:
 
         logger.debug("Final label decoder: %s  Should be strings to ints", label_decoder)
 
+        # words which we are analyzing
+        target_words = set()
+
+        # all known words in the dataset, not just target words
         known_words = set()
 
         with open(data_path, "r+", encoding="utf-8") as f:
@@ -78,6 +82,7 @@ class Dataset:
                 if get_counts:
                     counts[label_decoder[label]] += 1
 
+                target_words.add(words[target_idx])
                 known_words.update(words)
 
         self.sentences = sentences
@@ -93,6 +98,7 @@ class Dataset:
         self.shuffle = shuffle
 
         self.known_words = [x.lower() for x in sorted(known_words)]
+        self.target_words = set(x.lower() for x in target_words)
 
     def __len__(self):
         """

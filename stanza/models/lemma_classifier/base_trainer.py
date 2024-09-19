@@ -60,8 +60,9 @@ class BaseLemmaClassifierTrainer(ABC):
         self.output_dim = len(label_decoder)
         logger.info(f"Loaded dataset successfully from {train_file}")
         logger.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
+        logger.info(f"Target words: {dataset.target_words}")
 
-        self.model = self.build_model(label_decoder, upos_to_id, dataset.known_words)
+        self.model = self.build_model(label_decoder, upos_to_id, dataset.known_words, dataset.target_words)
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.model.to(device)
