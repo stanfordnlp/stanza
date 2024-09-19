@@ -21,7 +21,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
         From the LSTM output, we get the embedding of the specific token that we classify on. That embedding
         is fed into an MLP for classification.
     """
-    def __init__(self, model_args, output_dim, pt_embedding, label_decoder, upos_to_id, known_words,
+    def __init__(self, model_args, output_dim, pt_embedding, label_decoder, upos_to_id, known_words, target_words, target_upos,
                  use_charlm=False, charlm_forward_file=None, charlm_backward_file=None):
         """
         Args:
@@ -30,6 +30,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
             upos_to_id (Mapping[str, int]): A dictionary mapping UPOS tag strings to their respective IDs
             pt_embedding (Pretrain): pretrained embeddings
             known_words (list(str)): Words which are in the training data
+            target_words (set(str)): a set of the words which might need lemmatization
             use_charlm (bool): Whether or not to use the charlm embeddings
             charlm_forward_file (str): The path to the forward pass model for the character language model
             charlm_backward_file (str): The path to the forward pass model for the character language model.
@@ -41,7 +42,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
         Raises:
             FileNotFoundError: if the forward or backward charlm file cannot be found.
         """
-        super(LemmaClassifierLSTM, self).__init__(label_decoder)
+        super(LemmaClassifierLSTM, self).__init__(label_decoder, target_words, target_upos)
         self.model_args = model_args
 
         self.hidden_dim = model_args['hidden_dim']
@@ -113,6 +114,8 @@ class LemmaClassifierLSTM(LemmaClassifier):
             "args": self.model_args,
             "upos_to_id": self.upos_to_id,
             "known_words": self.known_words,
+            "target_words": list(self.target_words),
+            "target_upos": list(self.target_upos),
         }
         skipped = [k for k in save_dict["params"].keys() if self.is_unsaved_module(k)]
         for k in skipped:

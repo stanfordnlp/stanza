@@ -33,7 +33,7 @@ class BaseLemmaClassifierTrainer(ABC):
         self.criterion = nn.BCEWithLogitsLoss(weight=weights)
 
     @abstractmethod
-    def build_model(self, label_decoder, upos_to_id, known_words):
+    def build_model(self, label_decoder, upos_to_id, known_words, target_words, target_upos):
         """
         Build a model using pieces of the dataset to determine some of the model shape
         """
@@ -60,8 +60,9 @@ class BaseLemmaClassifierTrainer(ABC):
         self.output_dim = len(label_decoder)
         logger.info(f"Loaded dataset successfully from {train_file}")
         logger.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
+        logger.info(f"Target words: {dataset.target_words}")
 
-        self.model = self.build_model(label_decoder, upos_to_id, dataset.known_words)
+        self.model = self.build_model(label_decoder, upos_to_id, dataset.known_words, dataset.target_words, set(dataset.target_upos))
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.model.to(device)

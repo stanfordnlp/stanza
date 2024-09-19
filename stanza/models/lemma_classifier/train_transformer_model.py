@@ -72,8 +72,8 @@ class TransformerBaselineTrainer(BaseLemmaClassifierTrainer):
         ])
         return optimizer
 
-    def build_model(self, label_decoder, upos_to_id, known_words):
-        return LemmaClassifierWithTransformer(model_args=self.model_args, output_dim=self.output_dim, transformer_name=self.transformer_name, label_decoder=label_decoder)
+    def build_model(self, label_decoder, upos_to_id, known_words, target_words, target_upos):
+        return LemmaClassifierWithTransformer(model_args=self.model_args, output_dim=self.output_dim, transformer_name=self.transformer_name, label_decoder=label_decoder, target_words=target_words, target_upos=target_upos)
 
 
 def main(args=None, predefined_args=None):

@@ -19,10 +19,12 @@ from stanza.models.lemma_classifier.constants import ModelType
 logger = logging.getLogger('stanza.lemmaclassifier')
 
 class LemmaClassifier(ABC, nn.Module):
-    def __init__(self, label_decoder, *args, **kwargs):
+    def __init__(self, label_decoder, target_words, target_upos, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.label_decoder = label_decoder
+        self.target_words = target_words
+        self.target_upos = target_upos
         self.unsaved_modules = []
 
     def add_unsaved_module(self, name, module):
@@ -81,6 +83,8 @@ class LemmaClassifier(ABC, nn.Module):
                                         label_decoder=checkpoint['label_decoder'],
                                         upos_to_id=checkpoint['upos_to_id'],
                                         known_words=checkpoint['known_words'],
+                                        target_words=set(checkpoint['target_words']),
+                                        target_upos=set(checkpoint['target_upos']),
                                         use_charlm=use_charlm,
                                         charlm_forward_file=charlm_forward_file,
                                         charlm_backward_file=charlm_backward_file)
@@ -90,7 +94,12 @@ class LemmaClassifier(ABC, nn.Module):
             output_dim = len(checkpoint['label_decoder'])
             saved_args = checkpoint['args']
             bert_model = saved_args['bert_model']
-            model = LemmaClassifierWithTransformer(model_args = saved_args, output_dim=output_dim, transformer_name=bert_model, label_decoder=checkpoint['label_decoder'])
+            model = LemmaClassifierWithTransformer(model_args=saved_args,
+                                                   output_dim=output_dim,
+                                                   transformer_name=bert_model,
+                                                   label_decoder=checkpoint['label_decoder'],
+                                                   target_words=set(checkpoint['target_words']),
+                                                   target_upos=set(checkpoint['target_upos']))
         else:
             raise ValueError("Unknown model type %s" % model_type)
 

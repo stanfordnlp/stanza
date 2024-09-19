@@ -72,8 +72,8 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
         else:
             raise ValueError("Must enter a valid loss function (e.g. 'ce' or 'weighted_bce')")
 
-    def build_model(self, label_decoder, upos_to_id, known_words):
-        return LemmaClassifierLSTM(self.model_args, self.output_dim, self.pt_embedding, label_decoder, upos_to_id, known_words,
+    def build_model(self, label_decoder, upos_to_id, known_words, target_words, target_upos):
+        return LemmaClassifierLSTM(self.model_args, self.output_dim, self.pt_embedding, label_decoder, upos_to_id, known_words, target_words, target_upos,
                                    use_charlm=self.use_charlm, charlm_forward_file=self.charlm_forward_file, charlm_backward_file=self.charlm_backward_file)
 
 def build_argparse():
