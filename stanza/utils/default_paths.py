@@ -21,6 +21,7 @@ def get_default_paths():
         "SENTIMENT_DATA_DIR": DATA_ROOT + "/sentiment",
         "CONSTITUENCY_DATA_DIR": DATA_ROOT + "/constituency",
         "COREF_DATA_DIR": DATA_ROOT + "/coref",
+        "LEMMA_CLASSIFIER_DATA_DIR": DATA_ROOT + "/lemma_classifier",
 
         # Set directories to store external word vector data
         "WORDVEC_DIR": "extern_data/wordvec",
