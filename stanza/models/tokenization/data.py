@@ -1,5 +1,5 @@
 from bisect import bisect_right
-from copy import copy
+from copy import copy, deepcopy
 import numpy as np
 import random
 import logging
@@ -355,15 +355,20 @@ class DataLoader(TokenizationDataset):
             features[i, :len(f_), :] = f_
             raw_units.append(r_ + ['<PAD>'] * (pad_len - len(r_)))
 
+        # so we always return text that's not been <UNK>ed, but will return
+        # IDs with <UNK>s in them. REVIEW: check if the raw text is used
+        # anywhere else such that the lack of UNKs will cause a problem
+        dropped_units = deepcopy(raw_units)
+
         if unit_dropout > 0 and not self.eval:
             # dropout characters/units at training time and replace them with UNKs
             mask = np.random.random_sample(units.shape) < unit_dropout
             mask[units == padid] = 0
             units[mask] = unkid
-            for i in range(len(raw_units)):
-                for j in range(len(raw_units[i])):
+            for i in range(len(dropped_units)):
+                for j in range(len(dropped_units[i])):
                     if mask[i, j]:
-                        raw_units[i][j] = '<UNK>'
+                        dropped_units[i][j] = '<UNK>'
 
         # dropout unit feature vector in addition to only torch.dropout in the model.
         # experiments showed that only torch.dropout hurts the model
@@ -372,8 +377,8 @@ class DataLoader(TokenizationDataset):
         if self.args['use_dictionary'] and feat_unit_dropout > 0 and not self.eval:
             mask_feat = np.random.random_sample(units.shape) < feat_unit_dropout
             mask_feat[units == padid] = 0
-            for i in range(len(raw_units)):
-                for j in range(len(raw_units[i])):
+            for i in range(len(dropped_units)):
+                for j in range(len(dropped_units[i])):
                     if mask_feat[i,j]:
                         features[i,j,:] = 0
                         
