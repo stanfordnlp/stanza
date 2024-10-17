@@ -401,13 +401,21 @@ def load_conllu(file, path, treebank_type):
             except:
                 raise UDError("Cannot parse multi-word token ID '{}' at line {}".format(_encode(columns[ID]), line_idx))
 
-            for _ in range(start, end + 1):
+            words_expected = end - start + 1
+            words_found = 0
+            while words_found < words_expected:
                 word_line = _decode(file.readline().rstrip("\r\n"))
                 line_idx += 1
                 word_columns = word_line.split("\t")
                 if len(word_columns) != 10:
                     raise UDError("The CoNLL-U line does not contain 10 tab-separated columns at line {}: '{}'".format(line_idx, _encode(word_line)))
+                if "." in word_columns[ID]:
+                    if treebank_type.get('no_empty_nodes', False):
+                        raise UDError("The collapsed CoNLL-U line still contains empty nodes at line {}: {}".format(line_idx, _encode(line)))
+                    else:
+                        continue
                 ud.words.append(UDWord(ud.tokens[-1], word_columns, is_multiword=True))
+                words_found += 1
 
         # Basic tokens/words
         else:
