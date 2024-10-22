@@ -141,7 +141,11 @@ vlsp22 is the 2022 constituency treebank from the VLSP bakeoff
 vlsp23 is the 2023 update to the constituency treebank from the VLSP bakeoff
   the vlsp22 code also works for the new dataset,
     although some effort may be needed to update the tags
-  currently there is no test data, so by default the split uses 1/10th for test
+  As of late 2024, the test set is available on request at vlsp.resources@gmail.com
+  Organize the directory
+    $CONSTITUENCY_BASE/vietnamese/VLSP_2023
+      $CONSTITUENCY_BASE/vietnamese/VLSP_2023/Trainingset
+      $CONSTITUENCY_BASE/vietnamese/VLSP_2023/test
 
 zh_ctb-51 is the 5.1 version of CTB
   put LDC2005T01U01_ChineseTreebank5.1 in $CONSTITUENCY_BASE/chinese
@@ -281,7 +285,7 @@ def process_vlsp22(paths, dataset_name, *args):
         updated_tagset = False
     elif dataset_name == 'vi_vlsp23':
         default_subdir = os.path.join('VLSP_2023', 'Trainingdataset')
-        default_make_test_split = True
+        default_make_test_split = False
         updated_tagset = True
 
     parser = argparse.ArgumentParser()
@@ -300,9 +304,16 @@ def process_vlsp22(paths, dataset_name, *args):
     if not os.path.exists(vlsp_dir):
         raise FileNotFoundError("Could not find the {} dataset in the expected location of {} - CONSTITUENCY_BASE == {}".format(dataset_name, vlsp_dir, paths["CONSTITUENCY_BASE"]))
     vlsp_files = os.listdir(vlsp_dir)
-    vlsp_test_files = [os.path.join(vlsp_dir, x) for x in vlsp_files if x.startswith("private") and not x.endswith(".zip")]
     vlsp_train_files = [os.path.join(vlsp_dir, x) for x in vlsp_files if x.startswith("file") and not x.endswith(".zip")]
     vlsp_train_files.sort()
+        
+    if dataset_name == 'vi_vlsp22':
+        vlsp_test_files = [os.path.join(vlsp_dir, x) for x in vlsp_files if x.startswith("private") and not x.endswith(".zip")]
+    elif dataset_name == 'vi_vlsp23':
+        vlsp_test_dir = os.path.abspath(os.path.join(vlsp_dir, os.pardir, "test"))
+        vlsp_test_files = os.listdir(vlsp_test_dir)
+        vlsp_test_files = [os.path.join(vlsp_test_dir, x) for x in vlsp_test_files if x.endswith(".csv")]
+
     if len(vlsp_train_files) == 0:
         raise FileNotFoundError("No train files (files starting with 'file') found in {}".format(vlsp_dir))
     if not args.test_split and len(vlsp_test_files) == 0:
@@ -335,7 +346,7 @@ def process_vlsp22(paths, dataset_name, *args):
     if not args.test_split:
         print("Procesing test files:\n  {}".format("\n  ".join(vlsp_test_files)))
         with tempfile.TemporaryDirectory() as test_output_path:
-            vtb_convert.convert_files(vlsp_test_files, test_output_path, verbose=True, fix_errors=True, convert_brackets=args.convert_brackets)
+            vtb_convert.convert_files(vlsp_test_files, test_output_path, verbose=True, fix_errors=True, convert_brackets=args.convert_brackets, updated_tagset=updated_tagset)
             if args.n_splits:
                 for rotation in range(args.n_splits):
                     rotation_name = "%s-%d-%d" % (dataset_name, rotation, args.n_splits)

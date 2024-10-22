@@ -108,7 +108,8 @@ def is_valid_line(line):
 # not clear if TP is supposed to be NP or PP - needs a native speaker to decode
 WEIRD_LABELS = sorted(set(["WP", "YP", "SNP", "STC", "UPC", "(TP", "Xp", "XP", "WHVP", "WHPR", "NO", "WHADV", "(SC (", "(VOC (", "(Adv (", "(SP (", "ADV-MDP", "(SPL", "(ADV (", "(V-MWE ("] + list(REMAPPING.keys())))
 # the 2023 dataset has TP and WHADV as actual labels
-WEIRD_LABELS_2023 = sorted(set(["WP", "YP", "SNP", "STC", "UPC", "Xp", "XP", "WHVP", "WHPR", "NO", "(SC (", "(VOC (", "(Adv (", "(SP (", "ADV-MDP", "(SPL", "(ADV (", "(V-MWE ("] + list(REMAPPING.keys())))
+# furthermore, trees with NO were cleaned up and one of the test trees has NORD as a word
+WEIRD_LABELS_2023 = sorted(set(["WP", "YP", "SNP", "STC", "UPC", "Xp", "XP", "WHVP", "WHPR", "(SC (", "(VOC (", "(Adv (", "(SP (", "ADV-MDP", "(SPL", "(ADV (", "(V-MWE ("] + list(REMAPPING.keys())))
 
 def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False, updated_tagset=False):
     """
