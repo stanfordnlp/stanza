@@ -62,8 +62,9 @@ def get_num_samples(org_dir, file_names):
         file_dir = os.path.join(org_dir, filename)
         with open(file_dir, 'r', encoding='utf-8') as reader:
             content = reader.readlines()
-            for _ in content:
-                count += 1
+            for line in content:
+                if not line.startswith("<s") and not line.startswith("</s>"):
+                    count += 1
 
     return count
 
@@ -80,6 +81,8 @@ def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.
     train_path, dev_path, test_path = create_paths(split_dir, short_name)
 
     # Set up the number of samples for each train/dev/test set
+    # TODO: if we ever wanted to split files with <s> </s> in them,
+    # this particular code would need some updating to pay attention to the ids
     num_samples = get_num_samples(org_dir, file_names)
     print("Found {} total samples in {}".format(num_samples, org_dir))
 

@@ -111,7 +111,7 @@ WEIRD_LABELS = sorted(set(["WP", "YP", "SNP", "STC", "UPC", "(TP", "Xp", "XP", "
 # furthermore, trees with NO were cleaned up and one of the test trees has NORD as a word
 WEIRD_LABELS_2023 = sorted(set(["WP", "YP", "SNP", "STC", "UPC", "Xp", "XP", "WHVP", "WHPR", "(SC (", "(VOC (", "(Adv (", "(SP (", "ADV-MDP", "(SPL", "(ADV (", "(V-MWE ("] + list(REMAPPING.keys())))
 
-def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False, updated_tagset=False):
+def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False, updated_tagset=False, write_ids=False):
     """
     :param orig_file: original directory storing original trees
     :param new_file: new directory storing formatted constituency trees
@@ -128,6 +128,7 @@ def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False, u
         # tree is a valid tree. It will not be written if it
         # does not have a '(' that signifies the presence of constituents
         tree = ""
+        tree_id = None
         reading_tree = False
         for line_idx, line in enumerate(content):
             line = ' '.join(line.split())
@@ -137,6 +138,10 @@ def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False, u
                 tree = ""
                 tree += '(ROOT '
                 reading_tree = True
+                if line.startswith("<s id="):
+                    tree_id = line.split("=")[1]
+                    assert tree_id.endswith(">")
+                    tree_id = int(tree_id[:-1])
             elif line == '</s>' and reading_tree:
                 # one tree in 25432.prd is not valid because
                 # it is just a bunch of blank lines
@@ -180,9 +185,18 @@ def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False, u
                     if bad_label:
                         continue
 
+                    if write_ids:
+                        if tree_id is None:
+                            errors["missing_id"].append("Missing ID from {} at line {}".format(orig_file, line_idx))
+                            writer.write("<s>")
+                        else:
+                            writer.write("<s id=%d>\n" % tree_id)
                     writer.write(tree)
+                    if write_ids:
+                        writer.write("</s>\n")
                     reading_tree = False
                     tree = ""
+                    tree_id = None
                 except MixedTreeError:
                     errors["mixed"].append("Mixed leaves and constituents from {} line {}: {}".format(orig_file, line_idx, tree))
                 except UnlabeledTreeError:
@@ -196,14 +210,14 @@ def convert_file(orig_file, new_file, fix_errors=True, convert_brackets=False, u
 
     return errors
 
-def convert_files(file_list, new_dir, verbose=False, fix_errors=True, convert_brackets=False, updated_tagset=False):
+def convert_files(file_list, new_dir, verbose=False, fix_errors=True, convert_brackets=False, updated_tagset=False, write_ids=False):
     errors = defaultdict(list)
     for filename in file_list:
         base_name, _ = os.path.splitext(os.path.split(filename)[-1])
         new_path = os.path.join(new_dir, base_name)
         new_file_path = f'{new_path}.mrg'
         # Convert the tree and write to new_file_path
-        new_errors = convert_file(filename, new_file_path, fix_errors, convert_brackets, updated_tagset)
+        new_errors = convert_file(filename, new_file_path, fix_errors, convert_brackets, updated_tagset, write_ids)
         for e in new_errors:
             errors[e].extend(new_errors[e])
 

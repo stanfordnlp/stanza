@@ -353,6 +353,11 @@ def process_vlsp22(paths, dataset_name, *args):
                     vtb_split.split_files(test_output_path, paths["CONSTITUENCY_DATA_DIR"], rotation_name, train_size=0, dev_size=0)
             else:
                 vtb_split.split_files(test_output_path, paths["CONSTITUENCY_DATA_DIR"], dataset_name, train_size=0, dev_size=0)
+    if not args.test_split and not args.n_splits and dataset_name == 'vi_vlsp23':
+        print("Procesing test files and keeping ids:\n  {}".format("\n  ".join(vlsp_test_files)))
+        with tempfile.TemporaryDirectory() as test_output_path:
+            vtb_convert.convert_files(vlsp_test_files, test_output_path, verbose=True, fix_errors=True, convert_brackets=args.convert_brackets, updated_tagset=updated_tagset, write_ids=True)
+            vtb_split.split_files(test_output_path, paths["CONSTITUENCY_DATA_DIR"], dataset_name + "-ids", train_size=0, dev_size=0)
 
 def process_arboretum(paths, dataset_name, *args):
     """
