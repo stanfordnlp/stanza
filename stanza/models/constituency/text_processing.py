@@ -5,6 +5,7 @@ import logging
 from stanza.models.common import utils
 from stanza.models.constituency.utils import retag_tags
 from stanza.models.constituency.trainer import Trainer
+from stanza.models.constituency.tree_reader import read_trees
 from stanza.utils.get_tqdm import get_tqdm
 
 logger = logging.getLogger('stanza')
@@ -19,7 +20,57 @@ def read_tokenized_file(tokenized_file):
     lines = [x.strip() for x in lines]
     lines = [x for x in lines if x]
     docs = [[word if all(x == '_' for x in word) else word.replace("_", " ") for word in sentence.split()] for sentence in lines]
-    return docs
+    ids = [None] * len(docs)
+    return docs, ids
+
+def read_xml_tree_file(tree_file):
+    """
+    Read sentences from a file of the format unique to VLSP test sets
+
+    in particular, it should be multiple blocks of
+
+    <s id=1>
+      (tree ...)
+    </s>
+    """
+    with open(tree_file, encoding='utf-8') as fin:
+        lines = fin.readlines()
+    lines = [x.strip() for x in lines]
+    lines = [x for x in lines if x]
+    docs = []
+    ids = []
+    tree_id = None
+    tree_text = []
+    for line in lines:
+        if line.startswith("<s"):
+            tree_id = line.split("=")
+            if len(tree_id) > 1:
+                tree_id = tree_id[1]
+                if tree_id.endswith(">"):
+                    tree_id = tree_id[:-1]
+                tree_id = int(tree_id)
+            else:
+                tree_id = None
+        elif line.startswith("</s"):
+            if len(tree_text) == 0:
+                raise ValueError("Found a blank tree in %s" % tree_file)
+            ids.append(tree_id)
+            tree_text = "\n".join(tree_text)
+            trees = read_trees(tree_text)
+            # TODO: perhaps the processing can be put into read_trees instead
+            trees = [t.prune_none().simplify_labels() for t in trees]
+            if len(trees) != 1:
+                raise ValueError("Found a tree with %d trees in %s" % (len(trees), tree_file))
+            tree = trees[0]
+            text = tree.leaf_labels()
+            text = [word if all(x == '_' for x in word) else word.replace("_", " ") for word in text]
+            docs.append(text)
+            tree_text = []
+            tree_id = None
+        else:
+            tree_text.append(line)
+
+    return docs, ids
 
 
 def parse_tokenized_sentences(args, model, retag_pipeline, sentences):
@@ -51,22 +102,33 @@ def parse_text(args, model, retag_pipeline, tokenized_file=None, predict_file=No
     if tokenized_file is None:
         tokenized_file = args['tokenized_file']
 
+    docs, ids = None, None
     if tokenized_file is not None:
-        docs = read_tokenized_file(tokenized_file)
-        logger.info("Processing %d lines", len(docs))
+        docs, ids = read_tokenized_file(tokenized_file)
+    elif args['xml_tree_file']:
+        logger.info("Reading trees from %s" % args['xml_tree_file'])
+        docs, ids = read_xml_tree_file(args['xml_tree_file'])
 
-        with utils.output_stream(predict_file) as fout:
-            chunk_size = 10000
-            for chunk_start in range(0, len(docs), chunk_size):
-                chunk = docs[chunk_start:chunk_start+chunk_size]
-                logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
-                treebank = parse_tokenized_sentences(args, model, retag_pipeline, chunk)
+    if not docs:
+        logger.error("No sentences to process!")
+        return
 
-                for tree_idx, result in enumerate(treebank):
-                    tree = result.predictions[0].tree
-                    tree.tree_id = chunk_start + tree_idx + 1
-                    fout.write(args['predict_format'].format(tree))
-                    fout.write("\n")
+    logger.info("Processing %d sentences", len(docs))
+
+    with utils.output_stream(predict_file) as fout:
+        chunk_size = 10000
+        for chunk_start in range(0, len(docs), chunk_size):
+            chunk = docs[chunk_start:chunk_start+chunk_size]
+            ids_chunk = ids[chunk_start:chunk_start+chunk_size]
+            logger.info("Processing trees %d to %d", chunk_start, chunk_start+len(chunk))
+            treebank = parse_tokenized_sentences(args, model, retag_pipeline, chunk)
+
+            for result, tree_id in zip(treebank, ids_chunk):
+                tree = result.predictions[0].tree
+                if tree_id is not None:
+                    tree.tree_id = tree_id
+                fout.write(args['predict_format'].format(tree))
+                fout.write("\n")
 
 def parse_dir(args, model, retag_pipeline, tokenized_dir, predict_dir):
     os.makedirs(predict_dir, exist_ok=True)
