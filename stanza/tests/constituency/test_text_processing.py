@@ -25,8 +25,9 @@ def test_read_tokenized_file(tmp_path):
     with open(filename, "w") as fout:
         # test that the underscore token comes back with spaces
         fout.write("This is a_small test\nLine two\n")
-    text = text_processing.read_tokenized_file(filename)
+    text, ids = text_processing.read_tokenized_file(filename)
     assert text == [['This', 'is', 'a small', 'test'], ['Line', 'two']]
+    assert ids == [None, None]
 
 def test_parse_tokenized_sentences(pipeline):
     con_processor = pipeline.processors["constituency"]

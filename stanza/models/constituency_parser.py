@@ -341,8 +341,7 @@ def build_argparse():
     parser.add_argument('--silver_file', type=str, default=None, help='Secondary training file.')
     parser.add_argument('--silver_remove_duplicates', default=False, action='store_true', help="Do/don't remove duplicates from the silver training file.  Could be useful for intentionally reweighting some trees")
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
-    # TODO: write a unit test of these things
-    # and possibly refactor --tokenized_file / --tokenized_dir from here & ensemble
+    # TODO: possibly refactor --tokenized_file / --tokenized_dir from here & ensemble
     parser.add_argument('--xml_tree_file', type=str, default=None, help='Input file of VLSP formatted trees for parsing with parse_text.')
     parser.add_argument('--tokenized_file', type=str, default=None, help='Input file of tokenized text for parsing with parse_text.')
     parser.add_argument('--tokenized_dir', type=str, default=None, help='Input directory of tokenized text for parsing with parse_text.')
