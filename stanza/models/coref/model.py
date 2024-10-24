@@ -224,6 +224,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         if map_location is None:
             map_location = self.config.device
         logger.debug(f"Loading from {path}...")
+        # TODO: the config is preventing us from using weights_only=True
         state_dicts = torch.load(path, map_location=map_location)
         self.epochs_trained = state_dicts.pop("epochs_trained", 0)
         # just ignore a config in the model, since we should already have one

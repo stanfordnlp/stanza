@@ -69,6 +69,8 @@ class Trainer:
             else:
                 raise FileNotFoundError("Cannot find model in {} or in {}".format(filename, os.path.join(args.save_dir, filename)))
         try:
+            # TODO: switch to weights_only=True
+            # need to convert enums to int first
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             logger.exception("Cannot load model from {}".format(filename))
