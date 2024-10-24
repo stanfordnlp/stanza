@@ -2,6 +2,11 @@
 Trains or scores a constituency model.
 
 Currently a suuuuper preliminary script.
+
+Example of how to run on multiple parsers at the same time on the Stanford workqueue:
+
+for i in `echo 1000 1001 1002 1003 1004`; do nlprun -d a6000 "python3 stanza/utils/training/run_constituency.py vi_vlsp23 --use_bert --stage1_bert_finetun --save_name vi_vlsp23_$i.pt --seed $i --epochs 200 --force" -o vi_vlsp23_$i.out; done
+
 """
 
 import logging
