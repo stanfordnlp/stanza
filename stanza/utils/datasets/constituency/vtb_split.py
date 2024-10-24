@@ -63,8 +63,7 @@ def get_num_samples(org_dir, file_names):
         with open(file_dir, 'r', encoding='utf-8') as reader:
             content = reader.readlines()
             for line in content:
-                if not line.startswith("<s") and not line.startswith("</s>"):
-                    count += 1
+                count += 1
 
     return count
 
@@ -84,7 +83,7 @@ def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.
     # TODO: if we ever wanted to split files with <s> </s> in them,
     # this particular code would need some updating to pay attention to the ids
     num_samples = get_num_samples(org_dir, file_names)
-    print("Found {} total samples in {}".format(num_samples, org_dir))
+    print("Found {} total lines in {}".format(num_samples, org_dir))
 
     stop_train = int(num_samples * train_size)
     if train_size + dev_size >= 1.0:
@@ -101,7 +100,7 @@ def split_files(org_dir, split_dir, short_name=None, train_size=0.7, dev_size=0.
         stop_dev = 0
         output_limits = (num_samples,)
         output_names = (test_path,)
-        print("Copying all {} trees to test".format(num_samples))
+        print("Copying all {} lines to test".format(num_samples))
 
     # Count how much stuff we've written.
     # We will switch to the next output file when we're written enough
