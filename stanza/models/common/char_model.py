@@ -268,7 +268,7 @@ class CharacterLanguageModel(nn.Module):
 
     @classmethod
     def load(cls, filename, finetune=False):
-        state = torch.load(filename, lambda storage, loc: storage)
+        state = torch.load(filename, lambda storage, loc: storage, weights_only=True)
         # allow saving just the Model object,
         # and allow for old charlms to still work
         if 'state_dict' in state:
@@ -342,7 +342,7 @@ class CharacterLanguageModelTrainer():
         Note that you MUST set finetune=True if planning to continue training
         Otherwise the only benefit you will get will be a warm GPU
         """
-        state = torch.load(filename, lambda storage, loc: storage)
+        state = torch.load(filename, lambda storage, loc: storage, weights_only=True)
         model = CharacterLanguageModel.from_full_state(state['model'], finetune)
         model = model.to(args['device'])
 

@@ -191,7 +191,7 @@ class Trainer(BaseTrainer):
         and the actual use of pretrain embeddings will depend on the boolean config "pretrain" in the loaded args.
         """
         try:
-            checkpoint = torch.load(filename, lambda storage, loc: storage)
+            checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
         except BaseException:
             logger.error("Cannot load model from {}".format(filename))
             raise

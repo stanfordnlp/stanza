@@ -13,7 +13,7 @@ class Trainer:
         torch.save(savedict, filename)
 
     def load(self, filename):
-        savedict = torch.load(filename, lambda storage, loc: storage)
+        savedict = torch.load(filename, lambda storage, loc: storage, weights_only=True)
 
         self.model.load_state_dict(savedict['model'])
         if self.args['mode'] == 'train':

@@ -206,7 +206,7 @@ def get_current_lr(trainer, args):
     return trainer.scheduler.state_dict().get('_last_lr', [args['lr0']])[0]
 
 def load_char_vocab(vocab_file):
-    return {'char': CharVocab.load_state_dict(torch.load(vocab_file, lambda storage, loc: storage))}
+    return {'char': CharVocab.load_state_dict(torch.load(vocab_file, lambda storage, loc: storage, weights_only=True))}
 
 def train(args):
     utils.log_training_args(args, logger)

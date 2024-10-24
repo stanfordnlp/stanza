@@ -194,7 +194,7 @@ class Trainer(BaseTrainer):
 
     def load(self, filename, pretrain=None, args=None, foundation_cache=None):
         try:
-            checkpoint = torch.load(filename, lambda storage, loc: storage)
+            checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
         except BaseException:
             logger.error("Cannot load model from {}".format(filename))
             raise

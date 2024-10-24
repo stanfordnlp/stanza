@@ -150,5 +150,5 @@ class TestLemmatizer:
         # check that the charlm wasn't saved in here
         args = saved_model.args
         save_name = os.path.join(args['save_dir'], args['save_name'])
-        checkpoint = torch.load(save_name, lambda storage, loc: storage)
+        checkpoint = torch.load(save_name, lambda storage, loc: storage, weights_only=True)
         assert not any(x.startswith("contextual_embedding") for x in checkpoint['model'].keys())

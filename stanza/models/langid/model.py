@@ -114,7 +114,7 @@ class LangIDBiLSTM(nn.Module):
             raise FileNotFoundError("Trying to load langid model, but path not specified!  Try --load_name")
         if not os.path.exists(path):
             raise FileNotFoundError("Trying to load langid model from path which does not exist: %s" % path)
-        checkpoint = torch.load(path, map_location=torch.device("cpu"))
+        checkpoint = torch.load(path, map_location=torch.device("cpu"), weights_only=True)
         weights = checkpoint["model_state_dict"]["loss_train.weight"]
         model = cls(checkpoint["char_to_idx"], checkpoint["tag_to_idx"], checkpoint["num_layers"],
                     checkpoint["embedding_dim"], checkpoint["hidden_dim"], batch_size=batch_size, weights=weights,
