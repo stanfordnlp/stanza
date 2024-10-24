@@ -53,6 +53,7 @@ class Pretrain:
     def load(self):
         if self.filename is not None and os.path.exists(self.filename):
             try:
+                # TODO: update all pretrains to satisfy weights_only=True
                 data = torch.load(self.filename, lambda storage, loc: storage)
                 logger.debug("Loaded pretrain from {}".format(self.filename))
                 if not isinstance(data, dict):

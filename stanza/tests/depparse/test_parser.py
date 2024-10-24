@@ -145,7 +145,7 @@ class TestParser:
         save_name = trainer.args['save_name']
         filename = tmp_path / save_name
         assert os.path.exists(filename)
-        checkpoint = torch.load(filename, lambda storage, loc: storage)
+        checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
         assert any(x.startswith("bert_model") for x in checkpoint['model'].keys())
 
         # Test loading the saved model, saving it, and still having bert in it
@@ -157,7 +157,7 @@ class TestParser:
         saved_model.save(filename)
 
         # This is the part that would fail if the force_bert_saved option did not exist
-        checkpoint = torch.load(filename, lambda storage, loc: storage)
+        checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
         assert any(x.startswith("bert_model") for x in checkpoint['model'].keys())
 
     def test_with_peft(self, tmp_path, wordvec_pretrain_file):

@@ -79,6 +79,7 @@ class Trainer(BaseTrainer):
 
     def load(self, filename):
         try:
+            # the tokenizers with dictionaries won't properly load weights_only=True because they have a set
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             logger.error("Cannot load model from {}".format(filename))

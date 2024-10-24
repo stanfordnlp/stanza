@@ -84,6 +84,9 @@ class BaseTrainer:
             else:
                 raise FileNotFoundError("Cannot find model in {} or in {}".format(filename, os.path.join(args['save_dir'], filename)))
         try:
+            # TODO: currently cannot switch this to weights_only=True
+            # without in some way changing the model to save enums in
+            # a safe manner, probably by converting to int
             checkpoint = torch.load(filename, lambda storage, loc: storage)
         except BaseException:
             logger.exception("Cannot load model from %s", filename)
