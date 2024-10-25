@@ -1,6 +1,7 @@
 """ see __init__.py """
 
 from datetime import datetime
+import dataclasses
 import json
 import logging
 import os
@@ -15,6 +16,9 @@ except ImportError:
     import tomli as tomllib
 import torch
 import transformers     # type: ignore
+
+from pickle import UnpicklingError
+import warnings
 
 from stanza.utils.get_tqdm import get_tqdm   # type: ignore
 tqdm = get_tqdm()
@@ -224,8 +228,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         if map_location is None:
             map_location = self.config.device
         logger.debug(f"Loading from {path}...")
-        # TODO: the config is preventing us from using weights_only=True
-        state_dicts = torch.load(path, map_location=map_location)
+        try:
+            state_dicts = torch.load(path, map_location=map_location, weights_only=True)
+        except UnpicklingError:
+            state_dicts = torch.load(path, map_location=map_location, weights_only=False)
+            warnings.warn("The saved coref model has an old format using Config instead of the Config mapped to dict to store weights.  This version of Stanza can support reading both the new and the old formats.  Future versions will only allow loading with weights_only=True.  Please resave the coref model using this version ASAP.")
         self.epochs_trained = state_dicts.pop("epochs_trained", 0)
         # just ignore a config in the model, since we should already have one
         # TODO: some config elements may be fixed parameters of the model,
@@ -299,11 +306,17 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             raise FileNotFoundError("coref model got an invalid path |%s|" % path)
         if not os.path.exists(path):
             raise FileNotFoundError("coref model file %s not found" % path)
-        state_dicts = torch.load(path, map_location=map_location)
+        try:
+            state_dicts = torch.load(path, map_location=map_location, weights_only=True)
+        except UnpicklingError:
+            state_dicts = torch.load(path, map_location=map_location, weights_only=False)
+            warnings.warn("The saved coref model has an old format using Config instead of the Config mapped to dict to store weights.  This version of Stanza can support reading both the new and the old formats.  Future versions will only allow loading with weights_only=True.  Please resave the coref model using this version ASAP.")
         epochs_trained = state_dicts.pop("epochs_trained", 0)
         config = state_dicts.pop('config', None)
         if config is None:
             raise ValueError("Cannot load this format model without config in the dicts")
+        if isinstance(config, dict):
+            config = Config(**config)
         if config_update:
             for key, value in config_update.items():
                 setattr(config, key, value)
@@ -395,7 +408,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             from peft import get_peft_model_state_dict
             savedict["bert_lora"] = get_peft_model_state_dict(self.bert, adapter_name="coref")
         savedict["epochs_trained"] = self.epochs_trained  # type: ignore
-        savedict["config"] = self.config
+        # save as a dictionary because the weights_only=True load option
+        # doesn't allow for arbitrary @dataclass configs
+        savedict["config"] = dataclasses.asdict(self.config)
         save_dir = os.path.split(save_path)[0]
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
