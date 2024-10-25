@@ -22,7 +22,7 @@ class Trainer(BaseTrainer):
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.lexicon = lexicon
+            self.lexicon = list(lexicon)
             self.dictionary = dictionary
             self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
         self.model = self.model.to(device)
@@ -68,7 +68,9 @@ class Trainer(BaseTrainer):
         params = {
             'model': self.model.state_dict() if self.model is not None else None,
             'vocab': self.vocab.state_dict(),
-            'lexicon': self.lexicon,
+            # save and load lexicon as list instead of set so
+            # we can use weights_only=True
+            'lexicon': list(self.lexicon),
             'config': self.args
         }
         try:
@@ -79,8 +81,7 @@ class Trainer(BaseTrainer):
 
     def load(self, filename):
         try:
-            # the tokenizers with dictionaries won't properly load weights_only=True because they have a set
-            checkpoint = torch.load(filename, lambda storage, loc: storage)
+            checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
         except BaseException:
             logger.error("Cannot load model from {}".format(filename))
             raise
@@ -95,6 +96,7 @@ class Trainer(BaseTrainer):
         self.lexicon = checkpoint['lexicon']
 
         if self.lexicon is not None:
+            self.lexicon = set(self.lexicon)
             self.dictionary = create_dictionary(self.lexicon)
         else:
             self.dictionary = None
