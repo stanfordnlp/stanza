@@ -118,7 +118,7 @@ class CNNClassifier(BaseClassifier):
         self.unsaved_modules = []
 
         emb_matrix = pretrain.emb
-        self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
+        self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(emb_matrix, freeze=True))
         self.add_unsaved_module('elmo_model', elmo_model)
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]
