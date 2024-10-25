@@ -240,7 +240,7 @@ class LSTMModel(BaseModel, nn.Module):
         self.unsaved_modules = []
 
         emb_matrix = pretrain.emb
-        self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(torch.from_numpy(emb_matrix), freeze=True))
+        self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(emb_matrix, freeze=True))
 
         # replacing NBSP picks up a whole bunch of words for VI
         self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pretrain.vocab) }

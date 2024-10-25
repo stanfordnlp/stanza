@@ -15,6 +15,9 @@ from .vocab import BaseVocab, VOCAB_PREFIX, UNK_ID
 from stanza.models.common.utils import open_read_binary, open_read_text
 from stanza.resources.common import DEFAULT_MODEL_DIR
 
+from pickle import UnpicklingError
+import warnings
+
 logger = logging.getLogger('stanza')
 
 class PretrainedWordVocab(BaseVocab):
@@ -53,14 +56,21 @@ class Pretrain:
     def load(self):
         if self.filename is not None and os.path.exists(self.filename):
             try:
-                # TODO: update all pretrains to satisfy weights_only=True
-                data = torch.load(self.filename, lambda storage, loc: storage)
+                # TODO: after making the next release, remove the weights_only=False version
+                try:
+                    data = torch.load(self.filename, lambda storage, loc: storage, weights_only=True)
+                except UnpicklingError:
+                    data = torch.load(self.filename, lambda storage, loc: storage, weights_only=False)
+                    warnings.warn("The saved pretrain has an old format using numpy.ndarray instead of torch to store weights.  This version of Stanza can support reading both the new and the old formats.  Future versions will only allow loading with weights_only=True.  Please resave the pretrained embedding using this version ASAP.")
                 logger.debug("Loaded pretrain from {}".format(self.filename))
                 if not isinstance(data, dict):
                     raise RuntimeError("File {} exists but is not a stanza pretrain file.  It is not a dict, whereas a Stanza pretrain should have a dict with 'emb' and 'vocab'".format(self.filename))
                 if 'emb' not in data or 'vocab' not in data:
                     raise RuntimeError("File {} exists but is not a stanza pretrain file.  A Stanza pretrain file should have 'emb' and 'vocab' fields in its state dict".format(self.filename))
-                self._vocab, self._emb = PretrainedWordVocab.load_state_dict(data['vocab']), data['emb']
+                self._vocab = PretrainedWordVocab.load_state_dict(data['vocab'])
+                self._emb = data['emb']
+                if isinstance(self._emb, np.ndarray):
+                    self._emb = torch.from_numpy(self._emb)
                 return
             except (KeyboardInterrupt, SystemExit):
                 raise
@@ -152,9 +162,9 @@ class Pretrain:
         rows = len(lines)
         cols = len(lines[0]) - 1
 
-        emb = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32)
+        emb = torch.zeros((rows + len(VOCAB_PREFIX), cols), dtype=torch.float32)
         for i, line in enumerate(lines):
-            emb[i+len(VOCAB_PREFIX)] = [float(x) for x in line[-cols:]]
+            emb[i+len(VOCAB_PREFIX)] = torch.tensor([float(x) for x in line[-cols:]], dtype=torch.float32)
         words = [line[0].replace(' ', '\xa0') for line in lines]
         return words, emb
 
@@ -206,11 +216,11 @@ class Pretrain:
             # another failure case: all words have spaces in them
             cols = min(len(x) for x in lines) - 1
         rows = len(lines)
-        emb = np.zeros((rows + len(VOCAB_PREFIX), cols), dtype=np.float32)
+        emb = torch.zeros((rows + len(VOCAB_PREFIX), cols), dtype=torch.float32)
         if unk_line is not None:
-            emb[UNK_ID] = [float(x) for x in unk_line[-cols:]]
+            emb[UNK_ID] = torch.tensor([float(x) for x in unk_line[-cols:]], dtype=torch.float32)
         for i, line in enumerate(lines):
-            emb[i+len(VOCAB_PREFIX)] = [float(x) for x in line[-cols:]]
+            emb[i+len(VOCAB_PREFIX)] = torch.tensor([float(x) for x in line[-cols:]], dtype=torch.float32)
 
         # if there were word pieces separated with spaces, rejoin them with nbsp instead
         # this way, the normalize_unit method in vocab.py can find the word at test time
@@ -268,7 +278,7 @@ if __name__ == '__main__':
     pretrain = Pretrain('test.pt', 'test.txt')
     print(pretrain.emb)
     # verify pt file
-    x = torch.load('test.pt')
+    x = torch.load('test.pt', weights_only=True)
     print(x)
     # 2nd load: load saved pt file
     pretrain = Pretrain('test.pt', 'test.txt')

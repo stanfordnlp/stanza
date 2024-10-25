@@ -71,7 +71,7 @@ def test_resave_pretrain():
                                vec_filename=f'unban_mox_opal')
         check_pretrain(pt2)
 
-        pt3 = torch.load(test_pt_file.name)
+        pt3 = torch.load(test_pt_file.name, weights_only=True)
         check_embedding(pt3['emb'])
     finally:
         os.unlink(test_pt_file.name)

@@ -128,7 +128,7 @@ def main():
                 if pt.emb.shape[0] < trainer.model.word_emb.weight.shape[0]:
                     print("  WARNING: if any vectors beyond {} were fine tuned, that fine tuning will be lost".format(N))
             device = next(trainer.model.parameters()).device
-            delta = trainer.model.word_emb.weight[:N, :] - torch.from_numpy(pt.emb).to(device)[:N, :]
+            delta = trainer.model.word_emb.weight[:N, :] - pt.emb.to(device)[:N, :]
             delta = delta.detach()
             delta_norms = torch.linalg.norm(delta, dim=1).cpu().numpy()
             if np.sum(delta_norms < 0) > 0:
