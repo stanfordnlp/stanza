@@ -35,6 +35,8 @@ def parse_args():
     args = parser.parse_args()
     args.input_dir = os.path.abspath(args.input_dir)
     args.output_dir = os.path.abspath(args.output_dir)
+    if args.lang is not None:
+        args.lang = ",".join(args.lang.strip().split())
     return args
 
 
