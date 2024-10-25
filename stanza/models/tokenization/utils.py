@@ -18,7 +18,7 @@ from stanza.models.tokenization.data import SortedDataset
 logger = logging.getLogger('stanza')
 paths = default_paths.get_default_paths()
 
-def create_dictionary(lexicon=None):
+def create_dictionary(lexicon):
     """
     This function is to create a new dictionary used for improving tokenization model for multi-syllable words languages
     such as vi, zh or th. This function takes the lexicon as input and output a dictionary that contains three set:
