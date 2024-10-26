@@ -1,9 +1,9 @@
+import dataclasses
 import logging
 import math
 import os
 import random
 import re
-from types import SimpleNamespace
 
 import numpy as np
 import torch
@@ -12,6 +12,7 @@ import torch.nn.functional as F
 
 import stanza.models.classifiers.data as data
 from stanza.models.classifiers.base_classifier import BaseClassifier
+from stanza.models.classifiers.config import CNNConfig
 from stanza.models.classifiers.data import SentimentDatum
 from stanza.models.classifiers.utils import ExtraVectors, ModelType, build_output_layers
 from stanza.models.common.bert_embedding import extract_bert_embeddings
@@ -71,9 +72,8 @@ class CNNClassifier(BaseClassifier):
         """
         super(CNNClassifier, self).__init__()
         self.labels = labels
-        # existing models don't have the bert_finetune or use_peft arguments
-        bert_finetune = getattr(args, "bert_finetune", False)
-        use_peft = getattr(args, "use_peft", False)
+        bert_finetune = args.bert_finetune
+        use_peft = args.use_peft
         force_bert_saved = force_bert_saved or bert_finetune
         logger.debug("bert_finetune %s / force_bert_saved %s", bert_finetune, force_bert_saved)
 
@@ -81,37 +81,37 @@ class CNNClassifier(BaseClassifier):
         self.peft_name = peft_name
 
         # we build a separate config out of the args so that we can easily save it in torch
-        self.config = SimpleNamespace(filter_channels = args.filter_channels,
-                                      filter_sizes = args.filter_sizes,
-                                      fc_shapes = args.fc_shapes,
-                                      dropout = args.dropout,
-                                      num_classes = len(labels),
-                                      wordvec_type = args.wordvec_type,
-                                      extra_wordvec_method = args.extra_wordvec_method,
-                                      extra_wordvec_dim = args.extra_wordvec_dim,
-                                      extra_wordvec_max_norm = args.extra_wordvec_max_norm,
-                                      char_lowercase = args.char_lowercase,
-                                      charlm_projection = args.charlm_projection,
-                                      has_charlm_forward = charmodel_forward is not None,
-                                      has_charlm_backward = charmodel_backward is not None,
-                                      use_elmo = args.use_elmo,
-                                      elmo_projection = args.elmo_projection,
-                                      bert_model = args.bert_model,
-                                      bert_finetune = bert_finetune,
-                                      bert_hidden_layers = getattr(args, 'bert_hidden_layers', None),
-                                      force_bert_saved = force_bert_saved,
+        self.config = CNNConfig(filter_channels = args.filter_channels,
+                                filter_sizes = args.filter_sizes,
+                                fc_shapes = args.fc_shapes,
+                                dropout = args.dropout,
+                                num_classes = len(labels),
+                                wordvec_type = args.wordvec_type,
+                                extra_wordvec_method = args.extra_wordvec_method,
+                                extra_wordvec_dim = args.extra_wordvec_dim,
+                                extra_wordvec_max_norm = args.extra_wordvec_max_norm,
+                                char_lowercase = args.char_lowercase,
+                                charlm_projection = args.charlm_projection,
+                                has_charlm_forward = charmodel_forward is not None,
+                                has_charlm_backward = charmodel_backward is not None,
+                                use_elmo = args.use_elmo,
+                                elmo_projection = args.elmo_projection,
+                                bert_model = args.bert_model,
+                                bert_finetune = bert_finetune,
+                                bert_hidden_layers = args.bert_hidden_layers,
+                                force_bert_saved = force_bert_saved,
 
-                                      use_peft = use_peft,
-                                      lora_rank = getattr(args, 'lora_rank', None),
-                                      lora_alpha = getattr(args, 'lora_alpha', None),
-                                      lora_dropout = getattr(args, 'lora_dropout', None),
-                                      lora_modules_to_save = getattr(args, 'lora_modules_to_save', None),
-                                      lora_target_modules = getattr(args, 'lora_target_modules', None),
+                                use_peft = use_peft,
+                                lora_rank = args.lora_rank,
+                                lora_alpha = args.lora_alpha,
+                                lora_dropout = args.lora_dropout,
+                                lora_modules_to_save = args.lora_modules_to_save,
+                                lora_target_modules = args.lora_target_modules,
 
-                                      bilstm = args.bilstm,
-                                      bilstm_hidden_dim = args.bilstm_hidden_dim,
-                                      maxpool_width = args.maxpool_width,
-                                      model_type = ModelType.CNN)
+                                bilstm = args.bilstm,
+                                bilstm_hidden_dim = args.bilstm_hidden_dim,
+                                maxpool_width = args.maxpool_width,
+                                model_type = ModelType.CNN)
 
         self.char_lowercase = args.char_lowercase
 
@@ -521,9 +521,14 @@ class CNNClassifier(BaseClassifier):
             for k in skipped:
                 del model_state[k]
 
+        config = dataclasses.asdict(self.config)
+        config['wordvec_type'] = config['wordvec_type'].name
+        config['extra_wordvec_method'] = config['extra_wordvec_method'].name
+        config['model_type'] = config['model_type'].name
+
         params = {
             'model':        model_state,
-            'config':       self.config,
+            'config':       config,
             'labels':       self.labels,
             'extra_vocab':  self.extra_vocab,
         }

@@ -8,16 +8,21 @@ import logging
 import os
 import torch
 import torch.optim as optim
+from types import SimpleNamespace
 
 import stanza.models.classifiers.data as data
 import stanza.models.classifiers.cnn_classifier as cnn_classifier
 import stanza.models.classifiers.constituency_classifier as constituency_classifier
-from stanza.models.classifiers.utils import ModelType
+from stanza.models.classifiers.config import CNNConfig, ConstituencyConfig
+from stanza.models.classifiers.utils import ModelType, WVType, ExtraVectors
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, load_charlm, load_pretrain
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.common.pretrain import Pretrain
 from stanza.models.common.utils import get_split_optimizer
 from stanza.models.constituency.tree_embedding import TreeEmbedding
+
+from pickle import UnpicklingError
+import warnings
 
 logger = logging.getLogger('stanza')
 
@@ -69,9 +74,13 @@ class Trainer:
             else:
                 raise FileNotFoundError("Cannot find model in {} or in {}".format(filename, os.path.join(args.save_dir, filename)))
         try:
-            # TODO: switch to weights_only=True
-            # need to convert enums to int first
-            checkpoint = torch.load(filename, lambda storage, loc: storage)
+            # TODO: can remove the try/except once the new version is out
+            #checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
+            try:
+                checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
+            except UnpicklingError as e:
+                checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=False)
+                warnings.warn("The saved classifier has an old format using SimpleNamespace and/or Enum instead of a dict to store config.  This version of Stanza can support reading both the new and the old formats.  Future versions will only allow loading with weights_only=True.  Please resave the pretrained classifier using this version ASAP.")
         except BaseException:
             logger.exception("Cannot load model from {}".format(filename))
             raise
@@ -91,22 +100,42 @@ class Trainer:
             }
         else:
             model_params = checkpoint['params']
-        model_type = model_params['config'].model_type
+        # TODO: this can be removed once v1.10.0 is out
+        if isinstance(model_params['config'], SimpleNamespace):
+            model_params['config'] = vars(model_params['config'])
+        # TODO: these isinstance can go away after 1.10.0
+        model_type = model_params['config']['model_type']
+        if isinstance(model_type, str):
+            model_type = ModelType[model_type]
+            model_params['config']['model_type'] = model_type
 
         if model_type == ModelType.CNN:
+            # TODO: these updates are only necessary during the
+            # transition to the @dataclass version of the config
+            # Once those are all saved, it is no longer necessary
+            # to patch existing models (since they will all be patched)
+            if 'has_charlm_forward' not in model_params['config']:
+                model_params['config']['has_charlm_forward'] = args.charlm_forward_file is not None
+            if 'has_charlm_backward' not in model_params['config']:
+                model_params['config']['has_charlm_backward'] = args.charlm_backward_file is not None
+            for argname in ['bert_hidden_layers', 'bert_finetune', 'force_bert_saved', 'use_peft',
+                            'lora_rank', 'lora_alpha', 'lora_dropout', 'lora_modules_to_save', 'lora_target_modules']:
+                model_params['config'][argname] = model_params['config'].get(argname, None)
+            # TODO: these isinstance can go away after 1.10.0
+            if isinstance(model_params['config']['wordvec_type'], str):
+                model_params['config']['wordvec_type'] = WVType[model_params['config']['wordvec_type']]
+            if isinstance(model_params['config']['extra_wordvec_method'], str):
+                model_params['config']['extra_wordvec_method'] = ExtraVectors[model_params['config']['extra_wordvec_method']]
+            model_params['config'] = CNNConfig(**model_params['config'])
+
             pretrain = Trainer.load_pretrain(args, foundation_cache)
             elmo_model = utils.load_elmo(args.elmo_model) if args.use_elmo else None
-            # TODO: existing models don't have this attribute, so we
-            # use None as not having a setting.  If the setting is
-            # False, though, we don't load the charlm
-            # We don't want to pass a charlm to a model which doesn't use one
-            has_charlm_forward = getattr(model_params['config'], 'has_charlm_forward', None)
-            if has_charlm_forward != False:
+
+            if model_params['config'].has_charlm_forward:
                 charmodel_forward = load_charlm(args.charlm_forward_file, foundation_cache)
             else:
                 charmodel_forward = None
-            has_charlm_backward = getattr(model_params['config'], 'has_charlm_backward', None)
-            if has_charlm_backward != False:
+            if model_params['config'].has_charlm_backward:
                 charmodel_backward = load_charlm(args.charlm_backward_file, foundation_cache)
             else:
                 charmodel_backward = None
@@ -148,6 +177,7 @@ class Trainer:
             }
             # TODO: integrate with peft for the constituency version
             tree_embedding = TreeEmbedding.model_from_params(model_params['tree_embedding'], pretrain_args, foundation_cache)
+            model_params['config'] = ConstituencyConfig(**model_params['config'])
             model = constituency_classifier.ConstituencyClassifier(tree_embedding=tree_embedding,
                                                                    labels=model_params['labels'],
                                                                    args=model_params['config'])
