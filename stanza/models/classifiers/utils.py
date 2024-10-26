@@ -3,7 +3,7 @@ from enum import Enum
 from torch import nn
 
 """
-Defines some args which are common between the classifier model(s) and tools which use them
+Defines some methods which may occur in multiple model types
 """
 # NLP machines:
 # word2vec are in
