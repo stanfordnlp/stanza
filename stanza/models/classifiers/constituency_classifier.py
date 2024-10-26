@@ -2,6 +2,7 @@
 A classifier that uses a constituency parser for the base embeddings
 """
 
+import dataclasses
 import logging
 from types import SimpleNamespace
 
@@ -10,6 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from stanza.models.classifiers.base_classifier import BaseClassifier
+from stanza.models.classifiers.config import ConstituencyConfig
 from stanza.models.classifiers.data import SentimentDatum
 from stanza.models.classifiers.utils import ModelType, build_output_layers
 
@@ -23,15 +25,15 @@ class ConstituencyClassifier(BaseClassifier):
         super(ConstituencyClassifier, self).__init__()
         self.labels = labels
         # we build a separate config out of the args so that we can easily save it in torch
-        self.config = SimpleNamespace(fc_shapes = args.fc_shapes,
-                                      dropout = args.dropout,
-                                      num_classes = len(labels),
-                                      constituency_backprop = args.constituency_backprop,
-                                      constituency_batch_norm = args.constituency_batch_norm,
-                                      constituency_node_attn = args.constituency_node_attn,
-                                      constituency_top_layer = args.constituency_top_layer,
-                                      constituency_all_words = args.constituency_all_words,
-                                      model_type = ModelType.CONSTITUENCY)
+        self.config = ConstituencyConfig(fc_shapes = args.fc_shapes,
+                                         dropout = args.dropout,
+                                         num_classes = len(labels),
+                                         constituency_backprop = args.constituency_backprop,
+                                         constituency_batch_norm = args.constituency_batch_norm,
+                                         constituency_node_attn = args.constituency_node_attn,
+                                         constituency_top_layer = args.constituency_top_layer,
+                                         constituency_all_words = args.constituency_all_words,
+                                         model_type = ModelType.CONSTITUENCY)
 
         self.tree_embedding = tree_embedding
 
@@ -79,10 +81,13 @@ class ConstituencyClassifier(BaseClassifier):
 
         tree_embedding = self.tree_embedding.get_params(skip_modules)
 
+        config = dataclasses.asdict(self.config)
+        config['model_type'] = config['model_type'].name
+
         params = {
             'model':           model_state,
             'tree_embedding':  tree_embedding,
-            'config':          self.config,
+            'config':          config,
             'labels':          self.labels,
         }
         return params

@@ -162,9 +162,9 @@ class TestClassifier:
 
         trainer, save_filename, _ = self.run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20", "--bert_model", bert_model])
         assert os.path.exists(save_filename)
-        saved_model = torch.load(save_filename, lambda storage, loc: storage)
+        saved_model = torch.load(save_filename, lambda storage, loc: storage, weights_only=True)
         # check that the bert model wasn't saved as part of the classifier
-        assert not saved_model['params']['config'].force_bert_saved
+        assert not saved_model['params']['config']['force_bert_saved']
         assert not any(x.startswith("bert_model") for x in saved_model['params']['model'].keys())
 
     def test_finetune_bert(self, tmp_path, fake_embeddings, train_file, dev_file):
@@ -175,9 +175,9 @@ class TestClassifier:
 
         trainer, save_filename, _ = self.run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20", "--bert_model", bert_model, "--bert_finetune"])
         assert os.path.exists(save_filename)
-        saved_model = torch.load(save_filename, lambda storage, loc: storage)
+        saved_model = torch.load(save_filename, lambda storage, loc: storage, weights_only=True)
         # after finetuning the bert model, make sure that the save file DOES contain parts of the transformer
-        assert saved_model['params']['config'].force_bert_saved
+        assert saved_model['params']['config']['force_bert_saved']
         assert any(x.startswith("bert_model") for x in saved_model['params']['model'].keys())
 
     def test_finetune_bert_layers(self, tmp_path, fake_embeddings, train_file, dev_file):
@@ -199,12 +199,12 @@ class TestClassifier:
         initial_model = glob.glob(os.path.join(save_path, "*E0000*"))
         assert len(initial_model) == 1
         initial_model = initial_model[0]
-        initial_model = torch.load(initial_model, lambda storage, loc: storage)
+        initial_model = torch.load(initial_model, lambda storage, loc: storage, weights_only=True)
 
         second_model_file = glob.glob(os.path.join(save_path, "*E0002*"))
         assert len(second_model_file) == 1
         second_model_file = second_model_file[0]
-        second_model = torch.load(second_model_file, lambda storage, loc: storage)
+        second_model = torch.load(second_model_file, lambda storage, loc: storage, weights_only=True)
 
         for layer_idx in range(2):
             bert_names = [x for x in second_model['params']['model'].keys() if x.startswith("bert_model") and "layer.%d." % layer_idx in x]
@@ -223,13 +223,13 @@ class TestClassifier:
         second_model_file_redo = glob.glob(os.path.join(save_path, "*E0002*"))
         assert len(second_model_file_redo) == 1
         assert second_model_file == second_model_file_redo[0]
-        second_model = torch.load(second_model_file, lambda storage, loc: storage)
+        second_model = torch.load(second_model_file, lambda storage, loc: storage, weights_only=True)
         assert "asdf" in second_model
 
         fifth_model_file = glob.glob(os.path.join(save_path, "*E0005*"))
         assert len(fifth_model_file) == 1
 
-        final_model = torch.load(fifth_model_file[0], lambda storage, loc: storage)
+        final_model = torch.load(fifth_model_file[0], lambda storage, loc: storage, weights_only=True)
         for layer_idx in range(2):
             bert_names = [x for x in final_model['params']['model'].keys() if x.startswith("bert_model") and "layer.%d." % layer_idx in x]
             assert len(bert_names) > 0
@@ -244,14 +244,14 @@ class TestClassifier:
 
         trainer, save_filename, _ = self.run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20", "--bert_model", bert_model, "--bert_finetune", "--use_peft", "--lora_modules_to_save", "pooler"])
         assert os.path.exists(save_filename)
-        saved_model = torch.load(save_filename, lambda storage, loc: storage)
+        saved_model = torch.load(save_filename, lambda storage, loc: storage, weights_only=True)
         # after finetuning the bert model, make sure that the save file DOES contain parts of the transformer, but only in peft form
-        assert saved_model['params']['config'].bert_model == bert_model
-        assert saved_model['params']['config'].force_bert_saved
-        assert saved_model['params']['config'].use_peft
+        assert saved_model['params']['config']['bert_model'] == bert_model
+        assert saved_model['params']['config']['force_bert_saved']
+        assert saved_model['params']['config']['use_peft']
 
-        assert not saved_model['params']['config'].has_charlm_forward
-        assert not saved_model['params']['config'].has_charlm_backward
+        assert not saved_model['params']['config']['has_charlm_forward']
+        assert not saved_model['params']['config']['has_charlm_backward']
 
         assert len(saved_model['params']['bert_lora']) > 0
         assert any(x.find(".pooler.") >= 0 for x in saved_model['params']['bert_lora'])
@@ -273,7 +273,7 @@ class TestClassifier:
         trainer, save_file, checkpoint_file = self.run_training(tmp_path, fake_embeddings, train_file, dev_file, extra_args=["--bilstm_hidden_dim", "20", "--bert_model", bert_model, "--bert_finetune", "--use_peft", "--lora_modules_to_save", "pooler", "--save_intermediate_models"])
 
         assert os.path.exists(save_file)
-        saved_model = torch.load(save_file, lambda storage, loc: storage)
+        saved_model = torch.load(save_file, lambda storage, loc: storage, weights_only=True)
         assert any(x.find(".encoder.") >= 0 for x in saved_model['params']['bert_lora'])
 
 
@@ -284,17 +284,17 @@ class TestClassifier:
         initial_model_file = glob.glob(os.path.join(save_path, "*E0000*"))
         assert len(initial_model_file) == 1
         initial_model_file = initial_model_file[0]
-        initial_model = torch.load(initial_model_file, lambda storage, loc: storage)
+        initial_model = torch.load(initial_model_file, lambda storage, loc: storage, weights_only=True)
 
         second_model_file = glob.glob(os.path.join(save_path, "*E0002*"))
         assert len(second_model_file) == 1
         second_model_file = second_model_file[0]
-        second_model = torch.load(second_model_file, lambda storage, loc: storage)
+        second_model = torch.load(second_model_file, lambda storage, loc: storage, weights_only=True)
 
         final_model_file = glob.glob(os.path.join(save_path, "*E0005*"))
         assert len(final_model_file) == 1
         final_model_file = final_model_file[0]
-        final_model = torch.load(final_model_file, lambda storage, loc: storage)
+        final_model = torch.load(final_model_file, lambda storage, loc: storage, weights_only=True)
 
         # params in initial_model & second_model start with "base_model.model."
         # whereas params in final_model start directly with "encoder" or "pooler"
