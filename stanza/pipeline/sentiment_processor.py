@@ -60,6 +60,13 @@ class SentimentProcessor(UDProcessor):
         # batch size counted as words
         self._batch_size = config.get('batch_size', SentimentProcessor.DEFAULT_BATCH_SIZE)
 
+    def _set_up_final_config(self, config):
+        loaded_args = vars(self._model.config)
+        loaded_args = {k: v for k, v in loaded_args.items() if not UDProcessor.filter_out_option(k)}
+        loaded_args.update(config)
+        self._config = loaded_args
+
+
     def process(self, document):
         sentences = self._model.extract_sentences(document)
         with torch.no_grad():
