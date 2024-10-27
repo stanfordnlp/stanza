@@ -55,6 +55,7 @@ class SentimentProcessor(UDProcessor):
         trainer = Trainer.load(filename=filename,
                                args=args,
                                foundation_cache=pipeline.foundation_cache)
+        self._trainer = trainer
         self._model = trainer.model
         self._model_type = self._model.config.model_type
         # batch size counted as words
