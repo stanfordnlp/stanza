@@ -27,6 +27,7 @@ A complete processing of a sentence is as follows:
 """
 
 from collections import namedtuple
+import copy
 from enum import Enum
 import logging
 import math
@@ -1152,15 +1153,22 @@ class LSTMModel(BaseModel, nn.Module):
             skipped = [k for k in model_state.keys() if self.is_unsaved_module(k)]
             for k in skipped:
                 del model_state[k]
+        config = copy.deepcopy(self.args)
+        config['sentence_boundary_vectors'] = config['sentence_boundary_vectors'].name
+        config['constituency_composition'] = config['constituency_composition'].name
+        config['transition_stack'] = config['transition_stack'].name
+        config['constituent_stack'] = config['constituent_stack'].name
+        config['transition_scheme'] = config['transition_scheme'].name
+        assert isinstance(self.rare_words, set)
         params = {
             'model': model_state,
             'model_type': "LSTM",
-            'config': self.args,
-            'transitions': self.transitions,
+            'config': config,
+            'transitions': [repr(x) for x in self.transitions],
             'constituents': self.constituents,
             'tags': self.tags,
             'words': self.delta_words,
-            'rare_words': self.rare_words,
+            'rare_words': list(self.rare_words),
             'root_labels': self.root_labels,
             'constituent_opens': self.constituent_opens,
             'unary_limit': self.unary_limit(),
