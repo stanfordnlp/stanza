@@ -56,6 +56,7 @@ class Ensemble(nn.Module):
         """
         super().__init__()
 
+        self.args = args
         if filenames:
             if models:
                 raise ValueError("both filenames and models set when making the Ensemble")
