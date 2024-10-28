@@ -1,3 +1,4 @@
+import gc
 
 import pytest
 import stanza
@@ -21,6 +22,7 @@ class TestSentimentPipeline:
         """
         A reusable pipeline with the NER module
         """
+        gc.collect()
         return stanza.Pipeline(dir=TEST_MODELS_DIR, processors="tokenize,sentiment")
 
     def test_simple(self, pipeline):
