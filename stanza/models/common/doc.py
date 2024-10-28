@@ -1614,8 +1614,16 @@ class Span(StanzaObject):
         # load start and end char offsets from tokens
         self.start_char = self.tokens[0].start_char
         self.end_char = self.tokens[-1].end_char
-        # assume doc is already provided and not None
-        self.text = self.doc.text[self.start_char:self.end_char]
+        if self.doc is not None and self.doc.text is not None:
+            self.text = self.doc.text[self.start_char:self.end_char]
+        elif tokens[0].sent is tokens[-1].sent:
+            sentence = tokens[0].sent
+            text_start = tokens[0].start_char - sentence.tokens[0].start_char
+            text_end = tokens[-1].end_char - sentence.tokens[0].start_char
+            self.text = sentence.text[text_start:text_end]
+        else:
+            # TODO: do any spans ever cross sentences?
+            raise RuntimeError("Document text does not exist, and the span tested crosses two sentences, so it is impossible to extract the entity text!")
         # collect the words of the span following tokens
         self.words = [w for t in tokens for w in t.words]
         # set the sentence back-pointer to point to the sentence of the first token
