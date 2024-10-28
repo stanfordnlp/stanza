@@ -42,11 +42,18 @@ class ConstituencyProcessor(UDProcessor):
         trainer = Trainer.load(filename=config['model_path'],
                                args=args,
                                foundation_cache=pipeline.foundation_cache)
+        self._trainer = trainer
         self._model = trainer.model
         self._model.eval()
         # batch size counted as sentences
         self._batch_size = int(config.get('batch_size', ConstituencyProcessor.DEFAULT_BATCH_SIZE))
         self._tqdm = 'tqdm' in config and config['tqdm']
+
+    def _set_up_final_config(self, config):
+        loaded_args = self._model.args
+        loaded_args = {k: v for k, v in loaded_args.items() if not UDProcessor.filter_out_option(k)}
+        loaded_args.update(config)
+        self._config = loaded_args
 
     def process(self, document):
         sentences = document.sentences
