@@ -4,6 +4,9 @@ import os
 
 import torch
 
+from pickle import UnpicklingError
+import warnings
+
 logger = logging.getLogger('stanza')
 
 class ModelType(Enum):
@@ -31,7 +34,7 @@ class BaseTrainer:
             'batches_trained': self.batches_trained,
             'best_f1': self.best_f1,
             'best_epoch': self.best_epoch,
-            'model_type': self.model_type,
+            'model_type': self.model_type.name,
             'first_optimizer': self.first_optimizer,
         }
         checkpoint["bert_lora"] = self.get_peft_params()
@@ -87,7 +90,11 @@ class BaseTrainer:
             # TODO: currently cannot switch this to weights_only=True
             # without in some way changing the model to save enums in
             # a safe manner, probably by converting to int
-            checkpoint = torch.load(filename, lambda storage, loc: storage)
+            try:
+                checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
+            except UnpicklingError as e:
+                checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=False)
+                warnings.warn("The saved constituency parser has an old format using Enum, set, unsanitized Transitions, etc.  This version of Stanza can support reading both the new and the old formats.  Future versions will only allow loading with weights_only=True.  Please resave the constituency parser using this version ASAP.")
         except BaseException:
             logger.exception("Cannot load model from %s", filename)
             raise
@@ -97,7 +104,10 @@ class BaseTrainer:
 
         if 'model_type' not in checkpoint:
             # old models will have this trait
+            # TODO: can remove this after 1.10
             checkpoint['model_type'] = ModelType.LSTM
+        if isinstance(checkpoint['model_type'], str):
+            checkpoint['model_type'] = ModelType[checkpoint['model_type']]
         if checkpoint['model_type'] == ModelType.LSTM:
             clazz = Trainer
         elif checkpoint['model_type'] == ModelType.ENSEMBLE:

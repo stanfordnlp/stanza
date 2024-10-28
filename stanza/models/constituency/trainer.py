@@ -17,7 +17,8 @@ import torch
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, load_charlm, load_pretrain, NoTransformerFoundationCache
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper, pop_peft_args
 from stanza.models.constituency.base_trainer import BaseTrainer, ModelType
-from stanza.models.constituency.lstm_model import LSTMModel
+from stanza.models.constituency.lstm_model import LSTMModel, SentenceBoundary, StackHistory, ConstituencyComposition
+from stanza.models.constituency.parse_transitions import Transition, TransitionScheme
 from stanza.models.constituency.utils import build_optimizer, build_scheduler
 # TODO: could put find_wordvec_pretrain, choose_charlm, etc in a more central place if it becomes widely used
 from stanza.utils.training.common import find_wordvec_pretrain, choose_charlm, find_charlm_file
@@ -105,6 +106,17 @@ class Trainer(BaseTrainer):
         Refactoring allows other processors to include a constituency parser as a module
         """
         saved_args = dict(params['config'])
+        if isinstance(saved_args['sentence_boundary_vectors'], str):
+            saved_args['sentence_boundary_vectors'] = SentenceBoundary[saved_args['sentence_boundary_vectors']]
+        if isinstance(saved_args['constituency_composition'], str):
+            saved_args['constituency_composition'] = ConstituencyComposition[saved_args['constituency_composition']]
+        if isinstance(saved_args['transition_stack'], str):
+            saved_args['transition_stack'] = StackHistory[saved_args['transition_stack']]
+        if isinstance(saved_args['constituent_stack'], str):
+            saved_args['constituent_stack'] = StackHistory[saved_args['constituent_stack']]
+        if isinstance(saved_args['transition_scheme'], str):
+            saved_args['transition_scheme'] = TransitionScheme[saved_args['transition_scheme']]
+
         # some parameters which change the structure of a model have
         # to be ignored, or the model will not function when it is
         # reloaded from disk
@@ -160,6 +172,12 @@ class Trainer(BaseTrainer):
                 bert_saved = False
             forward_charlm =  Trainer.find_and_load_charlm(saved_args["charlm_forward_file"],  "forward",  saved_args, foundation_cache)
             backward_charlm = Trainer.find_and_load_charlm(saved_args["charlm_backward_file"], "backward", saved_args, foundation_cache)
+
+            # TODO: the isinstance will be unnecessary after 1.10.0
+            transitions = params['transitions']
+            if all(isinstance(x, str) for x in transitions):
+                transitions = [Transition.from_repr(x) for x in transitions]
+
             model = LSTMModel(pretrain=pt,
                               forward_charlm=forward_charlm,
                               backward_charlm=backward_charlm,
@@ -167,11 +185,11 @@ class Trainer(BaseTrainer):
                               bert_tokenizer=bert_tokenizer,
                               force_bert_saved=bert_saved,
                               peft_name=peft_name,
-                              transitions=params['transitions'],
+                              transitions=transitions,
                               constituents=params['constituents'],
                               tags=params['tags'],
                               words=params['words'],
-                              rare_words=params['rare_words'],
+                              rare_words=set(params['rare_words']),
                               root_labels=params['root_labels'],
                               constituent_opens=params['constituent_opens'],
                               unary_limit=params['unary_limit'],

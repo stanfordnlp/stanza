@@ -6,6 +6,7 @@ a parse tree out of tagged words.
 """
 
 from abc import ABC, abstractmethod
+import ast
 from collections import defaultdict
 from enum import Enum
 import functools
@@ -139,6 +140,36 @@ class Transition(ABC):
         if isinstance(other, Shift):
             return False
         return str(self) < str(other)
+
+
+    @staticmethod
+    def from_repr(desc):
+        """
+        This method is to avoid using eval() or otherwise trying to
+        deserialize strings in a possibly untrusted manner when
+        loading from a checkpoint
+        """
+        if desc == 'Shift':
+            return Shift()
+        if desc == 'CloseConstituent':
+            return CloseConstituent()
+        labels = desc.split("(", maxsplit=1)
+        if labels[0] not in ('CompoundUnary', 'OpenConstituent', 'Finalize'):
+            raise ValueError("Unknown Transition %s" % desc)
+        if len(labels) == 1:
+            raise ValueError("Unexpected Transition repr, %s needs labels" % labels[0])
+        if labels[1][-1] != ')':
+            raise ValueError("Expected Transition repr for %s: %s(labels)" % (labels[0], labels[0]))
+        trans_type = labels[0]
+        labels = labels[1][:-1]
+        labels = ast.literal_eval(labels)
+        if trans_type == 'CompoundUnary':
+            return CompoundUnary(*labels)
+        if trans_type == 'OpenConstituent':
+            return OpenConstituent(*labels)
+        if trans_type == 'Finalize':
+            return Finalize(*labels)
+        raise ValueError("Unexpected Transition %s" % desc)
 
 class Shift(Transition):
     def update_state(self, state, model):
