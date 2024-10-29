@@ -1,4 +1,4 @@
-
+import gc
 import pytest
 import stanza
 from stanza.models.common.foundation_cache import FoundationCache
@@ -14,6 +14,7 @@ TEST_TOKENS = [["This", "is", "a", "test", "."], ["Another", "sentence", "."], [
 
 @pytest.fixture(scope="module")
 def foundation_cache():
+    gc.collect()
     return FoundationCache()
 
 def check_results(doc):
