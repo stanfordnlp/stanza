@@ -1,12 +1,12 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Union
 
 # TODO: perhaps put the enums in this file
 from stanza.models.classifiers.utils import WVType, ExtraVectors, ModelType
 
 @dataclass
 class CNNConfig:  # pylint: disable=too-many-instance-attributes, too-few-public-methods
-        filter_channels: int | tuple
+        filter_channels: Union[int, tuple]
         filter_sizes: tuple
         fc_shapes: tuple
         dropout: float
