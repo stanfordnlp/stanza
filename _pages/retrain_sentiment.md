@@ -1,6 +1,6 @@
 ---
 layout: page
-title: Retrain models for an NER dataset
+title: Retrain models for a Sentiment dataset
 keywords: stanza, sentiment model training
 permalink: '/retrain_sentiment.html'
 nav_order: 12
