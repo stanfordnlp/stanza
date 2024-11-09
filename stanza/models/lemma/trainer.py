@@ -230,7 +230,9 @@ class Trainer(object):
             'vocab': self.vocab.state_dict(),
             'config': self.args
         }
-        os.makedirs(os.path.split(filename)[0], exist_ok=True)
+        save_dir = os.path.split(filename)[0]
+        if save_dir:
+            os.makedirs(os.path.split(filename)[0], exist_ok=True)
         torch.save(params, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to {}".format(filename))
 
