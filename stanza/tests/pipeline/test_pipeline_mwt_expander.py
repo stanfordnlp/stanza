@@ -72,7 +72,7 @@ word: .        		token parent:26-.
 
 
 def test_mwt():
-    pipeline = stanza.Pipeline(processors='tokenize,mwt', dir=TEST_MODELS_DIR, lang='fr')
+    pipeline = stanza.Pipeline(processors='tokenize,mwt', dir=TEST_MODELS_DIR, lang='fr', download_method=None)
     doc = pipeline(FR_MWT_SENTENCE)
     token_to_words = "\n".join(
         [f'token: {token.text.ljust(9)}\t\twords: [{", ".join([word.pretty_print() for word in token.words])}]' for sent in doc.sentences for token in sent.tokens]
@@ -100,3 +100,24 @@ def test_unknown_character():
     batch = mwt_processor.build_batch(doc)
     # the vocab used in this batch should have the missing characters
     assert all(x in batch.vocab._unit2id for x in text)
+
+def test_unknown_word():
+    """
+    Test a word which wasn't in the MWT training data
+
+    The seq2seq model for MWT was randomly hallucinating, but with the
+    CharacterClassifier, it should be able to process unusual MWT
+    without hallucinations
+    """
+    pipe = stanza.Pipeline(processors='tokenize,mwt', dir=TEST_MODELS_DIR, lang='en', download_method=None)
+    doc = pipe("I read the newspaper's report.")
+    assert len(doc.sentences) == 1
+    assert len(doc.sentences[0].tokens) == 6
+    assert len(doc.sentences[0].tokens[3].words) == 2
+    assert doc.sentences[0].tokens[3].words[0].text == 'newspaper'
+
+    # double check that this is something unknown to the model
+    mwt_processor = pipe.processors["mwt"]
+    trainer = mwt_processor.trainer
+    expansion = trainer.dict_expansion("newspaper's")
+    assert expansion is None
