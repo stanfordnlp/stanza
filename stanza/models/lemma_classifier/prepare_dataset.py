@@ -92,7 +92,9 @@ class DataProcessor():
                             "lemma": sentence.words[idx].lemma
                         })
 
-        self.write_output_file(save_name, self.target_upos, sentences)
+        if save_name:
+            self.write_output_file(save_name, self.target_upos, sentences)
+        return sentences
 
 def main(args=None):
     parser = argparse.ArgumentParser()
@@ -117,7 +119,7 @@ def main(args=None):
     doc = load_doc_from_conll_file(conll_path)
     processor = DataProcessor(target_word=args['target_word'], target_upos=[target_upos], allowed_lemmas=allowed_lemmas)
 
-    processor.process_document(doc, output_path)
+    return processor.process_document(doc, output_path)
 
 if __name__ == "__main__":
     main()
