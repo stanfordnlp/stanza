@@ -144,6 +144,33 @@ class Trainer(object):
                 final += [lem]
         return final
 
+    def has_contextual_lemmatizers(self):
+        return self.contextual_lemmatizers is not None and len(self.contextual_lemmatizers) > 0
+
+    def predict_contextual(self, sentence_words, sentence_tags, preds):
+        if len(self.contextual_lemmatizers) == 0:
+            return preds
+
+        # reversed so that the first lemmatizer has priority
+        for contextual in reversed(self.contextual_lemmatizers):
+            pred_idx = []
+            pred_sent_words = []
+            pred_sent_tags = []
+            pred_sent_ids = []
+            for sent_id, (words, tags) in enumerate(zip(sentence_words, sentence_tags)):
+                indices = contextual.target_indices(words, tags)
+                for idx in indices:
+                    pred_idx.append(idx)
+                    pred_sent_words.append(words)
+                    pred_sent_tags.append(tags)
+                    pred_sent_ids.append(sent_id)
+            if len(pred_idx) == 0:
+                continue
+            contextual_predictions = contextual.predict(pred_idx, pred_sent_words, pred_sent_tags)
+            for sent_id, word_id, pred in zip(pred_sent_ids, pred_idx, contextual_predictions):
+                preds[sent_id][word_id] = pred
+        return preds
+
     def update_lr(self, new_lr):
         utils.change_lr(self.optimizer, new_lr)
 
