@@ -16,6 +16,8 @@ import torch.nn as nn
 from stanza.models.common.foundation_cache import load_pretrain
 from stanza.models.lemma_classifier.constants import ModelType
 
+from typing import List
+
 logger = logging.getLogger('stanza.lemmaclassifier')
 
 class LemmaClassifier(ABC, nn.Module):
@@ -23,6 +25,7 @@ class LemmaClassifier(ABC, nn.Module):
         super().__init__(*args, **kwargs)
 
         self.label_decoder = label_decoder
+        self.label_encoder = {y: x for x, y in label_decoder.items()}
         self.target_words = target_words
         self.target_upos = target_upos
         self.unsaved_modules = []
@@ -50,6 +53,17 @@ class LemmaClassifier(ABC, nn.Module):
         """
         return a ModelType
         """
+
+    def target_indices(self, words, tags):
+        return [idx for idx, (word, tag) in enumerate(zip(words, tags)) if word.lower() in self.target_words and tag in self.target_upos]
+
+    def predict(self, position_indices: torch.Tensor, sentences: List[List[str]], upos_tags: List[List[str]]=[]) -> torch.Tensor:
+        upos_tags = self.convert_tags(upos_tags)
+        with torch.no_grad():
+            logits = self.forward(position_indices, sentences, upos_tags)  # should be size (batch_size, output_size)
+            predicted_class = torch.argmax(logits, dim=1)  # should be size (batch_size, 1)
+        predicted_class = [self.label_encoder[x.item()] for x in predicted_class]
+        return predicted_class
 
     @staticmethod
     def from_checkpoint(checkpoint, args=None):

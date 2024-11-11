@@ -61,6 +61,9 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
             del save_dict["params"][k]
         return save_dict
 
+    def convert_tags(self, upos_tags: List[List[str]]):
+        return None
+
     def forward(self, idx_positions: List[int], sentences: List[List[str]], upos_tags: List[List[int]]):
         """
         Computes the forward pass of the transformer baselines
