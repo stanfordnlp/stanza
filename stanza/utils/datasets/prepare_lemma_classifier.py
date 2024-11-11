@@ -5,6 +5,7 @@ from stanza.utils.datasets.common import find_treebank_dataset_file, UnknownData
 from stanza.utils.default_paths import get_default_paths
 from stanza.models.lemma_classifier import prepare_dataset
 from stanza.models.common.short_name_to_treebank import short_name_to_treebank
+from stanza.utils.conll import CoNLL
 
 SECTIONS = ("train", "dev", "test")
 
@@ -30,6 +31,40 @@ def process_treebank(paths, short_name, word, upos, allowed_lemmas, sections=SEC
         output_filenames.append(output_filename)
 
     return output_filenames
+
+def process_en_combined(paths, short_name):
+    udbase_dir = paths["UDBASE"]
+    output_dir = paths["LEMMA_CLASSIFIER_DATA_DIR"]
+    os.makedirs(output_dir, exist_ok=True)
+
+    train_treebanks = ["UD_English-EWT", "UD_English-GUM", "UD_English-GUMReddit", "UD_English-LinES"]
+    test_treebanks = ["UD_English-PUD", "UD_English-Pronouns"]
+
+    target_word = "'s"
+    target_upos = ["AUX"]
+
+    sentences = [ [], [], [] ]
+    for treebank in train_treebanks:
+        for section_idx, section in enumerate(SECTIONS):
+            filename = find_treebank_dataset_file(treebank, udbase_dir, section, "conllu", fail=True)
+            doc = CoNLL.conll2doc(filename)
+            processor = prepare_dataset.DataProcessor(target_word=target_word, target_upos=target_upos, allowed_lemmas=".*")
+            new_sentences = processor.process_document(doc, save_name=None)
+            print("Read %d sentences from %s" % (len(new_sentences), filename))
+            sentences[section_idx].extend(new_sentences)
+    for treebank in test_treebanks:
+        section = "test"
+        filename = find_treebank_dataset_file(treebank, udbase_dir, section, "conllu", fail=True)
+        doc = CoNLL.conll2doc(filename)
+        processor = prepare_dataset.DataProcessor(target_word=target_word, target_upos=target_upos, allowed_lemmas=".*")
+        new_sentences = processor.process_document(doc, save_name=None)
+        print("Read %d sentences from %s" % (len(new_sentences), filename))
+        sentences[2].extend(new_sentences)
+
+    for section, section_sentences in zip(SECTIONS, sentences):
+        output_filename = os.path.join(output_dir, "%s.%s.lemma" % (short_name, section))
+        prepare_dataset.DataProcessor.write_output_file(output_filename, target_upos, section_sentences)
+        print("Wrote %s sentences to %s" % (len(section_sentences), output_filename))
 
 def process_ja_gsd(paths, short_name):
     # this one looked promising, but only has 10 total dev & test cases
@@ -87,6 +122,7 @@ def process_el_gdt(paths, short_name):
 DATASET_MAPPING = {
     "ar_padt":           process_ar_padt,
     "el_gdt":            process_el_gdt,
+    "en_combined":       process_en_combined,
     "fa_perdt":          process_fa_perdt,
     "hi_hdtb":           process_hi_hdtb,
     "ja_gsd":            process_ja_gsd,
