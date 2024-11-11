@@ -1,4 +1,5 @@
 from collections import Counter
+import json
 import logging
 import os
 import random
@@ -8,7 +9,6 @@ import stanza
 import torch
 
 from stanza.models.lemma_classifier.constants import DEFAULT_BATCH_SIZE
-import stanza.models.lemma_classifier.prepare_dataset as prepare_dataset
 
 logger = logging.getLogger('stanza.lemmaclassifier')
 
@@ -47,11 +47,11 @@ class Dataset:
 
         known_words = set()
 
-        with open(data_path, "r+", encoding="utf-8") as f:
+        with open(data_path, "r+", encoding="utf-8") as fin:
             sentences, indices, labels, upos_ids, counts, upos_to_id = [], [], [], [], Counter(), {}
 
-            data_processor = prepare_dataset.DataProcessor("", [], "")
-            sentences_data = data_processor.read_processed_data(data_path)
+            input_json = json.load(fin)
+            sentences_data = input_json['sentences']
 
             for idx, sentence in enumerate(sentences_data):
                 # TODO Could replace this with sentence.values(), but need to know if Stanza requires Python 3.7 or later for backward compatability reasons
