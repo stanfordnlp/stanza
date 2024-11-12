@@ -74,7 +74,7 @@ def add_charlm_args(parser):
     parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
     parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
 
-def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argparse=None, build_model_filename=None, choose_charlm_method=None):
+def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argparse=None, build_model_filename=None, choose_charlm_method=None, args=None):
     """
     A main program for each of the run_xyz scripts
 
@@ -85,7 +85,11 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
       - the charlm, for example, needs this feature, since it makes
         both forward and backward models
     """
-    logger.info("Training program called with:\n" + " ".join(sys.argv))
+    if args is None:
+        logger.info("Training program called with:\n" + " ".join(sys.argv))
+        args = sys.argv[1:]
+    else:
+        logger.info("Training program called with:\n" + " ".join(args))
 
     paths = default_paths.get_default_paths()
 
@@ -95,9 +99,9 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
     if '--extra_args' in sys.argv:
         idx = sys.argv.index('--extra_args')
         extra_args = sys.argv[idx+1:]
-        command_args = parser.parse_args(sys.argv[1:idx])
+        command_args = parser.parse_args(sys.argv[:idx])
     else:
-        command_args, extra_args = parser.parse_known_args()
+        command_args, extra_args = parser.parse_known_args(args=args)
 
     # Pass this through to the underlying model as well as use it here
     # we don't put --save_name here for the awkward situation of

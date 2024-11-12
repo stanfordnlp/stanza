@@ -9,8 +9,16 @@ such as
 and it will prepare each of train, dev, test
 """
 
+from stanza.models.common.constant import treebank_to_short_name
+
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_treebank
+
+import stanza.utils.datasets.prepare_lemma_classifier as prepare_lemma_classifier
+
+def add_specific_args(parser) -> None:
+    parser.add_argument('--no_lemma_classifier', dest='lemma_classifier', action='store_false', default=True,
+                        help="Don't use the lemma classifier datasets.  Default is to build lemma classifier as part of the original lemmatizer")
 
 def check_lemmas(train_file):
     """
@@ -50,8 +58,12 @@ def process_treebank(treebank, model_type, paths, args):
         augment = True
     prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], augment=augment)
 
+    short_name = treebank_to_short_name(treebank)
+    if args.lemma_classifier and short_name in prepare_lemma_classifier.DATASET_MAPPING:
+        prepare_lemma_classifier.main(short_name)
+
 def main():
-    common.main(process_treebank, common.ModelType.LEMMA)
+    common.main(process_treebank, common.ModelType.LEMMA, add_specific_args)
 
 if __name__ == '__main__':
     main()

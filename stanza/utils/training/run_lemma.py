@@ -20,16 +20,22 @@ import os
 
 from stanza.models import identity_lemmatizer
 from stanza.models import lemmatizer
+from stanza.models.lemma import attach_lemma_classifier
 
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_lemma_charlm_args, choose_lemma_charlm
+from stanza.utils.training import run_lemma_classifier
 
 from stanza.utils.datasets.prepare_lemma_treebank import check_lemmas
+import stanza.utils.datasets.prepare_lemma_classifier as prepare_lemma_classifier
 
 logger = logging.getLogger('stanza')
 
 def add_lemma_args(parser):
     add_charlm_args(parser)
+
+    parser.add_argument('--no_lemma_classifier', dest='lemma_classifier', action='store_false', default=True,
+                        help="Don't use the lemma classifier datasets.  Default is to build lemma classifier as part of the original lemmatizer")
 
 def build_model_filename(paths, short_name, command_args, extra_args):
     """
@@ -141,6 +147,22 @@ def run_treebank(mode, paths, treebank, short_name,
             test_args = test_args + charlm_args + extra_args
             logger.info("Running test lemmatizer for {} with args {}".format(treebank, test_args))
             lemmatizer.main(test_args)
+
+        use_lemma_classifier = command_args.lemma_classifier and short_name in prepare_lemma_classifier.DATASET_MAPPING
+        if use_lemma_classifier and mode == Mode.TRAIN:
+            # TODO: pass along charlm args
+            lemma_classifier_args = [treebank]
+            if command_args.force:
+                lemma_classifier_args.append('--force')
+            run_lemma_classifier.main(lemma_classifier_args)
+
+            save_name = build_model_filename(paths, short_name, command_args, extra_args)
+            # TODO: use a temp path for the lemma_classifier or keep it somewhere
+            attach_args = ['--input', save_name,
+                           '--output', save_name,
+                           '--classifier', 'saved_models/lemma_classifier/%s_lemma_classifier.pt' % short_name]
+            attach_lemma_classifier.main(attach_args)
+            # TODO: rerun dev set / test set with the attached classifier?
 
 def main():
     common.main(run_treebank, "lemma", "lemmatizer", add_lemma_args, sub_argparse=lemmatizer.build_argparse(), build_model_filename=build_model_filename, choose_charlm_method=choose_lemma_charlm)
