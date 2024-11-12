@@ -79,8 +79,8 @@ def run_treebank(mode, paths, treebank, short_name,
         eval_args = bert_args + model_type_args + base_args + eval_args + embedding_args + extra_args
         evaluate_models.main(eval_args)
 
-def main():
-    common.main(run_treebank, "lemma_classifier", "lemma_classifier", add_lemma_args, sub_argparse=train_lstm_model.build_argparse(), build_model_filename=build_model_filename, choose_charlm_method=choose_lemma_charlm)
+def main(args=None):
+    common.main(run_treebank, "lemma_classifier", "lemma_classifier", add_lemma_args, sub_argparse=train_lstm_model.build_argparse(), build_model_filename=build_model_filename, choose_charlm_method=choose_lemma_charlm, args=args)
 
 
 if __name__ == '__main__':
