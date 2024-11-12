@@ -140,3 +140,20 @@ The conll format adds the annotations to the misc column:
 
 This is the first release of coref, so if there are suggested improvements to the format, please feel free to discuss this format [as a github issue](https://github.com/stanfordnlp/stanza/issues/new).
 
+## Available Languages
+
+Currently, there are models available for several languages, with more to come:
+
+| Language | Dataset |
+| :---     | :------ |
+| CA       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
+| CS       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
+| DE       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
+| EN       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
+| ES       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
+| FR       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
+| HI       | DeepH   |
+| NB       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
+| NN       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
+| PL       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
+| RU       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
