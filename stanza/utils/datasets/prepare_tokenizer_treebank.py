@@ -882,7 +882,7 @@ def add_english_sentence_final_punctuation(handparsed_sentences):
     return new_sents
 
 
-def build_extra_combined_english_dataset(paths, dataset):
+def build_extra_combined_english_dataset(paths, model_type, dataset):
     """
     Extra sentences we don't want augmented
     """
@@ -894,9 +894,15 @@ def build_extra_combined_english_dataset(paths, dataset):
         handparsed_sentences = add_english_sentence_final_punctuation(handparsed_sentences)
         sents.extend(handparsed_sentences)
         print("Loaded %d sentences from %s" % (len(sents), handparsed_path))
+
+        if model_type is common.ModelType.LEMMA:
+            handparsed_path = os.path.join(handparsed_dir, "english-lemmas", "en_lemmas.conllu")
+            handparsed_sentences = read_sentences_from_conllu(handparsed_path)
+            print("Loaded %d sentences from %s" % (len(handparsed_sentences), handparsed_path))
+            sents.extend(handparsed_sentences)
     return sents
 
-def build_extra_combined_italian_dataset(paths, dataset):
+def build_extra_combined_italian_dataset(paths, model_type, dataset):
     """
     Extra data - the MWT data for Italian
     """
@@ -1114,7 +1120,7 @@ def build_combined_dataset(paths, short_name, model_type, augment):
             if dataset == 'train' and augment:
                 sents = augment_punct(sents)
             if extra_fn is not None:
-                sents.extend(extra_fn(paths, dataset))
+                sents.extend(extra_fn(paths, model_type, dataset))
             write_sentences_to_conllu(output_conllu, sents)
 
 BIO_DATASETS = ("en_craft", "en_genia", "en_mimic")
