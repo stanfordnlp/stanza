@@ -117,6 +117,8 @@ def download_file(url, path, proxies, raise_for_status=False):
     """
     verbose = logger.level in [0, 10, 20]
     r = requests.get(url, stream=True, proxies=proxies)
+    if raise_for_status:
+        r.raise_for_status()
     with open(path, 'wb') as f:
         file_size = int(r.headers.get('content-length'))
         default_chunk_size = 131072
@@ -128,8 +130,6 @@ def download_file(url, path, proxies, raise_for_status=False):
                     f.write(chunk)
                     f.flush()
                     pbar.update(len(chunk))
-    if raise_for_status:
-        r.raise_for_status()
     return r.status_code
 
 def request_file(url, path, proxies=None, md5=None, raise_for_status=False, log_info=True, alternate_md5=None):
