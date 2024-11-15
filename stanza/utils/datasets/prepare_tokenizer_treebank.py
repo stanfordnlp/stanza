@@ -1036,7 +1036,7 @@ def build_combined_spanish_dataset(paths, model_type, dataset):
     return sents
 
 def build_combined_french_dataset(paths, model_type, dataset):
-    udbase_dir = paths["UDBASE_GIT"]
+    udbase_dir = paths["UDBASE"]
     handparsed_dir = paths["HANDPARSED_DIR"]
     if dataset == 'train':
         train_treebanks = ["UD_French-GSD", "UD_French-ParisStories", "UD_French-Rhapsodie", "UD_French-Sequoia"]
@@ -1068,9 +1068,7 @@ def build_combined_hebrew_dataset(paths, model_type, dataset):
 
     dev and test sets will be those from IAHLT
     """
-    # currently need to use UDBASE_GIT for both, since as of July 2024
-    # the knesset dataset is not part of UD git
-    udbase_dir = paths["UDBASE_GIT"]
+    udbase_dir = paths["UDBASE"]
     udbase_git_dir = paths["UDBASE_GIT"]
 
     treebanks = ["UD_Hebrew-IAHLTwiki", "UD_Hebrew-IAHLTknesset"]
