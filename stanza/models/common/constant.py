@@ -462,6 +462,7 @@ for k in lang2lcode:
     langlower2lcode[k.lower()] = lang2lcode[k]
 
 treebank_special_cases = {
+    "UD_Chinese-Beginner": "zh-hans_beginner",
     "UD_Chinese-GSDSimp": "zh-hans_gsdsimp",
     "UD_Chinese-GSD": "zh-hant_gsd",
     "UD_Chinese-HK": "zh-hant_hk",
