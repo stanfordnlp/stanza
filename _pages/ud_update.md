@@ -27,7 +27,7 @@ Add that to the languages in `stanza/models/common/constant.py`
 
 ### Possibly update Chinese datasets
 
-Weird edge case that occasionally happens: new ZH dataset, check if it is simplified or traditional.
+Weird edge case that occasionally happens: new ZH dataset, check if it is simplified or traditional.  The `build_short_name_to_treebank.py` script will throw an exception if this happens.
 
 Add the appropriate line to the special cases in `constant.py`.
 TODO: could add a script which checks for this
