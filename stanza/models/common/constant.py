@@ -6,6 +6,9 @@ These language codes mirror UD language codes when possible
 
 import re
 
+class UnknownLanguageError(ValueError):
+    pass
+
 # tuples in a list so we can assert that the langcodes are all unique
 # When applicable, we favor the UD decision over any other possible
 # language code or language name
@@ -75,6 +78,7 @@ lcode2lang_raw = [
     ("dv",  "Dhivehi"),
     ("nl",  "Dutch"),
     ("dz",  "Dzongkha"),
+    ("egy", "Egyptian"),
     ("en",  "English"),
     ("myv", "Erzya"),
     ("eo",  "Esperanto"),
@@ -100,10 +104,12 @@ lcode2lang_raw = [
     ("gub", "Guajajara"),
     ("gn",  "Guarani"),
     ("gu",  "Gujarati"),
+    ("gwi", "Gwichin"),
     ("ht",  "Haitian"),
     ("ha",  "Hausa"),
     ("he",  "Hebrew"),
     ("hz",  "Herero"),
+    ("azz", "Highland_Puebla_Nahuatl"),
     ("hil", "Hiligaynon"),
     ("hi",  "Hindi"),
     ("qhe", "Hindi_English"),
@@ -178,6 +184,7 @@ lcode2lang_raw = [
     ("mzn", "Mazandarani"),
     ("gun", "Mbya_Guarani"),
     ("enm", "Middle_English"),
+    ("frm", "Middle_French"),
     ("min", "Minangkabau"),
     ("xmf", "Mingrelian"),
     ("mwl", "Mirandese"),
@@ -202,10 +209,12 @@ lcode2lang_raw = [
     ("nd",  "North_Ndebele"),
     ("sme", "North_Sami"),
     ("nso", "Northern_Sotho"),
+    ("gya", "Northwest_Gbaya"),
     ("nb",  "Norwegian_Bokmaal"),
     ("nn",  "Norwegian_Nynorsk"),
     ("ii",  "Nuosu"),
     ("oc",  "Occitan"),
+    ("or",  "Odia"),
     ("oj",  "Ojibwa"),
     ("cu",  "Old_Church_Slavonic"),
     ("orv", "Old_East_Slavic"),
@@ -214,12 +223,15 @@ lcode2lang_raw = [
     ("sga", "Old_Irish"),
     ("ojp", "Old_Japanese"),
     ("otk", "Old_Turkish"),
-    ("or",  "Odia"),
     ("om",  "Oromo"),
     ("os",  "Ossetian"),
+    ("ota", "Ottoman_Turkish"),
     ("pi",  "Pali"),
     ("ps",  "Pashto"),
+    ("pad", "Paumari"),
     ("fa",  "Persian"),
+    ("pay", "Pesh"),
+    ("xpg", "Phrygian"),
     ("pbv", "Pnar"),
     ("pl",  "Polish"),
     ("qpm", "Pomak"),
@@ -255,6 +267,7 @@ lcode2lang_raw = [
     ("nr",  "South_Ndebele"),
     ("st",  "Southern_Sotho"),
     ("es",  "Spanish"),
+    ("ssp", "Spanish_Sign_Language"),
     ("su",  "Sundanese"),
     ("sw",  "Swahili"),
     ("ss",  "Swati"),
@@ -269,6 +282,7 @@ lcode2lang_raw = [
     ("tt",  "Tatar"),
     ("eme", "Teko"),
     ("te",  "Telugu"),
+    ("qte", "Telugu_English"),
     ("th",  "Thai"),
     ("bo",  "Tibetan"),
     ("ti",  "Tigrinya"),
@@ -288,6 +302,7 @@ lcode2lang_raw = [
     ("ug",  "Uyghur"),
     ("uz",  "Uzbek"),
     ("ve",  "Venda"),
+    ("vep", "Veps"),
     ("vi",  "Vietnamese"),
     ("vo",  "Volapük"),
     ("wa",  "Walloon"),
@@ -386,6 +401,7 @@ lcode2lang['no'] = 'Norwegian'
 lcode2lang['zh'] = 'Simplified_Chinese'
 
 extra_lang_to_lcodes = [
+    ("ab",  "Abkhaz"),
     ("gsw", "Alemannic"),
     ("my",  "Burmese"),
     ("ckb", "Central_Kurdish"),
@@ -397,6 +413,7 @@ extra_lang_to_lcodes = [
     ("lij", "Genoese"),
     ("ga",  "Gaelic"),
     ("ne",  "Gorkhali"),
+    ("ht",  "Haitian_Creole"),
     ("ilo", "Ilokano"),
     ("nr",  "isiNdebele"),
     ("xh",  "isiXhosa"),
@@ -485,7 +502,7 @@ def lang_to_langcode(lang):
     elif lang.lower() in lcode2lang:
         lcode = lang.lower()
     else:
-        raise ValueError("Unable to find language code for %s" % lang)
+        raise UnknownLanguageError("Unable to find language code for %s" % lang)
     return lcode
 
 RIGHT_TO_LEFT = set(["ar", "arc", "az", "ckb", "dv", "ff", "he", "ku", "mzn", "nqo", "ps", "fa", "rhg", "sd", "syr", "ur"])

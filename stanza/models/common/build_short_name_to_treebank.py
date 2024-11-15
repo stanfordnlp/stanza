@@ -1,7 +1,7 @@
 import glob
 import os
 
-from stanza.models.common.constant import treebank_to_short_name
+from stanza.models.common.constant import treebank_to_short_name, UnknownLanguageError
 from stanza.utils import default_paths
 
 paths = default_paths.get_default_paths()
@@ -12,7 +12,12 @@ directories.sort()
 
 output_name = os.path.join(os.path.split(__file__)[0], "short_name_to_treebank.py")
 ud_names = [os.path.split(ud_path)[1] for ud_path in directories]
-short_names = [treebank_to_short_name(ud_name) for ud_name in ud_names]
+short_names = []
+for directory, ud_name in zip(directories, ud_names):
+    try:
+        short_names.append(treebank_to_short_name(ud_name))
+    except UnknownLanguageError as e:
+        raise UnknownLanguageError("Could not find language short name for dataset %s, path %s" % (ud_name, directory)) from e
 max_len = max(len(x) for x in short_names) + 8
 line_format = "    %-" + str(max_len) + "s '%s',\n"
 
