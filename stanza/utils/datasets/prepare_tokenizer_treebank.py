@@ -881,6 +881,20 @@ def add_english_sentence_final_punctuation(handparsed_sentences):
             new_sents.append(sent)
     return new_sents
 
+def build_extra_combined_french_dataset(paths, model_type, dataset):
+    """
+    Extra sentences we don't want augmented for French - currently, handparsed lemmas
+    """
+    handparsed_dir = paths["HANDPARSED_DIR"]
+    sents = []
+    if dataset == 'train':
+        if model_type is common.ModelType.LEMMA:
+            handparsed_path = os.path.join(handparsed_dir, "french-lemmas", "fr_lemmas.conllu")
+            handparsed_sentences = read_sentences_from_conllu(handparsed_path)
+            print("Loaded %d sentences from %s" % (len(handparsed_sentences), handparsed_path))
+            sents.extend(handparsed_sentences)
+    return sents
+
 
 def build_extra_combined_english_dataset(paths, model_type, dataset):
     """
@@ -1095,6 +1109,7 @@ COMBINED_FNS = {
 # some extra data for the combined models without augmenting
 COMBINED_EXTRA_FNS = {
     "en_combined": build_extra_combined_english_dataset,
+    "fr_combined": build_extra_combined_french_dataset,
     "it_combined": build_extra_combined_italian_dataset,
 }
 
