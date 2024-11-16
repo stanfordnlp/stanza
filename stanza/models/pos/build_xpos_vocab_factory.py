@@ -4,6 +4,8 @@ import logging
 import os
 import re
 import sys
+from zipfile import ZipFile
+
 from stanza.models.common.constant import treebank_to_short_name
 from stanza.models.pos.xpos_vocab_utils import DEFAULT_KEY, choose_simplest_factory, XPOSType
 from stanza.models.common.doc import *
@@ -17,16 +19,29 @@ logger = logging.getLogger('stanza')
 
 def get_xpos_factory(shorthand, fn):
     logger.info('Resolving vocab option for {}...'.format(shorthand))
+    doc = None
     train_file = os.path.join(DATA_DIR, '{}.train.in.conllu'.format(shorthand))
-    if not os.path.exists(train_file):
-        raise UserWarning('Training data for {} not found in the data directory, falling back to using WordVocab. To generate the '
-                          'XPOS vocabulary for this treebank properly, please run the following command first:\n'
-                          '\tstanza/utils/datasets/prepare_pos_treebank.py {}'.format(fn, fn))
+    if os.path.exists(train_file):
+        doc = CoNLL.conll2doc(input_file=train_file)
+    else:
+        zip_file = os.path.join(DATA_DIR, '{}.train.in.zip'.format(shorthand))
+        if os.path.exists(zip_file):
+            with ZipFile(zip_file) as zin:
+                for train_file in zin.namelist():
+                    doc = CoNLL.conll2doc(input_file=train_file, zip_file=zip_file)
+                    if any(word.xpos for sentence in doc.sentences for word in sentence.words):
+                        break
+                else:
+                    raise ValueError('Found training data in {}, but none of the files contained had xpos'.format(zip_file))
+
+    if doc is None:
+        raise FileNotFoundError('Training data for {} not found.  To generate the XPOS vocabulary '
+                                'for this treebank properly, please run the following command first:\n'
+                                '  python3 stanza/utils/datasets/prepare_pos_treebank.py {}'.format(fn, fn))
         # without the training file, there's not much we can do
         key = DEFAULT_KEY
         return key
 
-    doc = CoNLL.conll2doc(input_file=train_file)
     data = doc.get([TEXT, UPOS, XPOS, FEATS], as_sentences=True)
     return choose_simplest_factory(data, shorthand)
 
@@ -38,7 +53,7 @@ def main():
 
     output_file = args.output_file
     if os.path.isdir(args.treebanks):
-        # if the path is a directory of datasets (which is the default if  is set)
+        # if the path is a directory of datasets (which is the default if --treebanks is not set)
         # we use those datasets to prepare the xpos factories
         treebanks = os.listdir(args.treebanks)
         treebanks = [x.split(".", maxsplit=1)[0] for x in treebanks]
@@ -118,6 +133,8 @@ def xpos_vocab_factory(data, shorthand):
             # log instead of throw
             # otherwise, updating datasets would be unpleasant
             logger.error("XPOS tagset in %s has apparently changed!  Was %s, is now %s", shorthand, XPOS_DESCRIPTIONS[shorthand], desc)
+    else:
+        logger.warning("Chose %s for the xpos factory for %s", desc, shorthand)
     return build_xpos_vocab(desc, data, shorthand)
 ''', file=f)
 
