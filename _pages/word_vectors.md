@@ -243,6 +243,19 @@ Multilingual Facilitation (pp. 275-288).
 University of Helsinki.
 https://doi.org/10.31885/9789515150257
 
+###
+
+For Komi Zyrian, fasttext has word vectors for Komi, but they don't
+actually help.  We kept using them in case there was some benefit for
+unknown words.
+
+Dev set scores on lattice:
+
+| Pretrain     | UPOS  | XPOS   | UFeats | AllTags | UAS   | LAS   | CLAS  | MLAS  | BLEX  |
+| :------:     | :---: | :----: | :----: | :----:  | :--:  | :--:  | :--:  | :--:  | :--:  |
+| None         | 87.86 | 84.79  | 83.12  | 74.12   | 76.78 | 66.18 | 59.94 | 57.44 | 59.94 |
+| Fasttext     | 88.33 | 84.39  | 83.99  | 75.25   | 75.65 | 64.58 | 59.14 | 56.34 | 59.14 |
+
 ### Marathi
 
 [The L3Cube project](https://github.com/l3cube-pune/MarathiNLP)
