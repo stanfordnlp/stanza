@@ -278,6 +278,16 @@ in International Journal of Intelligent Engineering and Systems, volume 13, pp 2
 
 We use the vectors for French from the CoNLL 17 shared task.  Other suggestions are welcome.
 
+### Ottoman Turkish
+
+As of UD 2.15, there is an Ottoman Turkish treebank large enough to use for models, [BOUN](https://github.com/UniversalDependencies/UD_Ottoman_Turkish-BOUN).  Using the CoNLL 17 shared task vectors for this treebank on POS gives a small improvement.  Again, other suggestions are welcome.
+
+| Pretrain    | UPOS  | XPOS  | UFeats | AllTags |
+| :---------: | :--:  | :--:  | :----: | :-----: |
+| No vectors  | 75.66 | 81.22 | 69.05  | 61.90   |
+| CoNLL17     | 81.48 | 84.92 | 75.13  | 67.20   |
+
+
 ### Sindhi
 
 We trained a new set of word vectors using Glove.  For the training
