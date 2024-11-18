@@ -180,6 +180,7 @@ specific_default_pretrains = {
     "nds":     "fasttext157",
     "nl":      "conll17",
     "nn":      "conll17",
+    "ota":     "conll17",
     "pl":      "conll17",
     "pt":      "conll17",
     "ro":      "conll17",
