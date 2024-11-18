@@ -22,7 +22,7 @@ class Trainer(BaseTrainer):
             # build model from scratch
             self.args = args
             self.vocab = vocab
-            self.lexicon = list(lexicon)
+            self.lexicon = list(lexicon) if lexicon is not None else None
             self.dictionary = dictionary
             self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
         self.model = self.model.to(device)
@@ -70,7 +70,7 @@ class Trainer(BaseTrainer):
             'vocab': self.vocab.state_dict(),
             # save and load lexicon as list instead of set so
             # we can use weights_only=True
-            'lexicon': list(self.lexicon),
+            'lexicon': list(self.lexicon) if self.lexicon is not None else None,
             'config': self.args
         }
         try:
