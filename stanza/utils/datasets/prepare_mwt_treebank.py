@@ -69,8 +69,8 @@ def process_treebank(treebank, model_type, paths, args):
         if language in KNOWN_COMPOSABLE_MWTS:
             print("Language %s is known to have all MWT composed of exactly its word pieces.  Checking..." % language)
             check_mwt_composition(f"{mwt_dir}/{short_name}.train.in.conllu")
-            check_mwt_composition(f"{mwt_dir}/{short_name}.dev.in.conllu")
-            check_mwt_composition(f"{mwt_dir}/{short_name}.test.in.conllu")
+            check_mwt_composition(f"{mwt_dir}/{short_name}.dev.gold.conllu")
+            check_mwt_composition(f"{mwt_dir}/{short_name}.test.gold.conllu")
 
         contract_mwt(f"{mwt_dir}/{short_name}.dev.gold.conllu",
                      f"{mwt_dir}/{short_name}.dev.in.conllu")
