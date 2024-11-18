@@ -366,6 +366,12 @@ class Document(StanzaObject):
                         word.id = idx_w
                 elif perform_mwt_processing == MWTProcessingType.PROCESS:
                     expanded = [x for x in expansions[idx_e].split(' ') if len(x) > 0]
+                    # in the event the MWT annotator only split the
+                    # Token into a single Word, we preserve its text
+                    # otherwise the Token's text is different from its
+                    # only Word's text
+                    if len(expanded) == 1:
+                        expanded = [token.text]
                     idx_e += 1
                     idx_w_end = idx_w + len(expanded) - 1
                     if token.misc:  # None can happen when using a prebuilt doc
