@@ -243,7 +243,7 @@ Multilingual Facilitation (pp. 275-288).
 University of Helsinki.
 https://doi.org/10.31885/9789515150257
 
-###
+### Komi Zyrian
 
 For Komi Zyrian, fasttext has word vectors for Komi, but they don't
 actually help.  We kept using them in case there was some benefit for
