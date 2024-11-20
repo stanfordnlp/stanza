@@ -23,6 +23,8 @@ from stanza.utils.datasets.contract_mwt import contract_mwt
 
 # languages where the MWTs are always a composition of the words themselves
 KNOWN_COMPOSABLE_MWTS = {"en"}
+# ... but partut is not put together that way
+MWT_EXCEPTIONS = {"en_partut"}
 
 def copy_conllu(tokenizer_dir, mwt_dir, short_name, dataset, particle):
     input_conllu_tokenizer = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
@@ -37,7 +39,7 @@ def check_mwt_composition(filename):
             if len(token.words) > 1:
                 expected = "".join(x.text for x in token.words)
                 if token.text != expected:
-                    raise ValueError("Unexpected token composition in sentence %d: %s instead of %s" % (sent_idx, token.text, expected))
+                    raise ValueError("Unexpected token composition in filename %s sentence %d id %s token %d: %s instead of %s" % (filename, sent_idx, sentence.sent_id, token_idx, token.text, expected))
 
 def process_treebank(treebank, model_type, paths, args):
     short_name = treebank_to_short_name(treebank)
@@ -66,7 +68,7 @@ def process_treebank(treebank, model_type, paths, args):
             shutil.copyfile(source_filename, dest_filename)
 
         language = short_name.split("_", 1)[0]
-        if language in KNOWN_COMPOSABLE_MWTS:
+        if language in KNOWN_COMPOSABLE_MWTS and short_name not in MWT_EXCEPTIONS:
             print("Language %s is known to have all MWT composed of exactly its word pieces.  Checking..." % language)
             check_mwt_composition(f"{mwt_dir}/{short_name}.train.in.conllu")
             check_mwt_composition(f"{mwt_dir}/{short_name}.dev.gold.conllu")
