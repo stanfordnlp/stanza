@@ -24,7 +24,8 @@ class TextTooLongError(ValueError):
 
 
 def update_max_length(model_name, tokenizer):
-    if model_name in ('google/muril-base-cased',
+    if model_name in ('hf-internal-testing/tiny-bert',
+                      'google/muril-base-cased',
                       'google/muril-large-cased',
                       'airesearch/wangchanberta-base-att-spm-uncased',
                       'camembert/camembert-large',
