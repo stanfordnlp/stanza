@@ -9,6 +9,7 @@ import pytest
 
 import torch
 
+import stanza
 from stanza.models import tagger
 from stanza.models.common import pretrain
 from stanza.models.pos.trainer import Trainer
@@ -290,3 +291,25 @@ class TestTagger:
     def test_with_bert_finetune(self, tmp_path, wordvec_pretrain_file):
         self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_learning_rate', '0.01', '--bert_hidden_layers', '2'])
 
+    def test_bert_pipeline(self, tmp_path, wordvec_pretrain_file):
+        """
+        Test training the tagger, then using it in a pipeline
+
+        The pipeline use of the tagger also tests the longer-than-maxlen workaround for the transformer
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert'])
+        save_name = trainer.args['save_name']
+        save_file = str(tmp_path / save_name)
+        assert os.path.exists(save_file)
+
+        pipe = stanza.Pipeline("en", processors="tokenize,pos", models_dir=TEST_MODELS_DIR, pos_model_path=save_file, pos_pretrain_path=wordvec_pretrain_file)
+        trainer = pipe.processors['pos'].trainer
+        assert trainer.args['save_name'] == save_name
+
+        # these should be one chunk only
+        doc = pipe("foo " * 100)
+        doc = pipe("foo " * 500)
+        # this is two chunks of bert embedding
+        doc = pipe("foo " * 1000)
+        # this is multiple chunks
+        doc = pipe("foo " * 2000)
