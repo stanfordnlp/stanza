@@ -964,9 +964,9 @@ def replace_semicolons(sentences):
     print("Updated %d sentences to replace sentence-final ; with ." % count)
     return new_sents
 
-def strip_xpos(sents):
+def strip_column(sents, column):
     """
-    Removes all xpos from the given dataset
+    Removes a specified column from the given dataset
 
     Particularly useful when mixing two different POS formalisms in the same tagger
     """
@@ -978,10 +978,71 @@ def strip_xpos(sents):
                 new_sent.append(word)
                 continue
             pieces = word.split("\t")
-            pieces[4] = "_"
+            pieces[column] = "_"
             new_sent.append("\t".join(pieces))
         new_sents.append(new_sent)
     return new_sents
+
+def strip_xpos(sents):
+    """
+    Removes all xpos from the given dataset
+
+    Particularly useful when mixing two different POS formalisms in the same tagger
+    """
+    return strip_column(sents, 4)
+
+def strip_feats(sents):
+    """
+    Removes all features from the given dataset
+
+    Particularly useful when mixing two different POS formalisms in the same tagger
+    """
+    return strip_column(sents, 5)
+
+def build_combined_albanian_dataset(paths, model_type, dataset):
+    """
+    sq_combined is STAF as the base, with TSA added for some things
+    """
+    udbase_dir = paths["UDBASE"]
+    udbase_git_dir = paths["UDBASE_GIT"]
+    handparsed_dir = paths["HANDPARSED_DIR"]
+
+    treebanks = ["UD_Albanian-STAF", "UD_Albanian-TSA"]
+
+    if dataset == 'train' and model_type == common.ModelType.POS:
+        documents = {}
+
+        conllu_file = common.find_treebank_dataset_file(treebanks[0], udbase_dir, "train", "conllu", fail=True)
+        new_sents = read_sentences_from_conllu(conllu_file)
+        documents[treebanks[0]] = new_sents
+
+        # we use udbase_git_dir for TSA because of an updated MWT scheme
+        conllu_file = common.find_treebank_dataset_file(treebanks[1], udbase_git_dir, "test", "conllu", fail=True)
+        new_sents = read_sentences_from_conllu(conllu_file)
+        new_sents = strip_xpos(new_sents)
+        new_sents = strip_feats(new_sents)
+        documents[treebanks[1]] = new_sents
+
+        return documents
+
+    if dataset == 'train' and model_type is not common.ModelType.DEPPARSE:
+        sents = []
+
+        conllu_file = common.find_treebank_dataset_file(treebanks[0], udbase_dir, "train", "conllu", fail=True)
+        new_sents = read_sentences_from_conllu(conllu_file)
+        print("Read %d sentences from %s" % (len(new_sents), conllu_file))
+        sents.extend(new_sents)
+
+        conllu_file = common.find_treebank_dataset_file(treebanks[1], udbase_git_dir, "test", "conllu", fail=True)
+        new_sents = read_sentences_from_conllu(conllu_file)
+        print("Read %d sentences from %s" % (len(new_sents), conllu_file))
+        sents.extend(new_sents)
+
+        return sents
+
+    conllu_file = common.find_treebank_dataset_file(treebanks[0], udbase_dir, dataset, "conllu", fail=True)
+    sents = read_sentences_from_conllu(conllu_file)
+    return sents
 
 def build_combined_spanish_dataset(paths, model_type, dataset):
     """
@@ -1102,6 +1163,7 @@ COMBINED_FNS = {
     "fr_combined": build_combined_french_dataset,
     "he_combined": build_combined_hebrew_dataset,
     "it_combined": build_combined_italian_dataset,
+    "sq_combined": build_combined_albanian_dataset,
 }
 
 # some extra data for the combined models without augmenting
