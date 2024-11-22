@@ -395,7 +395,7 @@ def build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_lay
         if remaining_attention.shape[1] <= tokenizer.model_max_length:
             break
         remaining_attention = remaining_attention[:, slice_len:]
-        remaining_ids = id_tensor[:, slice_len:]
+        remaining_ids = remaining_ids[:, slice_len:]
     slices = torch.cat(slices, axis=1)
     return slices
 
