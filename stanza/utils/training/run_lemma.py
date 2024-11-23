@@ -34,8 +34,10 @@ logger = logging.getLogger('stanza')
 def add_lemma_args(parser):
     add_charlm_args(parser)
 
-    parser.add_argument('--no_lemma_classifier', dest='lemma_classifier', action='store_false', default=True,
-                        help="Don't use the lemma classifier datasets.  Default is to build lemma classifier as part of the original lemmatizer")
+    parser.add_argument('--lemma_classifier', dest='lemma_classifier', action='store_true', default=None,
+                        help="Don't use the lemma classifier datasets.  Default is to build lemma classifier as part of the original lemmatizer if the charlm is used")
+    parser.add_argument('--no_lemma_classifier', dest='lemma_classifier', action='store_false',
+                        help="Don't use the lemma classifier datasets.  Default is to build lemma classifier as part of the original lemmatizer if the charlm is used")
 
 def build_model_filename(paths, short_name, command_args, extra_args):
     """
@@ -148,10 +150,13 @@ def run_treebank(mode, paths, treebank, short_name,
             logger.info("Running test lemmatizer for {} with args {}".format(treebank, test_args))
             lemmatizer.main(test_args)
 
-        use_lemma_classifier = command_args.lemma_classifier and short_name in prepare_lemma_classifier.DATASET_MAPPING
+        use_lemma_classifier = command_args.lemma_classifier
+        if use_lemma_classifier is None:
+            use_lemma_classifier = command_args.charlm is not None
+        use_lemma_classifier = use_lemma_classifier and short_name in prepare_lemma_classifier.DATASET_MAPPING
         if use_lemma_classifier and mode == Mode.TRAIN:
-            # TODO: pass along charlm args
-            lemma_classifier_args = [treebank]
+            lc_charlm_args = ['--no_charlm'] if command_args.charlm is None else ['--charlm', command_args.charlm]
+            lemma_classifier_args = [treebank] + lc_charlm_args
             if command_args.force:
                 lemma_classifier_args.append('--force')
             run_lemma_classifier.main(lemma_classifier_args)
