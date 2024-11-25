@@ -45,7 +45,7 @@ def build_model_filename(paths, short_name, command_args, extra_args):
     train_file     = f"{lemma_dir}/{short_name}.train.in.conllu"
 
     if not os.path.exists(train_file):
-        logger.debug("Treebank %s is not prepared for training the lemmatizer.  Could not find any training data at %s  Cannot figure out the expected save_name without looking at the data, but a later step in the process will skip the training anyway" % (treebank, train_file))
+        logger.debug("Treebank %s is not prepared for training the lemmatizer.  Could not find any training data at %s  Cannot figure out the expected save_name without looking at the data, but a later step in the process will skip the training anyway" % (short_name, train_file))
         return None
 
     has_lemmas = check_lemmas(train_file)
