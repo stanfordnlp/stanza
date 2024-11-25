@@ -22,6 +22,7 @@ class Mode(Enum):
     TRAIN = 1
     SCORE_DEV = 2
     SCORE_TEST = 3
+    SCORE_TRAIN = 4
 
 class ArgumentParserWithExtraHelp(argparse.ArgumentParser):
     def __init__(self, sub_argparse, *args, **kwargs):
@@ -56,6 +57,7 @@ def build_argparse(sub_argparse=None):
     parser.add_argument('--train', dest='mode', default=Mode.TRAIN, action='store_const', const=Mode.TRAIN, help='Run in train mode')
     parser.add_argument('--score_dev', dest='mode', action='store_const', const=Mode.SCORE_DEV, help='Score the dev set')
     parser.add_argument('--score_test', dest='mode', action='store_const', const=Mode.SCORE_TEST, help='Score the test set')
+    parser.add_argument('--score_train', dest='mode', action='store_const', const=Mode.SCORE_TRAIN, help='Score the train set as a test set.  Currently only implemented for some models')
 
     # These arguments need to be here so we can identify if the model already exists in the user-specified home
     # TODO: when all of the model scripts handle their own names, can eliminate this argument

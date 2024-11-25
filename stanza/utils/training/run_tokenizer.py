@@ -58,12 +58,15 @@ def run_treebank(mode, paths, treebank, short_name,
     if short_language == "zh" or short_language.startswith("zh-"):
         extra_args = ["--skip_newline"] + extra_args
 
+    train_gold = f"{tokenize_dir}/{short_name}.train.gold.conllu"
     dev_gold = f"{tokenize_dir}/{short_name}.dev.gold.conllu"
     test_gold = f"{tokenize_dir}/{short_name}.test.gold.conllu"
 
+    train_mwt = f"{tokenize_dir}/{short_name}-ud-train-mwt.json"
     dev_mwt = f"{tokenize_dir}/{short_name}-ud-dev-mwt.json"
     test_mwt = f"{tokenize_dir}/{short_name}-ud-test-mwt.json"
 
+    train_pred = temp_output_file if temp_output_file else f"{tokenize_dir}/{short_name}.train.pred.conllu"
     dev_pred = temp_output_file if temp_output_file else f"{tokenize_dir}/{short_name}.dev.pred.conllu"
     test_pred = temp_output_file if temp_output_file else f"{tokenize_dir}/{short_name}.test.pred.conllu"
 
@@ -101,6 +104,18 @@ def run_treebank(mode, paths, treebank, short_name,
 
         results = common.run_eval_script_tokens(test_gold, test_pred)
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
+
+    if mode == Mode.SCORE_TRAIN:
+        test_args = ["--mode", "predict", test_type, train_file, "--lang", short_language,
+                     "--conll_file", train_pred, "--shorthand", short_name, "--mwt_json_file", train_mwt]
+        test_args = test_args + extra_args
+        logger.info("Running test step with args: {}".format(test_args))
+        tokenizer.main(test_args)
+
+        results = common.run_eval_script_tokens(train_gold, train_pred)
+        logger.info("Finished running train set as a test on\n{}\n{}".format(treebank, results))
+
+
 
 def main():
     common.main(run_treebank, "tokenize", "tokenizer", sub_argparse=tokenizer.build_argparse())
