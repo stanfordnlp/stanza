@@ -396,7 +396,7 @@ class Document(StanzaObject):
                     word.sent = sentence
                     word.parent = token
                     sentence.words.append(word)
-                if len(token.words) > 1 and token.start_char is not None and token.end_char is not None and "".join(word.text for word in token.words) == token.text:
+                if token.start_char is not None and token.end_char is not None and "".join(word.text for word in token.words) == token.text:
                     start_char = token.start_char
                     for word in token.words:
                         end_char = start_char + len(word.text)
