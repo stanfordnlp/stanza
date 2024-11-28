@@ -29,7 +29,7 @@ class BaseVocab:
         self.state_attrs = ['lang', 'idx', 'cutoff', 'lower', '_unit2id', '_id2unit']
 
     def build_vocab(self):
-        raise NotImplementedError()
+        raise NotImplementedError("This BaseVocab does not have build_vocab implemented.  This method should create _id2unit and _unit2id")
 
     def state_dict(self):
         """ Returns a dictionary containing all states that are necessary to recover
