@@ -13,6 +13,7 @@ from stanza.models.common.doc import Document
 
 logger = logging.getLogger('stanza')
 
+# TODO: can wrap this in a Pytorch DataLoader, such as what was done for POS
 class DataLoader:
     def __init__(self, doc, batch_size, args, vocab=None, evaluation=False, expand_unk_vocab=False):
         self.batch_size = batch_size
@@ -36,7 +37,6 @@ class DataLoader:
             data = random.sample(data, keep)
             logger.debug("Subsample training set with rate {:g}".format(args['sample_train']))
 
-        data = self.preprocess(data)
         # shuffle for training
         if not self.evaluation:
             indices = list(range(len(data)))
@@ -54,7 +54,7 @@ class DataLoader:
         vocab = Vocab(data, self.args['shorthand'])
         return vocab
 
-    def preprocess(self, data):
+    def process(self, data):
         processed = []
         for d in data:
             src = list(d[0])
@@ -83,6 +83,7 @@ class DataLoader:
         if key < 0 or key >= len(self.data):
             raise IndexError
         batch = self.data[key]
+        batch = self.process(batch)
         batch_size = len(batch)
         batch = list(zip(*batch))
         assert len(batch) == 4
