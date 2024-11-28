@@ -37,7 +37,7 @@ class DataLoader:
             data = random.sample(data, keep)
             logger.debug("Subsample training set with rate {:g}".format(args['sample_train']))
 
-        data = self.preprocess(data, self.vocab, args)
+        data = self.preprocess(data)
         # shuffle for training
         if self.shuffled:
             indices = list(range(len(data)))
@@ -55,13 +55,13 @@ class DataLoader:
         vocab = Vocab(data, self.args['shorthand'])
         return vocab
 
-    def preprocess(self, data, vocab, args):
+    def preprocess(self, data):
         processed = []
         for d in data:
             src = list(d[0])
             src = [constant.SOS] + src + [constant.EOS]
-            tgt_in, tgt_out = self.prepare_target(vocab, d)
-            src = vocab.map(src)
+            tgt_in, tgt_out = self.prepare_target(self.vocab, d)
+            src = self.vocab.map(src)
             processed += [[src, tgt_in, tgt_out, d[0]]]
         return processed
 
