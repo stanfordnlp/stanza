@@ -17,11 +17,10 @@ class DataLoader:
     def __init__(self, doc, batch_size, args, vocab=None, evaluation=False, expand_unk_vocab=False):
         self.batch_size = batch_size
         self.args = args
-        self.eval = evaluation
-        self.shuffled = not self.eval
+        self.evaluation = evaluation
         self.doc = doc
 
-        data = self.load_doc(self.doc, evaluation=self.eval)
+        data = self.load_doc(self.doc, evaluation=self.evaluation)
 
         # handle vocab
         if vocab is None:
@@ -32,14 +31,14 @@ class DataLoader:
             self.vocab = vocab
 
         # filter and sample data
-        if args.get('sample_train', 1.0) < 1.0 and not self.eval:
+        if args.get('sample_train', 1.0) < 1.0 and not self.evaluation:
             keep = int(args['sample_train'] * len(data))
             data = random.sample(data, keep)
             logger.debug("Subsample training set with rate {:g}".format(args['sample_train']))
 
         data = self.preprocess(data)
         # shuffle for training
-        if self.shuffled:
+        if not self.evaluation:
             indices = list(range(len(data)))
             random.shuffle(indices)
             data = [data[i] for i in indices]
@@ -51,7 +50,7 @@ class DataLoader:
         logger.debug("{} batches created.".format(len(data)))
 
     def init_vocab(self, data):
-        assert self.eval == False # for eval vocab must exist
+        assert self.evaluation == False # for eval vocab must exist
         vocab = Vocab(data, self.args['shorthand'])
         return vocab
 
@@ -66,7 +65,7 @@ class DataLoader:
         return processed
 
     def prepare_target(self, vocab, datum):
-        if self.eval:
+        if self.evaluation:
             tgt = list(datum[0])  # as a placeholder
         else:
             tgt = list(datum[1])
@@ -119,7 +118,7 @@ class BinaryDataLoader(DataLoader):
     of an MWT split
     """
     def prepare_target(self, vocab, datum):
-        src = datum[0] if self.eval else datum[1]
+        src = datum[0] if self.evaluation else datum[1]
         binary = [0]
         has_space = False
         for char in src:
