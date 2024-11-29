@@ -37,7 +37,7 @@ class MWTProcessor(UDProcessor):
             else:
                 with torch.no_grad():
                     preds = []
-                    for i, b in enumerate(batch):
+                    for i, b in enumerate(batch.to_loader()):
                         preds += self.trainer.predict(b, never_decode_unk=True, vocab=batch.vocab)
 
                 if self.config.get('ensemble_dict', False):
