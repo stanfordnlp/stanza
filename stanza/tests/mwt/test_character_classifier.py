@@ -81,7 +81,7 @@ def test_train(tmp_path):
     doc = CoNLL.conll2doc(input_str=ENG_DEV)
     dataloader = DataLoader(doc, 10, model.args, vocab=model.vocab, evaluation=True, expand_unk_vocab=True)
     preds = []
-    for i, batch in enumerate(dataloader):
+    for i, batch in enumerate(dataloader.to_loader()):
         assert i == 0 # there should only be one batch
         preds += model.predict(batch, never_decode_unk=True, vocab=dataloader.vocab)
     assert len(preds) == 1

@@ -16,6 +16,7 @@ import time
 from datetime import datetime
 import argparse
 import logging
+import math
 import numpy as np
 import random
 import torch
@@ -184,7 +185,8 @@ def train(args):
         # train a seq2seq model
         logger.info("Training seq2seq-based MWT expander...")
         global_step = 0
-        max_steps = len(train_batch) * args['num_epoch']
+        steps_per_epoch = math.ceil(len(train_batch) / args['batch_size'])
+        max_steps = steps_per_epoch * args['num_epoch']
         dev_score_history = []
         best_dev_preds = []
         current_lr = args['lr']
@@ -201,7 +203,7 @@ def train(args):
         # start training
         for epoch in range(1, args['num_epoch']+1):
             train_loss = 0
-            for i, batch in enumerate(train_batch):
+            for i, batch in enumerate(train_batch.to_loader()):
                 start_time = time.time()
                 global_step += 1
                 loss = trainer.update(batch, eval=False) # update step
@@ -218,7 +220,7 @@ def train(args):
             # eval on dev
             logger.info("Evaluating on dev set...")
             dev_preds = []
-            for i, batch in enumerate(dev_batch):
+            for i, batch in enumerate(dev_batch.to_loader()):
                 preds = trainer.predict(batch)
                 dev_preds += preds
             if args.get('ensemble_dict', False) and args.get('ensemble_early_stop', False):
@@ -296,7 +298,7 @@ def evaluate(args):
         else:
             logger.info("Running the seq2seq model...")
             preds = []
-            for i, b in enumerate(batch):
+            for i, b in enumerate(batch.to_loader()):
                 preds += trainer.predict(b)
 
             if loaded_args.get('ensemble_dict', False):
