@@ -11,3 +11,9 @@ class Vocab(BaseVocab):
 
         self._id2unit = constant.VOCAB_PREFIX + list(sorted(list(counter.keys()), key=lambda k: counter[k], reverse=True))
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
+
+    def add_unit(self, unit):
+        if unit in self._unit2id:
+            return
+        self._unit2id[unit] = len(self._id2unit)
+        self._id2unit.append(unit)

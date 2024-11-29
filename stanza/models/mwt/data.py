@@ -3,6 +3,7 @@ import numpy as np
 import os
 from collections import Counter
 import logging
+
 import torch
 
 import stanza.models.common.seq2seq_constant as constant
@@ -13,11 +14,20 @@ from stanza.models.common.doc import Document
 
 logger = logging.getLogger('stanza')
 
+# enforce that the MWT splitter knows about a couple different alternate apostrophes
+# including covering some potential " typos
+# setting the augmentation to a very low value should be enough to teach it
+# about the unknown characters without messing up the predictions for other text
+#
+#      0x22, 0x27, 0x02BC, 0x02CA, 0x055A, 0x07F4, 0x2019, 0xFF07
+APOS = ('"',  "'",    'ʼ',    'ˊ',    '՚',    'ߴ',    '’',   '＇')
+
 # TODO: can wrap this in a Pytorch DataLoader, such as what was done for POS
 class DataLoader:
     def __init__(self, doc, batch_size, args, vocab=None, evaluation=False, expand_unk_vocab=False):
         self.batch_size = batch_size
         self.args = args
+        self.augment_apos = args.get('augment_apos', 0.0)
         self.evaluation = evaluation
         self.doc = doc
 
@@ -25,7 +35,11 @@ class DataLoader:
 
         # handle vocab
         if vocab is None:
+            assert self.evaluation == False # for eval vocab must exist
             self.vocab = self.init_vocab(data)
+            if self.augment_apos > 0 and any(x in self.vocab for x in APOS):
+                for apos in APOS:
+                    self.vocab.add_unit(apos)
         elif expand_unk_vocab:
             self.vocab = DeltaVocab(data, vocab)
         else:
@@ -54,9 +68,21 @@ class DataLoader:
         vocab = Vocab(data, self.args['shorthand'])
         return vocab
 
+    def maybe_augment_apos(self, datum):
+        for original in APOS:
+            if original in datum[0]:
+                if random.uniform(0,1) < self.augment_apos:
+                    replacement = random.choice(APOS)
+                    datum = (datum[0].replace(original, replacement), datum[1].replace(original, replacement))
+                break
+        return datum
+
+
     def process(self, data):
         processed = []
         for d in data:
+            if not self.evaluation and self.augment_apos > 0:
+                d = self.maybe_augment_apos(d)
             src = list(d[0])
             src = [constant.SOS] + src + [constant.EOS]
             tgt_in, tgt_out = self.prepare_target(self.vocab, d)
