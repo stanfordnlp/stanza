@@ -22,6 +22,8 @@ def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="b
     It can often be convenient to put the intermediate BIO files in
     the same directory as the output files, in which case you can pass
     in same path for both base_input_path and base_output_path.
+
+    This also will rewrite a BIOES as json
     """
     for input_shard, output_shard in zip(shard_names, shards):
         input_filename = os.path.join(base_input_path, '%s.%s.%s' % (short_name, input_shard, suffix))
