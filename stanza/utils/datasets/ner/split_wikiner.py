@@ -6,8 +6,8 @@ Preprocess the WikiNER dataset, by
 
 import os
 import random
+import warnings
 from collections import Counter
-random.seed(1234)
 
 def read_sentences(filename, encoding):
     sents = []
@@ -29,8 +29,8 @@ def read_sentences(filename, encoding):
             array = line.split()
             if len(array) != 2:
                 skip = True
+                warnings.warn("Format error at line {}: {}".format(i+1, line))
                 continue
-            #assert len(array) == 2, "Format error at line {}: {}".format(i+1, line)
             w, t = array
             cache.append([w, t])
         if len(cache) > 0:
@@ -60,6 +60,8 @@ def remap_labels(sents, remap):
     return new_sentences
 
 def split_wikiner(directory, *in_filenames, encoding="utf-8", prefix="", suffix="bio", remap=None, shuffle=True, train_fraction=0.7, dev_fraction=0.15, test_section=True):
+    random.seed(1234)
+
     sents = []
     for filename in in_filenames:
         new_sents = read_sentences(filename, encoding)
