@@ -1,10 +1,21 @@
 """Converts raw data files into json files usable by the training script.
 
-Currently it supports converting wikiner datasets, available here:
+Currently it supports converting WikiNER datasets, available here:
   https://figshare.com/articles/dataset/Learning_multilingual_named_entity_recognition_from_Wikipedia/5462500
   - download the language of interest to {Language}-WikiNER
   - then run
     prepare_ner_dataset.py French-WikiNER
+
+A gold re-edit of WikiNER for French is here:
+  - https://huggingface.co/datasets/danrun/WikiNER-fr-gold/tree/main
+  - https://arxiv.org/abs/2411.00030
+    Danrun Cao, Nicolas Béchet, Pierre-François Marteau
+  - download to $NERBASE/wikiner-fr-gold/wikiner-fr-gold.conll
+    prepare_ner_dataset.py fr_wikinergold
+
+French WikiNER and its gold re-edit can be mixed together with
+    prepare_ner_dataset.py fr_wikinermixed
+  - the data for both WikiNER and WikiNER-fr-gold needs to be in the right place first
 
 Also, Finnish Turku dataset, available here:
   - https://turkunlp.org/fin-ner.html
@@ -444,6 +455,7 @@ import sys
 import tempfile
 
 from stanza.models.common.constant import treebank_to_short_name, lcode2lang, lang_to_langcode, two_to_three_letters
+from stanza.models.ner.utils import to_bio2, bio2_to_bioes
 import stanza.utils.default_paths as default_paths
 
 from stanza.utils.datasets.common import UnknownDatasetError
@@ -476,7 +488,7 @@ import stanza.utils.datasets.ner.simplify_en_worldwide as simplify_en_worldwide
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
 import stanza.utils.datasets.ner.convert_hy_armtdp as convert_hy_armtdp
-from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_dataset, random_shuffle_by_prefixes, read_prefix_file, combine_files
+from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_sentences, write_dataset, random_shuffle_by_prefixes, read_prefix_file, combine_files
 
 SHARDS = ('train', 'dev', 'test')
 
@@ -606,6 +618,91 @@ def process_wikiner(paths, dataset):
     print("Splitting %s to %s" % (csv_file, base_output_path))
     split_wikiner(base_output_path, csv_file, prefix=short_name)
     convert_bio_to_json(base_output_path, base_output_path, short_name)
+
+def process_french_wikiner_gold(paths, dataset):
+    short_name = treebank_to_short_name(dataset)
+
+    base_input_path = os.path.join(paths["NERBASE"], "wikiner-fr-gold")
+    base_output_path = paths["NER_DATA_DIR"]
+
+    input_filename = os.path.join(base_input_path, "wikiner-fr-gold.conll")
+    if not os.path.exists(input_filename):
+        raise FileNotFoundError("Could not find the expected input file %s for dataset %s" % (input_filename, base_input_path))
+
+    print("Reading %s" % input_filename)
+    sentences = read_tsv(input_filename, text_column=0, annotation_column=2, separator=" ")
+    print("Read %d sentences" % len(sentences))
+
+    tags = [y for sentence in sentences for x, y in sentence]
+    tags = sorted(set(tags))
+    print("Found the following tags:\n%s" % tags)
+    expected_tags = ['B-LOC', 'B-MISC', 'B-ORG', 'B-PER',
+                     'E-LOC', 'E-MISC', 'E-ORG', 'E-PER',
+                     'I-LOC', 'I-MISC', 'I-ORG', 'I-PER',
+                     'O',
+                     'S-LOC', 'S-MISC', 'S-ORG', 'S-PER']
+    assert tags == expected_tags
+
+    output_filename = os.path.join(base_output_path, "%s.full.bioes" % short_name)
+    print("Writing BIOES to %s" % output_filename)
+    write_sentences(output_filename, sentences)
+
+    print("Splitting %s to %s" % (output_filename, base_output_path))
+    split_wikiner(base_output_path, output_filename, prefix=short_name)
+    convert_bio_to_json(base_output_path, base_output_path, short_name)
+
+def process_french_wikiner_mixed(paths, dataset):
+    """
+    Build both the original and gold edited versions of WikiNER, then mix them
+    """
+    short_name = treebank_to_short_name(dataset)
+
+    process_french_wikiner_gold(paths, "fr_wikinergold")
+    process_wikiner(paths, "French-WikiNER")
+    base_output_path = paths["NER_DATA_DIR"]
+
+    gold_train = read_tsv(os.path.join(base_output_path, "fr_wikinergold.train.bio"), text_column=0, annotation_column=1)
+    gold_dev = read_tsv(os.path.join(base_output_path, "fr_wikinergold.dev.bio"), text_column=0, annotation_column=1)
+    gold_test = read_tsv(os.path.join(base_output_path, "fr_wikinergold.test.bio"), text_column=0, annotation_column=1)
+    gold = gold_train + gold_dev + gold_test
+    print("%d total sentences in the gold relabeled dataset (randomly split)" % len(gold))
+    gold = {tuple([x[0] for x in sentence]): [x[1] for x in sentence] for sentence in gold}
+    print("  (%d after dedup)" % len(gold))
+
+    original = (read_tsv(os.path.join(base_output_path, "fr_wikiner.train.bio"), text_column=0, annotation_column=1) +
+                read_tsv(os.path.join(base_output_path, "fr_wikiner.dev.bio"), text_column=0, annotation_column=1) +
+                read_tsv(os.path.join(base_output_path, "fr_wikiner.test.bio"), text_column=0, annotation_column=1))
+    print("%d total sentences in the original wiki" % len(original))
+    original_words = {tuple([x[0] for x in sentence]) for sentence in original}
+    print("  (%d after dedup)" % len(original_words))
+
+    missing = [sentence for sentence in gold if sentence not in original_words]
+    # currently this dataset doesn't find two sentences
+    # one was dropped by the filter for incompletely tagged lines
+    # the other is probably not a huge deal to have one duplicate
+    assert len(missing) <= 2
+    print("Missing %d sentences" % len(missing))
+
+    skipped = 0
+    silver = []
+    silver_used = set()
+    for sentence in original:
+        words = tuple([x[0] for x in sentence])
+        tags = tuple([x[1] for x in sentence])
+        if words in gold or words in silver_used:
+            skipped += 1
+            continue
+        tags = to_bio2(tags)
+        tags = bio2_to_bioes(tags)
+        sentence = list(zip(words, tags))
+        silver.append(sentence)
+        silver_used.add(words)
+    print("Using %d sentences from the original wikiner alongside the gold annotated train set" % len(silver))
+    print("Skipped %d sentences" % skipped)
+
+    mixed_train = gold_train + silver
+    write_dataset([mixed_train, gold_dev, gold_test], base_output_path, short_name)
+
 
 def get_rgai_input_path(paths):
     return os.path.join(paths["NERBASE"], "hu_rgai")
@@ -1212,6 +1309,8 @@ DATASET_MAPPING = {
     "en_worldwide-9class": process_en_worldwide_9class,
     "fa_arman":          process_fa_arman,
     "fi_turku":          process_turku,
+    "fr_wikinergold":    process_french_wikiner_gold,
+    "fr_wikinermixed":   process_french_wikiner_mixed,
     "hi_hiner":          process_hiner,
     "hi_hinercollapsed": process_hinercollapsed,
     "hi_ijc":            process_ijc,
