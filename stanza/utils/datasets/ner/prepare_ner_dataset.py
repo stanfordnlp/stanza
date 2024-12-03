@@ -448,6 +448,7 @@ IAHLT contains NER for Hebrew in the knesset treebank
 
 import glob
 import os
+import json
 import random
 import re
 import shutil
@@ -654,6 +655,34 @@ def process_french_wikiner_gold(paths, dataset):
 def process_french_wikiner_mixed(paths, dataset):
     """
     Build both the original and gold edited versions of WikiNER, then mix them
+
+    First we eliminate any duplicates (with one exception), then we combine the data
+
+    There are two main ways we could have done this:
+      - mix it together without any restrictions
+      - use the multi_ner mechanism to build a dataset which represents two prediction heads
+
+    The second method seems to give slightly better results than the first method
+
+    On the randomly selected test set, using WV and charlm but not a transformer:
+
+    one prediction head:
+      INFO: Score by entity:
+        Prec.   Rec.    F1
+        89.32   89.26   89.29
+      INFO: Score by token:
+        Prec.   Rec.    F1
+        89.43   86.88   88.14
+      INFO: Weighted f1 for non-O tokens: 0.878855
+
+    two prediction heads:
+      INFO: Score by entity:
+        Prec.   Rec.    F1
+        89.83   89.76   89.79
+      INFO: Score by token:
+        Prec.   Rec.    F1
+        89.17   88.15   88.66
+      INFO: Weighted f1 for non-O tokens: 0.885675
     """
     short_name = treebank_to_short_name(dataset)
 
@@ -661,12 +690,16 @@ def process_french_wikiner_mixed(paths, dataset):
     process_wikiner(paths, "French-WikiNER")
     base_output_path = paths["NER_DATA_DIR"]
 
-    gold_train = read_tsv(os.path.join(base_output_path, "fr_wikinergold.train.bio"), text_column=0, annotation_column=1)
-    gold_dev = read_tsv(os.path.join(base_output_path, "fr_wikinergold.dev.bio"), text_column=0, annotation_column=1)
-    gold_test = read_tsv(os.path.join(base_output_path, "fr_wikinergold.test.bio"), text_column=0, annotation_column=1)
+    with open(os.path.join(base_output_path, "fr_wikinergold.train.json")) as fin:
+        gold_train = json.load(fin)
+    with open(os.path.join(base_output_path, "fr_wikinergold.dev.json")) as fin:
+        gold_dev = json.load(fin)
+    with open(os.path.join(base_output_path, "fr_wikinergold.test.json")) as fin:
+        gold_test = json.load(fin)
+
     gold = gold_train + gold_dev + gold_test
     print("%d total sentences in the gold relabeled dataset (randomly split)" % len(gold))
-    gold = {tuple([x[0] for x in sentence]): [x[1] for x in sentence] for sentence in gold}
+    gold = {tuple([x["text"] for x in sentence]): sentence for sentence in gold}
     print("  (%d after dedup)" % len(gold))
 
     original = (read_tsv(os.path.join(base_output_path, "fr_wikiner.train.bio"), text_column=0, annotation_column=1) +
@@ -694,14 +727,31 @@ def process_french_wikiner_mixed(paths, dataset):
             continue
         tags = to_bio2(tags)
         tags = bio2_to_bioes(tags)
-        sentence = list(zip(words, tags))
+        sentence = [{"text": x, "ner": y, "multi_ner": ["-", y]} for x, y in zip(words, tags)]
         silver.append(sentence)
         silver_used.add(words)
     print("Using %d sentences from the original wikiner alongside the gold annotated train set" % len(silver))
     print("Skipped %d sentences" % skipped)
 
+    gold_train = [[{"text": x["text"], "ner": x["ner"], "multi_ner": [x["ner"], "-"]} for x in sentence]
+                  for sentence in gold_train]
+    gold_dev = [[{"text": x["text"], "ner": x["ner"], "multi_ner": [x["ner"], "-"]} for x in sentence]
+                  for sentence in gold_dev]
+    gold_test = [[{"text": x["text"], "ner": x["ner"], "multi_ner": [x["ner"], "-"]} for x in sentence]
+                  for sentence in gold_test]
+
     mixed_train = gold_train + silver
-    write_dataset([mixed_train, gold_dev, gold_test], base_output_path, short_name)
+    print("Total sentences in the mixed training set: %d" % len(mixed_train))
+    output_filename = os.path.join(base_output_path, "%s.train.json" % short_name)
+    with open(output_filename, 'w', encoding='utf-8') as fout:
+        json.dump(mixed_train, fout, indent=1)
+
+    output_filename = os.path.join(base_output_path, "%s.dev.json" % short_name)
+    with open(output_filename, 'w', encoding='utf-8') as fout:
+        json.dump(gold_dev, fout, indent=1)
+    output_filename = os.path.join(base_output_path, "%s.test.json" % short_name)
+    with open(output_filename, 'w', encoding='utf-8') as fout:
+        json.dump(gold_test, fout, indent=1)
 
 
 def get_rgai_input_path(paths):
