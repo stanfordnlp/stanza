@@ -389,6 +389,16 @@ class TestTrainer:
                 assert tr.epochs_trained == i
                 assert isinstance(tr.optimizer, optim.AdamW)
 
+    def test_orthogonal(self, wordvec_pretrain_file):
+        """
+        Test a multistage training for a few iterations on the fake data
+
+        This should start with no pattn or lattn, have pattn in the middle, then lattn at the end
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            args = ['--orthogonal_learning_rate', '0.01']
+            self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
+
 
     def test_grad_clip_hooks(self, wordvec_pretrain_file):
         """
