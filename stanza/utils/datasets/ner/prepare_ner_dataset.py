@@ -489,7 +489,7 @@ import stanza.utils.datasets.ner.simplify_en_worldwide as simplify_en_worldwide
 import stanza.utils.datasets.ner.suc_to_iob as suc_to_iob
 import stanza.utils.datasets.ner.suc_conll_to_iob as suc_conll_to_iob
 import stanza.utils.datasets.ner.convert_hy_armtdp as convert_hy_armtdp
-from stanza.utils.datasets.ner.utils import convert_bio_to_json, get_tags, read_tsv, write_sentences, write_dataset, random_shuffle_by_prefixes, read_prefix_file, combine_files
+from stanza.utils.datasets.ner.utils import convert_bioes_to_bio, convert_bio_to_json, get_tags, read_tsv, write_sentences, write_dataset, random_shuffle_by_prefixes, read_prefix_file, combine_files
 
 SHARDS = ('train', 'dev', 'test')
 
@@ -649,8 +649,9 @@ def process_french_wikiner_gold(paths, dataset):
     write_sentences(output_filename, sentences)
 
     print("Splitting %s to %s" % (output_filename, base_output_path))
-    split_wikiner(base_output_path, output_filename, prefix=short_name)
-    convert_bio_to_json(base_output_path, base_output_path, short_name)
+    split_wikiner(base_output_path, output_filename, prefix=short_name, suffix="bioes")
+    convert_bioes_to_bio(base_output_path, base_output_path, short_name)
+    convert_bio_to_json(base_output_path, base_output_path, short_name, suffix="bioes")
 
 def process_french_wikiner_mixed(paths, dataset):
     """
