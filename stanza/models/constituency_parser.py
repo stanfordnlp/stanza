@@ -556,6 +556,9 @@ def build_argparse():
     parser.add_argument('--grad_clipping', default=None, type=float, help='Clip abs(grad) to this amount.  Use --no_grad_clipping to turn off grad clipping')
     parser.add_argument('--no_grad_clipping', action='store_const', const=None, dest='grad_clipping', help='Use --no_grad_clipping to turn off grad clipping')
 
+    parser.add_argument('--orthogonal_initial_epoch', default=1, type=int, help='When to start using the orthogonal loss')
+    parser.add_argument('--orthogonal_learning_rate', default=0.0, type=float, help='Multiplicative factor for the orthogonal loss')
+
     # Large Margin is from Large Margin In Softmax Cross-Entropy Loss
     # it did not help on an Italian VIT test
     # scores went from 0.8252 to 0.8248
@@ -727,6 +730,7 @@ def build_model_filename(args):
                                                transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
                                                tscheme=args['transition_scheme'].short_name,
                                                trans_layers=args['bert_hidden_layers'],
+                                               orthogonal=args['orthogonal_learning_rate'],
                                                seed=args['seed'])
     model_save_file = re.sub("_+", "_", model_save_file)
     logger.info("Expanded save_name: %s", model_save_file)
