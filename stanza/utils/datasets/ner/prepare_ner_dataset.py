@@ -714,8 +714,8 @@ def process_french_wikiner_mixed(paths, dataset):
     # currently this dataset doesn't find two sentences
     # one was dropped by the filter for incompletely tagged lines
     # the other is probably not a huge deal to have one duplicate
-    assert len(missing) <= 2
     print("Missing %d sentences" % len(missing))
+    assert len(missing) <= 2
 
     skipped = 0
     silver = []
