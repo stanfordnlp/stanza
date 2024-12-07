@@ -695,16 +695,14 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
                 if left in con_values and right in con_values:
                     left_value = con_values[left].squeeze(0)
                     right_value = con_values[right].squeeze(0)
-                    # technically could divide by norm to get the angle
-                    # not sure that would help
-                    # training dot product to be 0 is already enforcing orthogonal
                     mse = torch.dot(left_value, right_value)
                     orthogonal_losses.append(mse)
         for result in gold_results:
             gold_constituents = result.constituents
             con_values = {}
             for con in gold_constituents:
-                con_values[str(con.value)] = con.tree_hx
+                # normalize so that we are enforcing only the angle go to 0, not the length
+                con_values[str(con.value)] = nn.functional.normalize(con.tree_hx)
             build_losses(con_values, result.gold)
         orthogonal_losses = torch.stack(orthogonal_losses)
         orthogonal_target = torch.zeros(orthogonal_losses.shape).to(orthogonal_losses.device)
