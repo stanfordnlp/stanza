@@ -162,6 +162,7 @@ specific_default_pretrains = {
     "is":      "fasttext157",
     "it":      "conll17",
     "ja":      "conll17",
+    "ka":      "fasttext157",
     "kk":      "fasttext157",
     "kmr":     "fasttextwiki",
     "ko":      "conll17",
