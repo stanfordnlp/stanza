@@ -1,5 +1,6 @@
 from collections import Counter, namedtuple
 import copy
+import itertools
 import logging
 import os
 import random
@@ -689,13 +690,13 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
             subtrees = [x for x in tree.children if not x.is_preterminal()]
             for subtree in subtrees:
                 build_losses(con_values, subtree)
-            for subtree_idx in range(len(subtrees)-1):
-                left = str(subtrees[subtree_idx])
-                right = str(subtrees[subtree_idx+1])
+            for left, right in itertools.combinations(subtrees, 2):
+                left = str(left)
+                right = str(right)
                 if left in con_values and right in con_values:
                     left_value = con_values[left].squeeze(0)
                     right_value = con_values[right].squeeze(0)
-                    mse = torch.dot(left_value, right_value)
+                    mse = torch.dot(left_value, right_value) / (len(subtrees) - 1)
                     orthogonal_losses.append(mse)
         for result in gold_results:
             gold_constituents = result.constituents
