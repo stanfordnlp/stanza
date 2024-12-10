@@ -262,9 +262,6 @@ ner_pretrains = {
         "ancora":  "fasttextwiki",
         "conll02": "fasttextwiki",
     },
-    "fr": {
-        "wikiner": "fasttextwiki",
-    },
     "nl": {
         "conll02": "fasttextwiki",
         "wikiner": "fasttextwiki",
@@ -364,7 +361,7 @@ default_ners = {
     "es": "conll02",
     "fa": "arman",
     "fi": "turku",
-    "fr": "wikinergold",
+    "fr": "wikinergold_charlm",
     "he": "iahlt_charlm",
     "hu": "combined",
     "hy": "armtdp",
