@@ -293,7 +293,7 @@ We use the vectors for French from the CoNLL 17 shared task.  Other suggestions 
 
 ### Ottoman Turkish
 
-As of UD 2.15, there is an Ottoman Turkish treebank large enough to use for models, [BOUN](https://github.com/UniversalDependencies/UD_Ottoman_Turkish-BOUN).  Using the CoNLL 17 shared task vectors for this treebank on POS gives a small improvement.  Again, other suggestions are welcome.
+As of UD 2.15, there is an Ottoman Turkish treebank large enough to use for models, [BOUN](https://github.com/UniversalDependencies/UD_Ottoman_Turkish-BOUN).  Using the CoNLL 17 shared task vectors for Turkish on this treebank's POS gives a small improvement.  Again, other suggestions are welcome.
 
 | Pretrain    | UPOS  | XPOS  | UFeats | AllTags |
 | :---------: | :--:  | :--:  | :----: | :-----: |
