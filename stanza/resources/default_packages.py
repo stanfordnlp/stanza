@@ -364,7 +364,7 @@ default_ners = {
     "es": "conll02",
     "fa": "arman",
     "fi": "turku",
-    "fr": "wikiner",
+    "fr": "wikinergold",
     "he": "iahlt_charlm",
     "hu": "combined",
     "hy": "armtdp",
