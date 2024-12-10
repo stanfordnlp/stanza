@@ -663,9 +663,11 @@ def process_french_wikiner_mixed(paths, dataset):
       - mix it together without any restrictions
       - use the multi_ner mechanism to build a dataset which represents two prediction heads
 
-    The second method seems to give slightly better results than the first method
+    The second method seems to give slightly better results than the first method,
+    but neither beat just using a transformer on the gold set alone
 
-    On the randomly selected test set, using WV and charlm but not a transformer:
+    On the randomly selected test set, using WV and charlm but not a transformer
+    (this was on a previously published version of the dataset):
 
     one prediction head:
       INFO: Score by entity:
@@ -684,6 +686,26 @@ def process_french_wikiner_mixed(paths, dataset):
         Prec.   Rec.    F1
         89.17   88.15   88.66
       INFO: Weighted f1 for non-O tokens: 0.885675
+
+    On a randomly selected dev set, using transformer:
+
+    gold:
+      INFO: Score by entity:
+        Prec.   Rec.    F1
+        93.63   93.98   93.81
+      INFO: Score by token:
+        Prec.   Rec.    F1
+        92.80   92.79   92.80
+      INFO: Weighted f1 for non-O tokens: 0.927548
+
+    mixed:
+      INFO: Score by entity:
+        Prec.   Rec.    F1
+        93.54   93.82   93.68
+      INFO: Score by token:
+        Prec.   Rec.    F1
+        92.99   92.51   92.75
+      INFO: Weighted f1 for non-O tokens: 0.926964
     """
     short_name = treebank_to_short_name(dataset)
 
@@ -711,11 +733,20 @@ def process_french_wikiner_mixed(paths, dataset):
     print("  (%d after dedup)" % len(original_words))
 
     missing = [sentence for sentence in gold if sentence not in original_words]
+    for sentence in missing:
+        # the capitalization of WisiGoths and OstroGoths is different
+        # between the original and the new in some cases
+        goths = tuple([x.replace("Goth", "goth") for x in sentence])
+        if goths != sentence and goths in original_words:
+            original_words.add(sentence)
+    missing = [sentence for sentence in gold if sentence not in original_words]
     # currently this dataset doesn't find two sentences
     # one was dropped by the filter for incompletely tagged lines
     # the other is probably not a huge deal to have one duplicate
     print("Missing %d sentences" % len(missing))
     assert len(missing) <= 2
+    for sent in missing:
+        print(sent)
 
     skipped = 0
     silver = []
