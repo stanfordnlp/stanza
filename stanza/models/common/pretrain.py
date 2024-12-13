@@ -114,11 +114,11 @@ class Pretrain:
         Write the vocab & values to a text file
         """
         with open(filename, "w") as fout:
-            for i in range(len(self.vocab)):
-                row = self.emb[i]
-                fout.write(self.vocab[i])
+            for word_idx, word in enumerate(self.vocab):
+                row = self.emb[word_idx].to("cpu")
+                fout.write(word)
                 fout.write("\t")
-                fout.write("\t".join(map(str, row)))
+                fout.write("\t".join(["%.6f" % x.item() for x in row]))
                 fout.write("\n")
 
 
