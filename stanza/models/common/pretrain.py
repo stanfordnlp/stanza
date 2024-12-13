@@ -109,16 +109,19 @@ class Pretrain:
             logger.warning("Saving pretrained data failed due to the following exception... continuing anyway.\n\t{}".format(e))
 
 
-    def write_text(self, filename):
+    def write_text(self, filename, header=False):
         """
         Write the vocab & values to a text file
         """
         with open(filename, "w") as fout:
+            if header:
+                word_dim = self.emb[0].shape[0]
+                fout.write("%d %d\n" % (len(self.vocab), word_dim))
             for word_idx, word in enumerate(self.vocab):
                 row = self.emb[word_idx].to("cpu")
                 fout.write(word)
-                fout.write("\t")
-                fout.write("\t".join(["%.6f" % x.item() for x in row]))
+                fout.write(" ")
+                fout.write(" ".join(["%.6f" % x.item() for x in row]))
                 fout.write("\n")
 
 
