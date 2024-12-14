@@ -413,7 +413,14 @@ def convert_to_position_list(sentence, offsets):
         # this uses the last token piece for any offset by overwriting the previous value
         list_offsets[offset+1] = pos
     list_offsets[0] = 0
-    list_offsets[-1] = list_offsets[-2] + 1
+    for offset in list_offsets[-2::-1]:
+        # count backwards in case the last position was
+        # a word or character that got erased by the tokenizer
+        # this loop should eventually find something...
+        # after all, we just set the first one to be 0
+        if offset is not None:
+            list_offsets[-1] = offset + 1
+            break
     return list_offsets
 
 def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach):
