@@ -727,6 +727,8 @@ def build_model_filename(args):
                                                oracle_level=args['oracle_level'],
                                                embedding=embedding,
                                                finetune=maybe_finetune,
+                                               contrastive_learning_rate=args['contrastive_learning_rate'],
+                                               contrastive_initial_epoch=args['contrastive_initial_epoch'],
                                                transformer_finetune_begin=transformer_finetune_begin,
                                                transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
                                                tscheme=args['transition_scheme'].short_name,
