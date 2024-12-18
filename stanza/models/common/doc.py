@@ -440,6 +440,16 @@ class Document(StanzaObject):
             self.ents += s_ents
         return self.ents
 
+    def sort_features(self):
+        """ Sort the features on all the words... useful for prototype treebanks, for example """
+        for sentence in self.sentences:
+            for word in sentence.words:
+                if not word.feats:
+                    continue
+                pieces = word.feats.split("|")
+                pieces = sorted(pieces)
+                word.feats = "|".join(pieces)
+
     def iter_words(self):
         """ An iterator that returns all of the words in this Document. """
         for s in self.sentences:
