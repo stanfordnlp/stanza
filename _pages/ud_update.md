@@ -74,7 +74,7 @@ currently resides in `stanza/resources/default_packages.py`
 ### Add new default packages
 
 Any new languages will also need a default package marked in the appropriate resources file, probably
-`stanza/resources/default_packages.py`
+in the `default_treebanks` map in `stanza/resources/default_packages.py`
 
 ### Tokenizer models with dictionaries
 
