@@ -128,12 +128,51 @@ class DataLoader:
         if evaluation:
             data = doc.get([TEXT, UPOS, LEMMA])
         else:
-            data = doc.get([TEXT, UPOS, LEMMA, HEAD, DEPREL], as_sentences=True)
+            data = doc.get([TEXT, UPOS, LEMMA, HEAD, DEPREL, MISC], as_sentences=True)
             data = DataLoader.remove_goeswith(data)
+            data = DataLoader.extract_correct_forms(data)
         data = DataLoader.resolve_none(data)
         if caseless:
             data = DataLoader.lowercase_data(data)
         return data
+
+    @staticmethod
+    def extract_correct_forms(data):
+        """
+        Here we go through the raw data and use the CorrectForm of words tagged with CorrectForm
+
+        In addition, if the incorrect form of the word is not present in the training data,
+        we keep the incorrect form for the lemmatizer to learn from.
+        This way, it can occasionally get things right in misspelled input text.
+
+        We do check for and eliminate words where the incorrect form is already known as the
+        lemma for a different word.  For example, in the English datasets, there is a "busy"
+        which was meant to be "buys", and we don't want the model to learn to lemmatize "busy" to "buy"
+        """
+        new_data = []
+        incorrect_forms = []
+        for word in data:
+            misc = word[-1]
+            if not misc:
+                new_data.append(word[:3])
+                continue
+            misc = misc.split("|")
+            for piece in misc:
+                if piece.startswith("CorrectForm="):
+                    cf = piece.split("=", maxsplit=1)[1]
+                    # treat the CorrectForm as the desired word
+                    new_data.append((cf, word[1], word[2]))
+                    # and save the broken one for later in case it wasn't used anywhere else
+                    incorrect_forms.append((cf, word))
+                    break
+            else:
+                # if no CorrectForm, just keep the word as normal
+                new_data.append(word[:3])
+        known_words = {x[0] for x in new_data}
+        for correct_form, word in incorrect_forms:
+            if word[0] not in known_words:
+                new_data.append(word[:3])
+        return new_data
 
     @staticmethod
     def remove_goeswith(data):
@@ -154,7 +193,7 @@ class DataLoader:
                 if word[4] == 'goeswith':
                     remove_indices.add(word_idx)
                     remove_indices.add(word[3]-1)
-            filtered_data.extend([x[:3] for idx, x in enumerate(sentence) if idx not in remove_indices])
+            filtered_data.extend([x for idx, x in enumerate(sentence) if idx not in remove_indices])
         return filtered_data
 
     @staticmethod

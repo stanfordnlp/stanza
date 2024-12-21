@@ -60,6 +60,16 @@ GOESWITH_DATA = """
 
 """.lstrip()
 
+CORRECT_FORM_DATA = """
+# sent_id = weblog-blogspot.com_healingiraq_20040409053012_ENG_20040409_053012-0019
+# text = They are targetting ambulances
+1	They	they	PRON	PRP	Case=Nom|Number=Plur|Person=3|PronType=Prs	3	nsubj	3:nsubj	_
+2	are	be	AUX	VBP	Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin	3	aux	3:aux	_
+3	targetting	target	VERB	VBG	Tense=Pres|Typo=Yes|VerbForm=Part	0	root	0:root	CorrectForm=targeting
+4	ambulances	ambulance	NOUN	NNS	Number=Plur	3	obj	3:obj	SpaceAfter=No
+"""
+
+
 def test_load_document():
     train_doc = CoNLL.conll2doc(input_str=TRAIN_DATA)
     data = DataLoader.load_doc(train_doc, caseless=False, evaluation=True)
@@ -81,3 +91,16 @@ def test_load_goeswith():
     assert len(data) == 33 # will be the same as in test_load_document, but with the trailing 3 GOESWITH removed
     assert all(len(x) == 3 for x in data)
 
+def test_correct_form():
+    raw_data = TRAIN_DATA + CORRECT_FORM_DATA
+    train_doc = CoNLL.conll2doc(input_str=raw_data)
+    data = DataLoader.load_doc(train_doc, caseless=False, evaluation=True)
+    assert len(data) == 37
+    # the 'targeting' correction should not be applied if evaluation=True
+    # when evaluation=False, then the CorrectForms will be applied
+    assert not any(x[0] == 'targeting' for x in data)
+
+    data = DataLoader.load_doc(train_doc, caseless=False, evaluation=False)
+    assert len(data) == 38 # the same, but with an extra row so the model learns both 'targetting' and 'targeting'
+    assert any(x[0] == 'targeting' for x in data)
+    assert any(x[0] == 'targetting' for x in data)
