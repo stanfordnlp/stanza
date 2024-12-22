@@ -298,6 +298,9 @@ def evaluate(args):
             logger.info("[Ensembling dict with seq2seq lemmatizer...]")
             preds = trainer.ensemble(batch.doc.get([TEXT, UPOS]), preds)
 
+        if trainer.has_contextual_lemmatizers():
+            preds = trainer.update_contextual_preds(batch.doc, preds)
+
     # write to file and score
     batch.doc.set([LEMMA], preds)
     CoNLL.write_doc2conll(batch.doc, system_pred_file)

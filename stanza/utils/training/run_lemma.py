@@ -167,7 +167,9 @@ def run_treebank(mode, paths, treebank, short_name,
                            '--output', save_name,
                            '--classifier', 'saved_models/lemma_classifier/%s_lemma_classifier.pt' % short_name]
             attach_lemma_classifier.main(attach_args)
-            # TODO: rerun dev set / test set with the attached classifier?
+
+            # now we rerun the dev set - the HI in particular demonstrates some good improvement
+            lemmatizer.main(dev_args)
 
 def main():
     common.main(run_treebank, "lemma", "lemmatizer", add_lemma_args, sub_argparse=lemmatizer.build_argparse(), build_model_filename=build_model_filename, choose_charlm_method=choose_lemma_charlm)

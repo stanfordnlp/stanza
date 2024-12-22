@@ -12,6 +12,7 @@ from torch import nn
 import torch.nn.init as init
 
 import stanza.models.common.seq2seq_constant as constant
+from stanza.models.common.doc import TEXT, UPOS
 from stanza.models.common.foundation_cache import load_charlm
 from stanza.models.common.seq2seq_model import Seq2SeqModel
 from stanza.models.common.char_model import CharacterLanguageModelWordAdapter
@@ -169,6 +170,29 @@ class Trainer(object):
             contextual_predictions = contextual.predict(pred_idx, pred_sent_words, pred_sent_tags)
             for sent_id, word_id, pred in zip(pred_sent_ids, pred_idx, contextual_predictions):
                 preds[sent_id][word_id] = pred
+        return preds
+
+    def update_contextual_preds(self, doc, preds):
+        """
+        Update a flat list of preds with the output of the contextual lemmatizers
+
+        - First, it unflattens the preds based on the lengths of the sentences
+        - Then it uses the contextual lemmatizers
+        - Finally, it reflattens the preds into the format expected by the caller
+        """
+        if len(self.contextual_lemmatizers) == 0:
+            return preds
+
+        sentence_words = doc.get([TEXT], as_sentences=True)
+        sentence_tags = doc.get([UPOS], as_sentences=True)
+        sentence_preds = []
+        start_index = 0
+        for sent in sentence_words:
+            end_index = start_index + len(sent)
+            sentence_preds.append(preds[start_index:end_index])
+            start_index += len(sent)
+        preds = self.predict_contextual(sentence_words, sentence_tags, sentence_preds)
+        preds = [lemma for sentence in preds for lemma in sentence]
         return preds
 
     def update_lr(self, new_lr):

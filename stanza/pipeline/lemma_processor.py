@@ -115,16 +115,7 @@ class LemmaProcessor(UDProcessor):
                 preds = self.trainer.postprocess(batch.doc.get([doc.TEXT]), preds, edits=edits)
 
             if self.trainer.has_contextual_lemmatizers():
-                sentence_words = batch.doc.get([doc.TEXT], as_sentences=True)
-                sentence_tags = batch.doc.get([doc.UPOS], as_sentences=True)
-                sentence_preds = []
-                start_index = 0
-                for sent in sentence_words:
-                    end_index = start_index + len(sent)
-                    sentence_preds.append(preds[start_index:end_index])
-                    start_index += len(sent)
-                preds = self.trainer.predict_contextual(sentence_words, sentence_tags, sentence_preds)
-                preds = [lemma for sentence in preds for lemma in sentence]
+                preds = self.trainer.update_contextual_preds(batch.doc, preds)
 
         # map empty string lemmas to '_'
         preds = [max([(len(x), x), (0, '_')])[1] for x in preds]
