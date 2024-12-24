@@ -133,3 +133,13 @@ def test_latin_caseless_lemmatizer():
     assert len(doc.sentences[0].words) == 3
     for word, expected in zip(doc.sentences[0].words, expected_lemmas):
         assert word.lemma == expected
+
+def test_contextual_lemmatizer():
+    nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, package={"lemma": "default_accurate"}, download_method="reuse_resources")
+    lemmatizer = nlp.processors['lemma']._trainer
+    # the accurate model should have a 's classifier
+    assert len(lemmatizer.contextual_lemmatizers) > 0
+    # ideally the doc would have 'have' as the lemma for the second
+    # word, but maybe it's not always accurate.  actually, it works
+    # fine at the time of this test
+    doc = nlp("He's added a contextual lemmatizer")
