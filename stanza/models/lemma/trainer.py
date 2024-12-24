@@ -32,10 +32,10 @@ def unpack_batch(batch, device):
 
 class Trainer(object):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, device=None, foundation_cache=None):
+    def __init__(self, args=None, vocab=None, emb_matrix=None, model_file=None, device=None, foundation_cache=None, lemma_classifier_args=None):
         if model_file is not None:
             # load everything from file
-            self.load(model_file, args, foundation_cache)
+            self.load(model_file, args, foundation_cache, lemma_classifier_args)
         else:
             # build model from scratch
             self.args = args
@@ -292,7 +292,7 @@ class Trainer(object):
         torch.save(params, filename, _use_new_zipfile_serialization=False)
         logger.info("Model saved to {}".format(filename))
 
-    def load(self, filename, args, foundation_cache):
+    def load(self, filename, args, foundation_cache, lemma_classifier_args=None):
         try:
             checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
         except BaseException:
@@ -313,4 +313,4 @@ class Trainer(object):
         self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         self.contextual_lemmatizers = []
         for contextual in checkpoint.get('contextual', []):
-            self.contextual_lemmatizers.append(LemmaClassifier.from_checkpoint(contextual))
+            self.contextual_lemmatizers.append(LemmaClassifier.from_checkpoint(contextual, args=lemma_classifier_args))

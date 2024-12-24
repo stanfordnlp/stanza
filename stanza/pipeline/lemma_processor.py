@@ -48,11 +48,14 @@ class LemmaProcessor(UDProcessor):
             # since a long running program will remember everything
             # (unless we go back and make it smarter)
             # we make this an option, not the default
+            # TODO: need to update the cache to skip the contextual lemmatizer
             self.store_results = config.get('store_results', False)
             self._use_identity = False
             args = {'charlm_forward_file': config.get('forward_charlm_path', None),
                     'charlm_backward_file': config.get('backward_charlm_path', None)}
-            self._trainer = Trainer(args=args, model_file=config['model_path'], device=device, foundation_cache=pipeline.foundation_cache)
+            lemma_classifier_args = dict(args)
+            lemma_classifier_args['wordvec_pretrain_file'] = config.get('pretrain_path', None)
+            self._trainer = Trainer(args=args, model_file=config['model_path'], device=device, foundation_cache=pipeline.foundation_cache, lemma_classifier_args=lemma_classifier_args)
 
     def _set_up_requires(self):
         self._pretagged = self._config.get('pretagged', None)

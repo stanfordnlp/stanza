@@ -22,6 +22,7 @@ from stanza import __resources_version__
 from stanza.models.common.constant import lcode2lang, two_to_three_letters, three_to_two_letters
 from stanza.resources.default_packages import PACKAGES, TRANSFORMERS, TRANSFORMER_NICKNAMES
 from stanza.resources.default_packages import *
+from stanza.utils.datasets.prepare_lemma_classifier import DATASET_MAPPING as LEMMA_CLASSIFIER_DATASETS
 from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
@@ -179,14 +180,29 @@ def get_pos_dependencies(lang, package):
 
     return dependencies
 
+def get_lemma_pretrain_package(lang, package):
+    package, uses_pretrain, uses_charlm = split_package(package)
+    if not uses_pretrain:
+        return None
+    if not uses_charlm:
+        # currently the contextual lemma classifier is only active
+        # for the charlm lemmatizers
+        return None
+    if "%s_%s" % (lang, package) not in LEMMA_CLASSIFIER_DATASETS:
+        return None
+    return get_pretrain_package(lang, package, {}, default_pretrains)
+
 def get_lemma_charlm_package(lang, package):
     return get_charlm_package(lang, package, lemma_charlms, default_charlms)
 
 def get_lemma_dependencies(lang, package):
     dependencies = []
 
-    charlm_package = get_lemma_charlm_package(lang, package)
+    pretrain_package = get_lemma_pretrain_package(lang, package)
+    if pretrain_package is not None:
+        dependencies.append({'model': 'pretrain', 'package': pretrain_package})
 
+    charlm_package = get_lemma_charlm_package(lang, package)
     if charlm_package is not None:
         dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
         dependencies.append({'model': 'backward_charlm', 'package': charlm_package})
