@@ -475,7 +475,7 @@ def get_default_accurate(resources, lang):
     if transformer is not None:
         for processor in ('pos', 'depparse', 'constituency', 'sentiment'):
             update_processor_add_transformer(resources, lang, default_processors, processor, transformer)
-        if default_processors['ner'].endswith("_charlm"):
+        if 'ner' in default_processors and (default_processors['ner'].endswith("_charlm") or default_processors['ner'].endswith("_nocharlm")):
             update_processor_add_transformer(resources, lang, default_processors, "ner", transformer)
 
     optional = get_optional_accurate(resources, lang)
