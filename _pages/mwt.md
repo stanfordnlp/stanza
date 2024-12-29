@@ -15,7 +15,7 @@ For more details on why MWT is necessary for Universal Dependencies analysis, pl
 
 {% include alerts.html %}
 {{ note }}
-Only languages with <a href='https://universaldependencies.org/u/overview/tokenization.html'>multi-word tokens (MWT)</a>, such as German or French, require MWTProcessor; other languages, such as English or Chinese, do not support this processor in the pipeline.
+Only languages with <a href='https://universaldependencies.org/u/overview/tokenization.html'>multi-word tokens (MWT)</a>, such as German or French, require MWTProcessor; other languages, such as Chinese, do not support this processor in the pipeline.
 {{ end }}
 
 | Name | Annotator class name | Requirement | Generated Annotation | Description |
@@ -109,3 +109,17 @@ another pipeline which uses the
 [`tokenize_pretokenized`](https://stanfordnlp.github.io/stanza/tokenize.html#start-with-pretokenized-text)
 flag, in which case the second pipeline will respect the tokenization
 and MWT boundaries in the `Document`.
+
+## Character Classifier
+
+As of Stanza 1.9.0, there is a character classifier for certain MWT
+datasets in which the tokens are composed of words which add up to
+exactly the original token, every time.  For example, in English,
+`cannot` is composed of `can` and `not`, and this holds true for all
+tokens in English (given that the standard is to split `won't` into
+`wo` and `n't`).  In French, this is not necessarily true, as the
+token `des` splits into `de les`, among others.
+
+When training a new MWT model, this is automatically detected and
+logged at training time.
+

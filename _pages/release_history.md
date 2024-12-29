@@ -12,6 +12,14 @@ Note that prior to version 1.0.0, the Stanza library was named as "StanfordNLP".
 
 | Version | Date&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; | Notes |
 | :--- | :----------------------------------- | :--- |
+| 1.10.1 | 2024&#8209;12&#8209;24 | Rebuild with UD 2.15 hotfix ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.10.1)) |
+| 1.10.0 | 2024&#8209;12&#8209;22 | Rebuild with UD 2.15 ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.10.0)) |
+| 1.9.2  | 2024&#8209;09&#8209;12 | Multilingual Coref hotfix v2 ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.9.2)) |
+| 1.9.1  | 2024&#8209;09&#8209;12 | Multilingual Coref hotfix ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.9.1)) |
+| 1.9.0  | 2024&#8209;09&#8209;12 | Multilingual Coref ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.9.0)) |
+| 1.8.2  | 2024&#8209;04&#8209;20 | Old English, MWT improvements, and better memory management of Peft ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.8.2)) |
+| 1.8.1  | 2024&#8209;03&#8209;01 | PEFT Integration hotfix, especially for sentiment & constituency ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.8.1)) |
+| 1.8.0  | 2024&#8209;02&#8209;25 | PEFT Integration, especially for sentiment & constituency ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.8.0)) |
 | 1.7.0 | 2023&#8209;12&#8209;02 | Neural Coref model! ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.7.0)) |
 | 1.6.1 | 2023&#8209;10&#8209;05 | Patch for broken Arabic POS tagger. ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.6.1)) |
 | 1.6.0 | 2023&#8209;10&#8209;02 | Multiple default models and a combined EN NER model. ([full release log](https://github.com/stanfordnlp/stanza/releases/tag/v1.6.0)) |

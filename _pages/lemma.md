@@ -139,3 +139,27 @@ As can be seen in the result, Stanza should lemmatize the word _myword_ as _myle
 
 Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/main/stanza/models/lemmatizer.py#L22) of the lemmatizer.
 
+## Contextual Classifier
+
+As of Stanza 1.10, there is a contextual classifier for words with
+ambiguous words that can be determined by context.  For example, in
+English, the token `'s` as a verb can either represent `is` or `has`,
+with the lemma `be` or `have` respectively.
+
+One caveat is that this requires at least a few examples to have
+reasonable results.  Therefore, although there are other possible
+examples in English such as `saw`, `wound`, and `found`, the existing
+training data does not cover those ambiguous lemmas.
+
+Note that in general POS is sufficient to distinguish many possible
+ambiguous lemmas, and the contextual lemmatizer is only needed for
+cases where the POS (specifically the UPOS) are the same for two
+possible resolutions.  For example, in English, the ambiguity of `'s`
+as a verb or as a possessive was never an issue.
+
+Candidates for this expansion based on exploring UD treebanks can be
+found in
+[stanza/utils/datasets/prepare_lemma_classifier.py](https://github.com/stanfordnlp/stanza/blob/main/stanza/utils/datasets/prepare_lemma_classifier.py).
+Currently, the released models only use this for `'s` in English and
+`के` in Hindi, although we can expand this later, and more suggestions
+or data for ambiguous cases with little available data are welcome.
