@@ -813,6 +813,7 @@ TRANSFORMER_NICKNAMES = {
     "xlm-roberta-large": "xlm-roberta-large",
     "google/electra-large-discriminator": "electra-large",
     "microsoft/deberta-v3-large": "deberta-v3-large",
+    "princeton-nlp/Sheared-LLaMA-1.3B": "sheared-llama-1b3",
 
     # es
     "bertin-project/bertin-roberta-base-spanish": "bertin-roberta",
