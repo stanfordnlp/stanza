@@ -48,6 +48,9 @@ def load_tokenizer(model_name, tokenizer_kwargs=None, local_files_only=False):
         bert_args['local_files_only'] = local_files_only
         bert_tokenizer = AutoTokenizer.from_pretrained(model_name, **bert_args)
         update_max_length(model_name, bert_tokenizer)
+        if model_name == 'princeton-nlp/Sheared-LLaMA-1.3B':
+            bert_tokenizer.pad_token = bert_tokenizer.eos_token
+            logger.debug("Tokenizer does not have a pad_token - setting to %s (%s)", bert_tokenizer.pad_token, bert_tokenizer.eos_token)
         return bert_tokenizer
     return None
 
@@ -289,6 +292,48 @@ def fix_blank_tokens(tokenizer, data):
         new_data.append(new_sentence)
     return new_data
 
+def extract_llama_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach=True):
+    # will calculate attention masks ourselves later
+    tokenized = tokenizer(data, is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
+
+    list_offsets = []
+    for idx in range(len(data)):
+        converted_offsets = convert_to_position_list(data[idx], tokenized.word_ids(batch_index=idx))
+        list_offsets.append(converted_offsets)
+
+    if any(any(x is None for x in converted_offsets) for converted_offsets in list_offsets):
+        raise ValueError("OOPS, hit None when preparing to use transformer at idx {}\ndata[idx]: {}\nlist_offsets[idx]: {}\ntokenizer output: {}".format(idx, data[idx], list_offsets[idx], tokenized))
+
+    features = []
+    for i in range(int(math.ceil(len(data)/128))):
+        id_rows = [id_row + [tokenizer.eos_token_id] for id_row in tokenized['input_ids'][128*i:128*i+128]]
+        max_id_len = max(len(x) for x in id_rows)
+        attention_tensor = torch.zeros((len(id_rows), max_id_len), dtype=torch.long, device=device)
+        for idx, id_row in enumerate(id_rows):
+            attention_tensor[idx, :len(id_row)] = 1
+            if len(id_row) < max_id_len:
+                # actually this value doesn't matter... autoregressive
+                id_row.extend([0] * (max_id_len - len(id_row)))
+        id_tensor = torch.tensor(id_rows, device=device)
+
+        if detach:
+            with torch.no_grad():
+                features += build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_layers, detach, device)
+        else:
+            features += build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_layers, detach, device)
+
+    processed = []
+    #process the output
+    if not keep_endpoints:
+        #remove the bos and eos tokens
+        list_offsets = [sent[1:-1] for sent in list_offsets]
+    for feature, offsets in zip(features, list_offsets):
+        new_sent = feature[offsets]
+        processed.append(new_sent)
+
+    return processed
+
+
 def extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach=True):
     # using attention masks makes contextual embeddings much more useful for downstream tasks
     tokenized = tokenizer(data, is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
@@ -451,7 +496,7 @@ def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_end
             list_offsets.append(converted_offsets)
 
     if any(any(x is None for x in converted_offsets) for converted_offsets in list_offsets):
-        raise ValueError("OOPS, hit None when preparing to use Bert\ndata[idx]: {}\noffsets: {}\nlist_offsets[idx]: {}".format(data[idx], offsets, list_offsets[idx], tokenized))
+        raise ValueError("OOPS, hit None when preparing to use transformer at idx {}\ndata[idx]: {}\nlist_offsets[idx]: {}\ntokenizer output: {}".format(idx, data[idx], list_offsets[idx], tokenized))
 
 
     features = []
@@ -504,6 +549,9 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
 
     if "xlnet" in model_name:
         return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+
+    if "LLaMA" in model_name:
+        return extract_llama_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
 
     return extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
 
