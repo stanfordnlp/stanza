@@ -120,7 +120,6 @@ class TestLemmatizer:
 
         args = ["--train_file", train_file,
                 "--eval_file", dev_file,
-                "--gold_file", dev_file,
                 "--output_file", pred_file,
                 "--num_epoch", "2",
                 "--log_step", "10",
