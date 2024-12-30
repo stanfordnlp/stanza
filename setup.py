@@ -85,7 +85,7 @@ setup(
         'requests', 
         'networkx',
         'tomli;python_version<"3.11"',
-        'torch>=1.3.0',
+        'torch>=1.6.0',
         'tqdm',
     ],
 
