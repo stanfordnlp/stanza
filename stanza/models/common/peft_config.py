@@ -12,7 +12,10 @@ DEFAULT_LORA_ALPHA = 128
 TRANSFORMER_LORA_DROPOUT = {}
 DEFAULT_LORA_DROPOUT = 0.1
 
-TRANSFORMER_LORA_TARGETS = {}
+
+TRANSFORMER_LORA_TARGETS = {
+    "princeton-nlp/Sheared-LLaMA-1.3B": "self_attn.k_proj,self_attn.v_proj,self_attn.o_proj,mlp.gate_proj,mlp.up_proj,mlp.down_proj"
+}
 DEFAULT_LORA_TARGETS = "query,value,output.dense,intermediate.dense"
 
 TRANSFORMER_LORA_SAVE = {}
