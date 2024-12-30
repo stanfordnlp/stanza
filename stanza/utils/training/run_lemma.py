@@ -79,10 +79,8 @@ def run_treebank(mode, paths, treebank, short_name,
     lemma_dir      = paths["LEMMA_DATA_DIR"]
     train_file     = f"{lemma_dir}/{short_name}.train.in.conllu"
     dev_in_file    = f"{lemma_dir}/{short_name}.dev.in.conllu"
-    dev_gold_file  = f"{lemma_dir}/{short_name}.dev.gold.conllu"
     dev_pred_file  = temp_output_file if temp_output_file else f"{lemma_dir}/{short_name}.dev.pred.conllu"
     test_in_file   = f"{lemma_dir}/{short_name}.test.in.conllu"
-    test_gold_file = f"{lemma_dir}/{short_name}.test.gold.conllu"
     test_pred_file = temp_output_file if temp_output_file else f"{lemma_dir}/{short_name}.test.pred.conllu"
 
     charlm_args = build_lemma_charlm_args(short_language, dataset, command_args.charlm)
@@ -99,7 +97,6 @@ def run_treebank(mode, paths, treebank, short_name,
             train_args = ["--train_file", train_file,
                           "--eval_file", dev_in_file,
                           "--output_file", dev_pred_file,
-                          "--gold_file", dev_gold_file,
                           "--shorthand", short_name]
             logger.info("Running identity lemmatizer for {} with args {}".format(treebank, train_args))
             identity_lemmatizer.main(train_args)
@@ -107,7 +104,6 @@ def run_treebank(mode, paths, treebank, short_name,
             train_args = ["--train_file", train_file,
                           "--eval_file", test_in_file,
                           "--output_file", test_pred_file,
-                          "--gold_file", test_gold_file,
                           "--shorthand", short_name]
             logger.info("Running identity lemmatizer for {} with args {}".format(treebank, train_args))
             identity_lemmatizer.main(train_args)            
@@ -122,7 +118,6 @@ def run_treebank(mode, paths, treebank, short_name,
             train_args = ["--train_file", train_file,
                           "--eval_file", dev_in_file,
                           "--output_file", dev_pred_file,
-                          "--gold_file", dev_gold_file,
                           "--shorthand", short_name,
                           "--num_epoch", num_epochs,
                           "--mode", "train"]
@@ -133,7 +128,6 @@ def run_treebank(mode, paths, treebank, short_name,
         if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
             dev_args = ["--eval_file", dev_in_file,
                         "--output_file", dev_pred_file,
-                        "--gold_file", dev_gold_file,
                         "--shorthand", short_name,
                         "--mode", "predict"]
             dev_args = dev_args + charlm_args + extra_args
@@ -143,7 +137,6 @@ def run_treebank(mode, paths, treebank, short_name,
         if mode == Mode.SCORE_TEST:
             test_args = ["--eval_file", test_in_file,
                          "--output_file", test_pred_file,
-                         "--gold_file", test_gold_file,
                          "--shorthand", short_name,
                          "--mode", "predict"]
             test_args = test_args + charlm_args + extra_args

@@ -33,10 +33,9 @@ logger = logging.getLogger('stanza')
 def build_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/lemma', help='Directory for all lemma data.')
-    parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
+    parser.add_argument('--train_file', type=str, default=None, help='Training input file for data loader.')
+    parser.add_argument('--eval_file', type=str, default=None, help='Evaluation input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
-    parser.add_argument('--gold_file', type=str, default=None, help='Output CoNLL-U file.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--shorthand', type=str, help='Shorthand for the dataset to use.  lang_dataset')
@@ -147,7 +146,7 @@ def train(args):
 
     # pred and gold path
     system_pred_file = args['output_file']
-    gold_file = args['gold_file']
+    gold_file = args['eval_file']
 
     utils.print_config(args)
 
@@ -258,7 +257,6 @@ def train(args):
 def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
-    gold_file = args['gold_file']
     model_file = build_model_filename(args)
 
     # load model
@@ -304,10 +302,9 @@ def evaluate(args):
     # write to file and score
     batch.doc.set([LEMMA], preds)
     CoNLL.write_doc2conll(batch.doc, system_pred_file)
-    if gold_file is not None:
-        _, _, score = scorer.score(system_pred_file, gold_file)
 
-        logger.info("Finished evaluation\nLemma score:\n{} {:.2f}".format(args['shorthand'], score*100))
+    _, _, score = scorer.score(system_pred_file, args['eval_file'])
+    logger.info("Finished evaluation\nLemma score:\n{} {:.2f}".format(args['shorthand'], score*100))
 
 if __name__ == '__main__':
     main()
