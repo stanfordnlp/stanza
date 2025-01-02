@@ -205,6 +205,8 @@ def build_argparse():
     parser.add_argument('--no_bert_model', dest='bert_model', action="store_const", const=None, help="Don't use bert")
     parser.add_argument('--bert_hidden_layers', type=int, default=4, help="How many layers of hidden state to use from the transformer")
     parser.add_argument('--bert_hidden_layers_original', action='store_const', const=None, dest='bert_hidden_layers', help='Use layers 2,3,4 of the Bert embedding')
+    parser.add_argument('--bert_weights', type=str, default=None, help="A .pt file to use to reinitialize the transformer weights.  Useful for using a locally stored version of a finetuned model, for example.")
+    parser.add_argument('--force_bert_saved', default=False, action='store_true', help='Force the bert weights to be saved in the model file, even if it would otherwise be unnecessary.  This would allow a model loaded with --bert_weights to be shipped, for example.')
 
     # BERT finetuning (or any transformer finetuning)
     # also helps quite a lot.

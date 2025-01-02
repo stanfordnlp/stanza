@@ -273,20 +273,26 @@ class Trainer(BaseTrainer):
             args = temp_args
 
         peft_name = None
-        if args['use_peft']:
-            peft_name = "constituency"
-            bert_model, bert_tokenizer = load_bert(args['bert_model'])
-            bert_model = build_peft_wrapper(bert_model, temp_args, tlogger, adapter_name=peft_name)
-        elif args['bert_finetune'] or args['stage1_bert_finetune']:
+        if args['use_peft'] or args['bert_finetune'] or args['stage1_bert_finetune']:
             bert_model, bert_tokenizer = load_bert(args['bert_model'])
         else:
             bert_model, bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
+        # if you want the weights saved in the model file,
+        # making it easier to ship models with locally finetuned transformers,
+        # you can use the --force_bert_saved flag
+        if args['bert_weights']:
+            bert_dict = torch.load(args['bert_weights'], map_location=torch.device("cpu"))
+            bert_dict = {x[6:]: bert_dict[x] for x in bert_dict if x.startswith("model.")}
+            bert_model.load_state_dict(bert_dict)
+        if args['use_peft']:
+            peft_name = "constituency"
+            bert_model = build_peft_wrapper(bert_model, temp_args, tlogger, adapter_name=peft_name)
         model = LSTMModel(pt,
                           forward_charlm,
                           backward_charlm,
                           bert_model,
                           bert_tokenizer,
-                          False,
+                          args['force_bert_saved'],
                           peft_name,
                           train_transitions,
                           train_constituents,
