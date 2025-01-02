@@ -281,6 +281,10 @@ class Trainer(BaseTrainer):
             bert_model, bert_tokenizer = load_bert(args['bert_model'])
         else:
             bert_model, bert_tokenizer = load_bert(args['bert_model'], foundation_cache)
+        if args['bert_weights']:
+            bert_dict = torch.load(args['bert_weights'], map_location=torch.device("cpu"))
+            bert_dict = {x[6:]: bert_dict[x] for x in bert_dict if x.startswith("model.")}
+            bert_model.load_state_dict(bert_dict)
         model = LSTMModel(pt,
                           forward_charlm,
                           backward_charlm,
