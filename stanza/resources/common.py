@@ -120,7 +120,9 @@ def download_file(url, path, proxies, raise_for_status=False):
     if raise_for_status:
         r.raise_for_status()
     with open(path, 'wb') as f:
-        file_size = int(r.headers.get('content-length'))
+        file_size = r.headers.get('content-length', None)
+        if file_size:
+            file_size = int(file_size)
         default_chunk_size = 131072
         desc = 'Downloading ' + url
         with tqdm(total=file_size, unit='B', unit_scale=True, \
