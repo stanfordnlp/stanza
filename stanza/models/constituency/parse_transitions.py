@@ -319,7 +319,7 @@ class Dummy():
         if spec is None or spec == '' or spec == 'O':
             return "(%s ...)" % self.label
         if spec == 'T':
-            return "\Tree [.%s ? ]" % self.label
+            return r"\Tree [.%s ? ]" % self.label
         raise ValueError("Unhandled spec: %s" % spec)
 
     def __str__(self):
