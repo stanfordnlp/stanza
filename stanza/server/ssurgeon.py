@@ -256,7 +256,7 @@ def main():
     parser.add_argument('--output_file', type=str, default=None, help="Output file (otherwise will write to stdout)")
     parser.add_argument('--input_dir', type=str, default=None, help="Input dir to process instead of a single file.  Allows for reusing the Java program")
     parser.add_argument('--input_filter', type=str, default=".*[.]conllu", help="Only process files from the input_dir that match this filter - regex, not shell filter.  Default: %(default)s")
-    parser.add_argument('--no_input_filter', action='store_const', const=None, help="Remove the default input filename filter")
+    parser.add_argument('--no_input_filter', action='store_const', const=None, dest="input_filter", help="Remove the default input filename filter")
     parser.add_argument('--output_dir', type=str, default=None, help="Output dir for writing files, necessary if using --input_dir")
     parser.add_argument('--edit_file', type=str, default=None, help="File to get semgrex and ssurgeon rules from")
     parser.add_argument('--semgrex', type=str, default="{}=source >nsubj {} >csubj=bad {}", help="Semgrex to apply to the text.  A default detects words which have both an nsubj and a csubj.  Default: %(default)s")
