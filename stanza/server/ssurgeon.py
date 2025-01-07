@@ -285,6 +285,8 @@ def main():
                     if not re.match(args.input_filter, doc_filename):
                         continue
                 doc_path = os.path.join(args.input_dir, doc_filename)
+                if not os.path.isfile(doc_path):
+                    continue
                 output_path = os.path.join(args.output_dir, doc_filename)
                 print("Processing %s to %s" % (doc_path, output_path))
                 yield CoNLL.conll2doc(input_file=doc_path), output_path
