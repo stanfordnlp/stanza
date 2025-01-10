@@ -784,9 +784,7 @@ def build_combined_italian_dataset(paths, model_type, dataset):
         # could maybe add ParTUT, but that dataset has a slightly different xpos set
         # (no DE or I)
         # and I didn't feel like sorting through the differences
-        # Note: currently these each have small changes compared with
-        # the UD2.11 release.  See the issues (possibly closed by now)
-        # filed by AngledLuffa on each of the treebanks for more info.
+        # TODO: for that dataset, can try adding it without the xpos or feats on ParTUT
         treebanks = [
             "UD_Italian-ISDT",
             "UD_Italian-VIT",
@@ -887,6 +885,22 @@ def build_extra_combined_french_dataset(paths, model_type, dataset):
     if dataset == 'train':
         if model_type is common.ModelType.LEMMA:
             handparsed_path = os.path.join(handparsed_dir, "french-lemmas", "fr_lemmas.conllu")
+            handparsed_sentences = read_sentences_from_conllu(handparsed_path)
+            print("Loaded %d sentences from %s" % (len(handparsed_sentences), handparsed_path))
+            sents.extend(handparsed_sentences)
+    return sents
+
+def build_extra_combined_german_dataset(paths, model_type, dataset):
+    """
+    Extra sentences we don't want augmented for German
+
+    Currently, this is just the lemmas from Wiktionary
+    """
+    handparsed_dir = paths["HANDPARSED_DIR"]
+    sents = []
+    if dataset == 'train':
+        if model_type is common.ModelType.LEMMA:
+            handparsed_path = os.path.join(handparsed_dir, "german-lemmas-wiki", "de_wiki_lemmas.conllu")
             handparsed_sentences = read_sentences_from_conllu(handparsed_path)
             print("Loaded %d sentences from %s" % (len(handparsed_sentences), handparsed_path))
             sents.extend(handparsed_sentences)
@@ -1051,6 +1065,25 @@ def build_combined_albanian_dataset(paths, model_type, dataset):
     sents = read_sentences_from_conllu(conllu_file)
     return sents
 
+def build_combined_german_dataset(paths, model_type, dataset):
+    """
+    de_combined is currently GSD, with lemma information from Wiktionary
+
+    the lemma information is added in build_extra_combined_german_dataset
+
+    TODO: quite a bit of HDT we could possibly use
+    """
+    udbase_dir = paths["UDBASE"]
+
+    treebanks = ["UD_German-GSD"]
+
+    treebank = treebanks[0]
+    conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+    sents = read_sentences_from_conllu(conllu_file)
+
+    return sents
+
+
 def build_combined_spanish_dataset(paths, model_type, dataset):
     """
     es_combined is AnCora and GSD put together
@@ -1165,6 +1198,7 @@ def build_combined_hebrew_dataset(paths, model_type, dataset):
     return sents
 
 COMBINED_FNS = {
+    "de_combined": build_combined_german_dataset,
     "en_combined": build_combined_english_dataset,
     "es_combined": build_combined_spanish_dataset,
     "fr_combined": build_combined_french_dataset,
@@ -1175,6 +1209,7 @@ COMBINED_FNS = {
 
 # some extra data for the combined models without augmenting
 COMBINED_EXTRA_FNS = {
+    "de_combined": build_extra_combined_german_dataset,
     "en_combined": build_extra_combined_english_dataset,
     "fr_combined": build_extra_combined_french_dataset,
     "it_combined": build_extra_combined_italian_dataset,
