@@ -916,6 +916,11 @@ def build_extra_combined_english_dataset(paths, model_type, dataset):
             handparsed_sentences = read_sentences_from_conllu(handparsed_path)
             print("Loaded %d sentences from %s" % (len(handparsed_sentences), handparsed_path))
             sents.extend(handparsed_sentences)
+
+            handparsed_path = os.path.join(handparsed_dir, "english-lemmas-adj", "en_adj.conllu")
+            handparsed_sentences = read_sentences_from_conllu(handparsed_path)
+            print("Loaded %d sentences from %s" % (len(handparsed_sentences), handparsed_path))
+            sents.extend(handparsed_sentences)
     return sents
 
 def build_extra_combined_italian_dataset(paths, model_type, dataset):
