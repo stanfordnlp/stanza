@@ -26,7 +26,7 @@ default_treebanks = {
     "cu":      "proiel",
     "cy":      "ccg",
     "da":      "ddt",
-    "de":      "gsd",
+    "de":      "combined",
     "el":      "gdt",
     "en":      "combined",
     "es":      "combined",
