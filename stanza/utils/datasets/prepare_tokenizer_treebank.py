@@ -149,7 +149,7 @@ def augment_arabic_padt(sents, ratio=0.05):
 
     Reason seems to be that there are almost no examples of "text ." in the dataset.
     This function augments the Arabic-PADT dataset with a few such examples.
-    TODO: it may very well be that a lot of tokeners have this problem.
+    TODO: it may very well be that a lot of tokenizers have this problem.
 
     Also, there are a few examples in UD2.7 which are apparently
     headlines where there is a ' . ' in the middle of the text.
