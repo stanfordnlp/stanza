@@ -816,7 +816,7 @@ def build_combined_english_dataset(paths, model_type, dataset):
     """
     en_combined is currently EWT, GUM, PUD, Pronouns, and handparsed
     """
-    udbase_dir = paths["UDBASE"]
+    udbase_dir = paths["UDBASE_GIT"]
     check_gum_ready(udbase_dir)
 
     if dataset == 'train':
@@ -908,6 +908,11 @@ def build_extra_combined_english_dataset(paths, model_type, dataset):
 
         if model_type is common.ModelType.LEMMA:
             handparsed_path = os.path.join(handparsed_dir, "english-lemmas", "en_lemmas.conllu")
+            handparsed_sentences = read_sentences_from_conllu(handparsed_path)
+            print("Loaded %d sentences from %s" % (len(handparsed_sentences), handparsed_path))
+            sents.extend(handparsed_sentences)
+
+            handparsed_path = os.path.join(handparsed_dir, "english-lemmas-verbs", "irregularVerbs-noNnoAdj.conllu")
             handparsed_sentences = read_sentences_from_conllu(handparsed_path)
             print("Loaded %d sentences from %s" % (len(handparsed_sentences), handparsed_path))
             sents.extend(handparsed_sentences)
