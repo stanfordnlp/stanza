@@ -307,6 +307,8 @@ def train(args):
     global_start_time = time.time()
     format_str = 'Finished STEP {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
 
+    logger.debug("Training model on device %s", next(trainer.model.parameters()).device)
+
     if args['adapt_eval_interval']:
         args['eval_interval'] = utils.get_adaptive_eval_interval(dev_data.num_examples, 2000, args['eval_interval'])
         logger.info("Evaluating the model every {} steps...".format(args['eval_interval']))
