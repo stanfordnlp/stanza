@@ -888,6 +888,11 @@ def build_extra_combined_french_dataset(paths, model_type, dataset):
             handparsed_sentences = read_sentences_from_conllu(handparsed_path)
             print("Loaded %d sentences from %s" % (len(handparsed_sentences), handparsed_path))
             sents.extend(handparsed_sentences)
+
+            handparsed_path = os.path.join(handparsed_dir, "french-lemmas", "french1st_6thGrade.conllu")
+            handparsed_sentences = read_sentences_from_conllu(handparsed_path)
+            print("Loaded %d sentences from %s" % (len(handparsed_sentences), handparsed_path))
+            sents.extend(handparsed_sentences)
     return sents
 
 def build_extra_combined_german_dataset(paths, model_type, dataset):
