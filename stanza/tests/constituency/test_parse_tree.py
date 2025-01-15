@@ -367,3 +367,17 @@ def test_reverse():
     assert len(trees) == 1
     reversed_tree = trees[0].reverse()
     assert str(reversed_tree) == "(ROOT (S (VP (S (VP (VP (NP (NNS antennae) (NP (POS 's) (NNP Jennifer))) (VB lick)) (TO to))) (VBP want)) (NP (PRP I))))"
+
+def test_mark_spans():
+    text = "(ROOT (S (NP (PRP I)) (VP (VBP want) (S (VP (TO to) (VP (VB lick) (NP (NP (NNP Jennifer) (POS 's)) (NNS antennae))))))))"
+    trees = tree_reader.read_trees(text)
+    assert len(trees) == 1
+    tree = trees[0]
+
+    tree.mark_spans()
+
+    assert tree.start_index == 0
+    assert tree.end_index == 7
+    for idx, pt in enumerate(tree.yield_preterminals()):
+        assert pt.start_index == idx
+        assert pt.end_index == idx + 1
