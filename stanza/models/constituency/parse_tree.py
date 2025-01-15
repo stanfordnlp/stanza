@@ -589,3 +589,19 @@ class Tree(StanzaObject):
             for tree in trees:
                 fout.write(fmt.format(tree))
                 fout.write("\n")
+
+    def mark_spans(self):
+        self._mark_spans(0)
+
+    def _mark_spans(self, start_index):
+        self.start_index = start_index
+
+        if len(self.children) == 0:
+            self.end_index = start_index + 1
+            return
+
+        for child in self.children:
+            child._mark_spans(start_index)
+            start_index = child.end_index
+
+        self.end_index = start_index
