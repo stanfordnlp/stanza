@@ -84,7 +84,7 @@ setup(
         'protobuf>=3.15.0',
         'requests', 
         'networkx',
-        'tomli;python_version<"3.12"',
+        'tomli;python_version<"3.11"',
         'torch>=1.13.0',
         'tqdm',
     ],
