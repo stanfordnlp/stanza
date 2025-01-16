@@ -439,8 +439,8 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
         stats_log_lines = [
             "Epoch %d finished" % trainer.epochs_trained,
-            "Transitions correct: %d" % total_correct,
-            "Transitions incorrect: %s" % total_incorrect,
+            "Transitions correct:   %d" % total_correct,
+            "Transitions incorrect: %d" % total_incorrect,
             "Total loss for epoch: %.5f" % epoch_stats.epoch_loss,
             "Dev score      (%5d): %8f" % (trainer.epochs_trained, f1),
             "Best dev score (%5d): %8f" % (trainer.best_epoch, trainer.best_f1)
