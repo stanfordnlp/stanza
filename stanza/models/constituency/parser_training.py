@@ -552,9 +552,11 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
 
     # TODO: refactor the logging?
     total_correct = sum(v for _, v in epoch_stats.transitions_correct.items())
+    correct_transitions_str = "\n  ".join(["%s: %d" % (x, epoch_stats.transitions_correct[x]) for x in epoch_stats.transitions_correct])
+    tlogger.info("Transitions correct: %d\n  %s", total_correct, correct_transitions_str)
     total_incorrect = sum(v for _, v in epoch_stats.transitions_incorrect.items())
-    tlogger.info("Transitions correct: %d\n  %s", total_correct, str(epoch_stats.transitions_correct))
-    tlogger.info("Transitions incorrect: %d\n  %s", total_incorrect, str(epoch_stats.transitions_incorrect))
+    incorrect_transitions_str = "\n  ".join(["%s: %d" % (x, epoch_stats.transitions_incorrect[x]) for x in epoch_stats.transitions_incorrect])
+    tlogger.info("Transitions incorrect: %d\n  %s", total_incorrect, incorrect_transitions_str)
     if len(epoch_stats.repairs_used) > 0:
         tlogger.info("Oracle repairs:\n  %s", "\n  ".join("%s (%s): %d" % (x.name, x.value, y) for x, y in epoch_stats.repairs_used.most_common()))
     if epoch_stats.fake_transitions_used > 0:
