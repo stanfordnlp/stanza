@@ -595,7 +595,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
     """
     contrastive_loss = 0.0
     contrastive_trees_used = 0
-    if epoch >= args['contrastive_initial_epoch'] and contrastive_loss_function is not None:
+    if epoch <= args['contrastive_final_epoch'] and epoch >= args['contrastive_initial_epoch'] and contrastive_loss_function is not None:
         reparsed_results = model.parse_sentences(iter([x.tree for x in training_batch]), model.build_batch_from_trees, len(training_batch), model.predict, keep_state=True, keep_constituents=True)
         gold_results = model.analyze_trees([x.tree for x in training_batch], keep_constituents=True, keep_scores=False)
 
@@ -655,7 +655,10 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
             mse = torch.stack([torch.dot(x.squeeze(0), y.squeeze(0)) for x, y in zip(reparsed_negatives, gold_negatives)])
             device = next(model.parameters()).device
             target = torch.zeros(mse.shape[0]).to(device)
-            contrastive_loss = args['contrastive_learning_rate'] * contrastive_loss_function(mse, target)
+            current_contrastive_lr = args['contrastive_learning_rate']
+            if args['contrastive_final_epoch'] != float('inf'):
+                current_contrastive_lr = current_contrastive_lr * (args['contrastive_final_epoch'] - epoch + 1) / args['contrastive_final_epoch']
+            contrastive_loss = current_contrastive_lr * contrastive_loss_function(mse, target)
             contrastive_trees_used += len(reparsed_negatives)
 
     # now we add the state to the trees in the batch

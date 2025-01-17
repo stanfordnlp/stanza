@@ -555,6 +555,7 @@ def build_argparse():
 
     parser.add_argument('--contrastive_initial_epoch', default=1, type=int, help='When to start contrastive learning')
     parser.add_argument('--contrastive_learning_rate', default=0.0, type=float, help='Multiplicative factor for constrastive learning')
+    parser.add_argument('--contrastive_final_epoch', default=float('inf'), type=int, help='When to stop contrastive learning.  Loss will decay to 0')
 
     parser.add_argument('--grad_clipping', default=None, type=float, help='Clip abs(grad) to this amount.  Use --no_grad_clipping to turn off grad clipping')
     parser.add_argument('--no_grad_clipping', action='store_const', const=None, dest='grad_clipping', help='Use --no_grad_clipping to turn off grad clipping')
