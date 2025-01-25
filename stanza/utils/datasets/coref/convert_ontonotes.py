@@ -172,7 +172,7 @@ SECTION_NAMES = {"train": "train",
                  "test": "test"}
 OVERRIDE_CONLL_PATHS = {"en_ontonotes": {
     "train": "train_sg.english.v4_gold_conll",
-    "dev": "dev_sg_pred.english.v4_gold_conll",
+    "validation": "dev_sg_pred.english.v4_gold_conll",
     "test": "test_sg_pred.english.v4_gold_conll"
 }}
 
