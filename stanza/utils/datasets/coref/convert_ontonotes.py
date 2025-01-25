@@ -198,7 +198,7 @@ def process_dataset(short_name, ontonotes_path, coref_output_path):
     # possible Singleton conlls that maybe in the folder
     (Path(ontonotes_path) / "cache").mkdir(exist_ok=True)
 
-    dataset = load_dataset("conll2012_ontonotesv5", config_name, cache_dir=str(Path(ontonotes_path) / "cache"))
+    dataset = load_dataset("conll2012_ontonotesv5", config_name, cache_dir=str(Path(ontonotes_path) / "cache"), trust_remote_code=True)
     for section, hf_name in SECTION_NAMES.items():
     # for section, hf_name in [("test", "test")]:
         print("Processing %s" % section)
