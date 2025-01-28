@@ -381,3 +381,37 @@ def test_mark_spans():
     for idx, pt in enumerate(tree.yield_preterminals()):
         assert pt.start_index == idx
         assert pt.end_index == idx + 1
+
+def read_single_tree(text):
+    trees = tree_reader.read_trees(text)
+    assert len(trees) == 1
+    tree = trees[0]
+    return tree
+
+
+def test_missing_node_errors():
+    correct_attach = "(ROOT (S (NP (PRP I)) (VP (VBP want) (S (VP (TO to) (VP (VB eat) (NP (NP (NN spaghetti)) (PP (IN with) (NP (NNS meatballs))))))))))"
+    wrong_attach   = "(ROOT (S (NP (PRP I)) (VP (VBP want) (S (VP (TO to) (VP (VB eat) (NP (NN spaghetti)) (PP (IN with) (NP (NNS meatballs)))))))))"
+    correct_attach = read_single_tree(correct_attach)
+    wrong_attach   = read_single_tree(wrong_attach)
+
+    #print("{:P}".format(correct_attach))
+    #print("{:P}".format(wrong_attach))
+
+    errors = Tree.single_missing_node_errors(correct_attach, wrong_attach)
+    assert errors == [('VP', 'NP', 'NP', 'PP', True)]
+
+    errors = Tree.single_missing_node_errors(wrong_attach, correct_attach)
+    assert errors == [('VP', 'NP', 'NP', 'PP', False)]
+
+def test_count_candidate_missing_nodes():
+    correct_attach = "(ROOT (S (NP (PRP I)) (VP (VBP want) (S (VP (TO to) (VP (VB eat) (NP (NP (NN spaghetti)) (PP (IN with) (NP (NNS meatballs))))))))))"
+    correct_attach = read_single_tree(correct_attach)
+    edits = [('VP', 'NP', 'NP', 'PP')]
+    assert correct_attach.count_candidate_missing_nodes(edits) == 1
+    edits = [('VP', 'NP', 'NP', 'PP'), ('VP', 'NP', 'NP', 'PP')]
+    assert correct_attach.count_candidate_missing_nodes(edits) == 2
+
+    wrong_attach   = "(ROOT (S (NP (PRP I)) (VP (VBP want) (S (VP (TO to) (VP (VB eat) (NP (NN spaghetti)) (PP (IN with) (NP (NNS meatballs)))))))))"
+    wrong_attach   = read_single_tree(wrong_attach)
+    assert wrong_attach.count_candidate_missing_nodes(edits) == 2
