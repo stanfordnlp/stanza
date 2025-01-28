@@ -35,7 +35,7 @@ tlogger = logging.getLogger('stanza.constituency.trainer')
 
 TrainItem = namedtuple("TrainItem", ['tree', 'gold_sequence', 'preterminals'])
 
-class EpochStats(namedtuple("EpochStats", ['transition_loss', 'contrastive_loss', 'total_loss', 'transitions_correct', 'transitions_incorrect', 'repairs_used', 'fake_transitions_used', 'contrastive_trees_used', 'nans'])):
+class EpochStats(namedtuple("EpochStats", ['transition_loss', 'contrastive_loss', 'total_loss', 'transitions_correct', 'transitions_incorrect', 'repairs_used', 'fake_transitions_used', 'contrastive_trees_used', 'nans', 'missing_node_errors'])):
     def __add__(self, other):
         transitions_correct = self.transitions_correct + other.transitions_correct
         transitions_incorrect = self.transitions_incorrect + other.transitions_incorrect
@@ -46,7 +46,11 @@ class EpochStats(namedtuple("EpochStats", ['transition_loss', 'contrastive_loss'
         total_loss = self.total_loss + other.total_loss
         contrastive_trees_used = self.contrastive_trees_used + other.contrastive_trees_used
         nans = self.nans + other.nans
-        return EpochStats(transition_loss, contrastive_loss, total_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, contrastive_trees_used, nans)
+        if other.missing_node_errors:
+            missing_node_errors = self.missing_node_errors + other.missing_node_errors
+        else:
+            missing_node_errors = self.missing_node_errors
+        return EpochStats(transition_loss, contrastive_loss, total_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, contrastive_trees_used, nans, missing_node_errors)
 
 def evaluate(args, model_file, retag_pipeline):
     """
@@ -408,6 +412,9 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     if args['save_each_start'] == 0 and trainer.epochs_trained == 0:
         trainer.save(args['save_each_name'] % trainer.epochs_trained, save_optimizer=True)
 
+    common_missing_nodes = []
+    missing_node_errors = []
+
     # trainer.epochs_trained+1 so that if the trainer gets saved after 1 epoch, the epochs_trained is 1
     for trainer.epochs_trained in range(trainer.epochs_trained+1, args['epochs']+1):
         trainer.train()
@@ -421,7 +428,22 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         epoch_data = epoch_data + epoch_silver_data
         epoch_data.sort(key=lambda x: len(x[1]))
 
+        for missing_node in common_missing_nodes:
+            missing_node_count = sum(x.tree.count_candidate_missing_nodes([missing_node]) for x in epoch_data)
+            tlogger.info("The next batch has %d candidates for missing node %s", missing_node_count, missing_node)
+
         epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, process_outputs, model_loss_function, contrastive_loss_function, epoch_data, oracle, args)
+
+        # TODO: refactor the logging?
+        if epoch_stats.missing_node_errors:
+            common_missing_nodes = Counter([x[:4] for x in epoch_stats.missing_node_errors])
+            tlogger.info("Most common missing nodes this epoch: %s", common_missing_nodes.most_common(5))
+            missing_node_errors = missing_node_errors + epoch_stats.missing_node_errors
+            if len(missing_node_errors) > 1000:
+                missing_node_errors = missing_node_errors[-1000:]
+            common_missing_nodes = Counter([x[:4] for x in missing_node_errors]).most_common(5)
+            tlogger.info("Most common missing nodes in the most recent %d: %s", len(missing_node_errors), common_missing_nodes)
+            common_missing_nodes = [x[0] for x in common_missing_nodes]
 
         # print statistics
         # by now we've forgotten about the original tags on the trees,
@@ -437,7 +459,6 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             trainer.save(args['save_name'], save_optimizer=False)
         if epoch_stats.nans > 0:
             tlogger.warning("Had to ignore %d batches with NaN", epoch_stats.nans)
-        # TODO: refactor the logging?
         total_correct = sum(v for _, v in epoch_stats.transitions_correct.items())
         correct_transitions_str = "\n  ".join(["%s: %d" % (x, epoch_stats.transitions_correct[x]) for x in epoch_stats.transitions_correct])
         tlogger.info("Transitions correct: %d\n  %s", total_correct, correct_transitions_str)
@@ -564,7 +585,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
 
     optimizer = trainer.optimizer
 
-    epoch_stats = EpochStats(0.0, 0.0, 0.0, Counter(), Counter(), Counter(), 0, 0, 0)
+    epoch_stats = EpochStats(0.0, 0.0, 0.0, Counter(), Counter(), Counter(), 0, 0, 0, [])
 
     for batch_idx, interval_start in enumerate(tqdm(interval_starts, postfix="Epoch %d" % epoch)):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
@@ -595,6 +616,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
     """
     contrastive_loss = 0.0
     contrastive_trees_used = 0
+    missing_node_errors = []
     if epoch <= args['contrastive_final_epoch'] and epoch >= args['contrastive_initial_epoch'] and contrastive_loss_function is not None:
         reparsed_results = model.parse_sentences(iter([x.tree for x in training_batch]), model.build_batch_from_trees, len(training_batch), model.predict, keep_state=True, keep_constituents=True)
         gold_results = model.analyze_trees([x.tree for x in training_batch], keep_constituents=True, keep_scores=False)
@@ -617,6 +639,8 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
             reparsed_tree = reparsed_state.constituents.value.value.value
             gold_state = gold_result.state
             gold_tree = gold_state.constituents.value.value.value
+
+            missing_node_errors.extend(Tree.single_missing_node_errors(gold_tree, reparsed_tree))
 
             def contrast_trees(reparsed, gold):
                 if reparsed.is_preterminal() or gold.is_preterminal():
@@ -778,7 +802,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
             contrastive_loss = contrastive_loss.item()
         nans = 0
 
-    return EpochStats(transition_loss, contrastive_loss, total_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, contrastive_trees_used, nans)
+    return EpochStats(transition_loss, contrastive_loss, total_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, contrastive_trees_used, nans, missing_node_errors)
 
 def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None, analyze_first_errors=False):
     """
