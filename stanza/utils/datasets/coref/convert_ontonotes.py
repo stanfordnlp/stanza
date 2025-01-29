@@ -8,7 +8,7 @@ If you want to simply process the official OntoNotes dataset...
 2. make folders! (or those adjusted to taste through scripts/config.sh)
    - extern_data/coref/english/en_ontonotes
    - data/coref
-2. run this script: python convert_ontonotes.py
+2. run this script: python -m stanza.utils.datasets.coref.convert_ontonotes
 
 If you happen to have singleton annotated coref chains...
 1. install the `datasets` package: `pip install datasets`
@@ -16,13 +16,13 @@ If you happen to have singleton annotated coref chains...
    - extern_data/coref/english/en_ontonotes
    - data/coref
 3. get the singletons annotated coref chains in conll format from the Splice repo
-   https://github.com/yilunzhu/splice/blob/main/data/ontonotes5_mentions.zip
+    https://github.com/yilunzhu/splice/raw/refs/heads/main/data/ontonotes5_mentions.zip
 4. place the singleton annotated coref chains in the folder `extern_data/coref/english/en_ontonotes`
    $ ls ./extern_data/coref/english/en_ontonotes
         dev_sg_pred.english.v4_gold_conll
         test_sg_pred.english.v4_gold_conll
         train_sg.english.v4_gold_conll
-5. run this script: python convert_ontonotes.py
+5. run this script: python -m stanza.utils.datasets.coref.convert_ontonotes
 
 Your results will appear in ./data/coref/, and you can be off to the races with training!
 Note that this script invokes Stanza itself to run some tagging.
