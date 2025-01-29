@@ -245,11 +245,17 @@ def process_dataset(short_name, ontonotes_path, coref_output_path, use_singleton
     for section, hf_name in SECTION_NAMES.items():
     # for section, hf_name in [("test", "test")]:
         print("Processing %s" % section)
-        if (Path(ontonotes_path) / OVERRIDE_CONLL_PATHS[short_name][hf_name]).exists() and use_singletons:
+        if use_singletons:
+            singletons_path = (Path(ontonotes_path) / OVERRIDE_CONLL_PATHS[short_name][hf_name])
+            if not singletons_path.exists():
+                raise FileNotFoundError(
+                    "Could not find singleton annotated coref chains "
+                    "in conll format\nensure you have placed them in the folder %s" % singletons_path
+                )
             # if, for instance, Amir have given us some singleton annotated coref chains in conll files,
             # we will use those instead of the ones that OntoNotes has
             converted_section = convert_dataset_section(pipe, dataset[hf_name], extract_chains_from_conll(
-                str((Path(ontonotes_path) / OVERRIDE_CONLL_PATHS[short_name][hf_name]))
+                str(singletons_path)
             ))
         else:
             converted_section = convert_dataset_section(pipe, dataset[hf_name])
