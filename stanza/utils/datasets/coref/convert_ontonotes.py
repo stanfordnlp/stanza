@@ -258,7 +258,7 @@ def process_dataset(short_name, ontonotes_path, coref_output_path, use_singleton
             json.dump(converted_section, fout, indent=2)
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(prog="convert_ontonotes.py",
                                      description="Convert OntoNotes dataset to Stanza's coreference format")
     parser.add_argument("--use_singletons", default=False,
@@ -270,3 +270,6 @@ if __name__ == '__main__':
     ontonotes_path = os.path.join(coref_input_path, "english", "en_ontonotes")
     coref_output_path = paths['COREF_DATA_DIR']
     process_dataset("en_ontonotes", ontonotes_path, coref_output_path, args.use_singletons)
+
+if __name__ == '__main__':
+    main()
