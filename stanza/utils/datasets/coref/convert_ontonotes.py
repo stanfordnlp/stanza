@@ -61,15 +61,57 @@ def read_paragraphs(section):
             yield doc['document_id'], part_id, paragraph
 
 
-def convert_dataset_section(pipe, section, override_coref_chains=None):
+def convert_dataset_section(pipe, section, override_singleton_chains=None):
     processed_section = []
     section = list(x for x in read_paragraphs(section))
 
+    # we need to do this because apparently the singleton annotations
+    # don't use the same numbering scheme as the ontonotes annotations
+    # so there will be chain id conflicts
+    max_chain_id = sorted([
+        chain_id 
+        for i in section 
+        for j in i[2] 
+        for chain_id, _, _ in j["coref_spans"]
+    ])[-1]
+    # this dictionary will map singleton chains' "special" ids
+    # to the OntoNotes IDs
+    sg_to_ontonotes_cluster_id_map = defaultdict(
+        lambda: len(sg_to_ontonotes_cluster_id_map)+max_chain_id+1
+    )
+
     for idx, (doc_id, part_id, paragraph) in enumerate(tqdm(section)):
         sentences = [x['words'] for x in paragraph]
-        coref_spans = ([x['coref_spans'] for x in paragraph]
-                       if not override_coref_chains
-                       else override_coref_chains[doc_id][part_id])
+        truly_coref_spans = [x['coref_spans'] for x in paragraph]
+        # the problem to solve here is that the singleton chains'
+        # IDs don't match the coref chains' ids
+        # 
+        # and, what the labels calls a "singleton" may not actually
+        # be one because the "singleton" seems like it includes all
+        # NPs which may or may not be a singleton
+        coref_spans = []
+        if override_singleton_chains:
+            singleton_chains = override_singleton_chains[doc_id][part_id]
+            for singleton_pred, coref_pred in zip(singleton_chains, truly_coref_spans):
+                sentence_coref_preds = []
+                # these are sentence level predictions, which we will
+                # disambiguate: if a subspan of "singleton" exists in the 
+                # truly coref sets, we realise its not a singleton and
+                # then ignore it
+                coref_pred_locs = set([tuple(i[1:]) for i in coref_pred])
+                for id,start,end in singleton_pred:
+                    if (start,end) not in coref_pred_locs:
+                        # this is truly a singleton
+                        sentence_coref_preds.append([
+                            sg_to_ontonotes_cluster_id_map[id],
+                            start,
+                            end
+                        ])
+                sentence_coref_preds += coref_pred
+                coref_spans.append(sentence_coref_preds)
+        else:
+            coref_spans = truly_coref_spans
+
         sentence_speakers = [x['speaker'] for x in paragraph]
 
         processed = process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_speakers)
