@@ -22,7 +22,7 @@ If you happen to have singleton annotated coref chains...
         dev_sg_pred.english.v4_gold_conll
         test_sg_pred.english.v4_gold_conll
         train_sg.english.v4_gold_conll
-5. run this script: python -m stanza.utils.datasets.coref.convert_ontonotes
+5. run this script: python -m stanza.utils.datasets.coref.convert_ontonotes --use_singletons
 
 Your results will appear in ./data/coref/, and you can be off to the races with training!
 Note that this script invokes Stanza itself to run some tagging.
@@ -33,6 +33,7 @@ import os
 
 from pathlib import Path
 
+import argparse
 import stanza
 
 from stanza.models.constituency import tree_reader
@@ -218,7 +219,7 @@ OVERRIDE_CONLL_PATHS = {"en_ontonotes": {
     "test": "test_sg_pred.english.v4_gold_conll"
 }}
 
-def process_dataset(short_name, ontonotes_path, coref_output_path):
+def process_dataset(short_name, ontonotes_path, coref_output_path, use_singletons=False):
     try:
         from datasets import load_dataset
     except ImportError as e:
@@ -244,7 +245,7 @@ def process_dataset(short_name, ontonotes_path, coref_output_path):
     for section, hf_name in SECTION_NAMES.items():
     # for section, hf_name in [("test", "test")]:
         print("Processing %s" % section)
-        if (Path(ontonotes_path) / OVERRIDE_CONLL_PATHS[short_name][hf_name]).exists():
+        if (Path(ontonotes_path) / OVERRIDE_CONLL_PATHS[short_name][hf_name]).exists() and use_singletons:
             # if, for instance, Amir have given us some singleton annotated coref chains in conll files,
             # we will use those instead of the ones that OntoNotes has
             converted_section = convert_dataset_section(pipe, dataset[hf_name], extract_chains_from_conll(
@@ -257,13 +258,15 @@ def process_dataset(short_name, ontonotes_path, coref_output_path):
             json.dump(converted_section, fout, indent=2)
 
 
-def main():
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(prog="convert_ontonotes.py",
+                                     description="Convert OntoNotes dataset to Stanza's coreference format")
+    parser.add_argument("--use_singletons", default=False,
+                        action="store_true", help="Use singleton annotated coref chains")
+    args = parser.parse_args()
+
     paths = get_default_paths()
     coref_input_path = paths['COREF_BASE']
     ontonotes_path = os.path.join(coref_input_path, "english", "en_ontonotes")
     coref_output_path = paths['COREF_DATA_DIR']
-    process_dataset("en_ontonotes", ontonotes_path, coref_output_path)
-
-if __name__ == '__main__':
-    main()
-
+    process_dataset("en_ontonotes", ontonotes_path, coref_output_path, args.use_singletons)
