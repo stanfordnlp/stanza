@@ -620,21 +620,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
     if epoch <= args['contrastive_final_epoch'] and epoch >= args['contrastive_initial_epoch'] and contrastive_loss_function is not None:
         reparsed_results = model.parse_sentences(iter([x.tree for x in training_batch]), model.build_batch_from_trees, len(training_batch), model.predict, keep_state=True, keep_constituents=True)
         gold_results = model.analyze_trees([x.tree for x in training_batch], keep_constituents=True, keep_scores=False)
-
-        reparsed_negatives = []
-        gold_negatives = []
-
         for reparsed_result, gold_result in zip(reparsed_results, gold_results):
-            reparsed_constituents = reparsed_result.constituents
-            reparsed_hx = {}
-            for con in reparsed_constituents:
-                reparsed_hx[str(con.value)] = con.tree_hx
-        
-            gold_constituents = gold_result.constituents
-            gold_hx = {}
-            for con in gold_constituents:
-                gold_hx[str(con.value)] = con.tree_hx
-
             reparsed_state = reparsed_result.state
             reparsed_tree = reparsed_state.constituents.value.value.value
             gold_state = gold_result.state
@@ -642,48 +628,59 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
 
             missing_node_errors.extend(Tree.single_missing_node_errors(gold_tree, reparsed_tree))
 
-            def contrast_trees(reparsed, gold):
-                if reparsed.is_preterminal() or gold.is_preterminal():
-                    return
+        if common_missing_nodes:
+            synthetic_trees = [x.tree.flip_missing_node_errors(common_missing_nodes) for x in training_batch]
+            reparsed_results = model.analyze_trees(synthetic_trees, keep_constituents=True, keep_scores=False)
 
-                reparsed_idx = 0
-                gold_idx = 0
-                while reparsed_idx < len(reparsed.children) and gold_idx < len(gold.children):
-                    reparsed_child = reparsed.children[reparsed_idx]
-                    gold_child = gold.children[gold_idx]
-                    if not reparsed_child.is_preterminal() and not gold_child.is_preterminal():
-                        # TODO: check that comparing labels is helpful
-                        if (reparsed_child.label == gold_child.label and
-                            reparsed_child.start_index == gold_child.start_index and
-                            reparsed_child.end_index == gold_child.end_index):
+            reparsed_negatives = []
+            gold_negatives = []
+
+            for reparsed_result, gold_result in zip(reparsed_results, gold_results):
+                reparsed_constituents = reparsed_result.constituents
+                reparsed_hx = {}
+                for con in reparsed_constituents:
+                    reparsed_hx[str(con.value)] = con.tree_hx
+
+                gold_constituents = gold_result.constituents
+                gold_hx = {}
+                for con in gold_constituents:
+                    gold_hx[str(con.value)] = con.tree_hx
+
+                reparsed_state = reparsed_result.state
+                reparsed_tree = reparsed_state.constituents.value.value.value
+                gold_state = gold_result.state
+                gold_tree = gold_state.constituents.value.value.value
+
+
+                def contrast_trees(reparsed, gold):
+                    if reparsed.is_preterminal() or gold.is_preterminal():
+                        return
+
+                    if (len(reparsed.children) == len(gold.children) and
+                        all(x.start_index == y.start_index and x.end_index == y.end_index for x, y in zip(reparsed.children, gold.children))):
+                        for reparsed_child, gold_child in zip(reparsed.children, gold.children):
                             contrast_trees(reparsed_child, gold_child)
                         else:
-                            reparsed_negatives.append(reparsed_hx[str(reparsed_child)])
-                            gold_negatives.append(gold_hx[str(gold_child)])
-                    if reparsed_child.end_index == gold_child.end_index:
-                        reparsed_idx += 1
-                        gold_idx += 1
-                    elif reparsed_child.end_index < gold_child.end_index:
-                        reparsed_idx += 1
-                    else:
-                        gold_idx += 1
+                            # TODO: should be able to recurse on some of the equivalent nodes
+                            reparsed_negatives.append(reparsed_hx[str(reparsed)])
+                            gold_negatives.append(gold_hx[str(gold)])
 
-            reparsed_tree.mark_spans()
-            gold_tree.mark_spans()
-            contrast_trees(reparsed_tree, gold_tree)
+                reparsed_tree.mark_spans()
+                gold_tree.mark_spans()
+                contrast_trees(reparsed_tree, gold_tree)
 
-        reparsed_negatives = [nn.functional.normalize(hx) for hx in reparsed_negatives]
-        gold_negatives     = [nn.functional.normalize(hx) for hx in gold_negatives]
+            reparsed_negatives = [nn.functional.normalize(hx) for hx in reparsed_negatives]
+            gold_negatives     = [nn.functional.normalize(hx) for hx in gold_negatives]
 
-        if len(reparsed_negatives) > 0:
-            mse = torch.stack([torch.dot(x.squeeze(0), y.squeeze(0)) for x, y in zip(reparsed_negatives, gold_negatives)])
-            device = next(model.parameters()).device
-            target = torch.zeros(mse.shape[0]).to(device)
-            current_contrastive_lr = args['contrastive_learning_rate']
-            if args['contrastive_final_epoch'] != float('inf'):
-                current_contrastive_lr = current_contrastive_lr * (args['contrastive_final_epoch'] - epoch + 1) / args['contrastive_final_epoch']
-            contrastive_loss = current_contrastive_lr * contrastive_loss_function(mse, target)
-            contrastive_trees_used += len(reparsed_negatives)
+            if len(reparsed_negatives) > 0:
+                mse = torch.stack([torch.dot(x.squeeze(0), y.squeeze(0)) for x, y in zip(reparsed_negatives, gold_negatives)])
+                device = next(model.parameters()).device
+                target = torch.zeros(mse.shape[0]).to(device)
+                current_contrastive_lr = args['contrastive_learning_rate']
+                if args['contrastive_final_epoch'] != float('inf'):
+                    current_contrastive_lr = current_contrastive_lr * (args['contrastive_final_epoch'] - epoch + 1) / args['contrastive_final_epoch']
+                contrastive_loss = current_contrastive_lr * contrastive_loss_function(mse, target)
+                contrastive_trees_used += len(reparsed_negatives)
 
     # now we add the state to the trees in the batch
     # the state is built as a bulk operation
