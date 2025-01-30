@@ -432,7 +432,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             missing_node_count = sum(x.tree.count_candidate_missing_nodes([missing_node]) for x in epoch_data)
             tlogger.info("The next batch has %d candidates for missing node %s", missing_node_count, missing_node)
 
-        epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, process_outputs, model_loss_function, contrastive_loss_function, epoch_data, oracle, args)
+        epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, process_outputs, model_loss_function, contrastive_loss_function, epoch_data, oracle, common_missing_nodes, args)
 
         # TODO: refactor the logging?
         if epoch_stats.missing_node_errors:
@@ -579,7 +579,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
     return trainer
 
-def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, model_loss_function, contrastive_loss_function, epoch_data, oracle, args):
+def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, model_loss_function, contrastive_loss_function, epoch_data, oracle, common_missing_nodes, args):
     interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
     random.shuffle(interval_starts)
 
@@ -589,7 +589,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
 
     for batch_idx, interval_start in enumerate(tqdm(interval_starts, postfix="Epoch %d" % epoch)):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
-        batch_stats = train_model_one_batch(epoch, batch_idx, trainer.model, batch, transition_tensors, process_outputs, model_loss_function, contrastive_loss_function, oracle, args)
+        batch_stats = train_model_one_batch(epoch, batch_idx, trainer.model, batch, transition_tensors, process_outputs, model_loss_function, contrastive_loss_function, oracle, common_missing_nodes, args)
         trainer.batches_trained += 1
 
         # Early in the training, some trees will be degenerate in a
@@ -604,7 +604,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
 
     return epoch_stats
 
-def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_tensors, process_outputs, model_loss_function, contrastive_loss_function, oracle, args):
+def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_tensors, process_outputs, model_loss_function, contrastive_loss_function, oracle, common_missing_nodes, args):
     """
     Train the model for one batch
 
