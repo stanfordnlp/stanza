@@ -415,3 +415,16 @@ def test_count_candidate_missing_nodes():
     wrong_attach   = "(ROOT (S (NP (PRP I)) (VP (VBP want) (S (VP (TO to) (VP (VB eat) (NP (NN spaghetti)) (PP (IN with) (NP (NNS meatballs)))))))))"
     wrong_attach   = read_single_tree(wrong_attach)
     assert wrong_attach.count_candidate_missing_nodes(edits) == 2
+
+
+def test_flip_missing_nodes():
+    correct_attach = "(ROOT (S (NP (PRP I)) (VP (VBP want) (S (VP (TO to) (VP (VB eat) (NP (NP (NN spaghetti)) (PP (IN with) (NP (NNS meatballs))))))))))"
+    correct_attach = read_single_tree(correct_attach)
+    wrong_attach   = "(ROOT (S (NP (PRP I)) (VP (VBP want) (S (VP (TO to) (VP (VB eat) (NP (NN spaghetti)) (PP (IN with) (NP (NNS meatballs)))))))))"
+    wrong_attach   = read_single_tree(wrong_attach)
+
+    edits = [('VP', 'NP', 'NP', 'PP')]
+    flipped = correct_attach.flip_missing_node_errors(edits)
+    assert flipped == wrong_attach
+    flipped = wrong_attach.flip_missing_node_errors(edits)
+    assert flipped == correct_attach
