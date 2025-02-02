@@ -409,9 +409,9 @@ class BaseModel(ABC):
         new_constituents = []
         callbacks = defaultdict(list)
 
-        for idx, (tree, transition) in enumerate(zip(state_batch, transitions)):
+        for idx, (state, transition) in enumerate(zip(state_batch, transitions)):
             if not transition:
-                error = "Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(self))
+                error = "Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(state.gold_tree, state.to_string(self))
                 if fail:
                     raise ValueError(error)
                 else:
@@ -419,15 +419,15 @@ class BaseModel(ABC):
                     remove.add(idx)
                     continue
 
-            if tree.num_transitions >= len(tree.word_queue) * 20:
+            if state.num_transitions >= len(state.word_queue) * 20:
                 # too many transitions
                 # x20 is somewhat empirically chosen based on certain
                 # treebanks having deep unary structures, especially early
                 # on when the model is fumbling around
-                if tree.gold_tree:
-                    error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(tree.gold_tree, tree.to_string(self))
+                if state.gold_tree:
+                    error = "Went infinite on the following gold tree:\n{}\n\nFinal state:\n{}".format(state.gold_tree, state.to_string(self))
                 else:
-                    error = "Went infinite!:\nFinal state:\n{}".format(tree.to_string(self))
+                    error = "Went infinite!:\nFinal state:\n{}".format(state.to_string(self))
                 if fail:
                     raise ValueError(error)
                 else:
@@ -435,7 +435,7 @@ class BaseModel(ABC):
                     remove.add(idx)
                     continue
 
-            wq, c, nc, callback = transition.update_state(tree, self)
+            wq, c, nc, callback = transition.update_state(state, self)
 
             word_positions.append(wq)
             constituents.append(c)
@@ -451,13 +451,13 @@ class BaseModel(ABC):
                 new_constituents[idx] = constituent
 
         if len(remove) > 0:
-            state_batch = [tree for idx, tree in enumerate(state_batch) if idx not in remove]
+            state_batch = [state for idx, state in enumerate(state_batch) if idx not in remove]
             transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
 
         if len(state_batch) == 0:
             return state_batch
 
-        new_transitions = self.push_transitions([tree.transitions for tree in state_batch], transitions)
+        new_transitions = self.push_transitions([state.transitions for state in state_batch], transitions)
         new_constituents = self.push_constituents(constituents, new_constituents)
 
         state_batch = [state._replace(num_opens=state.num_opens + transition.delta_opens(),
