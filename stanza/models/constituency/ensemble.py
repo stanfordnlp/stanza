@@ -372,8 +372,8 @@ class EnsembleTrainer(BaseTrainer):
     """
     Stores a list of constituency models, useful for combining their results into one stronger model
     """
-    def __init__(self, ensemble, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0, first_optimizer=False):
-        super().__init__(ensemble, optimizer, scheduler, epochs_trained, batches_trained, best_f1, best_epoch, first_optimizer)
+    def __init__(self, ensemble, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0, first_optimizer=False, missing_node_errors=None):
+        super().__init__(ensemble, optimizer, scheduler, epochs_trained, batches_trained, best_f1, best_epoch, first_optimizer, missing_node_errors)
 
     @staticmethod
     def from_files(args, filenames, foundation_cache=None):

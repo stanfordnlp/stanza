@@ -33,8 +33,8 @@ class Trainer(BaseTrainer):
 
     Not inheriting from common/trainer.py because there's no concept of change_lr (yet?)
     """
-    def __init__(self, model, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0, first_optimizer=False):
-        super().__init__(model, optimizer, scheduler, epochs_trained, batches_trained, best_f1, best_epoch, first_optimizer)
+    def __init__(self, model, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0, first_optimizer=False, missing_node_errors=None):
+        super().__init__(model, optimizer, scheduler, epochs_trained, batches_trained, best_f1, best_epoch, first_optimizer, missing_node_errors)
 
     def save(self, filename, save_optimizer=True):
         """

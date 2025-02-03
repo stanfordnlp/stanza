@@ -413,7 +413,6 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         trainer.save(args['save_each_name'] % trainer.epochs_trained, save_optimizer=True)
 
     common_missing_nodes = []
-    missing_node_errors = []
 
     # trainer.epochs_trained+1 so that if the trainer gets saved after 1 epoch, the epochs_trained is 1
     for trainer.epochs_trained in range(trainer.epochs_trained+1, args['epochs']+1):
@@ -438,11 +437,11 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         if epoch_stats.missing_node_errors:
             common_missing_nodes = Counter([x[:4] for x in epoch_stats.missing_node_errors])
             tlogger.info("Most common missing nodes this epoch: %s", common_missing_nodes.most_common(5))
-            missing_node_errors = missing_node_errors + epoch_stats.missing_node_errors
-            if len(missing_node_errors) > 1000:
-                missing_node_errors = missing_node_errors[-1000:]
-            common_missing_nodes = Counter([x[:4] for x in missing_node_errors]).most_common(5)
-            tlogger.info("Most common missing nodes in the most recent %d: %s", len(missing_node_errors), common_missing_nodes)
+            trainer.missing_node_errors = trainer.missing_node_errors + epoch_stats.missing_node_errors
+            if len(trainer.missing_node_errors) > 1000:
+                trainer.missing_node_errors = trainer.missing_node_errors[-1000:]
+            common_missing_nodes = Counter([x[:4] for x in trainer.missing_node_errors]).most_common(5)
+            tlogger.info("Most common missing nodes in the most recent %d: %s", len(trainer.missing_node_errors), common_missing_nodes)
             common_missing_nodes = [x[0] for x in common_missing_nodes]
 
         # print statistics
