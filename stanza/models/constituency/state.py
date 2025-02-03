@@ -1,7 +1,7 @@
 from collections import namedtuple
 
 class State(namedtuple('State', ['word_queue', 'transitions', 'constituents', 'gold_tree', 'gold_sequence',
-                                 'sentence_length', 'num_opens', 'word_position', 'score'])):
+                                 'sentence_length', 'num_opens', 'word_position', 'score', 'broken'])):
     """
     Represents a partially completed transition parse
 

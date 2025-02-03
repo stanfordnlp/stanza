@@ -209,7 +209,8 @@ class BaseModel(ABC):
                         transitions=transitions,
                         constituents=constituents,
                         word_position=0,
-                        score=0.0)
+                        score=0.0,
+                        broken=False)
                   for idx, wq in enumerate(word_queues)]
         if gold_trees:
             states = [state._replace(gold_tree=gold_tree) for gold_tree, state in zip(gold_trees, states)]
@@ -317,7 +318,14 @@ class BaseModel(ABC):
 
             remove = set()
             for idx, state in enumerate(state_batch):
-                if state.finished(self):
+                if state.broken:
+                    # TODO: make a fake tree with the appropriate words at least?
+                    # something like the X-tree CoreNLP does
+                    #gold_tree = state.gold_tree
+                    #treebank.append(ParseResult(gold_tree, [], state if keep_state else None, constituents[batch_indices[idx]] if keep_constituents else None))
+                    #treebank_indices.append(batch_indices[idx])
+                    remove.add(idx)
+                elif state.finished(self):
                     predicted_tree = state.get_tree(self)
                     if self.reverse_sentence:
                         predicted_tree = predicted_tree.reverse()
@@ -402,13 +410,13 @@ class BaseModel(ABC):
         transitions: list of transitions, one per state
         fail: throw an exception on a failed transition, as opposed to skipping the tree
         """
-        remove = set()
-
         word_positions = []
         constituents = []
         new_constituents = []
+        valid_state_indices = []
         callbacks = defaultdict(list)
 
+        state_batch = list(state_batch)
         for idx, (state, transition) in enumerate(zip(state_batch, transitions)):
             if not transition:
                 error = "Got stuck and couldn't find a legal transition on the following gold tree:\n{}\n\nFinal state:\n{}".format(state.gold_tree, state.to_string(self))
@@ -416,7 +424,7 @@ class BaseModel(ABC):
                     raise ValueError(error)
                 else:
                     logger.error(error)
-                    remove.add(idx)
+                    state_batch[idx] = state._replace(broken=True)
                     continue
 
             if state.num_transitions >= len(state.word_queue) * 20:
@@ -432,7 +440,7 @@ class BaseModel(ABC):
                     raise ValueError(error)
                 else:
                     logger.error(error)
-                    remove.add(idx)
+                    state_batch[idx] = state._replace(broken=True)
                     continue
 
             wq, c, nc, callback = transition.update_state(state, self)
@@ -440,8 +448,9 @@ class BaseModel(ABC):
             word_positions.append(wq)
             constituents.append(c)
             new_constituents.append(nc)
+            valid_state_indices.append(idx)
             if callback:
-                # not `idx` in case something was removed
+                # not `idx` in case something was broken
                 callbacks[callback].append(len(new_constituents)-1)
 
         for key, idxs in callbacks.items():
@@ -450,22 +459,19 @@ class BaseModel(ABC):
             for idx, constituent in zip(idxs, callback_constituents):
                 new_constituents[idx] = constituent
 
-        if len(remove) > 0:
-            state_batch = [state for idx, state in enumerate(state_batch) if idx not in remove]
-            transitions = [trans for idx, trans in enumerate(transitions) if idx not in remove]
+        transitions = [trans for state, trans in zip(state_batch, transitions) if not state.broken]
+        if len(transitions) > 0:
+            new_transitions = self.push_transitions([state.transitions for state in state_batch if not state.broken], transitions)
+            new_constituents = self.push_constituents(constituents, new_constituents)
+        else:
+            new_transitions = []
+            new_constituents = []
 
-        if len(state_batch) == 0:
-            return state_batch
-
-        new_transitions = self.push_transitions([state.transitions for state in state_batch], transitions)
-        new_constituents = self.push_constituents(constituents, new_constituents)
-
-        state_batch = [state._replace(num_opens=state.num_opens + transition.delta_opens(),
-                                      word_position=word_position,
-                                      transitions=transition_stack,
-                                      constituents=constituents)
-                      for (state, transition, word_position, transition_stack, constituents)
-                      in zip(state_batch, transitions, word_positions, new_transitions, new_constituents)]
+        for state, transition, word_position, transition_stack, constituents, state_idx in zip(state_batch, transitions, word_positions, new_transitions, new_constituents, valid_state_indices):
+            state_batch[state_idx] = state._replace(num_opens=state.num_opens + transition.delta_opens(),
+                                                    word_position=word_position,
+                                                    transitions=transition_stack,
+                                                    constituents=constituents)
 
         return state_batch
 
