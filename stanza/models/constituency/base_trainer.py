@@ -14,7 +14,7 @@ class ModelType(Enum):
     ENSEMBLE           = 2
 
 class BaseTrainer:
-    def __init__(self, model, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0, first_optimizer=False):
+    def __init__(self, model, optimizer=None, scheduler=None, epochs_trained=0, batches_trained=0, best_f1=0.0, best_epoch=0, first_optimizer=False, missing_node_errors=None):
         self.model = model
         self.optimizer = optimizer
         self.scheduler = scheduler
@@ -25,6 +25,7 @@ class BaseTrainer:
         self.best_f1 = best_f1
         self.best_epoch = best_epoch
         self.first_optimizer = first_optimizer
+        self.missing_node_errors = [] if missing_node_errors is None else missing_node_errors
 
     def save(self, filename, save_optimizer=True):
         params = self.model.get_params()
@@ -36,6 +37,7 @@ class BaseTrainer:
             'best_epoch': self.best_epoch,
             'model_type': self.model_type.name,
             'first_optimizer': self.first_optimizer,
+            'missing_node_errors': self.missing_node_errors,
         }
         checkpoint["bert_lora"] = self.get_peft_params()
         if save_optimizer and self.optimizer is not None:
@@ -133,6 +135,7 @@ class BaseTrainer:
             build_simple_adadelta = params['config']['multistage'] and epochs_trained < params['config']['epochs'] // 2
             checkpoint['first_optimizer'] = build_simple_adadelta
         first_optimizer = checkpoint['first_optimizer']
+        missing_node_errors = checkpoint.get('missing_node_errors', [])
 
         if load_optimizer:
             optimizer = clazz.load_optimizer(model, checkpoint, first_optimizer, filename)
@@ -145,9 +148,9 @@ class BaseTrainer:
             logger.debug("-- MODEL CONFIG --")
             for k in model.args.keys():
                 logger.debug("  --%s: %s", k, model.args[k])
-            return Trainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch, first_optimizer=first_optimizer)
+            return Trainer(model=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch, first_optimizer=first_optimizer, missing_node_errors=missing_node_errors)
         elif checkpoint['model_type'] == ModelType.ENSEMBLE:
-            return EnsembleTrainer(ensemble=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch, first_optimizer=first_optimizer)
+            return EnsembleTrainer(ensemble=model, optimizer=optimizer, scheduler=scheduler, epochs_trained=epochs_trained, batches_trained=batches_trained, best_f1=best_f1, best_epoch=best_epoch, first_optimizer=first_optimizer, missing_node_errors=missing_node_errors)
         else:
             raise ValueError("Unexpected model type: %s" % checkpoint['model_type'])
 
