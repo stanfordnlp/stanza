@@ -1088,6 +1088,11 @@ class LSTMModel(BaseModel, nn.Module):
         If is_legal is set to True, will only return legal transitions.
         This means returning None if there are no legal transitions.
         Hopefully the constraints prevent that from happening
+
+        Returns:
+          tensor(batch_size, num_transitions) - final output layer
+          list(Transition) - predicted transitions
+          tensor(batch_size) - the final output specifically for the chosen transition
         """
         predictions = self.forward(states)
         pred_max = torch.argmax(predictions, dim=1)
