@@ -436,12 +436,13 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         # TODO: refactor the logging?
         if epoch_stats.missing_node_errors:
             common_missing_nodes = Counter([x[:4] for x in epoch_stats.missing_node_errors])
-            tlogger.info("Most common missing nodes this epoch: %s", common_missing_nodes.most_common(5))
+            tlogger.info("Saw %d missing or extra binary nodes this epoch.  Most common such errors this epoch:\n  %s",
+                         len(epoch_stats.missing_node_errors), "\n  ".join([str(x) for x in common_missing_nodes.most_common(5)]))
             trainer.missing_node_errors = trainer.missing_node_errors + epoch_stats.missing_node_errors
             if len(trainer.missing_node_errors) > 1000:
                 trainer.missing_node_errors = trainer.missing_node_errors[-1000:]
             common_missing_nodes = Counter([x[:4] for x in trainer.missing_node_errors]).most_common(5)
-            tlogger.info("Most common missing nodes in the most recent %d: %s", len(trainer.missing_node_errors), common_missing_nodes)
+            tlogger.info("Most common missing node errors in the most recent %d:\n  %s", len(trainer.missing_node_errors), "\n  ".join([str(x) for x in common_missing_nodes]))
             common_missing_nodes = [x[0] for x in common_missing_nodes]
 
         # print statistics
