@@ -428,3 +428,68 @@ def test_flip_missing_nodes():
     assert flipped == wrong_attach
     flipped = wrong_attach.flip_missing_node_errors(edits)
     assert flipped == correct_attach
+
+def test_flip_first_missing_nodes():
+    correct_attach = "(ROOT (S (NP (PRP I)) (VP (VBP want) (S (VP (TO to) (VP (VB eat) (NP (NP (NN spaghetti)) (PP (IN with) (NP (NNS meatballs))))))))))"
+    correct_attach = read_single_tree(correct_attach)
+    wrong_attach   = "(ROOT (S (NP (PRP I)) (VP (VBP want) (S (VP (TO to) (VP (VB eat) (NP (NN spaghetti)) (PP (IN with) (NP (NNS meatballs)))))))))"
+    wrong_attach   = read_single_tree(wrong_attach)
+
+    edits = [('VP', 'NP', 'NP', 'PP')]
+    flipped = correct_attach.flip_first_missing_node_error(edits)
+    assert flipped == wrong_attach
+    flipped = wrong_attach.flip_first_missing_node_error(edits)
+    assert flipped == correct_attach
+
+    correct_attach = """
+(ROOT
+  (S
+    (NP (PRP I))
+    (VP
+      (VBP want)
+      (S
+        (VP
+          (TO to)
+          (VP
+          (VB eat)
+            (NP
+              (NP (NNS noodles))
+              (PP
+                (IN with)
+                (NP (NN shrimp))))
+            (CC and)
+            (NP
+              (NP (NN spaghetti))
+              (PP
+                (IN with)
+                (NP (NNS meatballs))))))))))
+"""
+    correct_attach = read_single_tree(correct_attach)
+    # only one flip!
+    wrong_attach = """
+(ROOT
+  (S
+    (NP (PRP I))
+    (VP
+      (VBP want)
+      (S
+        (VP
+          (TO to)
+          (VP
+            (VB eat)
+            (NP (NNS noodles))
+            (PP
+              (IN with)
+              (NP (NN shrimp)))
+            (CC and)
+            (NP
+              (NP (NN spaghetti))
+              (PP
+                (IN with)
+                (NP (NNS meatballs))))))))))
+"""
+    wrong_attach = read_single_tree(wrong_attach)
+    flipped = correct_attach.flip_first_missing_node_error(edits)
+    assert flipped == wrong_attach
+    flipped = wrong_attach.flip_first_missing_node_error(edits)
+    assert flipped == correct_attach
