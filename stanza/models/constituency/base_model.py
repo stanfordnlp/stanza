@@ -191,7 +191,7 @@ class BaseModel(ABC):
             for trans, state in zip(transitions, states):
                 if not trans.is_legal(state, self):
                     raise RuntimeError("Transition {}:{} was not legal in a transition sequence:\nOriginal tree: {}\nTransitions: {}".format(state.num_transitions, trans, state.gold_tree, state.gold_sequence))
-        return None, transitions, None
+        return None, transitions, None, None
 
     def initial_state_from_preterminals(self, preterminal_lists, gold_trees, gold_sequences):
         """
@@ -274,7 +274,7 @@ class BaseModel(ABC):
         return state_batch
 
 
-    def parse_sentences(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False, keep_scores=False):
+    def parse_sentences(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False, keep_scores=False, keep_output_layers=False):
         """
         Repeat transitions to build a list of trees from the input batches.
 
@@ -302,8 +302,11 @@ class BaseModel(ABC):
         if keep_constituents:
             constituents = defaultdict(list)
 
+        if keep_output_layers:
+            output_layers = defaultdict(list)
+
         while len(state_batch) > 0:
-            pred_scores, transitions, scores = transition_choice(state_batch)
+            pred_scores, transitions, scores, previous_hx = transition_choice(state_batch)
             if keep_scores and scores is not None:
                 state_batch = [state._replace(score=state.score + score) for state, score in zip(state_batch, scores)]
             state_batch = self.bulk_apply(state_batch, transitions)
@@ -315,6 +318,11 @@ class BaseModel(ABC):
                         # constituents.value is the TreeStack node
                         # constituents.value.value is the Constituent itself (with the tree and the embedding)
                         constituents[batch_indices[t_idx]].append(state_batch[t_idx].constituents.value.value)
+
+            if keep_output_layers:
+                # previous_hx should be a tensor of shape (batch_size, output_layer_size)
+                for t_idx, output_layer in enumerate(previous_hx):
+                    output_layers[batch_indices[t_idx]].append(output_layer)
 
             remove = set()
             for idx, state in enumerate(state_batch):
@@ -330,7 +338,11 @@ class BaseModel(ABC):
                     if self.reverse_sentence:
                         predicted_tree = predicted_tree.reverse()
                     gold_tree = state.gold_tree
-                    treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, state.score)], state if keep_state else None, constituents[batch_indices[idx]] if keep_constituents else None))
+                    treebank.append(ParseResult(gold_tree,
+                                                [ScoredTree(predicted_tree, state.score)],
+                                                state if keep_state else None,
+                                                constituents[batch_indices[idx]] if keep_constituents else None,
+                                                output_layers[batch_indices[idx]] if keep_output_layers else None))
                     treebank_indices.append(batch_indices[idx])
                     remove.add(idx)
 
@@ -363,7 +375,7 @@ class BaseModel(ABC):
         with torch.no_grad():
             return self.parse_sentences(data_iterator, build_batch_fn, batch_size, transition_choice, keep_state, keep_constituents, keep_scores)
 
-    def analyze_trees(self, trees, batch_size=None, keep_state=True, keep_constituents=True, keep_scores=True):
+    def analyze_trees(self, trees, batch_size=None, keep_state=True, keep_constituents=True, keep_scores=True, keep_output_layers=True):
         """
         Return a ParseResult for each tree in the trees list
 
@@ -377,7 +389,7 @@ class BaseModel(ABC):
             # TODO: refactor?
             batch_size = self.args['eval_batch_size']
         tree_iterator = iter(trees)
-        treebank = self.parse_sentences(tree_iterator, self.build_batch_from_trees_with_gold_sequence, batch_size, self.predict_gold, keep_state, keep_constituents, keep_scores=keep_scores)
+        treebank = self.parse_sentences(tree_iterator, self.build_batch_from_trees_with_gold_sequence, batch_size, self.predict_gold, keep_state, keep_constituents, keep_scores=keep_scores, keep_output_layers=keep_output_layers)
         return treebank
 
     def parse_tagged_words(self, words, batch_size):

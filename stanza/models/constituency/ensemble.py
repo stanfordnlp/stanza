@@ -229,9 +229,14 @@ class Ensemble(nn.Module):
 
     def predict(self, states, is_legal=True):
         states = list(zip(*[x.states for x in states]))
-        predictions = [model.forward(state_batch) for model, state_batch in zip(self.models, states)]
+        forwards = [model.forward(state_batch) for model, state_batch in zip(self.models, states)]
+
+        previous_hx = [x[1] for x in forwards]
+        previous_hx = torch.stack(previous_hx, dim=2)
+        previous_hx = torch.sum(previous_hx, dim=2)
 
         # batch X num transitions X num models
+        predictions = [x[0] for x in forwards]
         predictions = torch.stack(predictions, dim=2)
 
         flat_predictions = torch.einsum("BTM,MT->BT", predictions, self.weighted_sum)
@@ -258,7 +263,7 @@ class Ensemble(nn.Module):
                         pred_trans[idx] = None
                         scores[idx] = None
 
-        return predictions, pred_trans, scores.squeeze(1)
+        return predictions, pred_trans, scores.squeeze(1), previous_hx
 
     def bulk_apply(self, state_batch, transitions, fail=False):
         new_states = []
@@ -322,7 +327,7 @@ class Ensemble(nn.Module):
             constituents = defaultdict(list)
 
         while len(state_batch) > 0:
-            pred_scores, transitions, scores = transition_choice(state_batch)
+            _, transitions, _, _ = transition_choice(state_batch)
             # num models lists of batch size states
             state_batch = self.bulk_apply(state_batch, transitions)
 
@@ -336,7 +341,7 @@ class Ensemble(nn.Module):
                     # TODO: could easily store the score here
                     # not sure what it means to store the state,
                     # since each model is tracking its own state
-                    treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, None)], None, None))
+                    treebank.append(ParseResult(gold_tree, [ScoredTree(predicted_tree, None)], None, None, None))
                     treebank_indices.append(batch_indices[idx])
                     remove.add(idx)
 

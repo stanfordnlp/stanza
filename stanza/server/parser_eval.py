@@ -12,7 +12,7 @@ from stanza.models.constituency.tree_reader import read_treebank
 
 EVALUATE_JAVA = "edu.stanford.nlp.parser.metrics.EvaluateExternalParser"
 
-ParseResult = namedtuple("ParseResult", ['gold', 'predictions', 'state', 'constituents'])
+ParseResult = namedtuple("ParseResult", ['gold', 'predictions', 'state', 'constituents', 'output_layers'])
 ScoredTree = namedtuple("ScoredTree", ['tree', 'score'])
 
 def build_request(treebank):
@@ -48,7 +48,7 @@ def collate(gold_treebank, predictions_treebank):
     """
     treebank = []
     for gold, prediction in zip(gold_treebank, predictions_treebank):
-        result = ParseResult(gold, [prediction], None, None)
+        result = ParseResult(gold, [prediction], None, None, None)
         treebank.append(result)
     return treebank
 
