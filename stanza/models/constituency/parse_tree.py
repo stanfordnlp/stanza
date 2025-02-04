@@ -758,3 +758,68 @@ class Tree(StanzaObject):
                         new_children.append(child.flip_missing_node_errors(possible_edits))
 
         return Tree(self.label, new_children)
+
+
+    def flip_first_missing_node_error(self, possible_edits):
+        """
+        Build a new tree with exactly the first of the edits in possible_edits applied
+
+        Edits should be of the form:
+          (parent, binary, left, right)
+        in other words, same as returned by single_missing_node_errors
+        """
+        if self.is_preterminal():
+            return Tree(self.label, Tree(self.children[0].label))
+
+        edits_performed = 0
+        def flip_helper(tree, possible_edits):
+            nonlocal edits_performed
+            # TODO: maybe make the possible edits a tuple?
+            candidate_edits = [x for x in possible_edits if x[0] == tree.label]
+            new_children = []
+
+            skip = False
+            for child_idx, child in enumerate(tree.children):
+                if skip:
+                    skip = False
+                    continue
+
+                if edits_performed > 0:
+                    new_children.append(flip_helper(child, possible_edits))
+                    continue
+
+                if (len(child.children) == 2 and
+                    any(x[1] == child.label and x[2] == child.children[0].label and x[3] == child.children[1].label for x in possible_edits)):
+                    # If this node matches one of the edits that removes a node,
+                    # execute that edit by recursively building the two children
+                    # and keeping those as new children
+                    edits_performed = 1
+                    new_children.append(flip_helper(child.children[0], possible_edits))
+                    new_children.append(flip_helper(child.children[1], possible_edits))
+                elif child_idx + 1 == len(tree.children):
+                    # this is the last node, so we can't possibly combine this node with a next node
+                    new_children.append(flip_helper(child, possible_edits))
+                else:
+                    next_child = tree.children[child_idx+1]
+                    if (len(next_child.children) == 2 and
+                        any(x[1] == next_child.label and x[2] == next_child.children[0].label and x[3] == next_child.children[1].label for x in possible_edits)):
+                        # next child matches one of the edits, so we will remove that child's node as well
+                        new_children.append(flip_helper(child, possible_edits))
+                    else:
+                        left_label = child.label
+                        right_label = next_child.label
+                        for candidate_edit in candidate_edits:
+                            if candidate_edit[2] == left_label and candidate_edit[3] == right_label:
+                                edits_performed = 1
+                                new_child = Tree(candidate_edit[1],
+                                                 [flip_helper(child, possible_edits),
+                                                  flip_helper(next_child, possible_edits)])
+                                new_children.append(new_child)
+                                skip = True
+                                break
+                        else:
+                            new_children.append(flip_helper(child, possible_edits))
+
+            return Tree(tree.label, new_children)
+
+        return flip_helper(self, possible_edits)
