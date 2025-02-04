@@ -619,7 +619,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
     missing_node_errors = []
     if epoch <= args['contrastive_final_epoch'] and epoch >= args['contrastive_initial_epoch'] and contrastive_loss_function is not None:
         reparsed_results = model.parse_sentences(iter([x.tree for x in training_batch]), model.build_batch_from_trees, len(training_batch), model.predict, keep_state=True, keep_constituents=True)
-        gold_results = model.analyze_trees([x.tree for x in training_batch], keep_constituents=True, keep_scores=False)
+        gold_results = model.analyze_trees([x.tree for x in training_batch], keep_constituents=True, keep_scores=False, keep_output_layers=True)
         for reparsed_result, gold_result in zip(reparsed_results, gold_results):
             reparsed_state = reparsed_result.state
             reparsed_tree = reparsed_state.constituents.value.value.value
@@ -630,7 +630,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
 
         if common_missing_nodes:
             synthetic_trees = [x.tree.flip_missing_node_errors(common_missing_nodes) for x in training_batch]
-            reparsed_results = model.analyze_trees(synthetic_trees, keep_constituents=True, keep_scores=False)
+            reparsed_results = model.analyze_trees(synthetic_trees, keep_constituents=True, keep_scores=False, keep_output_layers=True)
 
             reparsed_negatives = []
             gold_negatives = []
