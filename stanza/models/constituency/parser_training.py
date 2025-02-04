@@ -636,6 +636,13 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
             gold_negatives = []
 
             for reparsed_result, gold_result in zip(reparsed_results, gold_results):
+                reparsed_state = reparsed_result.state
+                reparsed_tree = reparsed_state.constituents.value.value.value
+                gold_state = gold_result.state
+                gold_tree = gold_state.constituents.value.value.value
+                if reparsed_tree == gold_tree:
+                    continue
+
                 reparsed_constituents = reparsed_result.constituents
                 reparsed_hx = {}
                 for con in reparsed_constituents:
@@ -645,12 +652,6 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
                 gold_hx = {}
                 for con in gold_constituents:
                     gold_hx[str(con.value)] = con.tree_hx
-
-                reparsed_state = reparsed_result.state
-                reparsed_tree = reparsed_state.constituents.value.value.value
-                gold_state = gold_result.state
-                gold_tree = gold_state.constituents.value.value.value
-
 
                 def contrast_trees(reparsed, gold):
                     if reparsed.is_preterminal() or gold.is_preterminal():
