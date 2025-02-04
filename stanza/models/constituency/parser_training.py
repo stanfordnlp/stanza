@@ -629,7 +629,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
             missing_node_errors.extend(Tree.single_missing_node_errors(gold_tree, reparsed_tree))
 
         if common_missing_nodes:
-            synthetic_trees = [x.tree.flip_missing_node_errors(common_missing_nodes) for x in training_batch]
+            synthetic_trees = [x.tree.flip_first_missing_node_error(common_missing_nodes) for x in training_batch]
             reparsed_results = model.analyze_trees(synthetic_trees, keep_constituents=True, keep_scores=False, keep_output_layers=True)
 
             reparsed_negatives = []
