@@ -20,7 +20,7 @@ def build_one_tree_treebank(fake_scores=True):
     gold = trees[0]
     if fake_scores:
         prediction = (gold, 1.0)
-        treebank = [ParseResult(gold, [prediction], None, None)]
+        treebank = [ParseResult(gold, [prediction], None, None, None)]
         return treebank
     else:
         prediction = gold

@@ -1075,11 +1075,12 @@ class LSTMModel(BaseModel, nn.Module):
 
         hx = torch.cat((word_hx, transition_hx, constituent_hx), axis=1)
         for idx, output_layer in enumerate(self.output_layers):
+            previous_hx = hx
             hx = self.predict_dropout(hx)
             if not self.maxout_k and idx < len(self.output_layers) - 1:
                 hx = self.nonlinearity(hx)
             hx = output_layer(hx)
-        return hx
+        return hx, previous_hx
 
     def predict(self, states, is_legal=True):
         """
@@ -1093,8 +1094,9 @@ class LSTMModel(BaseModel, nn.Module):
           tensor(batch_size, num_transitions) - final output layer
           list(Transition) - predicted transitions
           tensor(batch_size) - the final output specifically for the chosen transition
+          tensor(batch_size, output_layer_size) - the output layer *before* the logits
         """
-        predictions = self.forward(states)
+        predictions, previous_hx = self.forward(states)
         pred_max = torch.argmax(predictions, dim=1)
         scores = torch.take_along_dim(predictions, pred_max.unsqueeze(1), dim=1)
         pred_max = pred_max.detach().cpu()
@@ -1113,7 +1115,7 @@ class LSTMModel(BaseModel, nn.Module):
                         pred_trans[idx] = None
                         scores[idx] = None
 
-        return predictions, pred_trans, scores.squeeze(1)
+        return predictions, pred_trans, scores.squeeze(1), previous_hx
 
     def weighted_choice(self, states):
         """
@@ -1121,7 +1123,7 @@ class LSTMModel(BaseModel, nn.Module):
 
         TODO: pass in a temperature
         """
-        predictions = self.forward(states)
+        predictions, previous_hx = self.forward(states)
         pred_trans = []
         all_scores = []
         for state, prediction in zip(states, predictions):
@@ -1136,17 +1138,17 @@ class LSTMModel(BaseModel, nn.Module):
             pred_trans.append(self.transitions[idx])
             all_scores.append(prediction[idx])
         all_scores = torch.stack(all_scores)
-        return predictions, pred_trans, all_scores
+        return predictions, pred_trans, all_scores, previous_hx
 
     def predict_gold(self, states):
         """
         For each State, return the next item in the gold_sequence
         """
-        predictions = self.forward(states)
+        predictions, previous_hx = self.forward(states)
         transitions = [y.gold_sequence[y.num_transitions] for y in states]
         indices = torch.tensor([self.transition_map[t] for t in transitions], device=predictions.device)
         scores = torch.take_along_dim(predictions, indices.unsqueeze(1), dim=1)
-        return predictions, transitions, scores.squeeze(1)
+        return predictions, transitions, scores.squeeze(1), previous_hx
 
     def get_params(self, skip_modules=True):
         """
