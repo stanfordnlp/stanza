@@ -1,5 +1,6 @@
 from collections import Counter, namedtuple
 import copy
+import difflib
 import logging
 import os
 import random
@@ -646,38 +647,36 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
                 if reparsed_tree == gold_tree:
                     continue
 
-                reparsed_constituents = reparsed_result.constituents
-                reparsed_hx = {}
-                for con in reparsed_constituents:
-                    reparsed_hx[str(con.value)] = con.tree_hx
+                # 1: because the transition sequences start with a blank placeholder
+                # reversed because the first transition iterated will be the last transition executed
+                reparsed_transitions = [x.value for x in reversed(reparsed_state.transitions)][1:]
+                gold_transitions = [x.value for x in reversed(gold_state.transitions)][1:]
+                assert len(reparsed_transitions) == len(reparsed_result.output_layers)
+                assert len(gold_transitions) == len(gold_result.output_layers)
+                sequence_matcher = difflib.SequenceMatcher(a=reparsed_transitions, b=gold_transitions)
+                edits = sequence_matcher.get_opcodes()
+                #tlogger.info("%d reparsed transitions (%s first %s last) %d layers %d gold transitions %d layers\n   %s matches\n   %s edits",
+                #             len(reparsed_state.transitions), reparsed_transitions[0], reparsed_transitions[-1], len(reparsed_result.output_layers),
+                #             len(gold_state.transitions), len(gold_result.output_layers), sequence_matcher.get_matching_blocks(), sequence_matcher.get_opcodes())
+                #for e in edits:
+                #    if e[0] in ('insert', 'delete') and (e[2] - e[1] == 2 or e[4] - e[3] == 2):
+                #        tlogger.info("Found a weird edit: %s\n%s\n%s\n%s\n%s",
+                #                     e, gold_transitions, reparsed_transitions, "{:P}".format(gold_tree), "{:P}".format(reparsed_tree))
+                for edit in reversed(edits):
+                    if edit[0] == 'equal':
+                        reparsed_index = edit[1]
+                        gold_index = edit[3]
+                        break
+                else:
+                    raise RuntimeError("Unexpected lack of 'equal' edits between the two transition sequences")
+                reparsed_negatives.append(reparsed_result.output_layers[reparsed_index])
+                gold_negatives.append(gold_result.output_layers[gold_index])
 
-                gold_constituents = gold_result.constituents
-                gold_hx = {}
-                for con in gold_constituents:
-                    gold_hx[str(con.value)] = con.tree_hx
-
-                def contrast_trees(reparsed, gold):
-                    if reparsed.is_preterminal() or gold.is_preterminal():
-                        return
-
-                    if (len(reparsed.children) == len(gold.children) and
-                        all(x.start_index == y.start_index and x.end_index == y.end_index for x, y in zip(reparsed.children, gold.children))):
-                        for reparsed_child, gold_child in zip(reparsed.children, gold.children):
-                            contrast_trees(reparsed_child, gold_child)
-                        else:
-                            # TODO: should be able to recurse on some of the equivalent nodes
-                            reparsed_negatives.append(reparsed_hx[str(reparsed)])
-                            gold_negatives.append(gold_hx[str(gold)])
-
-                reparsed_tree.mark_spans()
-                gold_tree.mark_spans()
-                contrast_trees(reparsed_tree, gold_tree)
-
-            reparsed_negatives = [nn.functional.normalize(hx) for hx in reparsed_negatives]
-            gold_negatives     = [nn.functional.normalize(hx) for hx in gold_negatives]
+            reparsed_negatives = [nn.functional.normalize(hx, dim=0) for hx in reparsed_negatives]
+            gold_negatives     = [nn.functional.normalize(hx, dim=0) for hx in gold_negatives]
 
             if len(reparsed_negatives) > 0:
-                mse = torch.stack([torch.dot(x.squeeze(0), y.squeeze(0)) for x, y in zip(reparsed_negatives, gold_negatives)])
+                mse = torch.stack([torch.dot(x, y) for x, y in zip(reparsed_negatives, gold_negatives)])
                 device = next(model.parameters()).device
                 target = torch.zeros(mse.shape[0]).to(device)
                 current_contrastive_lr = args['contrastive_learning_rate']
