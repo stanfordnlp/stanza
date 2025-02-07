@@ -373,8 +373,7 @@ def read_one_tree(text):
     assert len(trees) == 1
     return trees[0]
 
-def test_count_wide_nodes():
-    text = """
+WIDE_NEIGHBORS_TREE = """
 ( (S
     (PP-LOC (IN In)
       (NP
@@ -420,5 +419,98 @@ def test_count_wide_nodes():
           (NP (NNP Christina) (NNP Haag) ))))
     (. .) ))
 """
-    tree = read_one_tree(text)
+
+def test_count_wide_nodes():
+    tree = read_one_tree(WIDE_NEIGHBORS_TREE)
     assert tree.count_wide_neighbors() == 4
+
+def test_count_wide_nodes():
+    tree = read_one_tree(WIDE_NEIGHBORS_TREE)
+    new_tree = tree.move_first_wide_neighbor()
+
+    expected_move = """
+(ROOT
+  (S
+    (PP-LOC
+      (IN In)
+      (NP
+        (NP (DT an) (NNP Oct.) (CD 19))
+        (PP
+          (NN review)
+          (IN of)
+          (NP
+            (`` ``)
+            (NP-TTL (DT The) (NN Misanthrope))
+            ('' '')
+            (PP-LOC
+              (IN at)
+              (NP
+                (NP (NNP Chicago) (POS 's))
+                (NNP Goodman)
+                (NNP Theatre)))))
+        (PRN
+          (-LRB- -LRB-)
+          (`` ``)
+          (S-HLN
+            (NP-SBJ (VBN Revitalized) (NNS Classics))
+            (VP
+              (VBP Take)
+              (NP (DT the) (NN Stage))
+              (PP-LOC
+                (IN in)
+                (NP (NNP Windy) (NNP City)))))
+          (, ,)
+          ('' '')
+          (NP-TMP (NN Leisure) (CC &) (NNS Arts))
+          (-RRB- -RRB-))))
+    (, ,)
+    (NP-SBJ-2
+      (NP
+        (NP (DT the) (NN role) )
+        (PP (IN of)
+          (NP (NNP Celimene) )))
+      (, ,)
+      (VP (VBN played)
+        (NP (-NONE- *) )
+        (PP (IN by)
+          (NP-LGS (NNP Kim) (NNP Cattrall) )))
+      (, ,) )
+    (VP
+      (VBD was)
+      (VP
+        (ADVP-MNR (RB mistakenly))
+        (VBN attributed)
+        (NP (-NONE- *-2))
+        (PP-CLR
+          (TO to)
+          (NP (NNP Christina) (NNP Haag)))))
+    (. .)))
+"""
+    expected_move = read_one_tree(expected_move)
+    assert tree != new_tree
+    assert new_tree == expected_move
+
+    # this one should move from right to left
+    smaller_tree = """
+(S-HLN
+  (NP-SBJ (VBN Revitalized) (NNS Classics))
+  (VP
+    (VBP Take)
+    (NP (DT the) (NN Stage))
+    (PP-LOC
+      (IN in)
+      (NP (NNP Windy) (NNP City)))))
+    """
+    smaller_tree = read_one_tree(smaller_tree)
+    new_tree = smaller_tree.move_first_wide_neighbor()
+    expected_smaller_tree = """
+(S-HLN
+  (NP-SBJ (VBN Revitalized) (NNS Classics) (VBP Take))
+  (VP
+    (NP (DT the) (NN Stage))
+    (PP-LOC
+      (IN in)
+      (NP (NNP Windy) (NNP City)))))
+    """
+    expected_smaller_tree = read_one_tree(expected_smaller_tree)
+    assert new_tree == expected_smaller_tree
