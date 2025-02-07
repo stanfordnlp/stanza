@@ -607,6 +607,7 @@ class Tree(StanzaObject):
 
     def move_first_wide_neighbor(self):
         already_moved = False
+        subtrees = []
 
         def move_helper(tree):
             if tree.is_leaf():
@@ -633,6 +634,11 @@ class Tree(StanzaObject):
                         new_children.append(Tree(child.label, left_children))
                         new_children.append(Tree(next_child.label, right_children))
 
+                        subtrees.append(child)
+                        subtrees.append(next_child)
+                        subtrees.append(new_children[-2])
+                        subtrees.append(new_children[-1])
+
                         if child_idx + 2 < len(tree.children):
                             new_children.extend(move_helper(x) for x in tree.children[child_idx + 2:])
 
@@ -646,6 +652,11 @@ class Tree(StanzaObject):
                         new_children.append(Tree(child.label, left_children))
                         new_children.append(Tree(next_child.label, right_children))
 
+                        subtrees.append(child)
+                        subtrees.append(next_child)
+                        subtrees.append(new_children[-2])
+                        subtrees.append(new_children[-1])
+
                         if child_idx + 2 < len(tree.children):
                             new_children.extend(move_helper(x) for x in tree.children[child_idx + 2:])
 
@@ -653,4 +664,28 @@ class Tree(StanzaObject):
                 new_children.append(move_helper(child))
             return Tree(tree.label, new_children)
 
-        return move_helper(self)
+        return move_helper(self), subtrees
+
+    def mark_parents(self, parent=None):
+        self.parent = parent
+
+        for child_idx, child in enumerate(self.children):
+            child.mark_parents(parent=self)
+            child.child_index = child_idx
+
+    def find_previous_span(self):
+        if self.parent is None:
+            return None
+        if self.child_index == 0:
+            return self.parent.find_previous_span()
+        else:
+            return self.parent.children[self.child_index - 1]
+
+    def find_next_span(self):
+        if self.parent is None:
+            return None
+        if self.child_index == len(self.parent.children) - 1:
+            return self.parent.find_next_span()
+        else:
+            return self.parent.children[self.child_index + 1]
+

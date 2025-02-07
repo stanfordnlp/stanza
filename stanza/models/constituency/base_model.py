@@ -25,7 +25,7 @@ import torch
 
 from stanza.models.common import utils
 from stanza.models.constituency import transition_sequence
-from stanza.models.constituency.parse_transitions import TransitionScheme, CloseConstituent
+from stanza.models.constituency.parse_transitions import TransitionScheme, CloseConstituent, Shift
 from stanza.models.constituency.parse_tree import Tree
 from stanza.models.constituency.state import State
 from stanza.models.constituency.tree_stack import TreeStack
@@ -274,7 +274,7 @@ class BaseModel(ABC):
         return state_batch
 
 
-    def parse_sentences(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False, keep_scores=False):
+    def parse_sentences(self, data_iterator, build_batch_fn, batch_size, transition_choice, keep_state=False, keep_constituents=False, keep_scores=False, keep_words=False):
         """
         Repeat transitions to build a list of trees from the input batches.
 
@@ -299,7 +299,7 @@ class BaseModel(ABC):
         batch_indices = list(range(len(state_batch)))
         horizon_iterator = iter([])
 
-        if keep_constituents:
+        if keep_constituents or keep_words:
             constituents = defaultdict(list)
 
         while len(state_batch) > 0:
@@ -311,6 +311,13 @@ class BaseModel(ABC):
             if keep_constituents:
                 for t_idx, transition in enumerate(transitions):
                     if isinstance(transition, CloseConstituent):
+                        # constituents is a TreeStack with information on how to build the next state of the LSTM or attn
+                        # constituents.value is the TreeStack node
+                        # constituents.value.value is the Constituent itself (with the tree and the embedding)
+                        constituents[batch_indices[t_idx]].append(state_batch[t_idx].constituents.value.value)
+            if keep_words:
+                for t_idx, transition in enumerate(transitions):
+                    if isinstance(transition, Shift):
                         # constituents is a TreeStack with information on how to build the next state of the LSTM or attn
                         # constituents.value is the TreeStack node
                         # constituents.value.value is the Constituent itself (with the tree and the embedding)
@@ -363,7 +370,7 @@ class BaseModel(ABC):
         with torch.no_grad():
             return self.parse_sentences(data_iterator, build_batch_fn, batch_size, transition_choice, keep_state, keep_constituents, keep_scores)
 
-    def analyze_trees(self, trees, batch_size=None, keep_state=True, keep_constituents=True, keep_scores=True):
+    def analyze_trees(self, trees, batch_size=None, keep_state=True, keep_constituents=True, keep_scores=True, keep_words=False):
         """
         Return a ParseResult for each tree in the trees list
 
@@ -377,7 +384,7 @@ class BaseModel(ABC):
             # TODO: refactor?
             batch_size = self.args['eval_batch_size']
         tree_iterator = iter(trees)
-        treebank = self.parse_sentences(tree_iterator, self.build_batch_from_trees_with_gold_sequence, batch_size, self.predict_gold, keep_state, keep_constituents, keep_scores=keep_scores)
+        treebank = self.parse_sentences(tree_iterator, self.build_batch_from_trees_with_gold_sequence, batch_size, self.predict_gold, keep_state, keep_constituents, keep_scores=keep_scores, keep_words=keep_words)
         return treebank
 
     def parse_tagged_words(self, words, batch_size):
