@@ -35,7 +35,7 @@ tlogger = logging.getLogger('stanza.constituency.trainer')
 
 TrainItem = namedtuple("TrainItem", ['tree', 'gold_sequence', 'preterminals'])
 
-class EpochStats(namedtuple("EpochStats", ['epoch_loss', 'orthogonal_loss', 'transitions_correct', 'transitions_incorrect', 'repairs_used', 'fake_transitions_used', 'nans'])):
+class EpochStats(namedtuple("EpochStats", ['epoch_loss', 'orthogonal_loss', 'transitions_correct', 'transitions_incorrect', 'repairs_used', 'fake_transitions_used', 'nans', 'wide_neighbors'])):
     def __add__(self, other):
         transitions_correct = self.transitions_correct + other.transitions_correct
         transitions_incorrect = self.transitions_incorrect + other.transitions_incorrect
@@ -44,7 +44,8 @@ class EpochStats(namedtuple("EpochStats", ['epoch_loss', 'orthogonal_loss', 'tra
         epoch_loss = self.epoch_loss + other.epoch_loss
         orthogonal_loss = self.orthogonal_loss + other.orthogonal_loss
         nans = self.nans + other.nans
-        return EpochStats(epoch_loss, orthogonal_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans)
+        wide_neighbors = self.wide_neighbors + other.wide_neighbors
+        return EpochStats(epoch_loss, orthogonal_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans, wide_neighbors)
 
 def evaluate(args, model_file, retag_pipeline):
     """
@@ -461,6 +462,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         ]
         if args['orthogonal_learning_rate'] > 0.0 and args['orthogonal_initial_epoch'] <= trainer.epochs_trained:
             stats_log_lines.append("Orthogonal loss for epoch: %.5f" % epoch_stats.orthogonal_loss)
+            stats_log_lines.append("Wide neighbors: %d" % epoch_stats.wide_neighbors)
         stats_log_lines.extend([
             "Total loss for epoch: %.5f" % epoch_stats.epoch_loss,
             "Dev score      (%5d): %8f" % (trainer.epochs_trained, f1),
@@ -565,7 +567,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
 
     optimizer = trainer.optimizer
 
-    epoch_stats = EpochStats(0.0, 0.0, Counter(), Counter(), Counter(), 0, 0)
+    epoch_stats = EpochStats(0.0, 0.0, Counter(), Counter(), Counter(), 0, 0, 0)
 
     for batch_idx, interval_start in enumerate(tqdm(interval_starts, postfix="Epoch %d" % epoch)):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
@@ -681,7 +683,10 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
     answers = torch.cat(all_answers)
 
     orthogonal_loss = 0.0
+    wide_neighbors = 0
     if epoch >= args['orthogonal_initial_epoch'] and orthogonal_loss_function is not None:
+        wide_neighbors = sum(x.tree.count_wide_neighbors() for x in training_batch)
+
         gold_results = model.analyze_trees([x.tree for x in training_batch], keep_constituents=True, keep_scores=False)
         orthogonal_losses = []
         def build_losses(con_values, tree):
@@ -740,7 +745,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
             orthogonal_loss = orthogonal_loss.item()
         nans = 0
 
-    return EpochStats(batch_loss, orthogonal_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans)
+    return EpochStats(batch_loss, orthogonal_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans, wide_neighbors)
 
 def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None):
     """
