@@ -685,35 +685,57 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
     orthogonal_loss = 0.0
     wide_neighbors = 0
     if epoch >= args['orthogonal_initial_epoch'] and orthogonal_loss_function is not None:
-        wide_neighbors = sum(x.tree.count_wide_neighbors() for x in training_batch)
+        all_trees = [(x.tree.move_first_wide_neighbor(), x.tree) for x in training_batch if x.tree.count_wide_neighbors() > 0]
+        mutated_trees = [x[0] for x in all_trees]
+        gold_trees = [x[1] for x in all_trees]
+        wide_neighbors = len(mutated_trees)
+        if wide_neighbors > 0:
+            mutated_results = model.analyze_trees([x[0] for x in mutated_trees], keep_constituents=True, keep_scores=False, keep_words=True)
+            gold_results = model.analyze_trees(gold_trees, keep_constituents=True, keep_scores=False, keep_words=True)
 
-        gold_results = model.analyze_trees([x.tree for x in training_batch], keep_constituents=True, keep_scores=False)
-        orthogonal_losses = []
-        def build_losses(con_values, tree):
-            # this can skip preterminals
-            # but a preterminal in the middle of a phrase has a high chance of being
-            # a conjunction, a punctuation, or other non-function word anyway
-            subtrees = [x for x in tree.children if not x.is_preterminal()]
-            for subtree in subtrees:
-                build_losses(con_values, subtree)
-            for left, right in itertools.combinations(subtrees, 2):
-                left = str(left)
-                right = str(right)
-                if left in con_values and right in con_values:
-                    left_value = con_values[left].squeeze(0)
-                    right_value = con_values[right].squeeze(0)
-                    mse = torch.dot(left_value, right_value) / (len(subtrees) - 1)
-                    orthogonal_losses.append(mse)
-        for result in gold_results:
-            gold_constituents = result.constituents
-            con_values = {}
-            for con in gold_constituents:
-                # normalize so that we are enforcing only the angle go to 0, not the length
-                con_values[str(con.value)] = nn.functional.normalize(con.tree_hx)
-            build_losses(con_values, result.gold)
-        orthogonal_losses = torch.stack(orthogonal_losses)
-        orthogonal_target = torch.zeros(orthogonal_losses.shape).to(orthogonal_losses.device)
-        orthogonal_loss = orthogonal_loss_function(orthogonal_losses, orthogonal_target) * args['orthogonal_learning_rate']
+            orthogonal_losses = []
+
+            def orth(x, y):
+                if x is None or y is None:
+                    return 0
+                orth_component = x - torch.dot(x, y) * y
+                return torch.linalg.norm(orth_component)
+
+            def span_independence(tree, subtree, tree_hx):
+                """
+                SCIN from the TreeReg paper
+                """
+                tree.mark_parents()
+                previous_span = subtree.find_previous_span()
+                previous_hx = tree_hx[str(previous_span)] if previous_span is not None else None
+                next_span = subtree.find_next_span()
+                next_hx = tree_hx[str(next_span)] if next_span is not None else None
+                current_hx = tree_hx[str(subtree)]
+                return orth(next_hx, current_hx) + orth(previous_hx, current_hx)
+
+            def split_span_score(tree, left_subtree, right_subtree, tree_hx):
+                return span_independence(tree, left_subtree, tree_hx) + span_independence(tree, right_subtree, tree_hx)
+
+            def build_losses(gold_tree, mutated_tree, gold_left, gold_right, mutated_left, mutated_right, gold_hx, mutated_hx):
+                # +4 to make the split_span_score for the gold tree always positive, trending to 0 if perfectly orthogonal
+                loss = split_span_score(mutated_tree, mutated_left, mutated_right, mutated_hx) + 4 - split_span_score(gold_tree, gold_left, gold_right, gold_hx)
+                return loss
+
+            for mutated_result, (mutated_tree, subtrees), gold_result, gold_tree in zip(mutated_results, mutated_trees, gold_results, gold_trees):
+                mutated_constituents = mutated_result.constituents
+                mutated_hx = {}
+                for con in mutated_constituents:
+                    mutated_hx[str(con.value)] = nn.functional.normalize(con.tree_hx).squeeze(0)
+
+                gold_constituents = gold_result.constituents
+                gold_hx = {}
+                for con in gold_constituents:
+                    gold_hx[str(con.value)] = nn.functional.normalize(con.tree_hx).squeeze(0)
+
+                gold_left, gold_right, mutated_left, mutated_right = subtrees
+                orthogonal_losses.append(build_losses(gold_tree, mutated_tree, gold_left, gold_right, mutated_left, mutated_right, gold_hx, mutated_hx))
+
+            orthogonal_loss = sum(orthogonal_losses) * args['orthogonal_learning_rate']
 
 
     errors = process_outputs(errors)

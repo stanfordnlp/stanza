@@ -426,7 +426,7 @@ def test_count_wide_nodes():
 
 def test_count_wide_nodes():
     tree = read_one_tree(WIDE_NEIGHBORS_TREE)
-    new_tree = tree.move_first_wide_neighbor()
+    new_tree, _ = tree.move_first_wide_neighbor()
 
     expected_move = """
 (ROOT
@@ -502,7 +502,7 @@ def test_count_wide_nodes():
       (NP (NNP Windy) (NNP City)))))
     """
     smaller_tree = read_one_tree(smaller_tree)
-    new_tree = smaller_tree.move_first_wide_neighbor()
+    new_tree, _ = smaller_tree.move_first_wide_neighbor()
     expected_smaller_tree = """
 (S-HLN
   (NP-SBJ (VBN Revitalized) (NNS Classics) (VBP Take))
