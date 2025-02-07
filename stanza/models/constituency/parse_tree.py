@@ -589,3 +589,18 @@ class Tree(StanzaObject):
             for tree in trees:
                 fout.write(fmt.format(tree))
                 fout.write("\n")
+
+    def count_wide_neighbors(self):
+        if self.is_preterminal():
+            return 0
+
+        total = 0
+        for child_idx, child in enumerate(self.children):
+            total += child.count_wide_neighbors()
+            if child_idx + 1 < len(self.children):
+                # TODO(future): python 3.10 will have itertools.pairwise()
+                next_child = self.children[child_idx + 1]
+                if ((len(child.children) >= 2 and len(next_child.children) >= 3) or
+                    (len(child.children) >= 3 and len(next_child.children) >= 2)):
+                    total += 1
+        return total

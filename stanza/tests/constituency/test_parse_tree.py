@@ -367,3 +367,58 @@ def test_reverse():
     assert len(trees) == 1
     reversed_tree = trees[0].reverse()
     assert str(reversed_tree) == "(ROOT (S (VP (S (VP (VP (NP (NNS antennae) (NP (POS 's) (NNP Jennifer))) (VB lick)) (TO to))) (VBP want)) (NP (PRP I))))"
+
+def read_one_tree(text):
+    trees = tree_reader.read_trees(text)
+    assert len(trees) == 1
+    return trees[0]
+
+def test_count_wide_nodes():
+    text = """
+( (S
+    (PP-LOC (IN In)
+      (NP
+        (NP (DT an) (NNP Oct.) (CD 19) (NN review) )
+        (PP (IN of)
+          (NP (`` ``)
+            (NP-TTL (DT The) (NN Misanthrope) )
+            ('' '')
+            (PP-LOC (IN at)
+              (NP
+                (NP (NNP Chicago) (POS 's) )
+                (NNP Goodman) (NNP Theatre) ))))
+        (PRN
+          (-LRB- -LRB-)
+          (`` ``)
+          (S-HLN
+            (NP-SBJ (VBN Revitalized) (NNS Classics) )
+            (VP (VBP Take)
+              (NP (DT the) (NN Stage) )
+              (PP-LOC (IN in)
+                (NP (NNP Windy) (NNP City) ))))
+          (, ,) ('' '')
+          (NP-TMP (NN Leisure) (CC &) (NNS Arts) )
+          (-RRB- -RRB-) )))
+    (, ,)
+    (NP-SBJ-2
+      (NP
+        (NP (DT the) (NN role) )
+        (PP (IN of)
+          (NP (NNP Celimene) )))
+      (, ,)
+      (VP (VBN played)
+        (NP (-NONE- *) )
+        (PP (IN by)
+          (NP-LGS (NNP Kim) (NNP Cattrall) )))
+      (, ,) )
+    (VP (VBD was)
+      (VP
+        (ADVP-MNR (RB mistakenly) )
+        (VBN attributed)
+        (NP (-NONE- *-2) )
+        (PP-CLR (TO to)
+          (NP (NNP Christina) (NNP Haag) ))))
+    (. .) ))
+"""
+    tree = read_one_tree(text)
+    assert tree.count_wide_neighbors() == 4
