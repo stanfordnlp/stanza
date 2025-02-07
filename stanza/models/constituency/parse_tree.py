@@ -604,3 +604,53 @@ class Tree(StanzaObject):
                     (len(child.children) >= 3 and len(next_child.children) >= 2)):
                     total += 1
         return total
+
+    def move_first_wide_neighbor(self):
+        already_moved = False
+
+        def move_helper(tree):
+            if tree.is_leaf():
+                return Tree(tree.label)
+
+            nonlocal already_moved
+            if already_moved:
+                new_children = [move_helper(child) for child in tree.children]
+                return Tree(tree.label, new_children)
+
+            new_children = []
+            for child_idx, child in enumerate(tree.children):
+                if child_idx + 1 < len(tree.children) and not already_moved:
+                    # the not already_moved check is in case a recursive call changes that value
+                    # not some race condition
+                    next_child = tree.children[child_idx + 1]
+                    # TODO: this favors one side rather than the other moving
+                    if len(child.children) >= 2 and len(next_child.children) >= 3:
+                        already_moved = True
+                        left_children = [move_helper(x) for x in child.children]
+                        left_children.append(move_helper(next_child.children[0]))
+                        right_children = [move_helper(x) for x in next_child.children[1:]]
+
+                        new_children.append(Tree(child.label, left_children))
+                        new_children.append(Tree(next_child.label, right_children))
+
+                        if child_idx + 2 < len(tree.children):
+                            new_children.extend(move_helper(x) for x in tree.children[child_idx + 2:])
+
+                        return Tree(tree.label, new_children)
+                    elif len(child.children) >= 3 and len(next_child.children) >= 2:
+                        already_moved = True
+                        left_children = [move_helper(x) for x in child.children[:-1]]
+                        right_children = [move_helper(child.children[-1])]
+                        right_children.extend(move_helper(x) for x in next_child.children)
+
+                        new_children.append(Tree(child.label, left_children))
+                        new_children.append(Tree(next_child.label, right_children))
+
+                        if child_idx + 2 < len(tree.children):
+                            new_children.extend(move_helper(x) for x in tree.children[child_idx + 2:])
+
+                        return Tree(tree.label, new_children)
+                new_children.append(move_helper(child))
+            return Tree(tree.label, new_children)
+
+        return move_helper(self)
