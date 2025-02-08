@@ -787,6 +787,7 @@ def build_model_filename(args):
                                                trans_layers=args['bert_hidden_layers'],
                                                orthogonal=args['orthogonal_learning_rate'],
                                                rattn=rattn,
+                                               orthogonal_final_epoch=args['orthogonal_final_epoch'],
                                                seed=args['seed'])
     model_save_file = re.sub("_+", "_", model_save_file)
     logger.info("Expanded save_name: %s", model_save_file)
