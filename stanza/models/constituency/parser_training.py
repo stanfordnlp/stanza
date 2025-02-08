@@ -366,18 +366,6 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     device = trainer.device
     model_loss_function.to(device)
 
-    if args['orthogonal_learning_rate'] > 0:
-        # To measure which of the neighboring subtrees are orthogonal,
-        # we take the dot product of their embeddings and then try to
-        # force that to 0 using MSELoss
-        # That way, either positive or negative dot product
-        # (which represents some form of correlation)
-        # is penalized
-        orthogonal_loss_function = nn.MSELoss(reduction='sum')
-        orthogonal_loss_function.to(device)
-    else:
-        orthogonal_loss_function = None
-
     transition_tensors = {x: torch.tensor(y, requires_grad=False, device=device).unsqueeze(0)
                           for (y, x) in enumerate(trainer.transitions)}
     trainer.train()
@@ -427,7 +415,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         epoch_data = epoch_data + epoch_silver_data
         epoch_data.sort(key=lambda x: len(x[1]))
 
-        epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, process_outputs, model_loss_function, orthogonal_loss_function, epoch_data, oracle, args)
+        epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, process_outputs, model_loss_function, epoch_data, oracle, args)
 
         # print statistics
         # by now we've forgotten about the original tags on the trees,
@@ -561,7 +549,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
     return trainer
 
-def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, model_loss_function, orthogonal_loss_function, epoch_data, oracle, args):
+def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, model_loss_function, epoch_data, oracle, args):
     interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
     random.shuffle(interval_starts)
 
@@ -571,7 +559,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
 
     for batch_idx, interval_start in enumerate(tqdm(interval_starts, postfix="Epoch %d" % epoch)):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
-        batch_stats = train_model_one_batch(epoch, batch_idx, trainer.model, batch, transition_tensors, process_outputs, model_loss_function, orthogonal_loss_function, oracle, args)
+        batch_stats = train_model_one_batch(epoch, batch_idx, trainer.model, batch, transition_tensors, process_outputs, model_loss_function, oracle, args)
         trainer.batches_trained += 1
 
         # Early in the training, some trees will be degenerate in a
@@ -586,7 +574,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
 
     return epoch_stats
 
-def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_tensors, process_outputs, model_loss_function, orthogonal_loss_function, oracle, args):
+def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_tensors, process_outputs, model_loss_function, oracle, args):
     """
     Train the model for one batch
 
@@ -684,7 +672,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
 
     orthogonal_loss = 0.0
     wide_neighbors = 0
-    if epoch >= args['orthogonal_initial_epoch'] and orthogonal_loss_function is not None:
+    if epoch >= args['orthogonal_initial_epoch']:
         all_trees = [(x.tree.move_first_wide_neighbor(), x.tree) for x in training_batch if x.tree.count_wide_neighbors() > 0]
         mutated_trees = [x[0] for x in all_trees]
         gold_trees = [x[1] for x in all_trees]
