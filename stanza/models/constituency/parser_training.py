@@ -672,7 +672,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
 
     orthogonal_loss = 0.0
     wide_neighbors = 0
-    if epoch >= args['orthogonal_initial_epoch']:
+    if epoch >= args['orthogonal_initial_epoch'] and epoch <= args['orthogonal_final_epoch']:
         all_trees = [(x.tree.move_first_wide_neighbor(), x.tree) for x in training_batch if x.tree.count_wide_neighbors() > 0]
         mutated_trees = [x[0] for x in all_trees]
         gold_trees = [x[1] for x in all_trees]
@@ -723,7 +723,11 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
                 gold_left, gold_right, mutated_left, mutated_right = subtrees
                 orthogonal_losses.append(build_losses(gold_tree, mutated_tree, gold_left, gold_right, mutated_left, mutated_right, gold_hx, mutated_hx))
 
-            orthogonal_loss = sum(orthogonal_losses) * args['orthogonal_learning_rate']
+            current_orthogonal_lr = args['orthogonal_learning_rate']
+            if args['orthogonal_final_epoch'] != float('inf'):
+                current_orthogonal_lr = current_orthogonal_lr * (args['orthogonal_final_epoch'] - epoch + 1) / args['orthogonal_final_epoch']
+
+            orthogonal_loss = current_orthogonal_lr * sum(orthogonal_losses)
 
 
     errors = process_outputs(errors)

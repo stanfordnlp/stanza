@@ -558,6 +558,7 @@ def build_argparse():
 
     parser.add_argument('--orthogonal_initial_epoch', default=1, type=int, help='When to start using the orthogonal loss')
     parser.add_argument('--orthogonal_learning_rate', default=0.0, type=float, help='Multiplicative factor for the orthogonal loss')
+    parser.add_argument('--orthogonal_final_epoch', default=float('inf'), type=int, help='When to stop contrastive learning.  Loss will decay to 0')
 
     # Large Margin is from Large Margin In Softmax Cross-Entropy Loss
     # it did not help on an Italian VIT test
