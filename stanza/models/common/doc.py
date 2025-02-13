@@ -46,6 +46,7 @@ TYPE = 'type'
 SENTIMENT = 'sentiment'
 CONSTITUENCY = 'constituency'
 COREF_CHAINS = 'coref_chains'
+LINE_NUMBER = 'line_number'
 
 # field indices when converting the document to conll
 FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
@@ -965,7 +966,7 @@ def init_from_misc(unit):
             # some key_value can not be split
             key, value = key_value
             # start & end char are kept as ints
-            if key in (START_CHAR, END_CHAR):
+            if key in (START_CHAR, END_CHAR, LINE_NUMBER):
                 value = int(value)
             # set attribute
             attr = f'_{key}'
@@ -1014,6 +1015,9 @@ def dict_to_conll_text(token_dict, id_connector="-"):
             token_conll[FIELD_TO_IDX[key]] = id_connector.join([str(x) for x in token_dict[key]]) if isinstance(token_dict[key], tuple) else str(token_dict[key])
         elif key in FIELD_TO_IDX:
             token_conll[FIELD_TO_IDX[key]] = str(token_dict[key])
+        elif key == LINE_NUMBER:
+            # skip this when converting back for now
+            pass
     if misc:
         token_conll[FIELD_TO_IDX[MISC]] = "|".join(misc)
     else:
@@ -1051,6 +1055,7 @@ class Token(StanzaObject):
         self._mexp = token_entry.get(MEXP, None)
         self._spaces_before = ""
         self._spaces_after = " "
+        self._line_number = None
 
         if self._misc is not None:
             init_from_misc(self)
@@ -1177,6 +1182,11 @@ class Token(StanzaObject):
         self._words = value
         for w in self._words:
             w.parent = self
+
+    @property
+    def line_number(self):
+        """ Access the line number from the original document, if set """
+        return self._line_number
 
     @property
     def start_char(self):
@@ -1323,6 +1333,7 @@ class Word(StanzaObject):
         self._sent = sentence
         self._mexp = word_entry.get(MEXP, None)
         self._coref_chains = None
+        self._line_number = None
 
         if self._misc is not None:
             init_from_misc(self)
@@ -1484,6 +1495,11 @@ class Word(StanzaObject):
     def misc(self, value):
         """ Set the word's miscellaneousness value. """
         self._misc = value if self._is_null(value) == False else None
+
+    @property
+    def line_number(self):
+        """ Access the line number from the original document, if set """
+        return self._line_number
 
     @property
     def start_char(self):

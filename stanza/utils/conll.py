@@ -8,6 +8,7 @@ from zipfile import ZipFile
 from stanza.models.common.doc import Document
 from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, NER, START_CHAR, END_CHAR
 from stanza.models.common.doc import FIELD_TO_IDX, FIELD_NUM
+from stanza.models.common.doc import LINE_NUMBER
 
 class CoNLLError(ValueError):
     pass
@@ -15,7 +16,7 @@ class CoNLLError(ValueError):
 class CoNLL:
 
     @staticmethod
-    def load_conll(f, ignore_gapping=True):
+    def load_conll(f, ignore_gapping=True, keep_line_numbers=False):
         """ Load the file or string into the CoNLL-U format data.
         Input: file or string reader, where the data is in CoNLL-U format.
         Output: a tuple whose first element is a list of list of list for each token in each sentence in the data,
@@ -43,6 +44,11 @@ class CoNLL:
                     continue
                 if len(array) != FIELD_NUM:
                     raise CoNLLError(f"Cannot parse CoNLL line {line_idx+1}: expecting {FIELD_NUM} fields, {len(array)} found at line {line_idx}\n  {array}")
+                if keep_line_numbers:
+                    if array[-1] == "_" or array[-1] is None:
+                        array[-1] = "%s=%d" % (LINE_NUMBER, line_idx)
+                    else:
+                        array[-1] = "%s|%s=%d" % (array[-1], LINE_NUMBER, line_idx)
                 sent += [array]
         if len(sent) > 0:
             doc.append(sent)
@@ -113,7 +119,7 @@ class CoNLL:
         return token_dict
 
     @staticmethod
-    def conll2dict(input_file=None, input_str=None, ignore_gapping=True, zip_file=None):
+    def conll2dict(input_file=None, input_str=None, ignore_gapping=True, zip_file=None, keep_line_numbers=False):
         """ Load the CoNLL-U format data from file or string into lists of dictionaries.
         """
         assert any([input_file, input_str]) and not all([input_file, input_str]), 'either use input file or input string'
@@ -121,21 +127,21 @@ class CoNLL:
 
         if input_str:
             infile = io.StringIO(input_str)
-            doc_conll, doc_comments = CoNLL.load_conll(infile, ignore_gapping)
+            doc_conll, doc_comments = CoNLL.load_conll(infile, ignore_gapping, keep_line_numbers)
         elif zip_file:
             with ZipFile(zip_file) as zin:
                 with zin.open(input_file) as fin:
-                    doc_conll, doc_comments = CoNLL.load_conll(io.TextIOWrapper(fin, encoding="utf-8"), ignore_gapping)
+                    doc_conll, doc_comments = CoNLL.load_conll(io.TextIOWrapper(fin, encoding="utf-8"), ignore_gapping, keep_line_numbers)
         else:
             with open(input_file, encoding='utf-8') as fin:
-                doc_conll, doc_comments = CoNLL.load_conll(fin, ignore_gapping)
+                doc_conll, doc_comments = CoNLL.load_conll(fin, ignore_gapping, keep_line_numbers)
 
         doc_dict, doc_empty = CoNLL.convert_conll(doc_conll)
         return doc_dict, doc_comments, doc_empty
 
     @staticmethod
-    def conll2doc(input_file=None, input_str=None, ignore_gapping=True, zip_file=None):
-        doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file)
+    def conll2doc(input_file=None, input_str=None, ignore_gapping=True, zip_file=None, keep_line_numbers=False):
+        doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file, keep_line_numbers=keep_line_numbers)
         return Document(doc_dict, text=None, comments=doc_comments, empty_sentences=doc_empty)
 
     @staticmethod

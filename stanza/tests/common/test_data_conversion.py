@@ -505,7 +505,7 @@ ENGLISH_TEST_SENTENCE = """
 1	This	this	PRON	DT	Number=Sing|PronType=Dem	4	nsubj	_	start_char=0|end_char=4
 2	is	be	AUX	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	4	cop	_	start_char=5|end_char=7
 3	a	a	DET	DT	Definite=Ind|PronType=Art	4	det	_	start_char=8|end_char=9
-4	test	test	NOUN	NN	Number=Sing	0	root	_	start_char=10|end_char=14|SpaceAfter=No
+4	test	test	NOUN	NN	Number=Sing	0	root	_	SpaceAfter=No|start_char=10|end_char=14
 """.lstrip()
 
 def test_convert_dict():
@@ -518,3 +518,21 @@ def test_convert_dict():
                  ['4', 'test', 'test', 'NOUN', 'NN', 'Number=Sing', '0', 'root', '_', 'SpaceAfter=No|start_char=10|end_char=14']]]
 
     assert converted == expected
+
+def test_line_numbers():
+    doc = CoNLL.conll2doc(input_str=ENGLISH_TEST_SENTENCE, keep_line_numbers=True)
+    # currently the line numbers are not output in the conllu format
+    doc_conllu = "{:C}\n".format(doc)
+    assert doc_conllu == ENGLISH_TEST_SENTENCE
+
+    # currently the line numbers are not output in the dict format
+    converted = CoNLL.convert_dict(doc.to_dict())
+    expected = [[['1', 'This', 'this', 'PRON', 'DT', 'Number=Sing|PronType=Dem', '4', 'nsubj', '_', 'start_char=0|end_char=4'],
+                 ['2', 'is', 'be', 'AUX', 'VBZ', 'Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin', '4', 'cop', '_', 'start_char=5|end_char=7'],
+                 ['3', 'a', 'a', 'DET', 'DT', 'Definite=Ind|PronType=Art', '4', 'det', '_', 'start_char=8|end_char=9'],
+                 ['4', 'test', 'test', 'NOUN', 'NN', 'Number=Sing', '0', 'root', '_', 'SpaceAfter=No|start_char=10|end_char=14']]]
+    assert converted == expected
+
+    for word_idx, word in enumerate(doc.sentences[0].words):
+        # the test sentence has two comments in it
+        assert word.line_number == word_idx + 2
