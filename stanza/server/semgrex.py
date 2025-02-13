@@ -34,6 +34,7 @@ same document over and over, though.
 
 import argparse
 import copy
+import os
 
 import stanza
 from stanza.protobuf import SemgrexRequest, SemgrexResponse
@@ -139,6 +140,7 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--input_file', type=str, default=None, help="Input file to process (otherwise will process a sample text)")
+    parser.add_argument('--input_dir', type=str, default=None, help="Process all of the files in this directory")
     parser.add_argument('semgrex', type=str, nargs="*", default=["{}=source >obj=zzz {}=target"], help="Semgrex to apply to the text.  The default looks for sentences with objects")
     parser.add_argument('--semgrex_file', type=str, default=None, help="File to read semgrex patterns from - relevant in case the pattern you want to use doesn't work well on the command line, for example")
     parser.add_argument('--print_input', dest='print_input', action='store_true', default=False, help="Print the input alongside the output - gets kind of noisy")
@@ -152,19 +154,23 @@ def main():
             args.semgrex = [x.strip() for x in fin.readlines() if x.strip()]
 
     if args.input_file:
-        doc = CoNLL.conll2doc(input_file=args.input_file, ignore_gapping=False)
+        docs = [CoNLL.conll2doc(input_file=args.input_file, ignore_gapping=False)]
+    elif args.input_dir:
+        docs = [CoNLL.conll2doc(input_file=os.path.join(args.input_dir, filename), ignore_gapping=False) for filename in sorted(os.listdir(args.input_dir))]
     else:
         nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma,depparse')
-        doc = nlp('Uro ruined modern.  Fortunately, Wotc banned him.')
+        docs = [nlp('Uro ruined modern.  Fortunately, Wotc banned him.')]
 
-    if args.print_input:
-        print("{:C}".format(doc))
-        print()
-        print("-" * 75)
-        print()
-    semgrex_result = process_doc(doc, *args.semgrex, enhanced=args.enhanced)
-    doc = annotate_doc(doc, semgrex_result, args.semgrex, args.matches_only)
-    print("{:C}".format(doc))
+    for doc in docs:
+        if args.print_input:
+            print("{:C}".format(doc))
+            print()
+            print("-" * 75)
+            print()
+        semgrex_result = process_doc(doc, *args.semgrex, enhanced=args.enhanced)
+        doc = annotate_doc(doc, semgrex_result, args.semgrex, args.matches_only)
+        if len(doc.sentences) > 0:
+            print("{:C}\n".format(doc))
 
 if __name__ == '__main__':
     main()
