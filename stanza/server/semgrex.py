@@ -156,7 +156,10 @@ def main():
     if args.input_file:
         docs = [CoNLL.conll2doc(input_file=args.input_file, ignore_gapping=False)]
     elif args.input_dir:
-        docs = [CoNLL.conll2doc(input_file=os.path.join(args.input_dir, filename), ignore_gapping=False) for filename in sorted(os.listdir(args.input_dir))]
+        filenames = sorted(os.listdir(args.input_dir))
+        filenames = [os.path.join(args.input_dir, filename) for filename in filenames]
+        filenames = [filename for filename in filenames if os.path.isfile(filename)]
+        docs = [CoNLL.conll2doc(input_file=filename, ignore_gapping=False) for filename in filenames]
     else:
         nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma,depparse')
         docs = [nlp('Uro ruined modern.  Fortunately, Wotc banned him.')]
