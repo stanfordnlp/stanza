@@ -448,7 +448,7 @@ class Document(StanzaObject):
                 if not word.feats:
                     continue
                 pieces = word.feats.split("|")
-                pieces = sorted(pieces)
+                pieces = sorted(pieces, key=str.casefold)
                 word.feats = "|".join(pieces)
 
     def iter_words(self):
@@ -1013,6 +1013,13 @@ def dict_to_conll_text(token_dict, id_connector="-"):
                 misc.append(token_dict[key])
         elif key == ID:
             token_conll[FIELD_TO_IDX[key]] = id_connector.join([str(x) for x in token_dict[key]]) if isinstance(token_dict[key], tuple) else str(token_dict[key])
+        elif key == FEATS:
+            feats = token_dict[key]
+            if feats:
+                pieces = feats.split("|")
+                pieces = sorted(pieces, key=str.casefold)
+                feats = "|".join(pieces)
+            token_conll[FIELD_TO_IDX[key]] = str(feats)
         elif key in FIELD_TO_IDX:
             token_conll[FIELD_TO_IDX[key]] = str(token_dict[key])
         elif key == LINE_NUMBER:
