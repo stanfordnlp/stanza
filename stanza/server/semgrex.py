@@ -96,7 +96,7 @@ class Semgrex(JavaProtobufContext):
         request = build_request(doc, semgrex_patterns)
         return self.process_request(request)
 
-def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only):
+def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_matches):
     """
     Put comments on the sentences which describe the matching semgrex patterns
     """
@@ -104,6 +104,7 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only):
     if isinstance(semgrex_patterns, str):
         semgrex_patterns = [semgrex_patterns]
     matching_sentences = []
+    nonmatching_sentences = []
     for sentence, graph_result in zip(doc.sentences, semgrex_result.result):
         sentence_matched = False
         for semgrex_pattern, pattern_result in zip(semgrex_patterns, graph_result.result):
@@ -123,8 +124,12 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only):
                     sentence.add_comment("# semgrex pattern |%s| matched at %s%s" % (semgrex_pattern, match_word, node_matches))
         if sentence_matched:
             matching_sentences.append(sentence)
+        else:
+            nonmatching_sentences.append(sentence)
     if matches_only:
         doc.sentences = matching_sentences
+    elif exclude_matches:
+        doc.sentences = nonmatching_sentences
     return doc
 
 
@@ -146,6 +151,7 @@ def main():
     parser.add_argument('--print_input', dest='print_input', action='store_true', default=False, help="Print the input alongside the output - gets kind of noisy")
     parser.add_argument('--no_print_input', dest='print_input', action='store_false', help="Don't print the input alongside the output - gets kind of noisy")
     parser.add_argument('--matches_only', action='store_true', default=False, help="Only print the matching sentences")
+    parser.add_argument('--exclude_matches', action='store_true', default=False, help="Only print the NON-matching sentences")
     parser.add_argument('--enhanced', action='store_true', default=False, help='Use the enhanced dependencies instead of the basic')
     args = parser.parse_args()
 
@@ -171,7 +177,7 @@ def main():
             print("-" * 75)
             print()
         semgrex_result = process_doc(doc, *args.semgrex, enhanced=args.enhanced)
-        doc = annotate_doc(doc, semgrex_result, args.semgrex, args.matches_only)
+        doc = annotate_doc(doc, semgrex_result, args.semgrex, args.matches_only, args.exclude_matches)
         if len(doc.sentences) > 0:
             print("{:C}\n".format(doc))
 
