@@ -14,6 +14,7 @@ from stanza.models.common import utils
 from stanza.models.common.foundation_cache import FoundationCache, NoTransformerFoundationCache
 from stanza.models.common.large_margin_loss import LargeMarginInSoftmaxLoss
 from stanza.models.common.utils import sort_with_indices, unsort
+from stanza.models.constituency import error_analysis_in_order
 from stanza.models.constituency import parse_transitions
 from stanza.models.constituency import transition_sequence
 from stanza.models.constituency import tree_reader
@@ -87,7 +88,7 @@ def evaluate(args, model_file, retag_pipeline):
 
         if args['log_norms']:
             trainer.log_norms()
-        f1, kbestF1, _ = run_dev_set(trainer.model, retagged_treebank, treebank, args, evaluator)
+        f1, kbestF1, _ = run_dev_set(trainer.model, retagged_treebank, treebank, args, evaluator, analyze_first_errors=True)
         tlogger.info("F1 score on %s: %f", args['eval_file'], f1)
         if kbestF1 is not None:
             tlogger.info("KBest F1 score on %s: %f", args['eval_file'], kbestF1)
@@ -379,6 +380,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         if LSTMModel.uses_lattn(args):
             multistage_splits[args['epochs'] * 3 // 4] = (args['pattn_num_layers'], True)
 
+    # TODO: refactor the oracle choice into the transition scheme?
     oracle = None
     if args['transition_scheme'] is TransitionScheme.IN_ORDER:
         oracle = InOrderOracle(trainer.root_labels, args['oracle_level'], args['additional_oracle_levels'], args['deactivated_oracle_levels'])
@@ -686,7 +688,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
 
     return EpochStats(batch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans)
 
-def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None):
+def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None, analyze_first_errors=False):
     """
     This reparses a treebank and executes the CoreNLP Java EvalB code.
 
@@ -767,6 +769,14 @@ def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None):
             response = evaluator.process(full_results)
     else:
         response = evaluator.process(full_results)
+
+    if analyze_first_errors and args['transition_scheme'] is TransitionScheme.IN_ORDER:
+        errors = Counter()
+        for result in full_results:
+            first_error = error_analysis_in_order.analyze_tree(result.gold, result.predictions[0].tree)
+            errors[first_error] += 1
+        log_lines = ["%30s: %d" % (key.name, errors[key]) for key in error_analysis_in_order.FirstError]
+        tlogger.info("First error frequency:\n  %s", "\n  ".join(log_lines))
 
     kbestF1 = response.kbestF1 if response.HasField("kbestF1") else None
     return response.f1, kbestF1, response.treeF1
