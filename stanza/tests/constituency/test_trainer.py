@@ -254,6 +254,14 @@ class TestTrainer:
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             self.run_train_test(wordvec_pretrain_file, tmpdirname)
 
+    def test_similarity_train(self, wordvec_pretrain_file):
+        """
+        Test that adding the similarity loss doesn't break things
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            args = ['--similarity_learning_rate', '0.1']
+            self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
+
     def test_early_dropout(self, wordvec_pretrain_file):
         """
         Test the whole thing for a few iterations on the fake data

@@ -41,24 +41,25 @@ def check_attachment_error(gold_sequence, pred_sequence, idx, error_type):
     #gold_close_idx = find_in_order_constituent_end(gold_sequence, idx+1) # +1 represents, start counting from the Shift
     #pred_close_idx = find_in_order_constituent_end(pred_sequence, idx)
     if gold_sequence[idx+1:gold_close_idx] != pred_sequence[idx:pred_close_idx]:
-        return FirstError.UNKNOWN
+        return FirstError.UNKNOWN, None, None
     if (isinstance(gold_sequence[gold_close_idx], CloseConstituent) and
         isinstance(pred_sequence[pred_close_idx], CloseConstituent) and
         isinstance(pred_sequence[pred_close_idx+1], CloseConstituent)):
+        #print(error_type)
         #print(gold_sequence)
         #print(gold_close_idx)
+        #print(gold_sequence[gold_close_idx:])
         #print(pred_sequence)
         #print(pred_close_idx)
-        #print("{:P}".format(gold_tree))
-        #print("{:P}".format(pred_tree))
+        #print(pred_sequence[pred_close_idx+1:])
         #print("=================")
-        return error_type
+        return error_type, gold_close_idx, pred_close_idx+1
 
     return None
 
 def analyze_tree(gold_tree, pred_tree):
     if gold_tree == pred_tree:
-        return FirstError.NONE
+        return FirstError.NONE, None, None
 
     gold_sequence = build_sequence(gold_tree, TransitionScheme.IN_ORDER)
     pred_sequence = build_sequence(pred_tree, TransitionScheme.IN_ORDER)
@@ -68,7 +69,7 @@ def analyze_tree(gold_tree, pred_tree):
             break
     else:
         # guess only the tags were different?
-        return FirstError.NONE
+        return FirstError.NONE, None, None
 
     if isinstance(gold_trans, CloseConstituent) and isinstance(pred_trans, Shift) and isinstance(gold_sequence[idx + 1], Shift):
         # perhaps this is an attachment error
@@ -82,7 +83,8 @@ def analyze_tree(gold_tree, pred_tree):
         # we can see if the exact same sequence of moved constituent was built
         error = check_attachment_error(pred_sequence, gold_sequence, idx, FirstError.MISSING_ATTACHMENT)
         if error is not None:
-            return error
+            # flip the gold & pred indices of the relevant locations
+            return error[0], error[2], error[1]
 
     if isinstance(gold_trans, OpenConstituent) and isinstance(pred_trans, OpenConstituent):
         gold_close_idx = advance_past_constituents(gold_sequence, idx+1)
@@ -99,15 +101,15 @@ def analyze_tree(gold_tree, pred_tree):
             if (sum(isinstance(gt, Shift) for gt in gold_sequence[idx+1:gold_close_idx]) ==
                 sum(isinstance(pt, Shift) for pt in pred_sequence[idx+1:pred_close_idx])):
                 if gold_sequence[gold_unary_idx:] == pred_sequence[pred_unary_idx:]:
-                    return FirstError.WRONG_SUBTREE_NO_CASCADE
+                    return FirstError.WRONG_SUBTREE_NO_CASCADE, gold_unary_idx, pred_unary_idx
                 else:
-                    return FirstError.WRONG_SUBTREE_CASCADE
-            return FirstError.UNKNOWN
+                    return FirstError.WRONG_SUBTREE_CASCADE, gold_unary_idx, pred_unary_idx
+            return FirstError.UNKNOWN, None, None
         # at this point, everything is the same aside from the open being a different label
         if gold_sequence[gold_unary_idx:] == pred_sequence[pred_unary_idx:]:
-            return FirstError.WRONG_OPEN_LABEL_NO_CASCADE
+            return FirstError.WRONG_OPEN_LABEL_NO_CASCADE, gold_unary_idx, pred_unary_idx
         else:
-            return FirstError.WRONG_OPEN_LABEL_CASCADE
+            return FirstError.WRONG_OPEN_LABEL_CASCADE, gold_unary_idx, pred_unary_idx
 
     if isinstance(gold_trans, Shift) and isinstance(pred_trans, OpenConstituent):
         # This could be a case of an extra bracket inserted into the tree
@@ -179,9 +181,9 @@ def analyze_tree(gold_tree, pred_tree):
             #print("=================")
             gold_unary_idx = advance_past_unaries(gold_sequence, pred_close_idx - 1)
             if pred_sequence[pred_unary_idx:] == gold_sequence[gold_unary_idx:]:
-                return FirstError.EXTRA_BRACKET_NO_CASCADE
+                return FirstError.EXTRA_BRACKET_NO_CASCADE, pred_close_idx, pred_close_idx+2
             else:
-                return FirstError.EXTRA_BRACKET_CASCADE
+                return FirstError.EXTRA_BRACKET_CASCADE, pred_close_idx, pred_close_idx+2
 
     if isinstance(pred_trans, Shift) and isinstance(gold_trans, OpenConstituent):
         # presumably this has attachment errors as well, similarly to EXTRA_BRACKET
@@ -196,8 +198,9 @@ def analyze_tree(gold_tree, pred_tree):
             #print("=================")
             pred_unary_idx = advance_past_unaries(pred_sequence, gold_close_idx - 1)
             if pred_sequence[pred_unary_idx:] == gold_sequence[gold_unary_idx:]:
-                return FirstError.MISSING_BRACKET_NO_CASCADE
+                return FirstError.MISSING_BRACKET_NO_CASCADE, gold_unary_idx, pred_unary_idx
             else:
-                return FirstError.MISSING_BRACKET_CASCADE
+                return FirstError.MISSING_BRACKET_CASCADE, gold_unary_idx, pred_unary_idx
 
-    return FirstError.UNKNOWN
+
+    return FirstError.UNKNOWN, None, None

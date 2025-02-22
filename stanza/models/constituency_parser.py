@@ -562,6 +562,8 @@ def build_argparse():
     parser.add_argument('--loss', default='cross', help='cross, large_margin, or focal.  Focal requires `pip install focal_loss_torch`')
     parser.add_argument('--loss_focal_gamma', default=2, type=float, help='gamma value for a focal loss')
 
+    parser.add_argument('--similarity_learning_rate', default=0.0, type=float, help='Scale the LR by this much when doing contextual similarity')
+
     # turn off dropout for word_dropout, predict_dropout, and lstm_input_dropout
     # this mechanism doesn't actually turn off lstm_layer_dropout (yet)
     # but that is set to a default of 0 anyway

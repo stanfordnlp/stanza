@@ -35,15 +35,17 @@ tlogger = logging.getLogger('stanza.constituency.trainer')
 
 TrainItem = namedtuple("TrainItem", ['tree', 'gold_sequence', 'preterminals'])
 
-class EpochStats(namedtuple("EpochStats", ['epoch_loss', 'transitions_correct', 'transitions_incorrect', 'repairs_used', 'fake_transitions_used', 'nans'])):
+class EpochStats(namedtuple("EpochStats", ['transition_loss', 'similarity_loss', 'total_loss', 'transitions_correct', 'transitions_incorrect', 'repairs_used', 'fake_transitions_used', 'nans'])):
     def __add__(self, other):
         transitions_correct = self.transitions_correct + other.transitions_correct
         transitions_incorrect = self.transitions_incorrect + other.transitions_incorrect
         repairs_used = self.repairs_used + other.repairs_used
         fake_transitions_used = self.fake_transitions_used + other.fake_transitions_used
-        epoch_loss = self.epoch_loss + other.epoch_loss
+        transition_loss = self.transition_loss + other.transition_loss
+        similarity_loss = self.similarity_loss + other.similarity_loss
+        total_loss = self.total_loss + other.total_loss
         nans = self.nans + other.nans
-        return EpochStats(epoch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans)
+        return EpochStats(transition_loss, similarity_loss, total_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans)
 
 def evaluate(args, model_file, retag_pipeline):
     """
@@ -359,6 +361,8 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
     else:
         raise ValueError("Unexpected loss term: %s" % args['loss'])
 
+    similarity_loss_function = nn.MSELoss(reduction='sum')
+
     device = trainer.device
     model_loss_function.to(device)
     transition_tensors = {x: torch.tensor(y, requires_grad=False, device=device).unsqueeze(0)
@@ -411,7 +415,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         epoch_data = epoch_data + epoch_silver_data
         epoch_data.sort(key=lambda x: len(x[1]))
 
-        epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, process_outputs, model_loss_function, epoch_data, oracle, args)
+        epoch_stats = train_model_one_epoch(trainer.epochs_trained, trainer, transition_tensors, process_outputs, model_loss_function, similarity_loss_function, epoch_data, oracle, args)
 
         # print statistics
         # by now we've forgotten about the original tags on the trees,
@@ -443,10 +447,17 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             "Epoch %d finished" % trainer.epochs_trained,
             "Transitions correct:   %d" % total_correct,
             "Transitions incorrect: %d" % total_incorrect,
-            "Total loss for epoch: %.5f" % epoch_stats.epoch_loss,
+            "Transition loss for epoch: %.5f" % epoch_stats.transition_loss,
+        ]
+        if args['similarity_learning_rate'] != 0.0:
+            stats_log_lines.extend([
+                "Similarity loss for epoch: %.5f" % epoch_stats.similarity_loss,
+                "Total loss for epoch: %.5f" % epoch_stats.total_loss,
+            ])
+        stats_log_lines.extend([
             "Dev score      (%5d): %8f" % (trainer.epochs_trained, f1),
             "Best dev score (%5d): %8f" % (trainer.best_epoch, trainer.best_f1)
-        ]
+        ])
         tlogger.info("\n  ".join(stats_log_lines))
 
         old_lr = trainer.optimizer.param_groups[0]['lr']
@@ -456,7 +467,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
             tlogger.info("Updating learning rate from %f to %f", old_lr, new_lr)
 
         if args['wandb']:
-            wandb.log({'epoch_loss': epoch_stats.epoch_loss, 'dev_score': f1}, step=trainer.epochs_trained)
+            wandb.log({'total_loss': epoch_stats.total_loss, 'dev_score': f1}, step=trainer.epochs_trained)
             if args['wandb_norm_regex']:
                 watch_regex = re.compile(args['wandb_norm_regex'])
                 for n, p in trainer.model.named_parameters():
@@ -540,17 +551,17 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
 
     return trainer
 
-def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, model_loss_function, epoch_data, oracle, args):
+def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, model_loss_function, similarity_loss_function, epoch_data, oracle, args):
     interval_starts = list(range(0, len(epoch_data), args['train_batch_size']))
     random.shuffle(interval_starts)
 
     optimizer = trainer.optimizer
 
-    epoch_stats = EpochStats(0.0, Counter(), Counter(), Counter(), 0, 0)
+    epoch_stats = EpochStats(0.0, 0.0, 0.0, Counter(), Counter(), Counter(), 0, 0)
 
     for batch_idx, interval_start in enumerate(tqdm(interval_starts, postfix="Epoch %d" % epoch)):
         batch = epoch_data[interval_start:interval_start+args['train_batch_size']]
-        batch_stats = train_model_one_batch(epoch, batch_idx, trainer.model, batch, transition_tensors, process_outputs, model_loss_function, oracle, args)
+        batch_stats = train_model_one_batch(epoch, batch_idx, trainer.model, batch, transition_tensors, process_outputs, model_loss_function, similarity_loss_function, oracle, args)
         trainer.batches_trained += 1
 
         # Early in the training, some trees will be degenerate in a
@@ -565,7 +576,7 @@ def train_model_one_epoch(epoch, trainer, transition_tensors, process_outputs, m
 
     return epoch_stats
 
-def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_tensors, process_outputs, model_loss_function, oracle, args):
+def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_tensors, process_outputs, model_loss_function, similarity_loss_function, oracle, args):
     """
     Train the model for one batch
 
@@ -585,6 +596,28 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
     transitions_incorrect = Counter()
     repairs_used = Counter()
     fake_transitions_used = 0
+
+    similarity_loss = 0.0
+    # TODO: expand this to other transition schemes
+    if args['similarity_learning_rate'] > 0.0 and args['transition_scheme'] is TransitionScheme.IN_ORDER:
+        reparsed_results = model.parse_sentences(iter([x.tree for x in training_batch]), model.build_batch_from_trees, len(training_batch), model.predict, keep_output_layers=True)
+        gold_results = model.analyze_trees([x.tree for x in training_batch], keep_output_layers=True)
+        errors = [error_analysis_in_order.analyze_tree(result.gold, result.predictions[0].tree) for result in reparsed_results]
+
+        similarity_inputs = []
+        similarity_targets = []
+        for reparsed, gold, first_error in zip(reparsed_results, gold_results, errors):
+            if reparsed.predictions[0].tree == reparsed.gold:
+                continue
+            error_type, gold_index, pred_index = error_analysis_in_order.analyze_tree(reparsed.gold, reparsed.predictions[0].tree)
+            if gold_index is None or pred_index is None:
+                continue
+            similarity_inputs.append(reparsed.output_layers[pred_index])
+            similarity_targets.append(gold.output_layers[gold_index])
+        if len(similarity_inputs) > 0:
+            similarity_inputs = torch.stack(similarity_inputs)
+            similarity_targets = torch.stack(similarity_targets)
+            similarity_loss = similarity_loss_function(similarity_inputs, similarity_targets) * args['similarity_learning_rate']
 
     all_errors = []
     all_answers = []
@@ -663,7 +696,8 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
 
     errors = process_outputs(errors)
     tree_loss = model_loss_function(errors, answers)
-    tree_loss.backward()
+    total_loss = tree_loss + similarity_loss
+    total_loss.backward()
     if args['watch_regex']:
         matched = False
         tlogger.info("Watching %s   ... epoch %d batch %d", args['watch_regex'], epoch, batch_idx)
@@ -679,14 +713,19 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
                     tlogger.info("  %s norm: %f grad not required", n, torch.linalg.norm(p))
         if not matched:
             tlogger.info("  (none found!)")
-    if torch.any(torch.isnan(tree_loss)):
-        batch_loss = 0.0
+    if torch.any(torch.isnan(total_loss)):
+        tree_loss = 0.0
+        similarity_loss = 0.0
+        total_loss = 0.0
         nans = 1
     else:
-        batch_loss = tree_loss.item()
+        tree_loss = tree_loss.item()
+        if similarity_loss != 0.0:
+            similarity_loss = similarity_loss.item()
+        total_loss = total_loss.item()
         nans = 0
 
-    return EpochStats(batch_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans)
+    return EpochStats(tree_loss, similarity_loss, total_loss, transitions_correct, transitions_incorrect, repairs_used, fake_transitions_used, nans)
 
 def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None, analyze_first_errors=False):
     """
@@ -773,7 +812,7 @@ def run_dev_set(model, retagged_trees, original_trees, args, evaluator=None, ana
     if analyze_first_errors and args['transition_scheme'] is TransitionScheme.IN_ORDER:
         errors = Counter()
         for result in full_results:
-            first_error = error_analysis_in_order.analyze_tree(result.gold, result.predictions[0].tree)
+            first_error, _, _ = error_analysis_in_order.analyze_tree(result.gold, result.predictions[0].tree)
             errors[first_error] += 1
         log_lines = ["%30s: %d" % (key.name, errors[key]) for key in error_analysis_in_order.FirstError]
         tlogger.info("First error frequency:\n  %s", "\n  ".join(log_lines))
