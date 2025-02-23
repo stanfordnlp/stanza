@@ -21,8 +21,10 @@ class FirstError(Enum):
     WRONG_SUBTREE_CASCADE       = 6
     EXTRA_ATTACHMENT            = 7
     MISSING_ATTACHMENT          = 8
-    EXTRA_BRACKET               = 9
-    MISSING_BRACKET             = 10
+    EXTRA_BRACKET_NO_CASCADE    = 9
+    EXTRA_BRACKET_CASCADE       = 10
+    MISSING_BRACKET_NO_CASCADE  = 11
+    MISSING_BRACKET_CASCADE     = 12
 
 def advance_past_unaries(sequence, idx):
     while idx + 2 < len(sequence) and isinstance(sequence[idx+1], OpenConstituent) and isinstance(sequence[idx+2], CloseConstituent):
@@ -167,7 +169,7 @@ def analyze_tree(gold_tree, pred_tree):
         #      (. .)))
 
         pred_close_idx = advance_past_constituents(pred_sequence, idx+1)
-        pred_unary_idx = advance_past_unaries(pred_sequence, pred_close_idx)
+        pred_unary_idx = advance_past_unaries(pred_sequence, pred_close_idx + 1)
         if gold_sequence[idx:pred_close_idx-1] == pred_sequence[idx+1:pred_close_idx]:
             #print(gold_sequence)
             #print(pred_sequence)
@@ -175,12 +177,16 @@ def analyze_tree(gold_tree, pred_tree):
             #print("{:P}".format(gold_tree))
             #print("{:P}".format(pred_tree))
             #print("=================")
-            return FirstError.EXTRA_BRACKET
+            gold_unary_idx = advance_past_unaries(gold_sequence, pred_close_idx - 1)
+            if pred_sequence[pred_unary_idx:] == gold_sequence[gold_unary_idx:]:
+                return FirstError.EXTRA_BRACKET_NO_CASCADE
+            else:
+                return FirstError.EXTRA_BRACKET_CASCADE
 
     if isinstance(pred_trans, Shift) and isinstance(gold_trans, OpenConstituent):
         # presumably this has attachment errors as well, similarly to EXTRA_BRACKET
         gold_close_idx = advance_past_constituents(gold_sequence, idx+1)
-        gold_unary_idx = advance_past_unaries(gold_sequence, gold_close_idx)
+        gold_unary_idx = advance_past_unaries(gold_sequence, gold_close_idx + 1)
         if pred_sequence[idx:gold_close_idx-1] == gold_sequence[idx+1:gold_close_idx]:
             #print(gold_sequence)
             #print(pred_sequence)
@@ -188,7 +194,10 @@ def analyze_tree(gold_tree, pred_tree):
             #print("{:P}".format(gold_tree))
             #print("{:P}".format(pred_tree))
             #print("=================")
-            return FirstError.MISSING_BRACKET
-
+            pred_unary_idx = advance_past_unaries(pred_sequence, gold_close_idx - 1)
+            if pred_sequence[pred_unary_idx:] == gold_sequence[gold_unary_idx:]:
+                return FirstError.MISSING_BRACKET_NO_CASCADE
+            else:
+                return FirstError.MISSING_BRACKET_CASCADE
 
     return FirstError.UNKNOWN
