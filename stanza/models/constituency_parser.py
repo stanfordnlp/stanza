@@ -563,6 +563,7 @@ def build_argparse():
     parser.add_argument('--loss_focal_gamma', default=2, type=float, help='gamma value for a focal loss')
 
     parser.add_argument('--similarity_learning_rate', default=0.0, type=float, help='Scale the LR by this much when doing contextual similarity')
+    parser.add_argument('--similarity_end_epoch', default=float('inf'), type=int, help='End epoch for doing the similarity loss')
 
     # turn off dropout for word_dropout, predict_dropout, and lstm_input_dropout
     # this mechanism doesn't actually turn off lstm_layer_dropout (yet)
