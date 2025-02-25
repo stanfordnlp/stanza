@@ -599,7 +599,7 @@ def train_model_one_batch(epoch, batch_idx, model, training_batch, transition_te
 
     similarity_loss = 0.0
     # TODO: expand this to other transition schemes
-    if args['similarity_learning_rate'] > 0.0 and epoch <= args['similiarity_end_epoch'] and args['transition_scheme'] is TransitionScheme.IN_ORDER:
+    if args['similarity_learning_rate'] > 0.0 and epoch <= args['similarity_end_epoch'] and args['transition_scheme'] is TransitionScheme.IN_ORDER:
         reparsed_results = model.parse_sentences(iter([x.tree for x in training_batch]), model.build_batch_from_trees, len(training_batch), model.predict, keep_output_layers=True)
         gold_results = model.analyze_trees([x.tree for x in training_batch], keep_output_layers=True)
         errors = [error_analysis_in_order.analyze_tree(result.gold, result.predictions[0].tree) for result in reparsed_results]
