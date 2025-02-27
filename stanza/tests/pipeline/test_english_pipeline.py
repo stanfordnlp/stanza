@@ -159,7 +159,7 @@ EN_DOC_CONLLU_GOLD_MULTIDOC = """
 class TestEnglishPipeline:
     @pytest.fixture(scope="class")
     def pipeline(self):
-        return stanza.Pipeline(dir=TEST_MODELS_DIR)
+        return stanza.Pipeline(dir=TEST_MODELS_DIR, download_method=None)
 
     @pytest.fixture(scope="class")
     def processed_doc(self, pipeline):
