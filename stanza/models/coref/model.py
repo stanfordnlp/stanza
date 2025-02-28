@@ -315,6 +315,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         config = state_dicts.pop('config', None)
         if config is None:
             raise ValueError("Cannot load this format model without config in the dicts")
+        if 'max_train_len' not in config:
+            # TODO: this is to keep old models working.
+            # Can get rid of it if those models are rebuilt
+            config['max_train_len'] = 5000
         if isinstance(config, dict):
             config = Config(**config)
         if config_update:
@@ -456,7 +460,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 doc = docs[doc_id]
 
                 # skip very long documents during training time
-                if len(doc["subwords"]) > 5000:
+                if len(doc["subwords"]) > self.config.max_train_len:
                     continue
 
                 for optim in self.optimizers.values():

@@ -132,6 +132,11 @@ if __name__ == "__main__":
     argparser.add_argument("--seed", type=int, default=2020,
                            help="Random seed to set")
 
+    argparser.add_argument("--max_train_len", type=int, default=5000,
+                           help="Skip any documents longer than this maximum length")
+    argparser.add_argument("--no_max_train_len", action="store_const", const=float("inf"), dest="max_train_len",
+                           help="Do not skip any documents for being too long")
+
     argparser.add_argument("--train_data", default=None, help="File to use for train data")
     argparser.add_argument("--dev_data", default=None, help="File to use for dev data")
     argparser.add_argument("--test_data", default=None, help="File to use for test data")
@@ -183,6 +188,9 @@ if __name__ == "__main__":
         config.dev_data = args.dev_data
     if args.test_data:
         config.test_data = args.test_data
+
+    if args.max_train_len:
+        config.max_train_len = args.max_train_len
 
     # if wandb, generate wandb configuration 
     if args.mode == "train":
