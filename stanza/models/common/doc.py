@@ -982,36 +982,41 @@ def init_from_misc(unit):
 
 def dict_to_conll_text(token_dict, id_connector="-"):
     token_conll = ['_' for i in range(FIELD_NUM)]
+
     misc = []
-    for key in token_dict:
-        if key == START_CHAR or key == END_CHAR:
+    if token_dict.get(MISC):
+        # avoid appending a blank misc entry.
+        # otherwise the resulting misc field in the conll doc will wind up being blank text
+        # TODO: potentially need to escape =|\ in the MISC as well
+        misc.append(token_dict[MISC])
+
+    # for other items meant to be in the MISC field,
+    # we try to operate on those columns in a deterministic order
+    # so that the output doesn't change based on the order of keys
+    # in the token_dict
+    for key in [START_CHAR, END_CHAR, NER]:
+        if key in token_dict:
             misc.append("{}={}".format(key, token_dict[key]))
-        elif key == NER:
-            # TODO: potentially need to escape =|\ in the NER
-            misc.append("{}={}".format(key, token_dict[key]))
-        elif key == COREF_CHAINS:
-            chains = token_dict[key]
-            if len(chains) > 0:
-                misc_chains = []
-                for chain in chains:
-                    if chain.is_start and chain.is_end:
-                        coref_position = "unit-"
-                    elif chain.is_start:
-                        coref_position = "start-"
-                    elif chain.is_end:
-                        coref_position = "end-"
-                    else:
-                        coref_position = "middle-"
-                    is_representative = "repr-" if chain.is_representative else ""
-                    misc_chains.append("%s%sid%d" % (coref_position, is_representative, chain.chain.index))
-                misc.append("{}={}".format(key, ",".join(misc_chains)))
-        elif key == MISC:
-            # avoid appending a blank misc entry.
-            # otherwise the resulting misc field in the conll doc will wind up being blank text
-            # TODO: potentially need to escape =|\ in the MISC as well
-            if token_dict[key]:
-                misc.append(token_dict[key])
-        elif key == ID:
+
+    if COREF_CHAINS in token_dict:
+        chains = token_dict[COREF_CHAINS]
+        if len(chains) > 0:
+            misc_chains = []
+            for chain in chains:
+                if chain.is_start and chain.is_end:
+                    coref_position = "unit-"
+                elif chain.is_start:
+                    coref_position = "start-"
+                elif chain.is_end:
+                    coref_position = "end-"
+                else:
+                    coref_position = "middle-"
+                is_representative = "repr-" if chain.is_representative else ""
+                misc_chains.append("%s%sid%d" % (coref_position, is_representative, chain.chain.index))
+            misc.append("{}={}".format(key, ",".join(misc_chains)))
+
+    for key in token_dict.keys():
+        if key == ID:
             token_conll[FIELD_TO_IDX[key]] = id_connector.join([str(x) for x in token_dict[key]]) if isinstance(token_dict[key], tuple) else str(token_dict[key])
         elif key == FEATS:
             feats = token_dict[key]
