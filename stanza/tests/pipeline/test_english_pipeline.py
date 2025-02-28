@@ -257,6 +257,31 @@ class TestEnglishPipeline:
         conllu = "{:C}".format(reparsed).strip()
         assert conllu == EXPECTED_PRETOKENIZED_CONLLU
 
+    def test_bulk_pretokenized(self, pretokenized_pipeline, tokenizer_pipeline):
+        doc = tokenizer_pipeline(PRETOKENIZED_TEXT)
+        conllu = "{:C}".format(doc).strip()
+        assert conllu == EXPECTED_TOKENIZED_ONLY_CONLLU
+
+        docs = pretokenized_pipeline([doc, doc])
+        assert len(docs) == 2
+        for doc in docs:
+            conllu = "{:C}".format(doc).strip()
+            assert conllu == EXPECTED_PRETOKENIZED_CONLLU
+
+    def test_conll2doc_pretokenized(self, pretokenized_pipeline):
+        doc = CoNLL.conll2doc(input_str=EXPECTED_TOKENIZED_ONLY_CONLLU)
+        # this was bug from version 1.10.1 sent to us from a user
+        # the pretokenized tokenize_processor would try to whitespace tokenize a document
+        # even if the document already had sentences & words & stuff
+        # not only would that be wrong if the text wouldn't whitespace tokenize into the words
+        # (such as with punctuation and SpaceAfter=No),
+        # it wouldn't even work in the case of conll2doc, since the document.text wasn't set
+        docs = pretokenized_pipeline([doc, doc])
+        assert len(docs) == 2
+        for doc in docs:
+            conllu = "{:C}".format(doc).strip()
+            assert conllu == EXPECTED_PRETOKENIZED_CONLLU
+
     def test_stream(self, pipeline):
         """ Test the streaming interface to the Pipeline """
         # Test all of the documents in one batch

@@ -2,6 +2,7 @@
 Processor for performing tokenization
 """
 
+import copy
 import io
 import logging
 
@@ -128,8 +129,18 @@ class TokenizeProcessor(UDProcessor):
         if self.config.get('pretokenized'):
             res = []
             for document in docs:
-                raw_text, document = self.process_pre_tokenized_text(document.text)
-                res.append(doc.Document(document, raw_text))
+                if len(document.sentences) > 0:
+                    # perhaps this is a document already tokenized,
+                    # being sent back in for more analysis / reparsing / etc?
+                    # in that case, no need to try to tokenize it
+                    # based on whitespace tokenizing the document text
+                    # which, interestingly, may not even exist depending on
+                    # how the document was created)
+                    # by making a whole deepcopy, the original Document is unchanged
+                    res.append(copy.deepcopy(document))
+                else:
+                    raw_text, document = self.process_pre_tokenized_text(document.text)
+                    res.append(doc.Document(document, raw_text))
             return res
 
         combined_text = '\n\n'.join([thisdoc.text for thisdoc in docs])
