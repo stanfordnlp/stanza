@@ -116,6 +116,9 @@ bce_loss_weight = 0.5
 # The directory that will contain conll prediction files
 conll_log_dir = "data/conll_logs"
 
+# Skip any documents longer than this length
+max_train_len = 5000
+
 # =============================================================================
 # Extra keyword arguments to be passed to bert tokenizers of specified models
 [DEFAULT.tokenizer_kwargs]

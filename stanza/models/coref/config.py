@@ -64,3 +64,4 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
     log_norms: bool
     singletons: bool
     
+    max_train_len: int
