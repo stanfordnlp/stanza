@@ -58,9 +58,16 @@ def find_cconj_head(heads, upos, start, end):
 
 def process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_speakers, use_cconj_heads=True):
     """
+    doc_id: a string naming the document
+    part_id: if the document has a particular subpart (can be blank)
+    sentences: a list of list of string representing the raw text
+
     coref_spans: a list of lists
     one list per sentence
     each sentence has a list of spans, where each span is (span_index, span_start, span_end)
+    the indices are relative to 0 for that particular sentence, and if the span is exactly 1 word long, span_start == span_end
+
+    sentence_speakers: a list of list of string representing who said each word.  can all be blank if there are no known speakers
     """
     sentence_lens = [len(x) for x in sentences]
     if all(isinstance(x, list) for x in sentence_speakers):
