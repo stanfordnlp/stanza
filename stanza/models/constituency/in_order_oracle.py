@@ -390,7 +390,7 @@ def fix_close_open_shift_ambiguous_predicted(gold_transition, pred_transition, g
         end_index = find_in_order_constituent_end(gold_sequence, end_index+1)
         candidates.append((gold_sequence[:gold_index], gold_sequence[open_index+1:end_index], gold_sequence[gold_index:open_index+1], gold_sequence[end_index:]))
 
-    scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=2)
+    scores, best_idx, best_candidate = score_candidates(model, state, candidates)
     if len(candidates) == 1:
         return RepairType.CLOSE_OPEN_SHIFT_UNAMBIGUOUS_BRACKET, best_candidate
 
@@ -510,7 +510,7 @@ def fix_close_shift_shift_ambiguous_predicted(gold_transition, pred_transition, 
         current_index = find_in_order_constituent_end(gold_sequence, current_index)
         assert current_index is not None
         candidates.append((gold_sequence[:gold_index], gold_sequence[start_index:current_index], [CloseConstituent()], gold_sequence[current_index:]))
-    scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=2)
+    scores, best_idx, best_candidate = score_candidates(model, state, candidates)
     if len(candidates) == 1:
         return RepairType.CLOSE_SHIFT_SHIFT, best_candidate
     if best_idx == len(candidates) - 1:
@@ -563,7 +563,7 @@ def ambiguous_shift_open_predicted_close(gold_transition, pred_transition, gold_
     late_index = advance_past_constituents(gold_sequence, gold_index)
     if early_index == late_index:
         candidates = [unary_candidate, early_candidate]
-        scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=2)
+        scores, best_idx, best_candidate = score_candidates(model, state, candidates)
         if best_idx == 0:
             return_label = "U"
         else:
@@ -571,7 +571,7 @@ def ambiguous_shift_open_predicted_close(gold_transition, pred_transition, gold_
     else:
         late_candidate = (gold_sequence[:gold_index], [pred_transition] + gold_sequence[gold_index:late_index], [CloseConstituent()], gold_sequence[late_index:])
         candidates = [unary_candidate, early_candidate, late_candidate]
-        scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=2)
+        scores, best_idx, best_candidate = score_candidates(model, state, candidates)
         if best_idx == 0:
             return_label = "U"
         elif best_idx == 1:

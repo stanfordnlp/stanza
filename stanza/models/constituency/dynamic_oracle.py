@@ -6,7 +6,7 @@ from stanza.models.constituency.parse_transitions import Shift, OpenConstituent,
 
 RepairEnum = namedtuple("RepairEnum", "name value is_correct")
 
-def score_candidates(model, state, candidates, candidate_idx):
+def score_candidates_single_block(model, state, candidates, candidate_idx):
     """
     score candidate fixed sequences by summing up the transition scores of the most important block
 
@@ -25,6 +25,33 @@ def score_candidates(model, state, candidates, candidate_idx):
             t_idx = model.transition_map[transition]
             score += predictions[0, t_idx].cpu().item()
             current_state = model.bulk_apply(current_state, [transition])
+        scores.append(score)
+    best_idx = np.argmax(scores)
+    best_candidate = [x for block in candidates[best_idx] for x in block]
+    return scores, best_idx, best_candidate
+
+def score_candidates(model, state, candidates):
+    """
+    score candidate fixed sequences by summing up the transition scores of the most important block
+
+    the candidate with the best summed score is chosen, and the candidate sequence is reconstructed from the blocks
+
+    actually, using either this or just scoring a single block doesn't really help
+      eg, score_candidates_single_block(candidate_idx=2)
+    it still winds up being slightly better for accuracy to simply
+    revert to teacher forcing for ambiguous transition errors
+    """
+    scores = []
+    # could bulkify this if we wanted
+    for candidate in candidates:
+        current_state = [state]
+        score = 0.0
+        for block in candidate[1:]:
+            for transition in block:
+                predictions = model.forward(current_state)
+                t_idx = model.transition_map[transition]
+                score += predictions[0, t_idx].cpu().item()
+                current_state = model.bulk_apply(current_state, [transition])
         scores.append(score)
     best_idx = np.argmax(scores)
     best_candidate = [x for block in candidates[best_idx] for x in block]

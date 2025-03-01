@@ -1,7 +1,7 @@
 from enum import Enum
 import random
 
-from stanza.models.constituency.dynamic_oracle import advance_past_constituents, score_candidates, DynamicOracle, RepairEnum
+from stanza.models.constituency.dynamic_oracle import advance_past_constituents, score_candidates_single_block, DynamicOracle, RepairEnum
 from stanza.models.constituency.parse_transitions import Shift, OpenConstituent, CloseConstituent
 
 def find_constituent_end(gold_sequence, cur_index):
@@ -256,7 +256,7 @@ def fix_shift_open_ambiguous_predicted(gold_transition, pred_transition, gold_se
         candidates.append((gold_sequence[:gold_index], [pred_transition], gold_sequence[gold_index:end_index+1], [CloseConstituent()], gold_sequence[end_index+1:]))
         current_index = end_index + 1
 
-    scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=3)
+    scores, best_idx, best_candidate = score_candidates_single_block(model, state, candidates, candidate_idx=3)
     if best_idx == len(candidates) - 1:
         best_idx = -1
     repair_type = RepairEnum(name=RepairType.SHIFT_OPEN_AMBIGUOUS_PREDICTED.name,
@@ -416,7 +416,7 @@ def fix_close_next_correct_predicted(gold_transition, pred_transition, gold_sequ
         candidates.append((gold_sequence[:gold_index], gold_sequence[gold_index+1:end_index+1], [CloseConstituent()], gold_sequence[end_index+1:]))
         current_index = end_index + 1
 
-    scores, best_idx, best_candidate = score_candidates(model, state, candidates, candidate_idx=3)
+    scores, best_idx, best_candidate = score_candidates_single_block(model, state, candidates, candidate_idx=3)
     if best_idx == len(candidates) - 1:
         best_idx = -1
     repair_type = RepairEnum(name=RepairType.CLOSE_NEXT_CORRECT_AMBIGUOUS_PREDICTED.name,
