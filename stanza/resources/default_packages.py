@@ -441,6 +441,7 @@ optional_coref = {
     "nn": "udcoref_xlm-roberta-lora",
     "pl": "udcoref_xlm-roberta-lora",
     "ru": "udcoref_xlm-roberta-lora",
+    "ta": "kbc_muril-large-cased-lora",
 }
 
 """
