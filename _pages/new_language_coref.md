@@ -82,6 +82,36 @@ total 46336
 -rw-r--r--  1 houjun  staff  21231649 Jul 24 16:37 my_coref.train.json
 ```
 
+#### New Dataset
+
+If you are building a new dataset which is previously unsupported, you
+will need to write a conversion script which turns the data into .json
+files such as produced by `convert_udcoref`.  The easiest way to do this
+is to build a script similar to
+[stanza/utils/datasets/coref/convert_hindi.py](https://github.com/stanfordnlp/stanza/blob/af3d42b70ef2d82d96f410214f98dd17dd983f51/stanza/utils/datasets/coref/convert_hindi.py),
+as this script converts a single language and should be easier to follow along.
+
+You will need to create a [Pipeline](getting_started.md#building-a-pipeline)
+for the language in question, as the model uses the heads of
+dependencies to form its attachments.
+
+Once that is created, you will want to split each document into lists
+of words for each sentence, lists of coref chains for each sentence
+(see the format used in the
+[process_document](https://github.com/stanfordnlp/stanza/blob/af3d42b70ef2d82d96f410214f98dd17dd983f51/stanza/utils/datasets/coref/utils.py#L61)
+utility function), and lists of speakers (which can be `""` if no
+speakers are annotated).  The utility function `process_document` will
+use the pipeline to find the heads of the coref phrases and turn the
+document into a json-ready document.  You can then write this out with
+the python [json](https://docs.python.org/3/library/json.html)
+library, as done in `convert_hindi.py`.
+
+One setting you may want to experiment with is the usage of `cconj`.
+Being the conjunction-aware word level coref tool, this model uses
+conjunctions to mark the heads of phrases.  However, while that has
+worked well in the languages we've experimented with, it won't
+necessarily help with all languages.
+
 ### Train Model
 
 #### Configure Your Training
