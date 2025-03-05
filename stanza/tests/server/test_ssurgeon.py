@@ -41,7 +41,7 @@ def test_ssurgeon_same_length():
     doc = CoNLL.conll2doc(input_str=SAMPLE_DOC_INPUT)
 
     ssurgeon_response = ssurgeon.process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits)
-    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response, add_missing_text=False)
 
     result = "{:C}".format(updated_doc)
     #print(result)
@@ -82,7 +82,7 @@ def test_ssurgeon_different_length():
     #print("{:C}".format(doc))
 
     ssurgeon_response = ssurgeon.process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits)
-    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response, add_missing_text=False)
 
     result = "{:C}".format(updated_doc)
     #print(result)
@@ -124,7 +124,7 @@ def test_ssurgeon_become_mwt():
     doc = CoNLL.conll2doc(input_str=BECOME_MWT_DOC_INPUT)
 
     ssurgeon_response = ssurgeon.process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits)
-    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response, add_missing_text=False)
 
     result = "{:C}".format(updated_doc)
     compare_ignoring_whitespace(result, BECOME_MWT_DOC_EXPECTED)
@@ -173,7 +173,7 @@ def test_ssurgeon_existing_mwt_no_change():
     doc = CoNLL.conll2doc(input_str=EXISTING_MWT_DOC_INPUT)
 
     ssurgeon_response = ssurgeon.process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits)
-    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response, add_missing_text=False)
 
     result = "{:C}".format(updated_doc)
     compare_ignoring_whitespace(result, EXISTING_MWT_DOC_EXPECTED)
@@ -186,7 +186,7 @@ def check_empty_test(input_text, expected=None, echo=False):
 
     # we don't want to edit this, just test the to/from conversion
     ssurgeon_response = ssurgeon.process_doc(doc, [])
-    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response)
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response, add_missing_text=False)
 
     result = "{:C}".format(updated_doc)
     if echo:
@@ -419,7 +419,7 @@ def test_ssurgeon_rewrite_sindhi_roots():
     request = ssurgeon.build_request(blank_dep_doc, edits)
 
     response = ssurgeon.process_doc(blank_dep_doc, edits)
-    updated_doc = ssurgeon.convert_response_to_doc(blank_dep_doc, response)
+    updated_doc = ssurgeon.convert_response_to_doc(blank_dep_doc, response, add_missing_text=False)
 
     result = "{:C}".format(updated_doc)
     assert result == SINDHI_ROOT_EXPECTED
