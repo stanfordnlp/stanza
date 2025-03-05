@@ -63,7 +63,7 @@ def build_request(doc, semgrex_patterns, enhanced=False):
             for token in sentence.tokens:
                 for word in token.words:
                     add_token(query.token, word, token)
-                    add_word_to_graph(query.graph, word, sent_idx, word_idx)
+                    add_word_to_graph(query.graph, word, sent_idx)
 
                     word_idx = word_idx + 1
 

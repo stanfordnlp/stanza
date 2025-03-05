@@ -73,7 +73,7 @@ def build_request(doc, ssurgeon_edits):
             for token in sentence.tokens:
                 for word in token.words:
                     java_protobuf_requests.add_token(graph.token, word, token)
-                    java_protobuf_requests.add_word_to_graph(graph, word, sent_idx, word_idx)
+                    java_protobuf_requests.add_word_to_graph(graph, word, sent_idx)
 
                     word_idx = word_idx + 1
     except Exception as e:
@@ -137,20 +137,23 @@ def convert_response_to_doc(doc, semgrex_response):
 
             ssurgeon_graph = ssurgeon_result.graph
             tokens = []
+            token_id_to_idx = {}
             for graph_node, graph_word in zip(ssurgeon_graph.node, ssurgeon_graph.token):
                 word_entry = build_word_entry(graph_node.index, graph_word)
+                token_id_to_idx[graph_node.index] = len(tokens)
                 tokens.append(word_entry)
-            tokens.sort(key=lambda x: x[ID])
             for root in ssurgeon_graph.root:
-                tokens[root-1][HEAD] = 0
-                tokens[root-1][DEPREL] = "root"
+                tokens[token_id_to_idx[root]][HEAD] = 0
+                tokens[token_id_to_idx[root]][DEPREL] = "root"
             for edge in ssurgeon_graph.edge:
                 # can't do anything about the extra dependencies for now
                 # TODO: put them all in .deps
                 if edge.isExtra:
                     continue
-                tokens[edge.target-1][HEAD] = edge.source
-                tokens[edge.target-1][DEPREL] = edge.dep
+                tokens[token_id_to_idx[edge.target]][HEAD] = edge.source
+                tokens[token_id_to_idx[edge.target]][DEPREL] = edge.dep
+
+            tokens.sort(key=lambda x: x[ID])
 
             # for any MWT, produce a token_entry which represents the word range
             mwt_tokens = []

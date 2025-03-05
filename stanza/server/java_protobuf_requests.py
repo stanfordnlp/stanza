@@ -177,18 +177,26 @@ def add_sentence(request_sentences, sentence, num_tokens):
             add_token(request_sentence.token, word, token)
     return request_sentence
 
-def add_word_to_graph(graph, word, sent_idx, word_idx):
+def add_word_to_graph(graph, word, sent_idx):
     """
     Add a node and possibly an edge for a word in a basic dependency graph.
     """
     node = graph.node.add()
     node.sentenceIndex = sent_idx+1
-    node.index = word_idx+1
+    if isinstance(word.id, int):
+        node.index = word.id
+    else:
+        node.index = word.id[0]
+        node.emptyIndex = word.id[1]
 
     if word.head != 0 and word.head is not None:
         edge = graph.edge.add()
         edge.source = word.head
-        edge.target = word_idx+1
+        if isinstance(word.id, int):
+            edge.target = word.id
+        else:
+            edge.target = word.id[0]
+            edge.targetEmpty = word.id[1]
         if word.deprel is not None:
             edge.dep = word.deprel
         else:
