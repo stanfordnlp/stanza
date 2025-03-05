@@ -126,7 +126,7 @@ def build_word_entry(word_index, graph_word):
         word_entry[MISC] = java_protobuf_requests.substitute_space_misc(graph_word.conllUMisc, word_entry[MISC])
     return word_entry
 
-def convert_response_to_doc(doc, semgrex_response):
+def convert_response_to_doc(doc, semgrex_response, add_missing_text):
     doc = copy.deepcopy(doc)
     try:
         for sent_idx, (sentence, ssurgeon_result) in enumerate(zip(doc.sentences, semgrex_response.result)):
@@ -193,11 +193,15 @@ def convert_response_to_doc(doc, semgrex_response):
 
             sentence_text = "".join(token_text)
 
+            found_text = False
             for comment in old_comments:
                 if comment.startswith("# text ") or comment.startswith("#text ") or comment.startswith("# text=") or comment.startswith("#text="):
                     sentence.add_comment("# text = " + sentence_text)
+                    found_text = True
                 else:
                     sentence.add_comment(comment)
+            if not found_text and add_missing_text:
+                sentence.add_comment("# text = " + sentence_text)
 
             doc.sentences[sent_idx] = sentence
 
@@ -266,6 +270,7 @@ def main():
     parser.add_argument('ssurgeon', type=str, default=["relabelNamedEdge -edge bad -reln advcl"], nargs="*", help="Ssurgeon edits to apply based on the Semgrex.  Can have multiple edits in a row.  A default exists to transform csubj into advcl.  Default: %(default)s")
     parser.add_argument('--print_input', dest='print_input', action='store_true', default=False, help="Print the input alongside the output - gets kind of noisy.  Default: %(default)s")
     parser.add_argument('--no_print_input', dest='print_input', action='store_false', help="Don't print the input alongside the output - gets kind of noisy")
+    parser.add_argument('--no_add_missing_text', dest='add_missing_text', action='store_false', help="By default, the tool will add a #text comment if one does not exist.  This leaves that blank")
     args = parser.parse_args()
 
     if args.edit_file:
@@ -304,7 +309,7 @@ def main():
             print("{:C}".format(doc))
         ssurgeon_request = build_request(doc, ssurgeon_edits)
         ssurgeon_response = send_ssurgeon_request(ssurgeon_request)
-        updated_doc = convert_response_to_doc(doc, ssurgeon_response)
+        updated_doc = convert_response_to_doc(doc, ssurgeon_response, args.add_missing_text)
         if output is not None:
             with open(output, "w", encoding="utf-8") as fout:
                 fout.write("{:C}\n\n".format(updated_doc))
