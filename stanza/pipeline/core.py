@@ -485,6 +485,8 @@ def main():
     parser.add_argument('--lang', type=str, default='en', help='Language of the pipeline to use')
     parser.add_argument('--input_file', type=str, required=True, help='Input file to read')
     parser.add_argument('--processors', type=str, default='tokenize,pos,lemma,depparse', help='Processors to use')
+    parser.add_argument('--package', type=str, default='default', help='Which package to use')
+    parser.add_argument('--tokenize_no_ssplit', default=False, action='store_true', help="Don't ssplit")
     args, extra_args = parser.parse_known_args()
 
     try:
@@ -497,6 +499,9 @@ def main():
         with open(args.input_file, encoding="utf-8") as fin:
             doc = fin.read()
         extra_args = {}
+    extra_args['package'] = args.package
+    if args.tokenize_no_ssplit:
+        extra_args['tokenize_no_ssplit'] = True
 
     pipe = Pipeline(args.lang, processors=args.processors, **extra_args)
 
