@@ -7,7 +7,7 @@ import torch.nn.functional as F
 logger = logging.getLogger('stanza')
 
 class RelativeAttention(nn.Module):
-    def __init__(self, d_model, num_heads, window=8, dropout=0.2, reverse=False, d_output=None, fudge_output=False):
+    def __init__(self, d_model, num_heads, window=8, dropout=0.2, reverse=False, d_output=None, fudge_output=False, num_sinks=0):
         super().__init__()
         if d_output is None:
             d_output = d_model
@@ -21,6 +21,7 @@ class RelativeAttention(nn.Module):
             else:
                 raise ValueError("incompatible `d_model` and `num_heads`")
         self.window = window
+        self.num_sinks = num_sinks
         self.d_model = d_model
         self.d_head = d_head
         self.num_heads = num_heads
@@ -33,11 +34,11 @@ class RelativeAttention(nn.Module):
         #nn.init.eye_(self.value.weight)
 
         self.dropout = nn.Dropout(dropout)
-        self.position = nn.Parameter(torch.randn(1, 1, d_head, window, 1))
+        self.position = nn.Parameter(torch.randn(1, 1, d_head, window + num_sinks, 1))
 
         self.register_buffer(
             "mask", 
-            torch.tril(torch.ones(window, window), diagonal=-1).unsqueeze(0).unsqueeze(0).unsqueeze(0)
+            torch.tril(torch.ones(window + num_sinks, window + num_sinks), diagonal=-1).unsqueeze(0).unsqueeze(0).unsqueeze(0)
         )
         self.register_buffer(
             "flipped_mask",
@@ -60,6 +61,15 @@ class RelativeAttention(nn.Module):
             zeros = torch.zeros((x.shape[0], self.window - seq_len, x.shape[2]), dtype=x.dtype, device=x.device)
             x = torch.cat((x, zeros), axis=1)
             seq_len = self.window
+
+        if self.num_sinks > 0:
+            orig_seq_len += self.num_sinks
+            seq_len += self.num_sinks
+            # could keep a parameter to train sinks, but as it turns out,
+            # the position vectors just overlap that parameter space anyway
+            # generally the model trains the sinks to zero if we do that
+            sink = torch.zeros((batch_size, self.num_sinks, d_model), dtype=x.dtype, device=x.device)
+            x = torch.cat((sink, x), axis=1)
 
         # k.shape = (batch_size, num_heads, d_head, seq_len)
         k = self.key(x).reshape(batch_size, seq_len, self.num_heads, -1).permute(0, 2, 3, 1)
@@ -84,7 +94,7 @@ class RelativeAttention(nn.Module):
             qk[:, :, :, :, :orig_seq_len] = qk[:, :, :, :, :orig_seq_len].masked_fill(shorter_mask == 1, float("-inf"))
             qk = qk[:, :, :, :orig_seq_len, :orig_seq_len]
         else:
-            qk[:, :, :, :, -self.window:] = qk[:, :, :, :, -self.window:].masked_fill(self.flipped_mask == 1, float("-inf"))
+            qk[:, :, :, :, -(self.window + self.num_sinks):] = qk[:, :, :, :, -(self.window + self.num_sinks):].masked_fill(self.flipped_mask == 1, float("-inf"))
         qk = F.softmax(qk, dim=3)
 
         # v.shape = (batch_size, num_heads, d_head, window, seq_len)
@@ -99,27 +109,28 @@ class RelativeAttention(nn.Module):
         if self.reverse:
             result = torch.flip(result, (1,))
 
-        return self.dropout(result)
+        return self.dropout(result[:, self.num_sinks:, :])
 
     def skew_repeat(self, q):
+        total_window = self.window + self.num_sinks
         # make stripes that look like this
         # (seq_len 5, window 3)
         #   1 2 3 4 5
         #   1 2 3 4 5
         #   1 2 3 4 5
-        q = q.unsqueeze(4).repeat(1, 1, 1, 1, self.window).transpose(3, 4)
+        q = q.unsqueeze(4).repeat(1, 1, 1, 1, total_window).transpose(3, 4)
         # now the stripes look like
         #   1 2 3 4 5
         #   0 2 3 4 5
         #   0 0 3 4 5
-        q[:, :, :, :, :self.window] = q[:, :, :, :, :self.window].masked_fill(self.mask == 1, 0)
+        q[:, :, :, :, :total_window] = q[:, :, :, :, :total_window].masked_fill(self.mask == 1, 0)
         q_shape = list(q.shape)
         q_new_shape = list(q.shape)[:-2] + [-1]
         q = q.reshape(q_new_shape)
         zeros = torch.zeros_like(q[:, :, :, :1])
-        zeros = zeros.repeat(1, 1, 1, self.window)
+        zeros = zeros.repeat(1, 1, 1, total_window)
         q = torch.cat((q, zeros), axis=-1)
-        q_new_shape = q_new_shape[:-1] + [self.window, -1]
+        q_new_shape = q_new_shape[:-1] + [total_window, -1]
         # now the stripes look like
         #   1 2 3 4 5
         #   2 3 4 5 0
