@@ -449,15 +449,15 @@ class LSTMModel(BaseModel, nn.Module):
 
             if self.args['rattn_forward']:
                 if self.args['rattn_cat']:
-                    self.rel_attn_forward = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], d_output=self.args['rattn_dim'], fudge_output=True)
+                    self.rel_attn_forward = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], d_output=self.args['rattn_dim'], fudge_output=True, num_sinks=self.args['rattn_sinks'])
                 else:
-                    self.rel_attn_forward = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'])
+                    self.rel_attn_forward = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], num_sinks=self.args['rattn_sinks'])
 
             if self.args['rattn_reverse']:
                 if self.args['rattn_cat']:
-                    self.rel_attn_reverse = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], reverse=True, d_output=self.args['rattn_dim'], fudge_output=True)
+                    self.rel_attn_reverse = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], reverse=True, d_output=self.args['rattn_dim'], fudge_output=True, num_sinks=self.args['rattn_sinks'])
                 else:
-                    self.rel_attn_reverse = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], reverse=True)
+                    self.rel_attn_reverse = RelativeAttention(self.word_input_size, self.args['rattn_heads'], window=self.args['rattn_window'], reverse=True, num_sinks=self.args['rattn_sinks'])
 
             if self.args['rattn_forward'] and self.args['rattn_cat']:
                 self.word_input_size += self.rel_attn_forward.d_output
