@@ -216,6 +216,13 @@ lora = true
 lora_target_modules = [ "query", "value", "dense", "ffn", "full_layer" ]
 lora_modules_to_save = [ "pooler" ]
 
+[aleph_lora]
+bert_model = "imvladikon/alephbertgimmel-base-512"
+bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
 [bert_multilingual_cased_lora]
 # LR sweep on a Hindi dataset
 # 0.00001:  0.53238
