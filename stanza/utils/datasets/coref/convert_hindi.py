@@ -26,7 +26,7 @@ def flatten_spans(coref_spans):
     coref_spans = [y for x in coref_spans for y in x]
     # sort by the first word index
     #   -->
-    #   [[0, 38, 39], [0, 42, 43], [0, 41, 41], [1, 60, 68], [0, 180, 180], [0, 300, 300], ...
+    #   [[0, 38, 39], [0, 41, 41], [0, 42, 43], [1, 60, 68], [0, 180, 180], [0, 300, 300], ...
     coref_spans = sorted(coref_spans, key=itemgetter(1))
     return coref_spans
 
