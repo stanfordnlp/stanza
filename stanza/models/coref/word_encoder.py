@@ -80,6 +80,13 @@ class WordEncoder(torch.nn.Module):  # pylint: disable=too-many-instance-attribu
         attn_mask = torch.arange(0, n_subtokens, device=self.device).expand((n_words, n_subtokens))
         attn_mask = ((attn_mask >= word_starts.unsqueeze(1))
                      * (attn_mask < word_ends.unsqueeze(1)))
+
+        # if first row all False, set col 0 to True
+        # otherwise, set the row to be the previous row?
+        word_lengths = torch.sum(attn_mask, dim=1)
+        if torch.any(word_lengths == 0):
+            raise ValueError("Found a blank word in training data!  This will break everything, starting with the attention masks, as some rows of the scoring table will be set to entirely -inf and then softmax to NaN.")
+
         attn_mask = torch.log(attn_mask.to(torch.float))
 
         attn_scores = self.attn(bert_out).T  # [1, n_subtokens]
