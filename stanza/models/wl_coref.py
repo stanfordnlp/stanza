@@ -79,13 +79,13 @@ if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
     argparser.add_argument("mode", choices=("train", "eval"))
     argparser.add_argument("experiment")
-    argparser.add_argument("--config-file", default="config.toml")
-    argparser.add_argument("--data-split", choices=("train", "dev", "test"),
+    argparser.add_argument("--config_file", default="config.toml")
+    argparser.add_argument("--data_split", choices=("train", "dev", "test"),
                            default="test",
                            help="Data split to be used for evaluation."
                                 " Defaults to 'test'."
                                 " Ignored in 'train' mode.")
-    argparser.add_argument("--batch-size", type=int,
+    argparser.add_argument("--batch_size", type=int,
                            help="Adjust to override the config value of anaphoricity "
                                 "batch size if you are experiencing out-of-memory "
                                 "issues")
@@ -113,7 +113,7 @@ if __name__ == "__main__":
                                 " If not supplied, in 'eval' mode the latest"
                                 " weights of the experiment will be loaded;"
                                 " in 'train' mode no weights will be loaded.")
-    argparser.add_argument("--word-level", action="store_true",
+    argparser.add_argument("--word_level", action="store_true",
                            help="If set, output word-level conll-formatted"
                                 " files in evaluation modes. Ignored in"
                                 " 'train' mode.")
