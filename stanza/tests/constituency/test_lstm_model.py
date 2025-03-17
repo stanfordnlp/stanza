@@ -415,22 +415,28 @@ def test_different_transition_sizes(pretrain_file):
     run_forward_checks(model)
 
 def test_relative_attention(pretrain_file):
-    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10')
+    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--no_rattn_cat')
     run_forward_checks(model)
 
 def test_relative_attention_cat(pretrain_file):
     model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--rattn_cat')
     run_forward_checks(model)
+    cat_size = model.word_input_size
+
+    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--no_rattn_cat')
+    run_forward_checks(model)
+    no_cat_size = model.word_input_size
+    assert cat_size > no_cat_size
 
 def test_relative_attention_directional(pretrain_file):
-    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--no_rattn_forward')
+    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--no_rattn_forward', '--no_rattn_cat')
     run_forward_checks(model)
 
-    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--no_rattn_reverse')
+    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--no_rattn_reverse', '--no_rattn_cat')
     run_forward_checks(model)
 
 def test_relative_attention_sinks(pretrain_file):
-    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--rattn_sinks', '2')
+    model = build_model(pretrain_file, '--no_use_lattn', '--use_rattn', '--rattn_heads', '10', '--no_rattn_cat', '--rattn_sinks', '2')
     run_forward_checks(model)
 
 def test_relative_attention_cat_sinks(pretrain_file):
