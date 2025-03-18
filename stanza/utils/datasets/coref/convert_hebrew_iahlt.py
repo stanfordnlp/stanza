@@ -58,8 +58,10 @@ def search_mention_end(doc, mention_end):
     return sent_idx, word_idx
 
 def extract_doc(tokenizer, lines):
+    # 16, 1, 5 for the train, dev, test sets
     broken = 0
     singletons = 0
+    one_words = 0
     processed_docs = []
     for line in tqdm(lines):
         all_clusters = defaultdict(list)
@@ -76,17 +78,18 @@ def extract_doc(tokenizer, lines):
                 end_sent, end_word = search_mention_end(doc, mention_end)
                 assert end_sent >= start_sent
                 if start_sent != end_sent:
-                    # 14, 1, 11 for the train, dev, test sets
                     broken += 1
                 else:
                     assert end_word >= start_word
+                    if end_word == start_word:
+                        one_words += 1
                     found_mentions.append((start_sent, start_word, end_word))
             if len(found_mentions) == 0:
                 continue
             elif len(found_mentions) == 1:
                 # the number of singletons, after discarding mentions that
                 # crossed a sentence boundary according to Stanza, is
-                # 4, 0, 1
+                # 5, 0, 1
                 # so clearly the dataset does not intentionally have
                 # (many?) singletons in it
                 singletons += 1
@@ -100,7 +103,7 @@ def extract_doc(tokenizer, lines):
             for sent_idx, start_word, end_word in all_clusters[cluster_idx]:
                 coref_spans[sent_idx].append((cluster_idx, start_word, end_word))
         processed_docs.append(CorefDoc(doc_id, sentences, coref_spans))
-    #print(filename, broken, singletons, one_words, total_clusters)
+    #print(broken, singletons, one_words)
     return processed_docs
 
 def read_doc(tokenizer, filename):
