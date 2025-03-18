@@ -707,6 +707,29 @@ def build_argparse():
 
     parser.add_argument('--use_rattn', default=False, action='store_true', help='Use a local attention layer')
     parser.add_argument('--rattn_window', default=16, type=int, help='Number of tokens to use for context in the local attention')
+    # Ran an experiment on id_icon with in_order, peft, 200 epochs training
+    # Equivalent experiment with no rattn had an average of 0.8922 dev
+    # window 16, cat, dim 200, sinks 0
+    #   head      dev score
+    #     1         0.8915
+    #     2         0.8933
+    #     3         0.8918
+    #     4         0.8934
+    #     5         0.8924
+    #     6         0.8936
+    #     8         0.8920
+    #    10         0.8909
+    #    12         0.8939
+    #    14         0.8949
+    #    16         0.8952
+    #    18         0.8915
+    #    20         0.8925
+    #    25         0.8913
+    #    30         0.8913
+    #    40         0.8943
+    #    50         0.8931
+    #    75         0.8940
+    # The average here is 0.8928, which is a tiny bit higher...
     parser.add_argument('--rattn_heads', default=16, type=int, help='Number of heads to use for context in the local attention')
     parser.add_argument('--no_rattn_forward', default=True, action='store_false', dest='rattn_forward', help="Use or don't use the forward relative attention")
     parser.add_argument('--no_rattn_reverse', default=True, action='store_false', dest='rattn_reverse', help="Use or don't use the reverse relative attention")
