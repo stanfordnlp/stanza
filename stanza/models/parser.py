@@ -125,6 +125,8 @@ def build_argparse():
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+
+    parser.add_argument('--train_size', type=int, default=None, help='If specified, randomly select this many sentences from the training data')
     return parser
 
 def parse_args(args=None):
@@ -197,6 +199,13 @@ def train(args):
     # possibly augment the training data with some amount of fake data
     # based on the options chosen
     logger.info("Original data size: {}".format(len(train_data)))
+    if args['train_size']:
+        if len(train_data) < args['train_size']:
+            random.shuffle(train_data)
+            train_data = train_data[:args['train_size']]
+            logger.info("Limiting training data to %d entries", len(train_data))
+        else:
+            logger.info("Train data less than %d already, not limiting train data", args['train_size'])
     train_data.extend(augment_punct(train_data, args['augment_nopunct'],
                                     keep_original_sentences=False))
     logger.info("Augmented data size: {}".format(len(train_data)))
