@@ -72,7 +72,11 @@ def extract_doc(tokenizer, lines):
         for cluster_idx, cluster in enumerate(clusters):
             found_mentions = []
             for mention in cluster['mentions']:
-                mention_start = mention[0]
+                # +1 on the start index produces better clusters,
+                # according to a short review by Amir Zeldes
+                # an official response from the IAHLT people
+                # would be even better
+                mention_start = mention[0] + 1
                 mention_end = mention[1]
                 start_sent, start_word = search_mention_start(doc, mention_start)
                 end_sent, end_word = search_mention_end(doc, mention_end)
