@@ -259,12 +259,10 @@ def main():
     # The default ssurgeon transforms the unwanted csubj to advcl
     # See https://github.com/UniversalDependencies/docs/issues/923
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_file', type=str, default=None, help="Input file to process (otherwise will process a sample text)")
-    parser.add_argument('--output_file', type=str, default=None, help="Output file (otherwise will write to stdout)")
-    parser.add_argument('--input_dir', type=str, default=None, help="Input dir to process instead of a single file.  Allows for reusing the Java program")
-    parser.add_argument('--input_filter', type=str, default=".*[.]conllu", help="Only process files from the input_dir that match this filter - regex, not shell filter.  Default: %(default)s")
+    parser.add_argument('--input', type=str, default=None, help="Input file / directory to process (otherwise will process a sample text)")
+    parser.add_argument('--output', type=str, default=None, help="Output location (otherwise will write to stdout)")
+    parser.add_argument('--input_filter', type=str, default=".*[.]conllu", help="If processing a directory, only process files from --input that match this filter - regex, not shell filter.  Default: %(default)s")
     parser.add_argument('--no_input_filter', action='store_const', const=None, dest="input_filter", help="Remove the default input filename filter")
-    parser.add_argument('--output_dir', type=str, default=None, help="Output dir for writing files, necessary if using --input_dir")
     parser.add_argument('--edit_file', type=str, default=None, help="File to get semgrex and ssurgeon rules from")
     parser.add_argument('--semgrex', type=str, default="{}=source >nsubj {} >csubj=bad {}", help="Semgrex to apply to the text.  A default detects words which have both an nsubj and a csubj.  Default: %(default)s")
     parser.add_argument('ssurgeon', type=str, default=["relabelNamedEdge -edge bad -reln advcl"], nargs="*", help="Ssurgeon edits to apply based on the Semgrex.  Can have multiple edits in a row.  A default exists to transform csubj into advcl.  Default: %(default)s")
@@ -278,27 +276,29 @@ def main():
     else:
         ssurgeon_edits = [SsurgeonEdit(args.semgrex, args.ssurgeon)]
 
-    if args.input_file:
-        docs = [CoNLL.conll2doc(input_file=args.input_file)]
-        outputs = [args.output_file]
-        input_output = zip(docs, outputs)
-    elif args.input_dir:
-        if not args.output_dir:
-            raise ValueError("Cannot process multiple files without knowing where to send them - please set --output_dir in order to use --input_dir")
-        if not os.path.exists(args.output_dir):
-            os.makedirs(args.output_dir)
-        def read_docs():
-            for doc_filename in os.listdir(args.input_dir):
-                if args.input_filter:
-                    if not re.match(args.input_filter, doc_filename):
+    if args.input:
+        if os.path.isfile(args.input):
+            docs = [CoNLL.conll2doc(input_file=args.input)]
+            # TODO: could check if --output is a directory
+            outputs = [args.output]
+            input_output = zip(docs, outputs)
+        else:
+            if not args.output:
+                raise ValueError("Cannot process multiple files without knowing where to send them - please set --output in order to use --input with a directory")
+            if not os.path.exists(args.output):
+                os.makedirs(args.output)
+            def read_docs():
+                for doc_filename in os.listdir(args.input):
+                    if args.input_filter:
+                        if not re.match(args.input_filter, doc_filename):
+                            continue
+                    doc_path = os.path.join(args.input, doc_filename)
+                    if not os.path.isfile(doc_path):
                         continue
-                doc_path = os.path.join(args.input_dir, doc_filename)
-                if not os.path.isfile(doc_path):
-                    continue
-                output_path = os.path.join(args.output_dir, doc_filename)
-                print("Processing %s to %s" % (doc_path, output_path))
-                yield CoNLL.conll2doc(input_file=doc_path), output_path
-        input_output = read_docs()
+                    output_path = os.path.join(args.output, doc_filename)
+                    print("Processing %s to %s" % (doc_path, output_path))
+                    yield CoNLL.conll2doc(input_file=doc_path), output_path
+            input_output = read_docs()
     else:
         docs = [CoNLL.conll2doc(input_str=SAMPLE_DOC)]
         outputs = [None]
