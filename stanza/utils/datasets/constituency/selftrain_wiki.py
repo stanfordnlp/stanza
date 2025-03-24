@@ -103,7 +103,7 @@ def read_wiki_file(filename):
             if line:
                 current_doc.append(line)
         line = next(line_iterator, None)
-            
+
     if current_doc:
         docs.append("\n\n".join(current_doc))
     return docs
