@@ -121,6 +121,8 @@ def run_treebank(mode, paths, treebank, short_name,
 
         results = common.run_eval_script_pos(eval_file if eval_file else dev_in_file, dev_pred_file)
         logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
+        if not temp_output_file:
+            logger.info("Output saved to %s", dev_pred_file)
 
     if mode == Mode.SCORE_TEST:
         test_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
@@ -137,6 +139,8 @@ def run_treebank(mode, paths, treebank, short_name,
 
         results = common.run_eval_script_pos(eval_file if eval_file else test_in_file, test_pred_file)
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
+        if not temp_output_file:
+            logger.info("Output saved to %s", test_pred_file)
 
 
 def main():
