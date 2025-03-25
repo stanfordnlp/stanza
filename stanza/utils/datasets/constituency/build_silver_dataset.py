@@ -78,7 +78,7 @@ def main():
     e2.to(args.get('device', None))
 
     if args['tokenized_file']:
-        tokenized_sentences = text_processing.read_tokenized_file(args['tokenized_file'])
+        tokenized_sentences, _ = text_processing.read_tokenized_file(args['tokenized_file'])
     elif args['tree_file']:
         treebank = tree_reader.read_treebank(args['tree_file'])
         tokenized_sentences = [x.leaf_labels() for x in treebank]
