@@ -60,6 +60,12 @@ def run_treebank(mode, paths, treebank, short_name,
     bert_args = choose_transformer(short_language, command_args, extra_args)
 
     if mode == Mode.TRAIN:
+        zip_train_file = os.path.splitext(train_file)[0] + ".zip"
+        if os.path.exists(train_file) and os.path.exists(zip_train_file):
+            logger.error("POS TRAIN FILE %s and %s both exist... this is very confusing, skipping %s" % (train_file, zip_train_file, short_name))
+            return
+        if os.path.exists(zip_train_file):
+            train_file = zip_train_file
         if not os.path.exists(train_file):
             logger.error("TRAIN FILE NOT FOUND: %s ... skipping" % train_file)
             return
