@@ -1,3 +1,15 @@
+"""
+Cut short the training portion of a constituency dataset.
+
+One could think this script isn't necessary, as shuf | head would work,
+but some treebanks use multiple lines for representing trees.
+Thus it is necessary to actually intelligently read the trees.
+
+Run with
+
+python3  stanza/utils/datasets/constituency/reduce_dataset.py --input zh-hans_ctb-51b --output zh-hans_ctb5k
+"""
+
 import argparse
 import os
 import random
