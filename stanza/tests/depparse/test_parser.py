@@ -6,6 +6,7 @@ Uses a couple sentences of UD_English-EWT as training/dev data
 
 import os
 import pytest
+import zipfile
 
 import torch
 
@@ -77,19 +78,24 @@ class TestParser:
     def wordvec_pretrain_file(self):
         return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
 
-    def run_training(self, tmp_path, wordvec_pretrain_file, train_text, dev_text, augment_nopunct=False, extra_args=None):
+    def run_training(self, tmp_path, wordvec_pretrain_file, train_text, dev_text, augment_nopunct=False, extra_args=None, zip_train_data=False):
         """
         Run the training for a few iterations, load & return the model
         """
-        train_file = str(tmp_path / "train.conllu")
+        train_file = str(tmp_path / "train.zip") if zip_train_data else str(tmp_path / "train.conllu")
         dev_file = str(tmp_path / "dev.conllu")
         pred_file = str(tmp_path / "pred.conllu")
 
         save_name = "test_parser.pt"
         save_file = str(tmp_path / save_name)
 
-        with open(train_file, "w", encoding="utf-8") as fout:
-            fout.write(train_text)
+        if zip_train_data:
+            with zipfile.ZipFile(train_file, "w") as zout:
+                with zout.open('train.conllu', 'w') as fout:
+                    fout.write(train_text.encode())
+        else:
+            with open(train_file, "w", encoding="utf-8") as fout:
+                fout.write(train_text)
 
         with open(dev_file, "w", encoding="utf-8") as fout:
             fout.write(dev_text)
@@ -125,6 +131,12 @@ class TestParser:
         Simple test of a few 'epochs' of tagger training
         """
         self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA)
+
+    def test_zipfile_train(self, tmp_path, wordvec_pretrain_file):
+        """
+        Simple test of a few 'epochs' of tagger training with a zipfile
+        """
+        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, zip_train_data=True)
 
     def test_with_bert_nlayers(self, tmp_path, wordvec_pretrain_file):
         self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_hidden_layers', '2'])
