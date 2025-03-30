@@ -112,7 +112,7 @@ def run_treebank(mode, paths, treebank, short_name,
         if not temp_output_file:
             logger.info("Output saved to %s", dev_pred_file)
 
-    if mode == Mode.SCORE_TEST:
+    if mode == Mode.SCORE_TEST or mode == Mode.TRAIN:
         test_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
                      "--eval_file", eval_file if eval_file else test_in_file,
                      "--output_file", test_pred_file,
