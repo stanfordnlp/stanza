@@ -70,7 +70,7 @@ class CoNLL:
                 try:
                     token_dict = CoNLL.convert_conll_token(token_conll)
                 except ValueError as e:
-                    raise CoNLLError("Could not process sentence %d token %d: %s" % (sent_idx, token_idx, str(e))) from e
+                    raise CoNLLError("Could not process sentence %d token %d:\n%s\n%s" % (sent_idx, token_idx, token_conll, str(e))) from e
                 if '.' in token_dict[ID]:
                     token_dict[ID] = tuple(int(x) for x in token_dict[ID].split(".", maxsplit=1))
                     sent_empty.append(token_dict)
