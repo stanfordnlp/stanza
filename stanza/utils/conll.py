@@ -16,12 +16,20 @@ class CoNLLError(ValueError):
 class CoNLL:
 
     @staticmethod
-    def load_conll(f, ignore_gapping=True, keep_line_numbers=False):
+    def load_conll(f, ignore_gapping=True, keep_line_numbers=False, ignore_first=0):
         """ Load the file or string into the CoNLL-U format data.
         Input: file or string reader, where the data is in CoNLL-U format.
         Output: a tuple whose first element is a list of list of list for each token in each sentence in the data,
         where the innermost list represents all fields of a token; and whose second element is a list of lists for each
         comment in each sentence in the data.
+
+        Some documents have extra stuff in the beginning, we typically should fail but we can also ignore them in the beginning by setting ignore_first to be nonzero.
+
+        Litbank ConLL is magical: they have either 10 or 11 lines, depending on whether
+        coreference information exists. So, if its litbank, they have to be processed
+        separately. This is likely a HACK and should probably be cleaned up in some othe
+        cleaner way. However, if ignore_first is string "litbank", we will use the magical
+        logic for processing LitBank files correctly.
         """
         # f is open() or io.StringIO()
         doc, sent = [], []
@@ -42,8 +50,13 @@ class CoNLL:
                 array = line.split('\t')
                 if ignore_gapping and '.' in array[0]:
                     continue
-                if len(array) != FIELD_NUM:
+                if len(array) != FIELD_NUM and (not ignore_first):
                     raise CoNLLError(f"Cannot parse CoNLL line {line_idx+1}: expecting {FIELD_NUM} fields, {len(array)} found at line {line_idx}\n  {array}")
+                else:
+                    if ignore_first == "litbank":
+                        array = array[2:-2]+[array[-1]]+["_"]
+                    else:
+                        array = array[ignore_first:]
                 if keep_line_numbers:
                     if array[-1] == "_" or array[-1] is None:
                         array[-1] = "%s=%d" % (LINE_NUMBER, line_idx)
@@ -119,7 +132,7 @@ class CoNLL:
         return token_dict
 
     @staticmethod
-    def conll2dict(input_file=None, input_str=None, ignore_gapping=True, zip_file=None, keep_line_numbers=False):
+    def conll2dict(input_file=None, input_str=None, ignore_gapping=True, zip_file=None, keep_line_numbers=False, ignore_first=0):
         """ Load the CoNLL-U format data from file or string into lists of dictionaries.
         """
         assert any([input_file, input_str]) and not all([input_file, input_str]), 'either use input file or input string'
@@ -127,26 +140,26 @@ class CoNLL:
 
         if input_str:
             infile = io.StringIO(input_str)
-            doc_conll, doc_comments = CoNLL.load_conll(infile, ignore_gapping, keep_line_numbers)
+            doc_conll, doc_comments = CoNLL.load_conll(infile, ignore_gapping, keep_line_numbers, ignore_first=ignore_first)
         elif zip_file:
             with ZipFile(zip_file) as zin:
                 with zin.open(input_file) as fin:
                     doc_conll, doc_comments = CoNLL.load_conll(io.TextIOWrapper(fin, encoding="utf-8"), ignore_gapping, keep_line_numbers)
         else:
             with open(input_file, encoding='utf-8') as fin:
-                doc_conll, doc_comments = CoNLL.load_conll(fin, ignore_gapping, keep_line_numbers)
+                doc_conll, doc_comments = CoNLL.load_conll(fin, ignore_gapping, keep_line_numbers, ignore_first=ignore_first)
 
         doc_dict, doc_empty = CoNLL.convert_conll(doc_conll)
         return doc_dict, doc_comments, doc_empty
 
     @staticmethod
-    def conll2doc(input_file=None, input_str=None, ignore_gapping=True, zip_file=None, keep_line_numbers=False):
-        doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file, keep_line_numbers=keep_line_numbers)
+    def conll2doc(input_file=None, input_str=None, ignore_gapping=True, zip_file=None, keep_line_numbers=False, ignore_first=0):
+        doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file, keep_line_numbers=keep_line_numbers, ignore_first=ignore_first)
         return Document(doc_dict, text=None, comments=doc_comments, empty_sentences=doc_empty)
 
     @staticmethod
-    def conll2multi_docs(input_file=None, input_str=None, ignore_gapping=True, zip_file=None):
-        doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file)
+    def conll2multi_docs(input_file=None, input_str=None, ignore_gapping=True, zip_file=None, ignore_first=0):
+        doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file, ignore_first=ignore_first)
 
         docs = []
         current_doc = []
