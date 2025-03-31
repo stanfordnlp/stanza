@@ -127,7 +127,7 @@ def main():
         prog='Convert Litbank Data',
     )
     parser.add_argument('--split_train', default=0.7, type=float, help='How much of the data to randomly split from train to make a test set')
-    parser.add_argument('--split_dev', default=0.3, type=float, help='How much of the data to randomly split from train to make a test set')
+    parser.add_argument('--split_dev', default=0.2, type=float, help='How much of the data to randomly split from train to make a test set')
 
     args = parser.parse_args()
     coref_input_path = paths['COREF_BASE']
