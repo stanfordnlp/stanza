@@ -112,7 +112,7 @@ def process_dataset(src, coref_output_path, train_split = 0.7, dev_split = 0.2):
     dev_data = split_random.sample(dataset, int(dev_split*length))
     test_data = [i for i in dataset if i not in dev_data]
 
-    for i,j in zip(["train", "dev", "test"], [train_data, dev_data, test_data]):
+    for i,j in zip(["test", "train", "dev"], [test_data, train_data, dev_data]):
         print("Processing %s split of length %d..." % (i, len(j)))
         results = process_split(j, pipe)
 
@@ -127,7 +127,7 @@ def main():
         prog='Convert Litbank Data',
     )
     parser.add_argument('--split_train', default=0.7, type=float, help='How much of the data to randomly split from train to make a test set')
-    parser.add_argument('--split_dev', default=0.3, type=float, help='How much of the data to randomly split from train to make a test set')
+    parser.add_argument('--split_dev', default=0.2, type=float, help='How much of the data to randomly split from train to make a test set')
 
     args = parser.parse_args()
     coref_input_path = paths['COREF_BASE']

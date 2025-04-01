@@ -382,8 +382,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             self.config.clusters_starts_are_singletons,
             self.config.singletons)
 
-        res.word_clusters = self._clusterize(doc, res.coref_scores, top_indices,
-                                             self.config.singletons)
+        res.word_clusters = self._clusterize(doc, res.coref_scores, top_indices, self.config.singletons)
 
         res.span_scores, res.span_y = self.sp.get_training_data(doc, words)
 
