@@ -54,6 +54,7 @@ class CorefDataset(Dataset):
             doc["subwords"] = subwords
             doc["word_id"] = word_id
             self.__out.append(doc)
+
         logger.info("Loaded %d docs from %s.", len(data_f), path)
 
     @property

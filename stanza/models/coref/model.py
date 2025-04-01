@@ -368,7 +368,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             # a_scores_batch    [batch_size, n_ants]
             a_scores_batch = self.a_scorer(
                 top_mentions=words[top_indices_batch], mentions_batch=words_batch,
-                pw_batch=pw_batch, top_rough_scores_batch=top_rough_scores_batch
+                pw_batch=pw_batch, top_rough_scores_batch=top_rough_scores_batch,
+                singletons=doc["singletons"]
             )
             a_scores_lst.append(a_scores_batch)
 
@@ -380,9 +381,12 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         res.coref_y = self._get_ground_truth(
             cluster_ids, top_indices, (top_rough_scores > float("-inf")),
             self.config.clusters_starts_are_singletons,
-            self.config.singletons)
+            doc.get("singletons", self.config.singletons))
 
-        res.word_clusters = self._clusterize(doc, res.coref_scores, top_indices, self.config.singletons)
+        res.word_clusters = self._clusterize(doc, res.coref_scores,
+                                             top_indices,
+                                             doc.get("singletons",
+                                                     self.config.singletons))
 
         res.span_scores, res.span_y = self.sp.get_training_data(doc, words)
 

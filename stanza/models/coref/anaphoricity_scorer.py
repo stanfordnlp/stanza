@@ -40,6 +40,7 @@ class AnaphoricityScorer(torch.nn.Module):
                 mentions_batch: torch.Tensor,
                 pw_batch: torch.Tensor,
                 top_rough_scores_batch: torch.Tensor,
+                singletons=None
                 ) -> torch.Tensor:
         """ Builds a pairwise matrix, scores the pairs and returns the scores.
 
@@ -57,18 +58,23 @@ class AnaphoricityScorer(torch.nn.Module):
         # [batch_size, n_ants, pair_emb]
         pair_matrix = self._get_pair_matrix(mentions_batch, pw_batch, top_mentions)
 
+        # if singletons is explicitly None, then we default to the config
+        # otherwise, we use whatever the variable tells us
+        if singletons == None:
+            singletons = self.predict_singletons
+
         # [batch_size, n_ants] vs [batch_size, 1]
         # first is coref scores, the second is whether its the start of a coref
-        if self.predict_singletons:
-            scores, start = self._ffnn(pair_matrix)
+        if singletons:
+            scores, start = self._ffnn(pair_matrix, singletons)
             scores = utils.add_dummy(scores+top_rough_scores_batch, eps=True)
 
             return torch.cat([start, scores], dim=1)
         else:
-            scores = self._ffnn(pair_matrix)
+            scores = self._ffnn(pair_matrix, singletons)
             return utils.add_dummy(scores+top_rough_scores_batch, eps=True)
 
-    def _ffnn(self, x: torch.Tensor) -> torch.Tensor:
+    def _ffnn(self, x: torch.Tensor, singletons) -> torch.Tensor:
         """
         Calculates anaphoricity scores.
 
@@ -81,7 +87,7 @@ class AnaphoricityScorer(torch.nn.Module):
         x = self.out(self.hidden(x))
         x = x.squeeze(2)
 
-        if not self.predict_singletons:
+        if not singletons:
             return x
 
         # because sometimes we only have the first 49 anaphoricities
