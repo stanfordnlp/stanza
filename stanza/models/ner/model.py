@@ -157,9 +157,9 @@ class NERTagger(nn.Module):
         inputs = []
         batch_size = len(sentences)
 
+        has_embedding = False
         if self.args['word_emb_dim'] > 0:
             #extract static embeddings
-            has_embedding = False
             if 'word' in self.vocab:
                 static_words, word_mask = self.extract_static_embeddings(self.args, sentences, self.vocab['word'])
 
@@ -213,9 +213,6 @@ class NERTagger(nn.Module):
             processed_bert = pad_sequence(processed_bert, batch_first=True)
             inputs += [pack(processed_bert)]
 
-        def pad(x):
-            return pad_packed_sequence(PackedSequence(x, word_emb.batch_sizes), batch_first=True)[0]
-
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('charlm', None):
                 char_reps_forward = self.charmodel_forward.get_representation(chars[0], charoffsets[0], charlens, char_orig_idx)
@@ -227,6 +224,10 @@ class NERTagger(nn.Module):
                 char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
                 char_reps = PackedSequence(char_reps.data, char_reps.batch_sizes)
                 inputs += [char_reps]
+
+        batch_sizes = inputs[0].batch_sizes
+        def pad(x):
+            return pad_packed_sequence(PackedSequence(x, batch_sizes), batch_first=True)[0]
 
         lstm_inputs = torch.cat([x.data for x in inputs], 1)
         if self.args['word_dropout'] > 0:
@@ -265,7 +266,11 @@ class NERTagger(nn.Module):
                 next_logits = pad(tag_clf(input_logits)).contiguous()
             # the tag_mask lets us avoid backprop on a blank tag
             tag_mask = torch.eq(tags[:, :, idx], EMPTY_ID)
-            next_loss, next_trans = crit(next_logits, torch.bitwise_or(tag_mask, word_mask), tags[:, :, idx])
+            if has_embedding:
+                tag_mask = torch.bitwise_or(tag_mask, word_mask)
+            else:
+                tag_mask = torch.bitwise_or(tag_mask, torch.eq(tags[:, :, idx], PAD_ID))
+            next_loss, next_trans = crit(next_logits, tag_mask, tags[:, :, idx])
             loss = loss + next_loss
             logits.append(next_logits)
             trans.append(next_trans)
