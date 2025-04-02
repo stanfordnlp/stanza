@@ -35,21 +35,22 @@ class NERTagger(nn.Module):
         if self.args['word_emb_dim'] > 0:
             emb_finetune = self.args.get('emb_finetune', True)
 
-            # load pretrained embeddings if specified
-            word_emb = nn.Embedding(len(self.vocab['word']), self.args['word_emb_dim'], PAD_ID)
-            # if a model trained with no 'delta' vocab is loaded, and
-            # emb_finetune is off, any resaving of the model will need
-            # the updated vectors.  this is accounted for in load()
-            if not emb_finetune or 'delta' in self.vocab:
-                # if emb_finetune is off
-                # or if the delta embedding is present
-                # then we won't fine tune the original embedding
-                self.add_unsaved_module('word_emb', word_emb)
-                self.word_emb.weight.detach_()
-            else:
-                self.word_emb = word_emb
-            if emb_matrix is not None:
-                self.init_emb(emb_matrix)
+            if 'word' in self.vocab:
+                # load pretrained embeddings if specified
+                word_emb = nn.Embedding(len(self.vocab['word']), self.args['word_emb_dim'], PAD_ID)
+                # if a model trained with no 'delta' vocab is loaded, and
+                # emb_finetune is off, any resaving of the model will need
+                # the updated vectors.  this is accounted for in load()
+                if not emb_finetune or 'delta' in self.vocab:
+                    # if emb_finetune is off
+                    # or if the delta embedding is present
+                    # then we won't fine tune the original embedding
+                    self.add_unsaved_module('word_emb', word_emb)
+                    self.word_emb.weight.detach_()
+                else:
+                    self.word_emb = word_emb
+                if emb_matrix is not None:
+                    self.init_emb(emb_matrix)
 
             # TODO: allow for expansion of delta embedding if new
             # training data has new words in it?
@@ -158,16 +159,19 @@ class NERTagger(nn.Module):
 
         if self.args['word_emb_dim'] > 0:
             #extract static embeddings
-            static_words, word_mask = self.extract_static_embeddings(self.args, sentences, self.vocab['word'])
+            has_embedding = False
+            if 'word' in self.vocab:
+                static_words, word_mask = self.extract_static_embeddings(self.args, sentences, self.vocab['word'])
 
-            word_mask = word_mask.to(device)
-            static_words = static_words.to(device)
-                
-            word_static_emb = self.word_emb(static_words)
+                word_mask = word_mask.to(device)
+                static_words = static_words.to(device)
+
+                word_static_emb = self.word_emb(static_words)
+                has_embedding = True
 
             if 'delta' in self.vocab and self.delta_emb is not None:
                 # masks should be the same
-                delta_words, _ = self.extract_static_embeddings(self.args, sentences, self.vocab['delta'])
+                delta_words, delta_mask = self.extract_static_embeddings(self.args, sentences, self.vocab['delta'])
                 delta_words = delta_words.to(device)
                 # unclear whether to treat words in the main embedding
                 # but not in delta as unknown
@@ -177,16 +181,24 @@ class NERTagger(nn.Module):
                 # also, note that at training time, words like this
                 # did not show up in the training data, but are
                 # not exactly UNK, so it makes sense
-                delta_unk_mask = torch.eq(delta_words, UNK_ID)
-                static_unk_mask = torch.not_equal(static_words, UNK_ID)
-                unk_mask = delta_unk_mask * static_unk_mask
-                delta_words[unk_mask] = PAD_ID
+                if has_embedding:
+                    delta_unk_mask = torch.eq(delta_words, UNK_ID)
+                    static_unk_mask = torch.not_equal(static_words, UNK_ID)
+                    unk_mask = delta_unk_mask * static_unk_mask
+                    delta_words[unk_mask] = PAD_ID
+                else:
+                    word_mask = delta_mask.to(device)
 
                 delta_emb = self.delta_emb(delta_words)
-                word_static_emb = word_static_emb + delta_emb
+                if has_embedding:
+                    word_static_emb = word_static_emb + delta_emb
+                else:
+                    has_embedding = True
+                    word_static_emb = delta_emb
 
-            word_emb = pack(word_static_emb)
-            inputs += [word_emb]
+            if has_embedding:
+                word_emb = pack(word_static_emb)
+                inputs += [word_emb]
 
         if self.bert_model is not None:
             device = next(self.parameters()).device

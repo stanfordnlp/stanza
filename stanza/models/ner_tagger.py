@@ -87,6 +87,8 @@ def build_argparse():
     parser.add_argument('--second_optim', type=str, default=None, help='once first optimizer converged, tune the model again. with: sgd, adagrad, adam or adamax.')
     parser.add_argument('--second_bert_learning_rate', default=0, type=float, help='Secondary stage transformer finetuning learning rate scale')
 
+    parser.add_argument('--no_pretrain', dest='pretrain', action='store_false', help="Turn off pretrained embeddings.")
+
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='sgd', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--lr', type=float, default=0.1, help='Learning rate.')
@@ -145,6 +147,9 @@ def main(args=None):
 
 def load_pretrain(args):
     # load pretrained vectors
+    if not args['pretrain']:
+        return None
+
     if args['wordvec_pretrain_file']:
         pretrain_file = args['wordvec_pretrain_file']
         pretrain = Pretrain(pretrain_file, None, args['pretrain_max_vocab'], save_to_file=False)

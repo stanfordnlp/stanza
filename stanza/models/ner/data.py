@@ -68,11 +68,13 @@ class DataLoader:
             charvocab = CharVocab.load_state_dict(from_model(self.args['charlm_forward_file']))
         else:
             charvocab = CharVocab(data, self.args['shorthand'])
-        wordvocab = self.pretrain.vocab
+        wordvocab = self.pretrain.vocab if self.pretrain is not None else None
         tag_data = [[(x[1],) for x in sentence] for sentence in data]
         tagvocab = CompositeVocab(tag_data, self.args['shorthand'], idx=0, sep=None)
         ignore = None
         if self.args['emb_finetune_known_only']:
+            if self.pretrain is None:
+                raise ValueError("Cannot train emb_finetune_known_only with no pretrain of known words")
             if self.args['lowercase']:
                 ignore = set([w[0] for sent in data for w in sent if w[0] in wordvocab or w[0].lower() in wordvocab])
             else:
@@ -80,10 +82,12 @@ class DataLoader:
             logger.debug("Ignoring %d in the delta vocab as they did not appear in the original embedding", len(ignore))
         deltavocab = WordVocab(data, self.args['shorthand'], cutoff=1, lower=self.args['lowercase'], ignore=ignore)
         logger.debug("Creating delta vocab of size %s", len(deltavocab))
-        vocab = MultiVocab({'char': charvocab,
-                            'word': wordvocab,
-                            'delta': deltavocab,
-                            'tag': tagvocab})
+        vocabs = {'char': charvocab,
+                  'delta': deltavocab,
+                  'tag': tagvocab}
+        if wordvocab is not None:
+            vocabs['word'] = wordvocab
+        vocab = MultiVocab(vocabs)
         return vocab
 
     def preprocess(self, data, vocab, args):

@@ -56,7 +56,7 @@ def build_pretrain_args(language, dataset, charlm="default", command_args=None, 
     charlm_args = build_charlm_args(language, charlm, model_dir=model_dir)
 
     wordvec_args = []
-    if extra_args is None or '--wordvec_pretrain_file' not in extra_args:
+    if '--wordvec_pretrain_file' not in extra_args and '--no_pretrain' not in extra_args:
         # will throw an error if the pretrain can't be found
         wordvec_pretrain = find_wordvec_pretrain(language, default_pretrains, ner_pretrains, dataset, model_dir=model_dir)
         wordvec_args = ['--wordvec_pretrain_file', wordvec_pretrain]

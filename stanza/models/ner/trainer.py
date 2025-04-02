@@ -68,7 +68,8 @@ class Trainer(BaseTrainer):
             # load everything from file
             self.load(model_file, pretrain, args, foundation_cache)
         else:
-            assert all(var is not None for var in [args, vocab, pretrain])
+            assert args is not None
+            assert vocab is not None
             # build model from scratch
             self.args = args
             self.vocab = vocab
@@ -81,7 +82,11 @@ class Trainer(BaseTrainer):
                 # peft the lovely model
                 bert_model = build_peft_wrapper(bert_model, self.args, logger, adapter_name=peft_name)
 
-            self.model = NERTagger(args, vocab, emb_matrix=pretrain.emb, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=self.args['bert_finetune'], peft_name=peft_name)
+            emb_matrix=None
+            if pretrain is not None:
+                emb_matrix = pretrain.emb
+
+            self.model = NERTagger(args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=self.args['bert_finetune'], peft_name=peft_name)
 
             # IMPORTANT: gradient checkpointing BREAKS peft if applied before
             # 1. Apply PEFT FIRST (looksie! it's above this line)
