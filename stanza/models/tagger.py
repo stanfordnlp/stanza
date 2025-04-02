@@ -129,6 +129,9 @@ def parse_args(args=None):
     if args.wandb_name:
         args.wandb = True
 
+    if not args.share_hid and args.tag_emb_dim == 0:
+        raise ValueError("Cannot have tag_emb_dim==0 with share_hid==False, as the tags will be embedded for the next layer")
+
     args = vars(args)
     return args
 
