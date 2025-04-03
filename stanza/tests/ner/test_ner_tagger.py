@@ -83,7 +83,7 @@ def test_evaluate(tmp_path):
             "--eval_file", str(test_json_filename),
             "--eval_output_file", str(test_output_filename),
             "--mode", "predict"]
-    args = args + build_pretrain_args("en", package, model_dir=TEST_MODELS_DIR)
+    args = args + build_pretrain_args("en", package, model_dir=TEST_MODELS_DIR, extra_args=[])
     args = ner_tagger.parse_args(args=args)
     confusion = ner_tagger.evaluate(args)
     assert confusion_to_macro_f1(confusion) == pytest.approx(1.0)
