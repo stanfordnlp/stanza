@@ -76,9 +76,9 @@ class DataLoader:
             if self.pretrain is None:
                 raise ValueError("Cannot train emb_finetune_known_only with no pretrain of known words")
             if self.args['lowercase']:
-                ignore = set([w[0] for sent in data for w in sent if w[0] in wordvocab or w[0].lower() in wordvocab])
+                ignore = set([w[0].lower() for sent in data for w in sent if w[0] not in wordvocab and w[0].lower() not in wordvocab])
             else:
-                ignore = set([w[0] for sent in data for w in sent if w[0] in wordvocab])
+                ignore = set([w[0] for sent in data for w in sent if w[0] not in wordvocab])
             logger.debug("Ignoring %d in the delta vocab as they did not appear in the original embedding", len(ignore))
         deltavocab = WordVocab(data, self.args['shorthand'], cutoff=1, lower=self.args['lowercase'], ignore=ignore)
         logger.debug("Creating delta vocab of size %s", len(deltavocab))

@@ -33,6 +33,13 @@ class WordVocab(BaseVocab):
         self._id2unit = VOCAB_PREFIX + list(sorted(list(counter.keys()), key=lambda k: counter[k], reverse=True))
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
 
+    def __iter__(self):
+        # the EMPTY shenanigans above make list() look really weird
+        # when using the __len__ / __getitem__ paradigm,
+        # but yielding items like this works fine
+        for x in self._id2unit:
+            yield x
+
     def __str__(self):
         return "<{}: {}>".format(type(self), ",".join("|%s|" % x for x in self._id2unit))
 
