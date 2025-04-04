@@ -92,8 +92,6 @@ class Tokenizer(nn.Module):
         if self.args['use_mwt']:
             nonmwt = F.logsigmoid(-mwt0)
             mwt = F.logsigmoid(mwt0)
-
-        if self.args['use_mwt']:
             pred = torch.cat([nontok, tok+nonsent+nonmwt, tok+sent+nonmwt, tok+nonsent+mwt, tok+sent+mwt], 2)
         else:
             pred = torch.cat([nontok, tok+nonsent, tok+sent], 2)
