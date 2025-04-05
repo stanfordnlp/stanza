@@ -431,7 +431,7 @@ class SortedDataset(Dataset):
             units[i, :len(u_)] = torch.from_numpy(u_)
             labels[i, :len(l_)] = torch.from_numpy(l_)
             features[i, :len(f_), :] = torch.from_numpy(f_)
-            raw_units.append(r_ + ['<PAD>'] * (pad_len - len(r_)))
+            raw_units.append(r_ + ['<PAD>'])
 
         return units, labels, features, raw_units
 
