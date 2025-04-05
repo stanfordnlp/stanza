@@ -258,8 +258,8 @@ def predict(trainer, data_generator, batch_size, max_seqlen, use_regex_tokens, n
     dataloader = TorchDataLoader(sorted_data, batch_size=batch_size, collate_fn=sorted_data.collate, num_workers=num_workers)
     for batch_idx, batch in enumerate(dataloader):
         num_sentences = len(batch[3])
-        # being sorted by length, we need to use -1 as the longest sentence
-        N = len(batch[3][-1])
+        # being sorted by descending length, we need to use 0 as the longest sentence
+        N = len(batch[3][0])
         for paragraph in batch[3]:
             all_raw.append(list(paragraph))
 
