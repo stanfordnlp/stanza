@@ -397,7 +397,7 @@ class SortedDataset(Dataset):
         super().__init__()
 
         self.dataset = dataset
-        self.data, self.indices = sort_with_indices(self.dataset.data, key=len)
+        self.data, self.indices = sort_with_indices(self.dataset.data, key=len, reverse=True)
 
     def __len__(self):
         return len(self.data)

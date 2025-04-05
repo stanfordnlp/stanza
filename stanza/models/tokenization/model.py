@@ -1,6 +1,7 @@
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, PackedSequence
 
 class Tokenizer(nn.Module):
     def __init__(self, args, nchars, emb_dim, hidden_dim, dropout, feat_dropout):
@@ -41,15 +42,15 @@ class Tokenizer(nn.Module):
 
         self.toknoise = nn.Dropout(self.args['tok_noise'])
 
-    def forward(self, x, feats):
+    def forward(self, x, feats, lengths):
         emb = self.embeddings(x)
         emb = self.dropout(emb)
         feats = self.dropout_feat(feats)
 
-
         emb = torch.cat([emb, feats], 2)
-
+        emb = pack_padded_sequence(emb, lengths, batch_first=True)
         inp, _ = self.rnn(emb)
+        inp, _ = pad_packed_sequence(inp, batch_first=True)
 
         if self.args['conv_res'] is not None:
             conv_input = emb.transpose(1, 2).contiguous()
@@ -73,10 +74,12 @@ class Tokenizer(nn.Module):
             mwt0 = self.mwt_clf(inp)
 
         if self.args['hierarchical']:
+            inp2 = inp
             if self.args['hier_invtemp'] > 0:
-                inp2, _ = self.rnn2(inp * (1 - self.toknoise(torch.sigmoid(-tok0 * self.args['hier_invtemp']))))
-            else:
-                inp2, _ = self.rnn2(inp)
+                inp2 = inp2 * (1 - self.toknoise(torch.sigmoid(-tok0 * self.args['hier_invtemp'])))
+            inp2 = pack_padded_sequence(inp2, lengths, batch_first=True)
+            inp2, _ = self.rnn2(inp2)
+            inp2, _ = pad_packed_sequence(inp2, batch_first=True)
 
             inp2 = self.dropout(inp2)
 

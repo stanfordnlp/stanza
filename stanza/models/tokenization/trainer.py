@@ -33,14 +33,15 @@ class Trainer(BaseTrainer):
 
     def update(self, inputs):
         self.model.train()
-        units, labels, features, _ = inputs
+        units, labels, features, text = inputs
+        lengths = [len(x) for x in text]
 
         device = next(self.model.parameters()).device
         units = units.to(device)
         labels = labels.to(device)
         features = features.to(device)
 
-        pred = self.model(units, features)
+        pred = self.model(units, features, lengths)
 
         self.optimizer.zero_grad()
         classes = pred.size(2)
@@ -54,13 +55,14 @@ class Trainer(BaseTrainer):
 
     def predict(self, inputs):
         self.model.eval()
-        units, _, features, _ = inputs
+        units, _, features, text = inputs
+        lengths = [len(x) for x in text]
 
         device = next(self.model.parameters()).device
         units = units.to(device)
         features = features.to(device)
 
-        pred = self.model(units, features)
+        pred = self.model(units, features, lengths)
 
         return pred.data.cpu().numpy()
 
