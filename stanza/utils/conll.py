@@ -75,7 +75,10 @@ class CoNLL:
                     token_dict[ID] = tuple(int(x) for x in token_dict[ID].split(".", maxsplit=1))
                     sent_empty.append(token_dict)
                 else:
-                    token_dict[ID] = tuple(int(x) for x in token_dict[ID].split("-", maxsplit=1))
+                    try:
+                        token_dict[ID] = tuple(int(x) for x in token_dict[ID].split("-", maxsplit=1))
+                    except ValueError as e:
+                        raise CoNLLError("Could not process ID %s at sent_idx %d, token_idx %d\nEntire token dict:\n%s" % (token_dict[ID], sent_idx, token_idx, token_dict)) from e
                     sent_dict.append(token_dict)
             doc_dict.append(sent_dict)
             doc_empty.append(sent_empty)
