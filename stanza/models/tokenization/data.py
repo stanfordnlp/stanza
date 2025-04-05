@@ -403,6 +403,11 @@ class SortedDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, index):
+        # This will return a single sample
+        #   np: index in character map
+        #   np: tokenization label
+        #   np: features
+        #   list: original text as one length strings
         return self.dataset.para_to_sentences(self.data[index])
 
     def unsort(self, arr):
