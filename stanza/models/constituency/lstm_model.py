@@ -824,9 +824,15 @@ class LSTMModel(BaseModel, nn.Module):
             rattn_inputs = [[x] for x in all_word_inputs]
 
             if self.rel_attn_forward is not None:
-                rattn_inputs = [x + [self.rel_attn_forward(x[0].unsqueeze(0)).squeeze(0)] for x in rattn_inputs]
+                if self.args['rattn_use_endpoint_sinks']:
+                    rattn_inputs = [x + [self.rel_attn_forward(x[0].unsqueeze(0), x[0][0]).squeeze(0)] for x in rattn_inputs]
+                else:
+                    rattn_inputs = [x + [self.rel_attn_forward(x[0].unsqueeze(0)).squeeze(0)] for x in rattn_inputs]
             if self.rel_attn_reverse is not None:
-                rattn_inputs = [x + [self.rel_attn_reverse(x[0].unsqueeze(0)).squeeze(0)] for x in rattn_inputs]
+                if self.args['rattn_use_endpoint_sinks']:
+                    rattn_inputs = [x + [self.rel_attn_reverse(x[0].unsqueeze(0), x[0][-1]).squeeze(0)] for x in rattn_inputs]
+                else:
+                    rattn_inputs = [x + [self.rel_attn_reverse(x[0].unsqueeze(0)).squeeze(0)] for x in rattn_inputs]
 
             if self.args['rattn_cat']:
                 all_word_inputs = [torch.cat(x, axis=1) for x in rattn_inputs]

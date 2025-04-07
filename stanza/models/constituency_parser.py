@@ -737,6 +737,7 @@ def build_argparse():
     parser.add_argument('--rattn_cat', default=True, action='store_true', help='Stack the rattn layers instead of adding them')
     parser.add_argument('--rattn_dim', default=200, type=int, help='Dimension of the rattn output when cat')
     parser.add_argument('--rattn_sinks', default=0, type=int, help='Number of attention sink tokens to learn')
+    parser.add_argument('--rattn_use_endpoint_sinks', default=False, action='store_true', help='Use the endpoints of the sentences as sinks')
 
     parser.add_argument('--log_norms', default=False, action='store_true', help='Log the parameters norms while training.  A very noisy option')
     parser.add_argument('--log_shapes', default=False, action='store_true', help='Log the parameters shapes at the beginning')

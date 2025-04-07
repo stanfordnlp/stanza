@@ -47,7 +47,7 @@ class RelativeAttention(nn.Module):
 
         self.reverse = reverse
 
-    def forward(self, x):
+    def forward(self, x, sink=None):
         # x.shape == (batch_size, seq_len, d_model)
         batch_size, seq_len, d_model = x.shape
         if d_model != self.d_model:
@@ -66,7 +66,10 @@ class RelativeAttention(nn.Module):
             # could keep a parameter to train sinks, but as it turns out,
             # the position vectors just overlap that parameter space anyway
             # generally the model trains the sinks to zero if we do that
-            sink = torch.zeros((batch_size, self.num_sinks, d_model), dtype=x.dtype, device=x.device)
+            if sink is None:
+                sink = torch.zeros((batch_size, self.num_sinks, d_model), dtype=x.dtype, device=x.device)
+            else:
+                sink = sink.expand(batch_size, self.num_sinks, d_model)
             x = torch.cat((sink, x), axis=1)
 
         # k.shape = (batch_size, num_heads, d_head, seq_len + num_sinks)
