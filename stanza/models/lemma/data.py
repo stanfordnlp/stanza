@@ -121,10 +121,10 @@ class DataLoader:
             yield self.__getitem__(i)
 
     def raw_data(self):
-        return self.load_doc(self.doc, self.args.get('caseless', False), self.eval)
+        return self.load_doc(self.doc, self.args.get('caseless', False), self.args.get('skip_blank_lemmas', False), self.eval)
 
     @staticmethod
-    def load_doc(doc, caseless, evaluation):
+    def load_doc(doc, caseless, skip_blank_lemmas, evaluation):
         if evaluation:
             data = doc.get([TEXT, UPOS, LEMMA])
         else:
@@ -132,6 +132,8 @@ class DataLoader:
             data = DataLoader.remove_goeswith(data)
             data = DataLoader.extract_correct_forms(data)
         data = DataLoader.resolve_none(data)
+        if not evaluation and skip_blank_lemmas:
+            data = DataLoader.skip_blank_lemmas(data)
         if caseless:
             data = DataLoader.lowercase_data(data)
         return data
@@ -200,6 +202,11 @@ class DataLoader:
     def lowercase_data(data):
         for token in data:
             token[0] = token[0].lower()
+        return data
+
+    @staticmethod
+    def skip_blank_lemmas(data):
+        data = [x for x in data if x[2] != '_']
         return data
 
     @staticmethod

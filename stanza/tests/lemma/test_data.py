@@ -69,38 +69,60 @@ CORRECT_FORM_DATA = """
 4	ambulances	ambulance	NOUN	NNS	Number=Plur	3	obj	3:obj	SpaceAfter=No
 """
 
+BLANKS_DATA = """
+# sent_id = weblog-juancole.com_juancole_20051126063000_ENG_20051126_063000-0018
+# text = Guerrillas killed an engineer, Asi Ali, from Tikrit.
+1	Guerrillas	_	NOUN	NNS	Number=Plur	2	nsubj	2:nsubj	_
+2	killed	_	VERB	VBD	Mood=Ind|Number=Plur|Person=3|Tense=Past|VerbForm=Fin	0	root	0:root	_
+3	an	a	DET	DT	Definite=Ind|PronType=Art	4	det	4:det	_
+4	engineer	_	NOUN	NN	Number=Sing	2	obj	2:obj	SpaceAfter=No
+
+""".lstrip()
+
 
 def test_load_document():
     train_doc = CoNLL.conll2doc(input_str=TRAIN_DATA)
-    data = DataLoader.load_doc(train_doc, caseless=False, evaluation=True)
+    data = DataLoader.load_doc(train_doc, caseless=False, skip_blank_lemmas=False, evaluation=True)
     assert len(data) == 33 # meticulously counted by hand
     assert all(len(x) == 3 for x in data)
 
-    data = DataLoader.load_doc(train_doc, caseless=False, evaluation=False)
+    data = DataLoader.load_doc(train_doc, caseless=False, skip_blank_lemmas=False, evaluation=False)
     assert len(data) == 33
     assert all(len(x) == 3 for x in data)
 
 def test_load_goeswith():
     raw_data = TRAIN_DATA + GOESWITH_DATA
     train_doc = CoNLL.conll2doc(input_str=raw_data)
-    data = DataLoader.load_doc(train_doc, caseless=False, evaluation=True)
+    data = DataLoader.load_doc(train_doc, caseless=False, skip_blank_lemmas=False, evaluation=True)
     assert len(data) == 36 # will be the same as in test_load_document with three additional words
     assert all(len(x) == 3 for x in data)
 
-    data = DataLoader.load_doc(train_doc, caseless=False, evaluation=False)
+    data = DataLoader.load_doc(train_doc, caseless=False, skip_blank_lemmas=False, evaluation=False)
     assert len(data) == 33 # will be the same as in test_load_document, but with the trailing 3 GOESWITH removed
     assert all(len(x) == 3 for x in data)
 
 def test_correct_form():
     raw_data = TRAIN_DATA + CORRECT_FORM_DATA
     train_doc = CoNLL.conll2doc(input_str=raw_data)
-    data = DataLoader.load_doc(train_doc, caseless=False, evaluation=True)
+    data = DataLoader.load_doc(train_doc, caseless=False, skip_blank_lemmas=False, evaluation=True)
     assert len(data) == 37
     # the 'targeting' correction should not be applied if evaluation=True
     # when evaluation=False, then the CorrectForms will be applied
     assert not any(x[0] == 'targeting' for x in data)
 
-    data = DataLoader.load_doc(train_doc, caseless=False, evaluation=False)
+    data = DataLoader.load_doc(train_doc, caseless=False, skip_blank_lemmas=False, evaluation=False)
     assert len(data) == 38 # the same, but with an extra row so the model learns both 'targetting' and 'targeting'
     assert any(x[0] == 'targeting' for x in data)
     assert any(x[0] == 'targetting' for x in data)
+
+def test_load_blank():
+    raw_data = TRAIN_DATA + BLANKS_DATA
+    train_doc = CoNLL.conll2doc(input_str=raw_data)
+    data = DataLoader.load_doc(train_doc, caseless=False, skip_blank_lemmas=False, evaluation=False)
+    assert len(data) == 37 # will be the same as in test_load_document with FOUR additional words
+    assert all(len(x) == 3 for x in data)
+
+    data = DataLoader.load_doc(train_doc, caseless=False, skip_blank_lemmas=True, evaluation=False)
+    assert len(data) == 34 # will be the same as in test_load_document, but one extra word is added.  others were blank
+    assert all(len(x) == 3 for x in data)
+

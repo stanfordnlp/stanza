@@ -78,6 +78,7 @@ def build_argparse():
     parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_lemmatizer.pt", help="File name to save the model")
 
     parser.add_argument('--caseless', default=False, action='store_true', help='Lowercase everything first before processing.  This will happen automatically if 100%% of the data is caseless')
+    parser.add_argument('--skip_blank_lemmas', default=False, action='store_true', help='Skip blank entries in the data files.  Useful for training a lemmatizer from a partially annotated dataset')
 
     parser.add_argument('--seed', type=int, default=1234)
     utils.add_device_args(parser)
