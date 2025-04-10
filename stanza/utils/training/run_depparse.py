@@ -41,7 +41,7 @@ def build_model_filename(paths, short_name, command_args, extra_args):
 
 def run_treebank(mode, paths, treebank, short_name,
                  temp_output_file, command_args, extra_args):
-    short_language, dataset = short_name.split("_")
+    short_language, dataset = short_name.split("_", 1)
 
     # TODO: refactor these blocks?
     depparse_dir   = paths["DEPPARSE_DATA_DIR"]

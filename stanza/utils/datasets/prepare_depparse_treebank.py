@@ -88,7 +88,7 @@ def process_treebank(treebank, model_type, paths, args) -> None:
         prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["DEPPARSE_DATA_DIR"])
     elif args.tag_method is Tags.PREDICTED:
         short_name = treebank_to_short_name(treebank)
-        short_language, dataset = short_name.split("_")
+        short_language, dataset = short_name.split("_", 1)
 
         # fmt: off
         base_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
