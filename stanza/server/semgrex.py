@@ -110,7 +110,8 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
         for semgrex_pattern, pattern_result in zip(semgrex_patterns, graph_result.result):
             semgrex_pattern = semgrex_pattern.replace("\n", " ")
             if len(pattern_result.match) == 0:
-                sentence.add_comment("# semgrex pattern |%s| did not match!" % semgrex_pattern)
+                if not matches_only:
+                    sentence.add_comment("# semgrex pattern |%s| did not match!" % semgrex_pattern)
             else:
                 sentence_matched = True
                 for match in pattern_result.match:
