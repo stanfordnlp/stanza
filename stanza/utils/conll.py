@@ -110,7 +110,9 @@ class CoNLL:
         token_dict = {}
         for field in FIELD_TO_IDX:
             value = token_conll[FIELD_TO_IDX[field]]
-            if value != '_':
+            if value == '' and field is FEATS:
+                continue
+            elif value != '_':
                 if field == HEAD:
                     token_dict[field] = int(value)
                 else:
