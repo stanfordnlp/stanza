@@ -886,6 +886,7 @@ TRANSFORMER_NICKNAMES = {
 
     # zh
     "google-bert/bert-base-chinese": "google-bert-chinese",
+    "hfl/chinese-bert-wwm": "hfl-bert-chinese",
     "hfl/chinese-roberta-wwm-ext": "hfl-roberta-chinese",
     "hfl/chinese-electra-180g-large-discriminator": "electra-large",
 
