@@ -108,19 +108,19 @@ class CoNLL:
         Output: a dictionary that maps from field name to value.
         """
         token_dict = {}
-        for field in FIELD_TO_IDX:
-            value = token_conll[FIELD_TO_IDX[field]]
+        for field, field_idx in FIELD_TO_IDX.items():
+            value = token_conll[field_idx]
             if value == '' and field is FEATS:
                 continue
             elif value != '_':
-                if field == HEAD:
+                if field is HEAD:
                     token_dict[field] = int(value)
                 else:
                     token_dict[field] = value
-            # special case if text is '_'
-            if token_conll[FIELD_TO_IDX[TEXT]] == '_':
-                token_dict[TEXT] = token_conll[FIELD_TO_IDX[TEXT]]
-                token_dict[LEMMA] = token_conll[FIELD_TO_IDX[LEMMA]]
+        # special case if text is '_'
+        if token_conll[FIELD_TO_IDX[TEXT]] == '_':
+            token_dict[TEXT] = token_conll[FIELD_TO_IDX[TEXT]]
+            token_dict[LEMMA] = token_conll[FIELD_TO_IDX[LEMMA]]
         return token_dict
 
     @staticmethod
