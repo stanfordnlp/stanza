@@ -786,6 +786,13 @@ TRANSFORMERS = {
     # or hfl/chinese-electra-180g-large-discriminator,
     #   which works better than the below roberta on constituency
     # "zh-hans": "hfl/chinese-roberta-wwm-ext",
+    # conparse dev scores (averaged over 5):
+    #   google bert:  0.9422
+    #   hfl bert:     0.9469
+    #   hfl roberta:  0.9459
+    #   hfl electra:  0.9515
+    # There is also a ShannonAI model, but our current codebase is
+    # somehow not compatible
     "zh-hans": "hfl/chinese-electra-180g-large-discriminator",
 }
 
@@ -889,6 +896,7 @@ TRANSFORMER_NICKNAMES = {
     "hfl/chinese-bert-wwm": "hfl-bert-chinese",
     "hfl/chinese-roberta-wwm-ext": "hfl-roberta-chinese",
     "hfl/chinese-electra-180g-large-discriminator": "electra-large",
+    "ShannonAI/ChineseBERT-base": "shannonai-chinese-bert",
 
     # multi-lingual Indic
     "ai4bharat/indic-bert": "indic-bert",
