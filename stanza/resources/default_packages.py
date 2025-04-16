@@ -791,9 +791,10 @@ TRANSFORMERS = {
     #   hfl bert:     0.9469
     #   hfl roberta:  0.9459
     #   hfl electra:  0.9515
+    #   hfl macbert:  0.9530
     # There is also a ShannonAI model, but our current codebase is
     # somehow not compatible
-    "zh-hans": "hfl/chinese-electra-180g-large-discriminator",
+    "zh-hans": "hfl/chinese-macbert-large",
 }
 
 TRANSFORMER_LAYERS = {
@@ -894,6 +895,7 @@ TRANSFORMER_NICKNAMES = {
     # zh
     "google-bert/bert-base-chinese": "google-bert-chinese",
     "hfl/chinese-bert-wwm": "hfl-bert-chinese",
+    "hfl/chinese-macbert-large": "hfl-macbert-chinese",
     "hfl/chinese-roberta-wwm-ext": "hfl-roberta-chinese",
     "hfl/chinese-electra-180g-large-discriminator": "electra-large",
     "ShannonAI/ChineseBERT-base": "shannonai-chinese-bert",
