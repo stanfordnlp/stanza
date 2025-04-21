@@ -76,6 +76,8 @@ A [`Token`](data_objects.md#token) object holds a token, and a list of its under
 | start_char | `int` | The start character index for this token in the raw text of the document. Particularly useful if you want to detokenize at one point, or apply annotations back to the raw text. |
 | end_char | `int` | The end character index for this token in the raw text of the document. Particularly useful if you want to detokenize at one point, or apply annotations back to the raw text. |
 | ner | `str` | The NER tag of this token, in [BIOES format](https://en.wikipedia.org/wiki/Inside%E2%80%93outside%E2%80%93beginning_(tagging)). Example: 'B-ORG'. |
+| spaces_after | `str` | The space(s) following a token.  Note that it is here, not on Word, as it is not expected to have spaces between Words in an MWT. |
+| spaces_before | `str` | The space(s) before a token, especially relevant at the start of a document |
 
 [`Token`](data_objects.md#token) also contains the following methods:
 
