@@ -891,6 +891,14 @@ class Sentence(StanzaObject):
         self.print_dependencies(file=dep_string)
         return dep_string.getvalue().strip()
 
+    def get_roots(self):
+        """ Return a list of root(s) from a sentence """
+        roots = []
+        for word in self.words:
+            if word.head == 0:
+                roots.append(word)
+        return roots
+
     def print_tokens(self, file=None):
         """ Print the tokens for this sentence. """
         for tok in self.tokens:
