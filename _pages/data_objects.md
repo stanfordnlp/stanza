@@ -49,6 +49,7 @@ A [`Sentence`](data_objects.md#sentence) object represents a sentence (as is seg
 | entities (ents) | `List[Span]` | The list of entities in this sentence. |
 | sentiment | `str` | The sentiment value for this sentence, as a string. Note that only a few languages have a sentiment model. |
 | constituency | [`ParseTree`](data_objects.md#parsetree) | The constituency parse for this sentence, as a ParseTree. Note that only a few languages have a [constituency model](constituency.md). |
+| sent_id | `str` | An ID given to sentences.  Can be assigned numerically from the document index when parsing, or read from the `# sent_id` comments when [reading a CoNLL file](data_conversion.md) |
 
 [`Sentence`](data_objects.md#sentence) also contains the following methods:
 
