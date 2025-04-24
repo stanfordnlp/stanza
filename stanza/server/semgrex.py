@@ -35,6 +35,7 @@ same document over and over, though.
 import argparse
 import copy
 import os
+import re
 
 import stanza
 from stanza.protobuf import SemgrexRequest, SemgrexResponse
@@ -146,6 +147,7 @@ def main():
     """
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', type=str, default=None, help='Process this file or directory')
+    parser.add_argument('--input_filter', type=str, default=None, help='Only process files that match this regex')
     parser.add_argument('semgrex', type=str, nargs="*", default=["{}=source >obj=zzz {}=target"], help="Semgrex to apply to the text.  The default looks for sentences with objects")
     parser.add_argument('--semgrex_file', type=str, default=None, help="File to read semgrex patterns from - relevant in case the pattern you want to use doesn't work well on the command line, for example")
     parser.add_argument('--print_input', dest='print_input', action='store_true', default=False, help="Print the input alongside the output - gets kind of noisy")
@@ -164,6 +166,9 @@ def main():
             docs = [CoNLL.conll2doc(input_file=args.input, ignore_gapping=False)]
         else:
             filenames = sorted(os.listdir(args.input))
+            if args.input_filter:
+                input_filter = re.compile(args.input_filter)
+                filenames = [x for x in filenames if input_filter.match(x)]
             filenames = [os.path.join(args.input, filename) for filename in filenames]
             filenames = [filename for filename in filenames if os.path.isfile(filename)]
             docs = [CoNLL.conll2doc(input_file=filename, ignore_gapping=False) for filename in filenames]
