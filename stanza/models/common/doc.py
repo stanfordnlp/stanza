@@ -1670,9 +1670,16 @@ class Span(StanzaObject):
             self.text = self.doc.text[self.start_char:self.end_char]
         elif tokens[0].sent is tokens[-1].sent:
             sentence = tokens[0].sent
-            text_start = tokens[0].start_char - sentence.tokens[0].start_char
-            text_end = tokens[-1].end_char - sentence.tokens[0].start_char
-            self.text = sentence.text[text_start:text_end]
+            if tokens[-1].end_char is not None and tokens[0].start_char is not None and sentence.tokens[0].start_char is not None:
+                text_start = tokens[0].start_char - sentence.tokens[0].start_char
+                text_end = tokens[-1].end_char - sentence.tokens[0].start_char
+                self.text = sentence.text[text_start:text_end]
+            else:
+                text = []
+                for token in tokens:
+                    text.append(token.text)
+                    text.append(token.spaces_after)
+                self.text = "".join(text[:-1])
         else:
             # TODO: do any spans ever cross sentences?
             raise RuntimeError("Document text does not exist, and the span tested crosses two sentences, so it is impossible to extract the entity text!")
