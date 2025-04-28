@@ -506,10 +506,9 @@ class Document(StanzaObject):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
 
     def __format__(self, spec):
-        if spec == 'c':
-            return "\n\n".join("{:c}".format(s) for s in self.sentences)
-        elif spec == 'C':
-            return "\n\n".join("{:C}".format(s) for s in self.sentences)
+        if spec and spec[0] in ('c', 'C'):
+            spec = "{:%s}" % spec
+            return "\n\n".join(spec.format(s) for s in self.sentences)
         else:
             return str(self)
 
@@ -939,7 +938,9 @@ class Sentence(StanzaObject):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
 
     def __format__(self, spec):
-        if spec != 'c' and spec != 'C':
+        if not spec:
+            return str(self)
+        if not spec[0] == 'c' and not spec[0] == 'C':
             return str(self)
 
         pieces = []
@@ -952,9 +953,9 @@ class Sentence(StanzaObject):
         for empty_word in self._empty_words[empty_idx:]:
             pieces.append(empty_word.to_conll_text())
 
-        if spec == 'c':
+        if spec[0] == 'c':
             return "\n".join(pieces)
-        elif spec == 'C':
+        elif spec[0] == 'C':
             tokens = "\n".join(pieces)
             if len(self.comments) > 0:
                 text = "\n".join(self.comments)
