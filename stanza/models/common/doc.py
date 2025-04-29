@@ -52,6 +52,9 @@ LINE_NUMBER = 'line_number'
 FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
 FIELD_NUM = len(FIELD_TO_IDX)
 
+DEFAULT_OUTPUT_FIELDS = [ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, NER, MULTI_NER, MEXP, COREF_CHAINS]
+NO_OFFSETS_OUTPUT_FIELDS = [ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, NER, MULTI_NER, MEXP, COREF_CHAINS]
+
 class DocJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, CorefMention):
@@ -942,16 +945,20 @@ class Sentence(StanzaObject):
             return str(self)
         if not spec[0] == 'c' and not spec[0] == 'C':
             return str(self)
+        if "-o" in spec:
+            fields = NO_OFFSETS_OUTPUT_FIELDS
+        else:
+            fields = DEFAULT_OUTPUT_FIELDS
 
         pieces = []
         empty_idx = 0
         for token_idx, token in enumerate(self.tokens):
             while empty_idx < len(self._empty_words) and self._empty_words[empty_idx].id[0] < token.id[0]:
-                pieces.append(self._empty_words[empty_idx].to_conll_text())
+                pieces.append(self._empty_words[empty_idx].to_conll_text(fields))
                 empty_idx += 1
-            pieces.append(token.to_conll_text())
+            pieces.append(token.to_conll_text(fields))
         for empty_word in self._empty_words[empty_idx:]:
-            pieces.append(empty_word.to_conll_text())
+            pieces.append(empty_word.to_conll_text(fields))
 
         if spec[0] == 'c':
             return "\n".join(pieces)
@@ -1254,16 +1261,16 @@ class Token(StanzaObject):
 
     def __format__(self, spec):
         if spec == 'C':
-            return "\n".join(self.to_conll_text())
+            return "\n".join(self.to_conll_text(DEFAULT_OUTPUT_FIELDS))
         elif spec == 'P':
             return self.pretty_print()
         else:
             return str(self)
 
-    def to_conll_text(self):
-        return "\n".join(dict_to_conll_text(x) for x in self.to_dict())
+    def to_conll_text(self, fields=DEFAULT_OUTPUT_FIELDS):
+        return "\n".join(dict_to_conll_text(x) for x in self.to_dict(fields))
 
-    def to_dict(self, fields=[ID, TEXT, MISC, START_CHAR, END_CHAR, NER, MULTI_NER, MEXP]):
+    def to_dict(self, fields=DEFAULT_OUTPUT_FIELDS):
         """ Dumps the token into a list of dictionary for this token with its extended words
         if the token is a multi-word token.
         """
@@ -1271,7 +1278,7 @@ class Token(StanzaObject):
         if len(self.id) > 1:
             token_dict = {}
             for field in fields:
-                if getattr(self, field) is not None:
+                if getattr(self, field, None) is not None:
                     token_dict[field] = getattr(self, field)
             if MISC in fields:
                 spaces_after = self.spaces_after
@@ -1292,7 +1299,7 @@ class Token(StanzaObject):
 
             ret.append(token_dict)
         for word in self.words:
-            word_dict = word.to_dict()
+            word_dict = word.to_dict(fields)
             if len(self.id) == 1 and NER in fields and getattr(self, NER) is not None: # propagate NER label to Word if it is a single-word token
                 word_dict[NER] = getattr(self, NER)
             if len(self.id) == 1 and MULTI_NER in fields and getattr(self, MULTI_NER) is not None: # propagate MULTI_NER label to Word if it is a single-word token
@@ -1597,25 +1604,25 @@ class Word(StanzaObject):
 
     def __format__(self, spec):
         if spec == 'C':
-            return self.to_conll_text()
+            return self.to_conll_text(DEFAULT_OUTPUT_FIELDS)
         elif spec == 'P':
             return self.pretty_print()
         else:
             return str(self)
 
-    def to_conll_text(self):
+    def to_conll_text(self, fields=DEFAULT_OUTPUT_FIELDS):
         """
         Turn a word into a conll representation (10 column tab separated)
         """
-        token_dict = self.to_dict()
+        token_dict = self.to_dict(fields)
         return dict_to_conll_text(token_dict, '.')
 
-    def to_dict(self, fields=[ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, MEXP, COREF_CHAINS]):
+    def to_dict(self, fields=DEFAULT_OUTPUT_FIELDS):
         """ Dumps the word into a dictionary.
         """
         word_dict = {}
         for field in fields:
-            if getattr(self, field) is not None:
+            if getattr(self, field, None) is not None:
                 word_dict[field] = getattr(self, field)
         return word_dict
 
