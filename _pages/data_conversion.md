@@ -94,3 +94,15 @@ There is a corresponding mechanism for writing back the document:
 ```python
 CoNLL.write_doc2conll(doc2, "output.conllu")
 ```
+
+There is also a string conversion option which converts the document to a string:
+
+```python
+conllu = "{:C}".format(doc)
+```
+
+To do the same without comments (such as `sent_id` or `text`):
+
+```python
+conllu = "{:c}".format(doc)
+```
