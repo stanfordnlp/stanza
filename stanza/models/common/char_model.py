@@ -330,7 +330,7 @@ class CharacterLanguageModelTrainer():
         params = [param for param in model.parameters() if param.requires_grad]
         optimizer = torch.optim.SGD(params, lr=args['lr0'], momentum=args['momentum'], weight_decay=args['weight_decay'])
         criterion = torch.nn.CrossEntropyLoss()
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True, factor=args['anneal'], patience=args['patience'])
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args['anneal'], patience=args['patience'])
         return cls(model, params, optimizer, criterion, scheduler)
 
 
@@ -353,7 +353,7 @@ class CharacterLanguageModelTrainer():
         criterion = torch.nn.CrossEntropyLoss()
         if 'criterion' in state: criterion.load_state_dict(state['criterion'])
 
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, verbose=True, factor=args['anneal'], patience=args['patience'])
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=args['anneal'], patience=args['patience'])
         if 'scheduler' in state: scheduler.load_state_dict(state['scheduler'])
 
         epoch = state.get('epoch', 1)
