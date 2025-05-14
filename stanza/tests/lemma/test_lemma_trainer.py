@@ -22,9 +22,11 @@ def english_model():
     models_path = os.path.join(TEST_MODELS_DIR, "en", "lemma", "*")
     models = glob.glob(models_path)
     # we expect at least one English model downloaded for the tests
-    assert len(models) >= 1
-    model_file = models[0]
-    return trainer.Trainer(model_file=model_file)
+    assert len(models) >= 1, "No English lemma models downloaded during setup!  Please make sure to run the setup script."
+    for model_file in models:
+        if "nocharlm" in model_file:
+            return trainer.Trainer(model_file=model_file)
+    raise FileNotFoundError("Should have downloaded the nocharlm English lemmatizer during setup.  Please rerun the setup script.")
 
 def test_load_model(english_model):
     """

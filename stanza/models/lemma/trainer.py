@@ -300,8 +300,8 @@ class Trainer(object):
             raise
         self.args = checkpoint['config']
         if args is not None:
-            self.args['charlm_forward_file'] = args['charlm_forward_file']
-            self.args['charlm_backward_file'] = args['charlm_backward_file']
+            self.args['charlm_forward_file'] = args.get('charlm_forward_file', self.args['charlm_forward_file'])
+            self.args['charlm_backward_file'] = args.get('charlm_backward_file', self.args['charlm_backward_file'])
         self.word_dict, self.composite_dict = checkpoint['dicts']
         if not self.args['dict_only']:
             self.model = self.build_seq2seq(self.args, None, foundation_cache)
