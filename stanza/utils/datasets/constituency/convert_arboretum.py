@@ -238,7 +238,7 @@ def process_tree(sentence):
     sentence = sentence.getroot()
     sent_id = sentence.get("id")
     if sent_id is None:
-        raise ValueError("Tree {} does not have an id".format(sent_idx))
+        raise ValueError("Tree {} does not have an id".format(sent_id))
     if len(sentence) > 1:
         raise ValueError("Longer than expected number of items in {}".format(sent_id))
     graph = sentence.find("graph")
