@@ -242,20 +242,20 @@ def process_tree(sentence):
     if len(sentence) > 1:
         raise ValueError("Longer than expected number of items in {}".format(sent_id))
     graph = sentence.find("graph")
-    if not graph:
+    if graph is None:
         raise ValueError("Unexpected tree structure in {} : top tag is not 'graph'".format(sent_id))
 
     root_id = graph.get("root")
-    if not root_id:
+    if root_id is None:
         raise ValueError("Tree has no root id in {}".format(sent_id))
 
     terminals = graph.find("terminals")
-    if not terminals:
+    if terminals is None:
         raise ValueError("No terminals in tree {}".format(sent_id))
     # some Arboretum graphs have two sets of nonterminals,
     # apparently intentionally, so we ignore that possible error
     nonterminals = graph.find("nonterminals")
-    if not nonterminals:
+    if nonterminals is None:
         raise ValueError("No nonterminals in tree {}".format(sent_id))
 
     # read the words.  the words have ids, text, and tags which we care about
