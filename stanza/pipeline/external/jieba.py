@@ -3,6 +3,7 @@ Processors related to Jieba in the pipeline.
 """
 
 import re
+import warnings
 
 from stanza.models.common import doc
 from stanza.pipeline._constants import TOKENIZE
@@ -30,8 +31,12 @@ class JiebaTokenizer(ProcessorVariant):
         if config['lang'] not in ['zh', 'zh-hans', 'zh-hant']:
             raise Exception("Jieba tokenizer is currently only allowed in Chinese (simplified or traditional) pipelines.")
 
-        check_jieba()
-        import jieba
+        # Surpress a DeprecationWarning about pkg_resource from jieba.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=DeprecationWarning, module="jieba")
+            check_jieba()
+            import jieba
+
         self.nlp = jieba
         self.no_ssplit = config.get('no_ssplit', False)
 
