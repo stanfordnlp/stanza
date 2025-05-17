@@ -260,7 +260,8 @@ def main():
     # See https://github.com/UniversalDependencies/docs/issues/923
     parser = argparse.ArgumentParser()
     parser.add_argument('--input', type=str, default=None, help="Input file / directory to process (otherwise will process a sample text)")
-    parser.add_argument('--output', type=str, default=None, help="Output location (otherwise will write to stdout)")
+    parser.add_argument('--output', type=str, default=None, help="Output location (otherwise will write back to the input directory)")
+    parser.add_argument('--stdout', action='store_true', default=False, help='Output to stdout')
     parser.add_argument('--input_filter', type=str, default=".*[.]conllu", help="If processing a directory, only process files from --input that match this filter - regex, not shell filter.  Default: %(default)s")
     parser.add_argument('--no_input_filter', action='store_const', const=None, dest="input_filter", help="Remove the default input filename filter")
     parser.add_argument('--edit_file', type=str, default=None, help="File to get semgrex and ssurgeon rules from")
@@ -279,12 +280,15 @@ def main():
     if args.input:
         if os.path.isfile(args.input):
             docs = [CoNLL.conll2doc(input_file=args.input)]
-            # TODO: could check if --output is a directory
-            outputs = [args.output]
+            if args.output is None:
+                outputs = [args.input]
+            else:
+                # TODO: could check if --output is a directory
+                outputs = [args.output]
             input_output = zip(docs, outputs)
         else:
             if not args.output:
-                raise ValueError("Cannot process multiple files without knowing where to send them - please set --output in order to use --input with a directory")
+                args.output = args.input
             if not os.path.exists(args.output):
                 os.makedirs(args.output)
             def read_docs():
@@ -303,6 +307,7 @@ def main():
         docs = [CoNLL.conll2doc(input_str=SAMPLE_DOC)]
         outputs = [None]
         input_output = zip(docs, outputs)
+        args.stdout = True
 
     for doc, output in input_output:
         if args.print_input:
@@ -313,7 +318,7 @@ def main():
         if output is not None:
             with open(output, "w", encoding="utf-8") as fout:
                 fout.write("{:C}\n\n".format(updated_doc))
-        else:
+        if args.stdout:
             print("{:C}\n".format(updated_doc))
 
 if __name__ == '__main__':
