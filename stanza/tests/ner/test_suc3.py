@@ -64,7 +64,7 @@ def test_read_zip():
             with zout.open(in_filename, "w") as fout:
                 fout.write(TEST_CONLL.encode())
 
-        out_filename = "iob"
+        out_filename = os.path.join(tempdir, "iob")
         num = suc_conll_to_iob.extract_from_zip(zip_name, in_filename, out_filename)
         assert num == 2
 
@@ -81,7 +81,7 @@ def test_read_raw():
         with open(in_filename, "w", encoding="utf-8") as fout:
             fout.write(TEST_CONLL)
 
-        out_filename = "iob"
+        out_filename = os.path.join(tempdir, "iob")
         with open(in_filename, encoding="utf-8") as fin, open(out_filename, "w", encoding="utf-8") as fout:
             num = suc_conll_to_iob.extract(fin, fout)
         assert num == 2
