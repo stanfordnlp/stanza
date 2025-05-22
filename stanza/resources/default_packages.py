@@ -766,6 +766,8 @@ TRANSFORMERS = {
     # google/muril-large-cased       86.30        72.45
     "ta": "google/muril-large-cased",
 
+    # https://huggingface.co/airesearch/wangchanberta-base-att-spm-uncased
+    "th": "airesearch/wangchanberta-base-att-spm-uncased",
 
     # https://huggingface.co/dbmdz/bert-base-turkish-128k-cased
     # helps the Turkish model quite a bit
@@ -884,6 +886,9 @@ TRANSFORMER_NICKNAMES = {
     "lgessler/microbert-tamil-mxp":  "ta-microbert-mxp",
     "l3cube-pune/tamil-bert":        "l3cube-tamil-bert",
     "d42kw01f/Tamil-RoBERTa":        "ta-d42kw01f-roberta",
+
+    # th
+    "airesearch/wangchanberta-base-att-spm-uncased":   "wangchanberta",
 
     # tr
     "dbmdz/bert-base-turkish-128k-cased": "bert",
