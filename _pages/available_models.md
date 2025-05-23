@@ -70,6 +70,9 @@ reasonable, though:
 | [wangchanberta](https://huggingface.co/airesearch/wangchanberta-base-att-spm-uncased)  |      92.21    | 76.65 |
 
 
+> Panyut Sriwirote, Wei Qi Leong, Charin Polpanumas, Santhawat Thanyawong, William Chandra Tjhi, Wirote Aroonmanakun, and Attapol T. Rutherford.  [The Thai Universal Dependency Treebank](https://direct.mit.edu/tacl/article/doi/10.1162/tacl_a_00745/128939/The-Thai-Universal-Dependency-Treebank).  In Transactions of the Association for Computational Linguistics.  2025. \[[pdf](https://direct.mit.edu/tacl/article-pdf/doi/10.1162/tacl%5C_a%5C_00745/2514583/tacl%5C_a%5C_00745.pdf)\]
+{: .citation }
+
 ## Available NER Models
 
 A description of the models available for the NER tool, along with their performance on test datasets, can be found [here](ner_models.md).
