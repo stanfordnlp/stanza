@@ -55,6 +55,19 @@ default.
 | Orchid  | 87.98          |  70.99            |        |
 | BEST    | 95.73          |  77.93            | Sentences are re-split using pythainlp |
 
+New in v1.10.1
+{: .label .label-green }
+
+The newly created [TUD treebank](https://github.com/nlp-chula/TUD)
+has UPOS and dependencies, and of course can be used for training a
+tokenizer.  The tokenizer built from this has a *terrible* sentence
+split rate, somewhere around 20%.  The POS and dependencies are
+reasonable, though:
+
+| Embedding | dev UPOS  | dev depparse LAS |
+| :------ | :---------: | :--------------: |
+| no transformer |      91.26    | 73.57 |
+| [wangchanberta](https://huggingface.co/airesearch/wangchanberta-base-att-spm-uncased)  |      92.21    | 76.65 |
 
 
 ## Available NER Models
