@@ -767,6 +767,11 @@ TRANSFORMERS = {
     "ta": "google/muril-large-cased",
 
     # https://huggingface.co/airesearch/wangchanberta-base-att-spm-uncased
+    # this is clearly better than no transformer on a couple datasets:
+    #
+    #                    TUD dev upos   TUD dev depparse LAS
+    # no transformer       91.26             73.57
+    # wangchanberta        92.21             76.65
     "th": "airesearch/wangchanberta-base-att-spm-uncased",
 
     # https://huggingface.co/dbmdz/bert-base-turkish-128k-cased
