@@ -35,7 +35,7 @@ NER models for BG, HU, FI, VI, and all tokenize/mwt/lemma/pos/depparse models up
 
 ### 1.1.1
 
-This version extends Stanza's v1.0.0 models with additional [sentiment analysis models](sentiment) for English, German and Chinese pipelines, a new [tokenizer for the Thai language](available_models#other-available-models-for-tokenization), and new suite of [Biomedical and Clinical English syntactic analysis and NER model packages](available_biomed_models). We've changed the default packages for a few languages for robustness. These changes include: Polish (default is now `PDB` model, from previous `LFG`), Korean (default is now `GSD`, from previous Kaist), Lithuanian (default is now `ALKSNIS`, from previous HSE).
+This version extends Stanza's v1.0.0 models with additional [sentiment analysis models](sentiment) for English, German and Chinese pipelines, a new [tokenizer for the Thai language](available_models#other-available-pipelines), and new suite of [Biomedical and Clinical English syntactic analysis and NER model packages](available_biomed_models). We've changed the default packages for a few languages for robustness. These changes include: Polish (default is now `PDB` model, from previous `LFG`), Korean (default is now `GSD`, from previous Kaist), Lithuanian (default is now `ALKSNIS`, from previous HSE).
 
 ### 1.0.0
 

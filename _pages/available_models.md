@@ -22,7 +22,7 @@ Results for these models are on the
 [performance](https://stanfordnlp.github.io/stanza/performance.html) page.
 There are also past results from previous versions of the models.
 
-## Other Available Models for Tokenization
+## Other Available Pipelines
 
 ### Myanmar
 
