@@ -152,9 +152,13 @@ def main():
     parser.add_argument('--semgrex_file', type=str, default=None, help="File to read semgrex patterns from - relevant in case the pattern you want to use doesn't work well on the command line, for example")
     parser.add_argument('--print_input', dest='print_input', action='store_true', default=False, help="Print the input alongside the output - gets kind of noisy")
     parser.add_argument('--no_print_input', dest='print_input', action='store_false', help="Don't print the input alongside the output - gets kind of noisy")
-    parser.add_argument('--matches_only', action='store_true', default=False, help="Only print the matching sentences")
+
+    parser.add_argument('--matches_only', action='store_true', default=True, help="Only print the matching sentences")
+    parser.add_argument('--no_matches_only', dest='matches_only', action='store_false', help="Only print the matching sentences")
     parser.add_argument('--exclude_matches', action='store_true', default=False, help="Only print the NON-matching sentences")
+
     parser.add_argument('--enhanced', action='store_true', default=False, help='Use the enhanced dependencies instead of the basic')
+    parser.add_argument('--no_combined_doc', dest='combined_doc', action='store_false', default=True, help='By default, combine all the input docs into one big document.  Allows for easier secondary processing like sorting')
     args = parser.parse_args()
 
     if args.semgrex_file:
@@ -175,6 +179,11 @@ def main():
     else:
         nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma,depparse')
         docs = [nlp('Uro ruined modern.  Fortunately, Wotc banned him.')]
+
+    if args.combined_doc:
+        sentences = [sent for doc in docs for sent in doc.sentences]
+        docs = [docs[0]]
+        docs[0].sentences = sentences
 
     for doc in docs:
         if args.print_input:
