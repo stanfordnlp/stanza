@@ -531,6 +531,11 @@ def process_il_ner(paths, short_name):
     def fix_tag(tag):
         if tag == '-':
             return 'O'
+        if tag.endswith("'"):
+            # not sure the correct fix, but we filed an issue, so hopefully they fix it
+            return "O"
+        if tag.endswith("NIMI") or tag.endswith("NET"):
+            return tag[:2] + "NETI"
         tag = tag.replace(joiner, "").upper()
         if tag.startswith("-"):
             return 'B%s' % tag
