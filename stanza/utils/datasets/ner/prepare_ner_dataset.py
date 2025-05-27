@@ -527,9 +527,11 @@ def process_it_fbk(paths, short_name):
     convert_bio_to_json(base_output_path, base_output_path, short_name, suffix="io")
 
 def process_il_ner(paths, short_name):
+    joiner = chr(0x200c)
     def fix_tag(tag):
         if tag == '-':
             return 'O'
+        tag = tag.replace(joiner, "").upper()
         if tag.startswith("-"):
             return 'B%s' % tag
         return tag
