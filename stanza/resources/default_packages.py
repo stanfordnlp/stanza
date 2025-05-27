@@ -96,7 +96,7 @@ default_treebanks = {
     "swl":     "sslc",
     "ta":      "ttb",
     "te":      "mtg",
-    "th":      "orchid",
+    "th":      "tud",
     "tr":      "imst",
     "ug":      "udt",
     "uk":      "iu",

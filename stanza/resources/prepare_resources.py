@@ -42,8 +42,6 @@ def parse_args():
 
 
 allowed_empty_languages = [
-    # we don't have a lot of Thai support yet
-    "th",
     # only tokenize and NER for Myanmar right now (soon...)
     "my",
 ]
