@@ -186,6 +186,7 @@ specific_default_pretrains = {
     "nds":     "fasttext157",
     "nl":      "conll17",
     "nn":      "conll17",
+    "or":      "fasttext157",
     "ota":     "conll17",
     "pl":      "conll17",
     "pt":      "conll17",
@@ -731,6 +732,8 @@ TRANSFORMERS = {
     #  l3cube-pune/marathi-roberta 76.48 66.21 61.20 57.60 61.20
     "mr": "l3cube-pune/marathi-roberta",
 
+    "or": "google/muril-large-cased",
+
     # https://huggingface.co/allegro/herbert-base-cased
     # Scores by entity on the NKJP NER task:
     # no bert (dev/test): 88.64/88.75
@@ -766,6 +769,8 @@ TRANSFORMERS = {
     # google/muril-large-cased       86.30        72.45
     "ta": "google/muril-large-cased",
 
+    "te": "google/muril-large-cased",
+
     # https://huggingface.co/airesearch/wangchanberta-base-att-spm-uncased
     # this is clearly better than no transformer on a couple datasets:
     #
@@ -777,6 +782,8 @@ TRANSFORMERS = {
     # https://huggingface.co/dbmdz/bert-base-turkish-128k-cased
     # helps the Turkish model quite a bit
     "tr": "dbmdz/bert-base-turkish-128k-cased",
+
+    "ur": "google/muril-large-cased",
 
     # from https://github.com/VinAIResearch/PhoBERT
     # "vi": "vinai/phobert-base",
