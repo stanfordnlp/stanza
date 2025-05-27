@@ -1424,7 +1424,7 @@ def main(dataset_name):
     if dataset_name in DATASET_MAPPING:
         DATASET_MAPPING[dataset_name](paths, dataset_name)
     elif dataset_name in ('uk_languk', 'Ukranian_languk', 'Ukranian-languk'):
-        process_languk(paths, dataset_name)
+        process_languk(paths, 'uk_languk')
     elif dataset_name.endswith("FIRE2013") or dataset_name.endswith("fire2013"):
         process_fire_2013(paths, dataset_name)
     elif dataset_name.endswith('WikiNER'):
