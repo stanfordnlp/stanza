@@ -67,6 +67,18 @@ HiNER is another Hindi dataset option
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hi_hiner
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset hi_hinercollapsed
 
+IL-NER has four datasets: HI, OR, TE, UR
+  https://github.com/ltrc/IL-NER
+  - Fine-tuning Pre-trained Named Entity Recognition Models For Indian Languages
+    Bahad, Sankalp and Mishra, Pruthwik and
+    Krishnamurthy, Parameswari and Sharma, Dipti
+  Convert the data as follows:
+    cd $NERBASE
+    mkdir indic
+    cd indic
+    git clone git@github.com:ltrc/IL-NER.git
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset or_ilner
+
 Ukranian NER is provided by lang-uk, available here:
   https://github.com/lang-uk/ner-uk
   git clone the repo to $NERBASE/lang-uk
@@ -514,6 +526,46 @@ def process_it_fbk(paths, short_name):
     split_wikiner(base_output_path, csv_file, prefix=short_name, suffix="io", shuffle=False, train_fraction=0.8, dev_fraction=0.1)
     convert_bio_to_json(base_output_path, base_output_path, short_name, suffix="io")
 
+def process_il_ner(paths, short_name):
+    def fix_tag(tag):
+        if tag =='-':
+            return 'O'
+        if tag.startswith("-"):
+            return 'B%s' % tag
+        return tag
+
+    lang_paths = {
+        "hi": "Hindi",
+        "or": "Odia",
+        "te": "Telugu",
+        "ur": "Urdu",
+    }
+    lang, ending = short_name.split("_")
+    assert ending == "ilner"
+    assert lang in lang_paths, "IL-NER only supports %s" % (", ".join(lang_paths.keys()))
+    ilner_path = os.path.join(paths["NERBASE"], "indic", "IL-NER")
+    if not os.path.exists(ilner_path):
+        raise FileNotFounderror("Cannot find the IL-NER dataset in its expected location: {}".format(ilner_path))
+    ilner_path = os.path.join(ilner_path, "Datasets", lang_paths[lang])
+    if not os.path.exists(ilner_path):
+        raise FileNotFoundError("IL-NER not in the layout expected: directory not found {}".format(ilner_path))
+    filenames = os.listdir(ilner_path)
+
+    base_output_path = paths["NER_DATA_DIR"]
+    for shard in SHARDS:
+        input_filenames = [x for x in filenames if shard in x]
+        if len(input_filenames) == 0:
+            raise FileNotFoundError("No %s file in %s" % (shard, ilner_path))
+        if len(input_filenames) > 1:
+            raise FileNotFoundError("Unexpected multiple files for %s in %s: %s" % (shard, ilner_path, input_filenames))
+        input_filename = os.path.join(ilner_path, input_filenames[0])
+        int_filename = os.path.join(base_output_path, '%s.%s.tsv' % (short_name, shard))
+        output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
+        sentences = read_tsv(input_filename, text_column=0, annotation_column=1, remap_fn=fix_tag)
+        print("Loaded %d sentences from %s" % (len(sentences), input_filename))
+        write_sentences(int_filename, sentences)
+
+        prepare_ner_file.process_dataset(int_filename, output_filename)
 
 def process_languk(paths, short_name):
     assert short_name == 'uk_languk'
@@ -1415,6 +1467,10 @@ DATASET_MAPPING = {
     "zh-hans_ontonotes": process_zh_ontonotes,
 }
 
+SUFFIX_MAPPING = {
+    "_ilner":            process_il_ner,
+}
+
 def main(dataset_name):
     paths = default_paths.get_default_paths()
     print("Processing %s" % dataset_name)
@@ -1442,7 +1498,12 @@ def main(dataset_name):
     elif dataset_name.lower().endswith("_masakhane"):
         process_masakhane(paths, dataset_name)
     else:
-        raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
+        for ending in SUFFIX_MAPPING:
+            if dataset_name.endswith(ending):
+                SUFFIX_MAPPING[ending](paths, dataset_name)
+                break
+        else:
+            raise UnknownDatasetError(dataset_name, f"dataset {dataset_name} currently not handled by prepare_ner_dataset")
     print("Done processing %s" % dataset_name)
 
 if __name__ == '__main__':
