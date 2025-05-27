@@ -528,11 +528,16 @@ def process_it_fbk(paths, short_name):
 
 def process_il_ner(paths, short_name):
     def fix_tag(tag):
-        if tag =='-':
+        if tag == '-':
             return 'O'
         if tag.startswith("-"):
             return 'B%s' % tag
         return tag
+
+    def fix_line(line):
+        if line == 'O':
+            return '-\tO'
+        return line
 
     lang_paths = {
         "hi": "Hindi",
@@ -561,7 +566,7 @@ def process_il_ner(paths, short_name):
         input_filename = os.path.join(ilner_path, input_filenames[0])
         int_filename = os.path.join(base_output_path, '%s.%s.tsv' % (short_name, shard))
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, shard))
-        sentences = read_tsv(input_filename, text_column=0, annotation_column=1, remap_fn=fix_tag)
+        sentences = read_tsv(input_filename, text_column=0, annotation_column=1, remap_tag_fn=fix_tag, remap_line=fix_line)
         print("Loaded %d sentences from %s" % (len(sentences), input_filename))
         write_sentences(int_filename, sentences)
 
@@ -1197,7 +1202,7 @@ def process_de_germeval2014(paths, short_name):
     datasets = []
     for shard in SHARDS:
         in_file = os.path.join(in_directory, "NER-de-%s.tsv" % shard)
-        sentences = read_tsv(in_file, 1, 2, remap_fn=remap_germeval_tag)
+        sentences = read_tsv(in_file, 1, 2, remap_tag_fn=remap_germeval_tag)
         datasets.append(sentences)
     tags = get_tags(datasets)
     print("Found the following tags: {}".format(sorted(tags)))

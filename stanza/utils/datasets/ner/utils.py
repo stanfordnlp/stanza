@@ -141,7 +141,7 @@ def write_multitag_dataset(datasets, output_dir, short_name, suffix="bio", shard
         output_filename = os.path.join(output_dir, "%s.%s.json" % (short_name, shard))
         write_multitag_json(output_filename, dataset)
 
-def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comments=True, keep_broken_tags=False, keep_all_columns=False, separator="\t"):
+def read_tsv(filename, text_column, annotation_column, remap_tag_fn=None, remap_line=None, skip_comments=True, keep_broken_tags=False, keep_all_columns=False, separator="\t"):
     """
     Read sentences from a TSV file
 
@@ -165,6 +165,8 @@ def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comme
         if skip_comments and line.startswith("#"):
             continue
 
+        if remap_line is not None:
+            line = remap_line(line)
         pieces = line.split(separator)
         try:
             word = pieces[text_column]
@@ -180,8 +182,8 @@ def read_tsv(filename, text_column, annotation_column, remap_fn=None, skip_comme
                 tag = None
             else:
                 raise IndexError("Filename %s: could not find tag index %d at line %d |%s|" % (filename, annotation_column, line_idx, line)) from e
-        if remap_fn:
-            tag = remap_fn(tag)
+        if remap_tag_fn is not None:
+            tag = remap_tag_fn(tag)
 
         if keep_all_columns:
             pieces[annotation_column] = tag
