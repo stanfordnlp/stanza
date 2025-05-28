@@ -60,7 +60,6 @@ setup(
 
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
-        'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
@@ -90,7 +89,7 @@ setup(
     ],
 
     # List required Python versions
-    python_requires='>=3.8',
+    python_requires='>=3.9',
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
