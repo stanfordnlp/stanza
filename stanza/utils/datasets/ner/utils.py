@@ -6,9 +6,11 @@ or the entire prepare_ner_dataset.py script
 """
 
 from collections import defaultdict
+import io
 import json
 import os
 import random
+import zipfile
 
 from stanza.models.common.doc import Document
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
@@ -141,7 +143,7 @@ def write_multitag_dataset(datasets, output_dir, short_name, suffix="bio", shard
         output_filename = os.path.join(output_dir, "%s.%s.json" % (short_name, shard))
         write_multitag_json(output_filename, dataset)
 
-def read_tsv(filename, text_column, annotation_column, remap_tag_fn=None, remap_line=None, skip_comments=True, keep_broken_tags=False, keep_all_columns=False, separator="\t"):
+def read_tsv(filename, text_column, annotation_column, remap_tag_fn=None, remap_line=None, skip_comments=True, keep_broken_tags=False, keep_all_columns=False, separator="\t", zip_filename=None):
     """
     Read sentences from a TSV file
 
@@ -149,8 +151,14 @@ def read_tsv(filename, text_column, annotation_column, remap_tag_fn=None, remap_
 
     If keep_broken_tags==True, then None is returned for a missing.  Otherwise, an IndexError is thrown
     """
-    with open(filename, encoding="utf-8") as fin:
-        lines = fin.readlines()
+    if zip_filename is not None:
+        with zipfile.ZipFile(zip_filename) as zin:
+            with zin.open(filename) as fin:
+                fin = io.TextIOWrapper(fin, encoding='utf-8')
+                lines = fin.readlines()
+    else:
+        with open(filename, encoding="utf-8") as fin:
+            lines = fin.readlines()
 
     lines = [x.strip() for x in lines]
 
