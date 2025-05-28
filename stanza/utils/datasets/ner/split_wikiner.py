@@ -60,6 +60,8 @@ def remap_labels(sents, remap):
     return new_sentences
 
 def split_wikiner_data(directory, sents, prefix="", suffix="bio", remap=None, shuffle=True, train_fraction=0.7, dev_fraction=0.15, test_section=True):
+    random.seed(1234)
+
     if remap:
         sents = remap_labels(sents, remap)
 
@@ -91,8 +93,6 @@ def split_wikiner_data(directory, sents, prefix="", suffix="bio", remap=None, sh
         write_sentences_to_file(batch, os.path.join(directory, filename))
 
 def split_wikiner(directory, *in_filenames, encoding="utf-8", **kwargs):
-    random.seed(1234)
-
     sents = []
     for filename in in_filenames:
         new_sents = read_sentences(filename, encoding)
