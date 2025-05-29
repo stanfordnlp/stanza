@@ -300,6 +300,11 @@ As of UD 2.15, there is an Ottoman Turkish treebank large enough to use for mode
 | No vectors  | 75.66 | 81.22 | 69.05  | 61.90   |
 | CoNLL17     | 81.48 | 84.92 | 75.13  | 67.20   |
 
+### Odia
+
+We tried vectors from
+https://www.cfilt.iitb.ac.in/~diptesh/embeddings/monolingual/non-contextual/
+for improving results on an Odia NER dataset, but it didn't help compared to the FastText vectors
 
 ### Sindhi
 
