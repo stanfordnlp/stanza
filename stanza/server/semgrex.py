@@ -124,6 +124,7 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
                                         for node in match.node]
                         node_matches = "  " + " ".join(node_matches)
                     sentence.add_comment("# semgrex pattern |%s| matched at %s%s" % (semgrex_pattern, match_word, node_matches))
+                    sentence.add_comment("# highlight tokens = %d" % match.matchIndex)
         if sentence_matched:
             matching_sentences.append(sentence)
         else:
