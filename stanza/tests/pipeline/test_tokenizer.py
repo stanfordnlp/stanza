@@ -313,20 +313,20 @@ TH_DOC_GOLD_NOSSPLIT_TOKENS = """
 @pytest.fixture(scope="module")
 def basic_pipeline():
     """ Create a pipeline with a basic English tokenizer """
-    nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en')
+    nlp = stanza.Pipeline(processors='tokenize', dir=TEST_MODELS_DIR, lang='en', download_method=None)
     return nlp
 
 
 @pytest.fixture(scope="module")
 def pretokenized_pipeline():
     """ Create a pipeline with a basic English pretokenized tokenizer """
-    nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR, 'lang': 'en', 'tokenize_pretokenized': True})
+    nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR, 'lang': 'en', 'tokenize_pretokenized': True, 'download_method': None})
     return nlp
 
 @pytest.fixture(scope="module")
 def zh_pipeline():
     """ Create a pipeline with a basic Chinese tokenizer """
-    nlp = stanza.Pipeline(lang='zh', processors='tokenize', dir=TEST_MODELS_DIR)
+    nlp = stanza.Pipeline(lang='zh', processors='tokenize', dir=TEST_MODELS_DIR, download_method=None)
     return nlp
 
 def test_tokenize(basic_pipeline):
@@ -366,6 +366,7 @@ def test_postprocessor():
 
     nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR,
                              'lang': 'en',
+                             'download_method': None,
                              'tokenize_postprocessor': dummy_postprocessor})
     doc = nlp(EN_DOC)
     assert EN_DOC_POSTPROCESSOR_COMBINED_TOKENS.strip() == '\n\n'.join([sent.tokens_string() for sent in doc.sentences]).strip()
@@ -381,6 +382,7 @@ def test_postprocessor_mwt():
 
     nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR,
                              'lang': 'fr',
+                             'download_method': None,
                              'tokenize_postprocessor': dummy_postprocessor})
     doc = nlp(FR_DOC)
     assert FR_DOC_PRETOKENIZED_LIST_GOLD_TOKENS.strip() == '\n\n'.join([sent.tokens_string() for sent in doc.sentences]).strip()
@@ -389,11 +391,13 @@ def test_postprocessor_mwt():
 def test_postprocessor_typeerror():
     with pytest.raises(ValueError):
         nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR, 'lang': 'en',
-                                'tokenize_postprocessor': "iamachicken"})
+                                 'download_method': None,
+                                 'tokenize_postprocessor': "iamachicken"})
 
 def test_no_ssplit():
     nlp = stanza.Pipeline(**{'processors': 'tokenize', 'dir': TEST_MODELS_DIR, 'lang': 'en',
-                                  'tokenize_no_ssplit': True})
+                             'download_method': None,
+                             'tokenize_no_ssplit': True})
 
     doc = nlp(EN_DOC_NO_SSPLIT)
     assert EN_DOC_NO_SSPLIT_SENTENCES == [[w.text for w in s.words] for s in doc.sentences]
