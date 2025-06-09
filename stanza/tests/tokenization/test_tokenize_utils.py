@@ -78,7 +78,7 @@ def test_long_paragraph():
 
     # run a test to make sure the chunk operation is called
     # if not, the test isn't actually testing what we need to test
-    batches = data.DataLoader(tokenizer.config, input_text=raw_text, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
+    batches = data.TokenizationDataset(tokenizer.config, input_text=raw_text, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
     batches.advance_old_batch = None
     with pytest.raises(TypeError):
         _, _, _, document = utils.output_predictions(None, tokenizer.trainer, batches, tokenizer.vocab, None, 3000,
@@ -86,7 +86,7 @@ def test_long_paragraph():
                                                      no_ssplit=tokenizer.config.get('no_ssplit', False))
 
     # a new DataLoader should not be crippled as the above one was
-    batches = data.DataLoader(tokenizer.config, input_text=raw_text, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
+    batches = data.TokenizationDataset(tokenizer.config, input_text=raw_text, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
     _, _, _, document = utils.output_predictions(None, tokenizer.trainer, batches, tokenizer.vocab, None, 3000,
                                                  orig_text=raw_text,
                                                  no_ssplit=tokenizer.config.get('no_ssplit', False))
