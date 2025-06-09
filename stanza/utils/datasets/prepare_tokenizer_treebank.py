@@ -143,7 +143,7 @@ def add_space_after_no(piece, fail_if_found=True):
         return piece + "|SpaceAfter=No"
 
 
-def augment_arabic_padt(sents, ratio=0.05):
+def augment_trailing_punct_space(sents, ratio=0.05):
     """
     Basic Arabic tokenizer gets the trailing punctuation wrong if there is a blank space.
 
@@ -160,15 +160,12 @@ def augment_arabic_padt(sents, ratio=0.05):
     """
     new_sents = []
     for sentence in sents:
-        if len(sentence) < 4:
-            raise ValueError("Read a surprisingly short sentence")
-        text_line = None
-        if sentence[0].startswith("# newdoc") and sentence[3].startswith("# text"):
-            text_line = 3
-        elif sentence[0].startswith("# newpar") and sentence[2].startswith("# text"):
-            text_line = 2
-        elif sentence[0].startswith("# sent_id") and sentence[1].startswith("# text"):
-            text_line = 1
+        words = [x for x in sentence if not x.startswith("#")]
+        if len(words) <= 1:
+            continue
+        for text_idx in range(len(sentence)):
+            if sentence[text_idx].startswith("# text"):
+                break
         else:
             raise ValueError("Could not find text line in %s" % sentence[0].split()[-1])
 
@@ -176,17 +173,18 @@ def augment_arabic_padt(sents, ratio=0.05):
         if random.random() > ratio:
             continue
 
-        if (sentence[text_line][-1] in ('.', '؟', '?', '!') and
-            sentence[text_line][-2] not in ('.', '؟', '?', '!', ' ') and
+        if (sentence[text_idx][-1] in ('.', '؟', '?', '!') and
+            sentence[text_idx][-2] not in ('.', '؟', '?', '!', ' ') and
             has_space_after_no(sentence[-2].split()[-1]) and
             len(sentence[-1].split()[1]) == 1):
             new_sent = list(sentence)
-            new_sent[text_line] = new_sent[text_line][:-1] + ' ' + new_sent[text_line][-1]
+            new_sent[text_idx] = new_sent[text_idx][:-1] + ' ' + new_sent[text_idx][-1]
             pieces = sentence[-2].split("\t")
             pieces[-1] = remove_space_after_no(pieces[-1])
             new_sent[-2] = "\t".join(pieces)
             assert new_sent != sentence
             new_sents.append(new_sent)
+    print("Augmented %d sentences with a new trailing space" % len(new_sents))
     return sents + new_sents
 
 
@@ -690,6 +688,9 @@ def augment_punct(sents):
     we replace some fraction of ' with ’ so that the tokenizer will recognize it.
 
     Also augments with ... / …
+
+    TODO: we could move all these operations to the tokenizer training,
+    like we did with the POS training augmentations
     """
     new_sents = augment_apos(sents)
     new_sents = augment_quotes(new_sents)
@@ -1256,6 +1257,8 @@ def build_combined_dataset(paths, short_name, model_type, augment):
         else:
             if dataset == 'train' and augment:
                 sents = augment_punct(sents)
+                if short_name == 'de_combined':
+                    sents = augment_trailing_punct_space(sents)
             if extra_fn is not None:
                 sents.extend(extra_fn(paths, model_type, dataset))
             write_sentences_to_conllu(output_conllu, sents)
@@ -1319,7 +1322,7 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
     if short_name == "te_mtg" and dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_telugu)
     elif short_name == "ar_padt" and dataset == 'train' and augment:
-        write_augmented_dataset(input_conllu, output_conllu, augment_arabic_padt)
+        write_augmented_dataset(input_conllu, output_conllu, augment_trailing_punct_space)
     elif short_name.startswith("ko_") and short_name.endswith("_seg"):
         remove_spaces(input_conllu, output_conllu)
     elif short_name.startswith("grc_") and short_name.endswith("-diacritics"):
