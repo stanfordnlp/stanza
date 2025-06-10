@@ -767,6 +767,11 @@ TRANSFORMERS = {
     # d42kw01f/Tamil-RoBERTa         85.59        70.55
     # google/muril-base-cased        85.67        72.68
     # google/muril-large-cased       86.30        72.45
+    #
+    # should also consider xlm-roberta-large
+    # updated on UD 2.16 data:      dev pos      ner
+    # google/muril-large-cased       86.86      65.08
+    # xlm-roberta-large                         66.28
     "ta": "google/muril-large-cased",
 
     "te": "google/muril-large-cased",
