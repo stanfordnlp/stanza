@@ -143,51 +143,6 @@ def add_space_after_no(piece, fail_if_found=True):
         return piece + "|SpaceAfter=No"
 
 
-def augment_trailing_punct_space(sents, ratio=0.05):
-    """
-    Basic Arabic tokenizer gets the trailing punctuation wrong if there is a blank space.
-
-    Reason seems to be that there are almost no examples of "text ." in the dataset.
-    This function augments the Arabic-PADT dataset with a few such examples.
-    TODO: it may very well be that a lot of tokenizers have this problem.
-
-    Also, there are a few examples in UD2.7 which are apparently
-    headlines where there is a ' . ' in the middle of the text.
-    According to an Arabic speaking labmate, the sentences are
-    headlines which could be reasonably split into two items.  Having
-    them as one item is quite confusing and possibly incorrect, but
-    such is life.
-    """
-    new_sents = []
-    for sentence in sents:
-        words = [x for x in sentence if not x.startswith("#")]
-        if len(words) <= 1:
-            continue
-        for text_idx in range(len(sentence)):
-            if sentence[text_idx].startswith("# text"):
-                break
-        else:
-            raise ValueError("Could not find text line in %s" % sentence[0].split()[-1])
-
-        # for some reason performance starts dropping quickly at higher numbers
-        if random.random() > ratio:
-            continue
-
-        if (sentence[text_idx][-1] in ('.', '؟', '?', '!') and
-            sentence[text_idx][-2] not in ('.', '؟', '?', '!', ' ') and
-            has_space_after_no(sentence[-2].split()[-1]) and
-            len(sentence[-1].split()[1]) == 1):
-            new_sent = list(sentence)
-            new_sent[text_idx] = new_sent[text_idx][:-1] + ' ' + new_sent[text_idx][-1]
-            pieces = sentence[-2].split("\t")
-            pieces[-1] = remove_space_after_no(pieces[-1])
-            new_sent[-2] = "\t".join(pieces)
-            assert new_sent != sentence
-            new_sents.append(new_sent)
-    print("Augmented %d sentences with a new trailing space" % len(new_sents))
-    return sents + new_sents
-
-
 def augment_telugu(sents):
     """
     Add a few sentences with modified punctuation to Telugu_MTG
@@ -688,9 +643,6 @@ def augment_punct(sents):
     we replace some fraction of ' with ’ so that the tokenizer will recognize it.
 
     Also augments with ... / …
-
-    TODO: we could move all these operations to the tokenizer training,
-    like we did with the POS training augmentations
     """
     new_sents = augment_apos(sents)
     new_sents = augment_quotes(new_sents)
@@ -1257,8 +1209,6 @@ def build_combined_dataset(paths, short_name, model_type, augment):
         else:
             if dataset == 'train' and augment:
                 sents = augment_punct(sents)
-                if short_name == 'de_combined':
-                    sents = augment_trailing_punct_space(sents)
             if extra_fn is not None:
                 sents.extend(extra_fn(paths, model_type, dataset))
             write_sentences_to_conllu(output_conllu, sents)
@@ -1321,8 +1271,6 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
 
     if short_name == "te_mtg" and dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_telugu)
-    elif short_name == "ar_padt" and dataset == 'train' and augment:
-        write_augmented_dataset(input_conllu, output_conllu, augment_trailing_punct_space)
     elif short_name.startswith("ko_") and short_name.endswith("_seg"):
         remove_spaces(input_conllu, output_conllu)
     elif short_name.startswith("grc_") and short_name.endswith("-diacritics"):

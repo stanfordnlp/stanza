@@ -261,6 +261,14 @@ class DataLoader(TokenizationDataset):
             random.shuffle(para)
         self.init_sent_ids()
 
+    def move_last_char(self, sentence):
+        if len(sentence[3]) > 1 and len(sentence[3]) < self.args['max_seqlen'] and sentence[1][-1] == 2 and sentence[1][-2] != 0:
+            new_units = [(x, int(y)) for x, y in zip(sentence[3][:-1], sentence[1][:-1])]
+            new_units.extend([(' ', 0), (sentence[3][-1], int(sentence[1][-1]))])
+            encoded = self.para_to_sentences(new_units)
+            return encoded
+        return None
+
     def next(self, eval_offsets=None, unit_dropout=0.0, feat_unit_dropout=0.0):
         ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
         feat_size = len(self.sentences[0][0][2][0])
@@ -271,11 +279,12 @@ class DataLoader(TokenizationDataset):
             # At eval time, this combines sentences in paragraph (indexed by id_pair[0]) starting sentence (indexed 
             # by id_pair[1]) into a long string for evaluation. At training time, we just select random sentences
             # from the entire dataset until we reach max_seqlen.
-            pid, sid = id_pair if self.eval else random.choice(self.sentence_ids)
-            sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
-
             drop_sents = False if self.eval or (self.args.get('sent_drop_prob', 0) == 0) else (random.random() < self.args.get('sent_drop_prob', 0))
             drop_last_char = False if self.eval or (self.args.get('last_char_drop_prob', 0) == 0) else (random.random() < self.args.get('last_char_drop_prob', 0))
+            move_last_char_prob = 0.0 if self.eval else self.args.get('last_char_move_prob', 0.0)
+
+            pid, sid = id_pair if self.eval else random.choice(self.sentence_ids)
+            sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
             total_len = len(sentences[0][0])
 
             assert self.eval or total_len <= self.args['max_seqlen'], 'The maximum sequence length {} is less than that of the longest sentence length ({}) in the data, consider increasing it! {}'.format(self.args['max_seqlen'], total_len, ' '.join(["{}/{}".format(*x) for x in zip(self.sentences[pid][sid])]))
@@ -294,6 +303,17 @@ class DataLoader(TokenizationDataset):
 
                     if total_len >= self.args['max_seqlen']:
                         break
+
+            if move_last_char_prob > 0.0:
+                for sentence_idx, sentence in enumerate(sentences):
+                    if random.random() < move_last_char_prob:
+                        # the sentence might not be eligible, such as
+                        # already having a space or not having a sentence final punct,
+                        # so we need to do a two step checking process here
+                        new_sentence = self.move_last_char(sentence)
+                        if new_sentence is not None:
+                            sentences[sentence_idx] = new_sentence[0]
+                            total_len += 1
 
             if drop_sents and len(sentences) > 1:
                 if total_len > self.args['max_seqlen']:
