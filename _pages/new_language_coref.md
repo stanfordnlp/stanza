@@ -68,7 +68,7 @@ total 35328
 We are ready to convert the data format! Run:
 
 ```bash
-python -m stanza.utils.datasets.coref.convert_udcoref my_coref -s train -s dev
+COREF_BASE=./extern_data/coref/ COREF_DATA_DIR=./data/coref python -m stanza.utils.datasets.coref.convert_udcoref --directory my_coref
 ```
 
 (you can add as many `-s` flags as you'd like, for instance for a test split or ablations)
