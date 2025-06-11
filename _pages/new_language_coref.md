@@ -155,19 +155,19 @@ This tells our system that, in this experiment, we want to use Facebook's Robert
 Once you feel ready to go, it's time to train the model. To do this, run:
 
 ```bash
-python -m stanza.models.wl_coref train [your experiment] --config-file ./data/coref_config.toml
+python -m stanza.models.wl_coref train [your experiment] --config_file ./data/coref_config.toml
 ```
 
 For instance, to run the *xlm_roberta_lora* experiment above, run:
 
 ```bash
-python -m stanza.models.wl_coref train xlm_roberta_lora --config-file ./data/coref_config.toml
+python -m stanza.models.wl_coref train xlm_roberta_lora --config_file ./data/coref_config.toml
 ```
 
 If you would like to use experiment tracking with Weights and Biases, run:
 
 ```bash
-python -m stanza.models.wl_coref train [your experiment] --config-file ./data/coref_config.toml --wandb
+python -m stanza.models.wl_coref train [your experiment] --config_file ./data/coref_config.toml --wandb
 ```
 
 #### Scoring
@@ -175,13 +175,13 @@ python -m stanza.models.wl_coref train [your experiment] --config-file ./data/co
 Once your model has converged, run:
 
 ```bash
-python -m stanza.models.wl_coref eval [your experiment] --config-file ./data/coref_config.toml
+python -m stanza.models.wl_coref eval [your experiment] --config_file ./data/coref_config.toml
 ```
 
 to score on the configured dev set, and 
 
 ```bash
-python -m stanza.models.wl_coref eval [your experiment] --data-split test --config-file ./data/coref_config.toml
+python -m stanza.models.wl_coref eval [your experiment] --data-split test --config_file ./data/coref_config.toml
 ```
 
 to score on the test set.
