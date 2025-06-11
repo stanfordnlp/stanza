@@ -44,6 +44,8 @@ def parse_args():
 allowed_empty_languages = [
     # only tokenize and NER for Myanmar right now (soon...)
     "my",
+    # currently only an NER, not even a tokenizer, for Oriya
+    "or",
 ]
 
 # map processor name to file ending
@@ -350,6 +352,8 @@ def process_default_zips(args):
             continue
         if all(k in ("backward_charlm", "forward_charlm", "pretrain", "lang_name") for k in resources[lang].keys()):
             continue
+        if lang in allowed_empty_languages and lang not in default_treebanks:
+            continue
         if lang not in default_treebanks:
             raise AssertionError(f'{lang} not in default treebanks!!!')
 
@@ -553,6 +557,8 @@ def process_packages(args):
         if 'alias' in resources[lang]:
             continue
         if all(k in ("backward_charlm", "forward_charlm", "pretrain", "lang_name") for k in resources[lang].keys()):
+            continue
+        if lang in allowed_empty_languages and lang not in default_treebanks:
             continue
         if lang not in default_treebanks:
             raise AssertionError(f'{lang} not in default treebanks!!!')
