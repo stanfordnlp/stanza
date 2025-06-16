@@ -9,7 +9,7 @@ from stanza.models.common.utils import ud_scores
 
 logger = logging.getLogger('stanza')
 
-def score_named_dependencies(pred_doc, gold_doc):
+def score_named_dependencies(pred_doc, gold_doc, output_latex=False):
     if len(pred_doc.sentences) != len(gold_doc.sentences):
         logger.warning("Not evaluating individual dependency F1 on accound of document length mismatch")
         return
@@ -32,7 +32,13 @@ def score_named_dependencies(pred_doc, gold_doc):
     labels = sorted(set(tp.keys()).union(fp.keys()).union(fn.keys()))
     max_len = max(len(x) for x in labels)
     log_lines = []
-    log_line_fmt = "%" + str(max_len) + "s: p %.4f r %.4f f1 %.4f (%d actual)"
+    #log_line_fmt = "%" + str(max_len) + "s: p %.4f r %.4f f1 %.4f (%d actual)"
+    if output_latex:
+        log_lines.append(r"\begin{tabular}{lrr}")
+        log_lines.append(r"Reln & F1 & Total \\")
+        log_line_fmt = "{label} & {f1:0.4f} & {actual} \\\\"
+    else:
+        log_line_fmt = "{label:>" + str(max_len) + "s}: p {precision:0.4f} r {recall:0.4f} f1 {f1:0.4f} ({actual} actual)"
     for label in labels:
         if tp[label] == 0:
             precision = 0
@@ -42,7 +48,17 @@ def score_named_dependencies(pred_doc, gold_doc):
             precision = tp[label] / (tp[label] + fp[label])
             recall = tp[label] / (tp[label] + fn[label])
             f1 = 2 * (precision * recall) / (precision + recall)
-        log_lines.append(log_line_fmt % (label, precision, recall, f1, tp[label] + fn[label]))
+        actual = tp[label] + fn[label]
+        template = {
+            'label': label,
+            'precision': precision,
+            'recall': recall,
+            'f1': f1,
+            'actual': actual
+        }
+        log_lines.append(log_line_fmt.format(**template))
+    if output_latex:
+        log_lines.append(r"\end{tabular}")
     logger.info("F1 scores for each dependency:\n  Note that unlabeled attachment errors hurt the labeled attachment scores\n%s" % "\n".join(log_lines))
 
 def score(system_conllu_file, gold_conllu_file, verbose=True):

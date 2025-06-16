@@ -47,6 +47,7 @@ def build_argparse():
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
     parser.add_argument('--no_gold_labels', dest='gold_labels', action='store_false', help="Don't score the eval file - perhaps it has no gold labels, for example.  Cannot be used at training time")
+    parser.add_argument('--output_latex', default=False, action='store_true', help='Output the per-relation table in Latex form')
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
@@ -422,7 +423,7 @@ def evaluate_trainer(args, trainer, pretrain):
                 if word.deprel is None:
                     raise ValueError("Gold document {} has a None at sentence {} word {}\n{:C}".format(args['eval_file'], sent_idx, word_idx, sentence))
 
-        scorer.score_named_dependencies(batch.doc, gold_doc)
+        scorer.score_named_dependencies(batch.doc, gold_doc, args['output_latex'])
         _, _, score = scorer.score(system_pred_file, args['eval_file'])
 
         logger.info("Parser score:")
