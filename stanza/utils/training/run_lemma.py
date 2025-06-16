@@ -20,11 +20,9 @@ import os
 
 from stanza.models import identity_lemmatizer
 from stanza.models import lemmatizer
-from stanza.models.lemma import attach_lemma_classifier
 
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_lemma_charlm_args, choose_lemma_charlm
-from stanza.utils.training import run_lemma_classifier
 
 from stanza.utils.datasets.prepare_lemma_treebank import check_lemmas
 import stanza.utils.datasets.prepare_lemma_classifier as prepare_lemma_classifier
@@ -148,6 +146,12 @@ def run_treebank(mode, paths, treebank, short_name,
             use_lemma_classifier = command_args.charlm is not None
         use_lemma_classifier = use_lemma_classifier and short_name in prepare_lemma_classifier.DATASET_MAPPING
         if use_lemma_classifier and mode == Mode.TRAIN:
+            # some installations may not have transformers,
+            # so we bury the lemma_classifier import in the codepath
+            # which actually needs it
+            from stanza.models.lemma import attach_lemma_classifier
+            from stanza.utils.training import run_lemma_classifier
+
             lc_charlm_args = ['--no_charlm'] if command_args.charlm is None else ['--charlm', command_args.charlm]
             lemma_classifier_args = [treebank] + lc_charlm_args
             if command_args.force:
