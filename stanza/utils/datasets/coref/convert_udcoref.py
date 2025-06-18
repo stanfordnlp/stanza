@@ -35,9 +35,9 @@ def process_documents(docs, augment=False):
 
         # extract the entities
         # get sentence words and lengths
-        sentences = [[j.text for j in i.words]
+        sentences = [[j.text for j in i.all_words]
                     for i in doc.sentences]
-        sentence_lens = [len(x.words) for x in doc.sentences]
+        sentence_lens = [len(x.all_words) for x in doc.sentences]
 
         cased_words = [] 
         for x in sentences:
@@ -56,13 +56,13 @@ def process_documents(docs, augment=False):
         # TODO: does SD vs UD matter?
         deprel = []
         for sentence in doc.sentences:
-            for word in sentence.words:
+            for word in sentence.all_words:
                 deprel.append(word.deprel)
-                if word.head == 0:
+                if not word.head or word.head == 0:
                     heads.append("null")
                 else:
                     heads.append(word.head - 1 + word_total)
-            word_total += len(sentence.words)
+            word_total += len(sentence.all_words)
 
         span_clusters = defaultdict(list)
         word_clusters = defaultdict(list)
@@ -75,7 +75,7 @@ def process_documents(docs, augment=False):
             misc = [[k.split("=")
                     for k in j
                     if k.split("=")[0] == "Entity"]
-                    for i in parsed_sentence.words
+                    for i in parsed_sentence.all_words
                     for j in [i.misc.split("|") if i.misc else []]]
             # and extract the Entity entry values
             entities = [i[0][1] if len(i) > 0 else None for i in misc]
@@ -112,34 +112,43 @@ def process_documents(docs, augment=False):
             for k, v in final_refs.items():
                 for i in v:
                     coref_spans.append([int(k), i[0], i[1]])
-            sentence_upos = [x.upos for x in parsed_sentence.words]
-            sentence_heads = [x.head - 1 if x.head > 0 else None for x in parsed_sentence.words]
+            sentence_upos = [x.upos for x in parsed_sentence.all_words]
+            sentence_heads = [x.head - 1 if x.head and x.head > 0 else None for x in parsed_sentence.all_words]
+
             for span in coref_spans:
                 # input is expected to be start word, end word + 1
                 # counting from 0
                 # whereas the OntoNotes coref_span is [start_word, end_word] inclusive
                 span_start = span[1] + word_total
                 span_end = span[2] + word_total + 1
-                candidate_head = find_cconj_head(sentence_heads, sentence_upos, span[1], span[2]+1)
-                if candidate_head is None:
-                    for candidate_head in range(span[1], span[2] + 1):
-                        # stanza uses 0 to mark the head, whereas OntoNotes is counting
-                        # words from 0, so we have to subtract 1 from the stanza heads
-                        #print(span, candidate_head, parsed_sentence.words[candidate_head].head - 1)
-                        # treat the head of the phrase as the first word that has a head outside the phrase
-                        if (parsed_sentence.words[candidate_head].head - 1 < span[1] or
-                            parsed_sentence.words[candidate_head].head - 1 > span[2]):
-                            break
-                    else:
-                        # if none have a head outside the phrase (circular??)
-                        # then just take the first word
-                        candidate_head = span[1]
+                # if its a zero coref (i.e. coref, but the head in None), we call
+                # the beginning of the span (i.e. the zero itself) the head
+
+                if not sentence_heads[span_start-1]:
+                    candidate_head = span[1]
+                else:
+                    candidate_head = find_cconj_head(sentence_heads, sentence_upos, span[1], span[2]+1)
+                    if candidate_head is None:
+                        for candidate_head in range(span[1], span[2] + 1):
+                            # stanza uses 0 to mark the head, whereas OntoNotes is counting
+                            # words from 0, so we have to subtract 1 from the stanza heads
+                            #print(span, candidate_head, parsed_sentence.words[candidate_head].head - 1)
+                            # treat the head of the phrase as the first word that has a head outside the phrase
+                            if parsed_sentence.all_words[candidate_head].head and (
+                                    parsed_sentence.all_words[candidate_head].head - 1 < span[1] or
+                                    parsed_sentence.all_words[candidate_head].head - 1 > span[2]
+                            ):
+                                break
+                        else:
+                            # if none have a head outside the phrase (circular??)
+                            # then just take the first word
+                            candidate_head = span[1]
                 #print("----> %d" % candidate_head)
                 candidate_head += word_total
                 span_clusters[span[0]].append((span_start, span_end))
                 word_clusters[span[0]].append(candidate_head)
                 head2span.append((candidate_head, span_start, span_end))
-            word_total += len(parsed_sentence.words)
+            word_total += len(parsed_sentence.all_words)
         span_clusters = sorted([sorted(values) for _, values in span_clusters.items()])
         word_clusters = sorted([sorted(values) for _, values in word_clusters.items()])
         head2span = sorted(head2span)
@@ -172,7 +181,7 @@ def process_dataset(short_name, coref_output_path, split_test, train_files, dev_
         for load in filenames:
             lang = load.split("/")[-1].split("_")[0]
             print("Ingesting %s from %s of lang %s" % (section, load, lang))
-            docs = CoNLL.conll2multi_docs(load)
+            docs = CoNLL.conll2multi_docs(load, ignore_gapping=False)
             print("  Ingested %d documents" % len(docs))
             if split_test and section == 'train':
                 test_section = []
@@ -216,7 +225,7 @@ def process_dataset(short_name, coref_output_path, split_test, train_files, dev_
             json.dump(converted_section, fout, indent=2)
 
 def get_dataset_by_language(coref_input_path, langs):
-    conll_path = os.path.join(coref_input_path, "CorefUD-1.2-public", "data")
+    conll_path = os.path.join(coref_input_path, "CorefUD-1.3-public", "data")
     train_filenames = []
     dev_filenames = []
     for lang in langs:
@@ -242,9 +251,9 @@ def main():
     coref_output_path = paths['COREF_DATA_DIR']
 
     if args.project:
-        if args.project == 'slavic':
-            project = "slavic_udcoref"
-            langs = ('Polish', 'Russian', 'Czech')
+        if args.project == 'baltoslavic':
+            project = "baltoslavic_udcoref"
+            langs = ('Polish', 'Russian', 'Czech', 'Old_Church_Slavonic', 'Lithuanian')
             train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
         elif args.project == 'hungarian':
             project = "hu_udcoref"
@@ -261,6 +270,26 @@ def main():
         elif args.project == 'norwegian':
             project = "norwegian_udcoref"
             langs = ('Norwegian',)
+            train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
+        elif args.project == 'turkish':
+            project = "turkish_udcoref"
+            langs = ('Turkish',)
+            train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
+        elif args.project == 'korean':
+            project = "korean_udcoref"
+            langs = ('Korean',)
+            train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
+        elif args.project == 'hindi':
+            project = "hindi_udcoref"
+            langs = ('Hindi',)
+            train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
+        elif args.project == 'ancient_greek':
+            project = "ancient_greek_udcoref"
+            langs = ('Ancient_Greek',)
+            train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
+        elif args.project == 'ancient_hebrew':
+            project = "ancient_hebrew_udcoref"
+            langs = ('Ancient_Hebrew',)
             train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
     else:
         project = args.directory

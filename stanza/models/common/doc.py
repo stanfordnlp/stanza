@@ -741,6 +741,17 @@ class Sentence(StanzaObject):
         self._empty_words = value
 
     @property
+    def all_words(self):
+        """ Access the list of words + empty words for this sentence. """
+        words = self._words
+        empty_words = self._empty_words
+
+        all = sorted(words + empty_words, key=lambda x:(x.id,)
+                     if isinstance(x.id, int) else x.id)
+
+        return all
+
+    @property
     def ents(self):
         """ Access the list of entities in this sentence. """
         return self._ents
