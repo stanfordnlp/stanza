@@ -25,3 +25,5 @@ class CorefResult:
     rough_scores: torch.Tensor = None                  # [n_words, n_words]
     span_scores: torch.Tensor = None                   # [n_heads, n_words, 2]
     span_y: Tuple[torch.Tensor, torch.Tensor] = None   # [n_heads] x2
+
+    zero_scores: torch.Tensor = None
