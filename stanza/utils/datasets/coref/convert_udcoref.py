@@ -10,6 +10,7 @@ from stanza.utils.datasets.coref.utils import find_cconj_head
 
 from stanza.utils.conll import CoNLL
 
+import warnings
 from random import Random
 
 import argparse
@@ -22,6 +23,7 @@ IS_UDCOREF_FORMAT = True
 UDCOREF_ADDN = 0 if not IS_UDCOREF_FORMAT else 1
 
 def process_documents(docs, augment=False):
+    # docs = sections
     processed_section = []
 
     for idx, (doc, doc_id, lang) in enumerate(tqdm(docs)):
@@ -67,8 +69,10 @@ def process_documents(docs, augment=False):
         span_clusters = defaultdict(list)
         word_clusters = defaultdict(list)
         head2span = []
+        is_zero = []
         word_total = 0
         SPANS = re.compile(r"(\(\w+|[%\w]+\))")
+        do_ctn = False # if we broke in the loop
         for parsed_sentence in doc.sentences:
             # spans regex
             # parse the misc column, leaving on "Entity" entries
@@ -114,8 +118,29 @@ def process_documents(docs, augment=False):
                     coref_spans.append([int(k), i[0], i[1]])
             sentence_upos = [x.upos for x in parsed_sentence.all_words]
             sentence_heads = [x.head - 1 if x.head and x.head > 0 else None for x in parsed_sentence.all_words]
+            sentence_text = [x.text for x in parsed_sentence.all_words]
+
+            # if "_" in sentence_text and sentence_text.index("_") in [j for i in coref_spans for j in i]:
+            #     import ipdb
+            #     ipdb.set_trace()
 
             for span in coref_spans:
+                zero = False
+                if sentence_text[span[1]] == "_" and span[1] == span[2]:
+                    is_zero.append([span[0], True])
+                    zero = True
+                    # oo! thaht's a zero coref, we should merge it forwards 
+                    # i.e. we pick the next word as the head!
+                    span = [span[0], span[1]+1, span[2]+1]
+                    # crap! there's two zeros right next to each other
+                    # we are sad and confused so we give up in this case
+                    if len(sentence_text) > span[1] and sentence_text[span[1]] == "_":
+                        warnings.warn("Found two zeros next to each other in sequence; we are confused and therefore giving up.")
+                        do_ctn = True
+                        break
+                else:
+                    is_zero.append([span[0], False])
+
                 # input is expected to be start word, end word + 1
                 # counting from 0
                 # whereas the OntoNotes coref_span is [start_word, end_word] inclusive
@@ -124,34 +149,73 @@ def process_documents(docs, augment=False):
                 # if its a zero coref (i.e. coref, but the head in None), we call
                 # the beginning of the span (i.e. the zero itself) the head
 
-                if not sentence_heads[span_start-1]:
+                if zero:
                     candidate_head = span[1]
                 else:
-                    candidate_head = find_cconj_head(sentence_heads, sentence_upos, span[1], span[2]+1)
-                    if candidate_head is None:
-                        for candidate_head in range(span[1], span[2] + 1):
-                            # stanza uses 0 to mark the head, whereas OntoNotes is counting
-                            # words from 0, so we have to subtract 1 from the stanza heads
-                            #print(span, candidate_head, parsed_sentence.words[candidate_head].head - 1)
-                            # treat the head of the phrase as the first word that has a head outside the phrase
-                            if parsed_sentence.all_words[candidate_head].head and (
-                                    parsed_sentence.all_words[candidate_head].head - 1 < span[1] or
-                                    parsed_sentence.all_words[candidate_head].head - 1 > span[2]
-                            ):
-                                break
-                        else:
-                            # if none have a head outside the phrase (circular??)
-                            # then just take the first word
-                            candidate_head = span[1]
+                    try:
+                        candidate_head = find_cconj_head(sentence_heads, sentence_upos, span[1], span[2]+1)
+                    except RecursionError:
+                        candidate_head = span[1]
+                    
+                if candidate_head is None:
+                    for candidate_head in range(span[1], span[2] + 1):
+                        # stanza uses 0 to mark the head, whereas OntoNotes is counting
+                        # words from 0, so we have to subtract 1 from the stanza heads
+                        #print(span, candidate_head, parsed_sentence.words[candidate_head].head - 1)
+                        # treat the head of the phrase as the first word that has a head outside the phrase
+                        if parsed_sentence.all_words[candidate_head].head and (
+                                parsed_sentence.all_words[candidate_head].head - 1 < span[1] or
+                                parsed_sentence.all_words[candidate_head].head - 1 > span[2]
+                        ):
+                            break
+                    else:
+                        # if none have a head outside the phrase (circular??)
+                        # then just take the first word
+                        candidate_head = span[1]
                 #print("----> %d" % candidate_head)
                 candidate_head += word_total
                 span_clusters[span[0]].append((span_start, span_end))
                 word_clusters[span[0]].append(candidate_head)
                 head2span.append((candidate_head, span_start, span_end))
+            if do_ctn:
+                break
             word_total += len(parsed_sentence.all_words)
+        if do_ctn:
+            continue
         span_clusters = sorted([sorted(values) for _, values in span_clusters.items()])
         word_clusters = sorted([sorted(values) for _, values in word_clusters.items()])
         head2span = sorted(head2span)
+        is_zero = [i for _,i in sorted(is_zero)]
+
+        # remove zero tokens "_" from cased_words and adjust indices accordingly
+        zero_positions = [i for i, w in enumerate(cased_words) if w == "_"]
+        if zero_positions:
+            old_to_new = {}
+            new_idx = 0
+            for old_idx, w in enumerate(cased_words):
+                if w != "_":
+                    old_to_new[old_idx] = new_idx
+                    new_idx += 1
+            cased_words = [w for w in cased_words if w != "_"]
+            sent_id = [sent_id[i] for i in sorted(old_to_new.keys())]
+            deprel = [deprel[i] for i in sorted(old_to_new.keys())]
+            heads = [heads[i] for i in sorted(old_to_new.keys())]
+            try:
+                span_clusters = [
+                    [(old_to_new[start], old_to_new[end - 1] + 1) for start, end in cluster]
+                    for cluster in span_clusters
+                ]
+            except:
+                warnings.warn("Somehow, we are still coreffering to a zero. This is likely due to multiple zeros on top of each other. We are giving up.")
+                continue
+            word_clusters = [
+                [old_to_new[h] for h in cluster]
+                for cluster in word_clusters
+            ]
+            head2span = [
+                (old_to_new[h], old_to_new[s], old_to_new[e - 1] + 1)
+                for h, s, e in head2span
+            ]
 
         processed = {
             "document_id": doc_id,
@@ -164,7 +228,8 @@ def process_documents(docs, augment=False):
             "span_clusters": span_clusters,
             "word_clusters": word_clusters,
             "head2span": head2span,
-            "lang": lang
+            "lang": lang,
+            "is_zero": is_zero
         }
         processed_section.append(processed)
     return processed_section
@@ -182,6 +247,7 @@ def process_dataset(short_name, coref_output_path, split_test, train_files, dev_
             lang = load.split("/")[-1].split("_")[0]
             print("Ingesting %s from %s of lang %s" % (section, load, lang))
             docs = CoNLL.conll2multi_docs(load, ignore_gapping=False)
+            # sections = docs[:10]
             print("  Ingested %d documents" % len(docs))
             if split_test and section == 'train':
                 test_section = []
@@ -302,4 +368,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

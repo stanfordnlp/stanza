@@ -38,6 +38,9 @@ class CorefDataset(Dataset):
             word2subword = []
             subwords = []
             word_id = []
+            nonblank_subwords = [] # a list of subwords, skipping _
+            previous_was_blank = [] # was the word before _?
+            was_blank = False # a flag to set if we saw "_"
             for i, word in enumerate(doc["cased_words"]):
                 tokenized = self.tokenizer.tokenize(word)
                 if len(tokenized) == 0:
@@ -50,9 +53,22 @@ class CorefDataset(Dataset):
                 word2subword.append((len(subwords), len(subwords) + len(tokenized_word)))
                 subwords.extend(tokenized_word)
                 word_id.extend([i] * len(tokenized_word))
+                if word == "_":
+                    was_blank = True
+                else:
+                    nonblank_subwords.extend(tokenized_word)
+                    previous_was_blank.extend(
+                        [True if was_blank else False]+[False]*(len(tokenized_word)-1)
+                    )
+                    was_blank = False
+
+            doc["nonblank_subwords"] = nonblank_subwords
+            doc["blank_prefix"] = previous_was_blank
+
             doc["word2subword"] = word2subword
             doc["subwords"] = subwords
             doc["word_id"] = word_id
+
             self.__out.append(doc)
         logger.info("Loaded %d docs from %s.", len(data_f), path)
 
