@@ -6,9 +6,9 @@ import logging
 import re
 import torch
 from torch.utils.data import Dataset
-from .vocab import Vocab
 
 from stanza.models.common.utils import sort_with_indices, unsort
+from stanza.models.tokenization.vocab import Vocab
 
 logger = logging.getLogger('stanza')
 
@@ -213,6 +213,29 @@ class TokenizationDataset:
 
         return units, labels, features, raw_units
 
+def build_move_punct_set(data, move_back_prob):
+    move_punct = {',', ':', '!', '.', '?', '"', '(', ')'}
+    for chunk in data:
+        # ignore positions at the start and end of a chunk
+        for idx in range(1, len(chunk)-1):
+            if chunk[idx][0] not in move_punct:
+                continue
+            if chunk[idx][1] == 0:
+                if chunk[idx+1][0].isspace() and not chunk[idx-1][0].isdigit():
+                    # this check removes punct which isn't ending a word...
+                    # honestly that's a rather unusual situation
+                    # VI has |3, 5| as a complete token
+                    # so we also eliminate isdigit()
+                    move_punct.remove(chunk[idx][0])
+                continue
+            # we skip isdigit() because we will intentionally not
+            # create things that look like decimal numbers
+            if not chunk[idx-1][0].isspace() and chunk[idx-1][0] not in move_punct and not chunk[idx-1][0].isdigit():
+                # this check eliminates things like '.' after 'Mr.'
+                move_punct.remove(chunk[idx][0])
+                continue
+    return move_punct
+
 class DataLoader(TokenizationDataset):
     """
     This is the training version of the dataset.
@@ -230,6 +253,14 @@ class DataLoader(TokenizationDataset):
 
         self.init_sent_ids()
         logger.debug(f"{len(self.sentence_ids)} sentences loaded.")
+
+        punct_move_back_prob = args.get('punct_move_back_prob', 0.0)
+        if punct_move_back_prob > 0.0:
+            self.move_punct = build_move_punct_set(self.data, punct_move_back_prob)
+            if len(self.move_punct) > 0:
+                logger.debug('Based on the training data, will augment space/punct combinations {}'.format(self.move_punct))
+            else:
+                logger.debug('Based on the training data, no punct are eligible to be rearranged with extra whitespace')
 
     def __len__(self):
         return len(self.sentence_ids)
@@ -269,6 +300,35 @@ class DataLoader(TokenizationDataset):
             return encoded
         return None
 
+    def move_punct_back(self, sentence):
+        if len(sentence[3]) <= 1 or len(sentence[3]) >= self.args['max_seqlen']:
+            return None
+
+        # check that we are not accidentally creating decimal numbers
+        #   idx == 1 or not sentence[3][idx-2].isdigit()
+        # one disadvantage of checking for sentence[1][idx] == 0
+        #   would be that tokens of all punct, such as '...',
+        #   should move but would not move if this is eliminated
+        print(sentence)
+        commas = [idx for idx, c in enumerate(sentence[3])
+                  if c in self.move_punct and idx > 0 and sentence[3][idx-1].isspace() and (idx == 1 or not sentence[3][idx-2].isdigit())]
+        if len(commas) == 0:
+            return None
+
+        all_units = [(x, int(y)) for x, y in zip(sentence[3], sentence[1])]
+        new_units = []
+
+        span_start = 0
+        for span_end in commas:
+            new_units.extend(all_units[span_start:span_end-1])
+            span_start = span_end
+        if span_end < len(sentence[3]):
+            new_units.extend(all_units[span_end:])
+
+        encoded = self.para_to_sentences(new_units)
+        return encoded
+
+
     def next(self, eval_offsets=None, unit_dropout=0.0, feat_unit_dropout=0.0):
         ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
         feat_size = len(self.sentences[0][0][2][0])
@@ -282,6 +342,7 @@ class DataLoader(TokenizationDataset):
             drop_sents = False if self.eval or (self.args.get('sent_drop_prob', 0) == 0) else (random.random() < self.args.get('sent_drop_prob', 0))
             drop_last_char = False if self.eval or (self.args.get('last_char_drop_prob', 0) == 0) else (random.random() < self.args.get('last_char_drop_prob', 0))
             move_last_char_prob = 0.0 if self.eval else self.args.get('last_char_move_prob', 0.0)
+            move_punct_back_prob = 0.0 if self.eval else self.args.get('punct_move_back_prob', 0.0)
 
             pid, sid = id_pair if self.eval else random.choice(self.sentence_ids)
             sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
@@ -314,6 +375,17 @@ class DataLoader(TokenizationDataset):
                         if new_sentence is not None:
                             sentences[sentence_idx] = new_sentence[0]
                             total_len += 1
+
+            if move_punct_back_prob > 0.0:
+                for sentence_idx, sentence in enumerate(sentences):
+                    if random.random() < move_punct_back_prob:
+                        # the sentence might not be eligible, such as
+                        # not having a space separated punct,
+                        # so we need to do a two step checking process here
+                        new_sentence = self.move_punct_back(sentence)
+                        if new_sentence is not None:
+                            total_len = total_len + len(new_sentence[0][3]) - len(sentences[sentence_idx][3])
+                            sentences[sentence_idx] = new_sentence[0]
 
             if drop_sents and len(sentences) > 1:
                 if total_len > self.args['max_seqlen']:
