@@ -12,9 +12,11 @@ def get_file(path):
     return res
 
 @app.route('/<path:path>')
+@app.route('/static/fonts/<path:path>')
 def static_file(path):
     if path in ['stanza-brat.css', 'stanza-brat.js', 'stanza-parseviewer.js', 'loading.gif',
-            'favicon.png', 'stanza-logo.png']:
+                'favicon.png', 'stanza-logo.png',
+                'Astloch-Bold.ttf', 'Liberation_Sans-Regular.ttf', 'PT_Sans-Caption-Web-Regular.ttf']:
         return app.send_static_file(path)
     elif path in 'index.html':
         return app.send_static_file('stanza-brat.html')
