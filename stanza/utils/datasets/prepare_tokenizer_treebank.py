@@ -993,6 +993,37 @@ def strip_feats(sents):
     """
     return strip_column(sents, 5)
 
+def build_combined_japanese_dataset(paths, model_type, dataset):
+    """
+    GSD with a handparsed dataset of some short verb phrases
+    """
+    udbase_dir = paths["UDBASE"]
+    handparsed_dir = paths["HANDPARSED_DIR"]
+
+    treebank = "UD_Japanese-GSD"
+    conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+    gsd_sents = read_sentences_from_conllu(conllu_file)
+    print("Read %d sentences from %s" % (len(gsd_sents), conllu_file))
+
+    if dataset == 'train':
+        extra_japanese = os.path.join(handparsed_dir, "japanese-handparsed", "spaces-ready-checked.conllu")
+        if not os.path.exists(extra_japanese):
+            raise FileNotFoundError("Cannot find the extra dataset which includes various verb patterns, expected {}".format(extra_japanese))
+        extra_sents = read_sentences_from_conllu(extra_japanese)
+        print("Read %d sentences from %s" % (len(extra_sents), extra_japanese))
+
+        if model_type == common.ModelType.POS:
+            documents = {}
+            documents[treebank] = gsd_sents
+            documents['handparsed'] = extra_sents
+            return documents
+        else:
+            sents = gsd_sents + extra_sents
+            return sents
+    else:
+        return gsd_sents
+
+
 def build_combined_albanian_dataset(paths, model_type, dataset):
     """
     sq_combined is STAF as the base, with TSA added for some things
@@ -1099,7 +1130,7 @@ def build_combined_spanish_dataset(paths, model_type, dataset):
         if model_type in (common.ModelType.TOKENIZER, common.ModelType.MWT, common.ModelType.LEMMA):
             extra_spanish = os.path.join(handparsed_dir, "spanish-mwt", "adjectives.conllu")
             if not os.path.exists(extra_spanish):
-                raise FileNotFoundError("Cannot find the extra dataset 'handpicked.mwt' which includes various multi-words retokenized, expected {}".format(extra_italian))
+                raise FileNotFoundError("Cannot find the extra dataset 'adjectives.conllu' which includes various multi-words retokenized, expected {}".format(extra_spanish))
             extra_sents = read_sentences_from_conllu(extra_spanish)
             print("Read %d sentences from %s" % (len(extra_sents), extra_spanish))
             sents.extend(extra_sents)
@@ -1177,6 +1208,7 @@ COMBINED_FNS = {
     "fr_combined": build_combined_french_dataset,
     "he_combined": build_combined_hebrew_dataset,
     "it_combined": build_combined_italian_dataset,
+    "ja_combined": build_combined_japanese_dataset,
     "sq_combined": build_combined_albanian_dataset,
 }
 
