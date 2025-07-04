@@ -421,6 +421,11 @@ def get_default_processors(resources, lang):
         expected_lemma = default_package + "_nocharlm"
         if expected_lemma in resources[lang]['lemma']:
             default_processors['lemma'] = expected_lemma
+        else:
+            expected_lemma = default_package + "_charlm"
+            if expected_lemma in resources[lang]['lemma']:
+                default_processors['lemma'] = expected_lemma
+                print("WARNING: nocharlm lemmatizer for %s model does not exist, but %s does" % (default_package, expected_lemma))
     elif lang not in allowed_empty_languages:
         default_processors['lemma'] = 'identity'
 
@@ -603,6 +608,11 @@ def process_packages(args):
                     lemma_package = package + "_nocharlm"
                     if lemma_package in resources[lang]["lemma"]:
                         processors["lemma"] = lemma_package
+                    else:
+                        lemma_package = package + "_charlm"
+                        if lemma_package in resources[lang]['lemma']:
+                            default_processors['lemma'] = lemma_package
+                            print("WARNING: nocharlm lemmatizer for %s model does not exist, but %s does" % (package, lemma_package))
 
                 if "depparse" in resources[lang] and "pos" in processors:
                     depparse_package = None
