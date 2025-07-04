@@ -79,6 +79,19 @@ IL-NER has four datasets: HI, OR, TE, UR
     git clone git@github.com:ltrc/IL-NER.git
     python3 -m stanza.utils.datasets.ner.prepare_ner_dataset or_ilner
 
+suralk/multiNER contains three languages, EN, SI, and TA
+  https://github.com/suralk/multiNER
+  https://arxiv.org/abs/2412.02056
+  - Ranathunga, Surangika, et al.
+    A Multi-way Parallel Named Entity Annotated Corpus for English, Tamil and Sinhala
+  The tags are in BIO format, with the same 4 tags as CoNLL
+  Convert the data as follows:
+    cd $NERBASE
+    mkdir mixed
+    cd mixed
+    git clone git@github.com:suralk/multiNER.git
+    python3 -m stanza.utils.datasets.ner.prepare_ner_dataset ta_suralk
+
 Ukranian NER is provided by lang-uk, available here:
   https://github.com/lang-uk/ner-uk
   git clone the repo to $NERBASE/lang-uk
@@ -473,7 +486,7 @@ import stanza.utils.default_paths as default_paths
 
 from stanza.utils.datasets.common import UnknownDatasetError
 from stanza.utils.datasets.ner.preprocess_wikiner import preprocess_wikiner
-from stanza.utils.datasets.ner.split_wikiner import split_wikiner
+from stanza.utils.datasets.ner.split_wikiner import split_wikiner, split_wikiner_data
 import stanza.utils.datasets.ner.build_en_combined as build_en_combined
 import stanza.utils.datasets.ner.conll_to_iob as conll_to_iob
 import stanza.utils.datasets.ner.convert_ar_aqmar as convert_ar_aqmar
@@ -525,6 +538,25 @@ def process_it_fbk(paths, short_name):
     base_output_path = paths["NER_DATA_DIR"]
     split_wikiner(base_output_path, csv_file, prefix=short_name, suffix="io", shuffle=False, train_fraction=0.8, dev_fraction=0.1)
     convert_bio_to_json(base_output_path, base_output_path, short_name, suffix="io")
+
+def process_suralk_multiner(paths, short_name):
+    lang_filenames = {
+        "en": "Final_English.txt",
+        "si": "Final_Sinhala.txt",
+        "ta": "Final_Tamil.txt",
+    }
+    lang, ending = short_name.split("_")
+    assert ending == "suralk"
+    assert lang in lang_filenames, "suralk/multiNER only supports %s" % (", ".join(lang_filenames.keys()))
+    suralk_path = os.path.join(paths["NERBASE"], "mixed", "multiNER", "nerannotateddatasets.zip")
+    if not os.path.exists(suralk_path):
+        raise FileNotFoundError("Expected to find the suralk/multiNER dataset in %s" % suralk_path)
+    sentences = read_tsv(lang_filenames[lang], text_column=0, annotation_column=1, separator=None, zip_filename=suralk_path)
+    print("Read %d sentences from %s::%s" % (len(sentences), suralk_path, lang_filenames[lang]))
+
+    base_output_path = paths["NER_DATA_DIR"]
+    split_wikiner_data(base_output_path, sentences, prefix=short_name, suffix="bio", shuffle=True)
+    convert_bio_to_json(base_output_path, base_output_path, short_name, suffix="bio")
 
 def process_il_ner(paths, short_name):
     joiner = chr(0x200c)
@@ -1481,6 +1513,7 @@ DATASET_MAPPING = {
 
 SUFFIX_MAPPING = {
     "_ilner":            process_il_ner,
+    "_suralk":           process_suralk_multiner,
 }
 
 def main(dataset_name):
