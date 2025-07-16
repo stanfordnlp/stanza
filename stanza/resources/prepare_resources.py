@@ -611,7 +611,7 @@ def process_packages(args):
                     else:
                         lemma_package = package + "_charlm"
                         if lemma_package in resources[lang]['lemma']:
-                            default_processors['lemma'] = lemma_package
+                            processors['lemma'] = lemma_package
                             print("WARNING: nocharlm lemmatizer for %s model does not exist, but %s does" % (package, lemma_package))
 
                 if "depparse" in resources[lang] and "pos" in processors:
