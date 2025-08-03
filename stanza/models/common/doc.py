@@ -486,18 +486,22 @@ class Document(StanzaObject):
 
     def _attach_coref_mentions(self, chains):
         for sentence in self.sentences:
-            for word in sentence.words:
+            for word in sentence.all_words:
                 word.coref_chains = []
 
         for chain in chains:
             for mention_idx, mention in enumerate(chain.mentions):
                 sentence = self.sentences[mention.sentence]
-                for word_idx in range(mention.start_word, mention.end_word):
-                    is_start = word_idx == mention.start_word
-                    is_end = word_idx == mention.end_word - 1
-                    is_representative = mention_idx == chain.representative_index
-                    attachment = CorefAttachment(chain, is_start, is_end, is_representative)
-                    sentence.words[word_idx].coref_chains.append(attachment)
+                if isinstance(mention.start_word, tuple):
+                    attachment = CorefAttachment(chain, True, True, False)
+                    sentence._empty_words[mention.start_word[1]-1].coref_chains.append(attachment)
+                else:
+                    for word_idx in range(mention.start_word, mention.end_word):
+                            is_start = word_idx == mention.start_word
+                            is_end = word_idx == mention.end_word - 1
+                            is_representative = mention_idx == chain.representative_index
+                            attachment = CorefAttachment(chain, is_start, is_end, is_representative)
+                            sentence.words[word_idx].coref_chains.append(attachment)
 
     def reindex_sentences(self, start_index):
         for sent_id, sentence in zip(range(start_index, start_index + len(self.sentences)), self.sentences):
