@@ -9,6 +9,8 @@ from stanza.models.common.doc import Word
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 
+import torch
+
 def extract_text(document, sent_id, start_word, end_word):
     sentence = document.sentences[sent_id]
     tokens = []
@@ -128,6 +130,11 @@ class CorefProcessor(UDProcessor):
             best_span = None
             max_propn = 0
             for span_idx, span in enumerate(span_cluster):
+                word_idx = results.word_clusters[cluster_idx][span_idx]
+                is_zero = zero_nodes_created.get((cluster_idx, word_idx))
+                if is_zero:
+                    continue
+
                 sent_id = sent_ids[span[0]]
                 sentence = sentences[sent_id]
                 start_word = word_pos[span[0]]
@@ -145,21 +152,33 @@ class CorefProcessor(UDProcessor):
                     max_propn = num_propn
 
             mentions = []
-            for span in span_cluster:
-                sent_id = sent_ids[span[0]]
-                start_word = word_pos[span[0]]
-                end_word = word_pos[span[1]-1] + 1
-                mentions.append(CorefMention(sent_id, start_word, end_word))
-            
-            # Add zero node mentions to this cluster if any exist
-            for zero_cluster_idx, zero_sent_id, zero_word_decimal_id in zero_nodes_created:
-                if zero_cluster_idx == cluster_idx:
-                    # Zero node is a single "word" mention at the decimal position
-                    import math
-                    end_word = math.floor(zero_word_decimal_id) + 1
-                    mentions.append(CorefMention(zero_sent_id, zero_word_decimal_id, end_word))
-            representative = mentions[best_span]
-            representative_text = extract_text(document, representative.sentence, representative.start_word, representative.end_word)
+            for span_idx, span in enumerate(span_cluster):
+                word_idx = results.word_clusters[cluster_idx][span_idx]
+                is_zero = zero_nodes_created.get((cluster_idx, word_idx))
+                if is_zero:
+                    (sent_id, zero_word_id) = is_zero
+                    # if the word id is a tuple, it will be attached
+                    # to the zero
+                    mentions.append(
+                        CorefMention(
+                            sent_id, 
+                             zero_word_id, 
+                             zero_word_id
+                        )
+                    )
+                else:
+                    sent_id = sent_ids[span[0]]
+                    start_word = word_pos[span[0]]
+                    end_word = word_pos[span[1]-1] + 1
+                    mentions.append(CorefMention(sent_id, start_word, end_word))
+                
+            # if we ended up with no best span, then our "representative text"
+            # is just underscore
+            if best_span:
+                representative = mentions[best_span]
+                representative_text = extract_text(document, representative.sentence, representative.start_word, representative.end_word)
+            else:
+                representative_text = "_"
 
             chain = CorefChain(len(clusters), mentions, representative_text, best_span)
             clusters.append(chain)
@@ -173,15 +192,26 @@ class CorefProcessor(UDProcessor):
             return
             
         zero_scores = results.zero_scores.squeeze(-1) if results.zero_scores.dim() > 1 else results.zero_scores
+        is_zero = []
         
         # Flatten word_clusters to get the word indices that correspond to zero_scores
         cluster_word_ids = []
-        for cluster in results.word_clusters:
+        cluster_mapping = {}
+        counter = 0
+        for indx, cluster in enumerate(results.word_clusters):
+            for _ in range(len(cluster)):
+                cluster_mapping[counter] = indx
+                counter += 1
             cluster_word_ids.extend(cluster)
         
         # Find indices where zero_scores > 0
-        zero_indices = (zero_scores > 0).nonzero(as_tuple=True)[0]
-        
+        print(zero_scores)
+        zero_indices = (zero_scores > 0.0).nonzero()
+
+        # this dict maps (cluster_id, word_id) to (cluster_id, start, end)
+        # which overrides span_clusters
+        zero_to_coref = {}
+
         for zero_idx in zero_indices:
             zero_idx = zero_idx.item()
             if zero_idx >= len(cluster_word_ids):
@@ -193,17 +223,21 @@ class CorefProcessor(UDProcessor):
             
             # Create zero node - attach BEFORE the current word
             # This means the zero node comes after word_id-1 but before word_id
-            if word_id > 0:
-                zero_word_id = (word_id, 1)  # attach after word_id-1, before word_id
-                zero_word = Word(document.sentences[sent_id], {
-                    "text": "_", 
-                    "lemma": "_", 
-                    "id": zero_word_id
-                })
-                document.sentences[sent_id]._empty_words.append(zero_word)
-                
-                # Track this zero node for adding to coreference clusters
-                cluster_idx, _ = cluster_mapping[zero_idx]
-                zero_nodes_created.append((cluster_idx, sent_id, word_id + 0.1))
-        
-        return zero_nodes_created
+            zero_word_id = (
+                word_id, 
+                len(document.sentences[sent_id]._empty_words)+1
+            )  # attach after word_id-1, before word_id
+            zero_word = Word(document.sentences[sent_id], {
+                "text": "_", 
+                "lemma": "_", 
+                "id": zero_word_id
+            })
+            document.sentences[sent_id]._empty_words.append(zero_word)
+            
+            # Track this zero node for adding to coreference clusters
+            cluster_idx = cluster_mapping[zero_idx]
+            zero_to_coref[(cluster_idx, word_idx)] = (
+                sent_id, zero_word_id
+            )
+
+        return zero_to_coref
