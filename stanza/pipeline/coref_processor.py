@@ -4,6 +4,7 @@ Processor that attaches coref annotations to a document
 
 from stanza.models.common.utils import misc_to_space_after
 from stanza.models.coref.coref_chain import CorefMention, CorefChain
+from stanza.models.common.doc import Word
 
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
@@ -99,8 +100,13 @@ class CorefProcessor(UDProcessor):
         }
         coref_input = self._model.build_doc(coref_input)
         results = self._model.run(coref_input)
+
+        
+        # Handle zero anaphora - zero_scores is always predicted
+        zero_nodes_created = self._handle_zero_anaphora(document, results, sent_ids, word_pos)
+        
         clusters = []
-        for span_cluster in results.span_clusters:
+        for cluster_idx, span_cluster in enumerate(results.span_clusters):
             if len(span_cluster) == 0:
                 continue
             span_cluster = sorted(span_cluster)
@@ -144,6 +150,14 @@ class CorefProcessor(UDProcessor):
                 start_word = word_pos[span[0]]
                 end_word = word_pos[span[1]-1] + 1
                 mentions.append(CorefMention(sent_id, start_word, end_word))
+            
+            # Add zero node mentions to this cluster if any exist
+            for zero_cluster_idx, zero_sent_id, zero_word_decimal_id in zero_nodes_created:
+                if zero_cluster_idx == cluster_idx:
+                    # Zero node is a single "word" mention at the decimal position
+                    import math
+                    end_word = math.floor(zero_word_decimal_id) + 1
+                    mentions.append(CorefMention(zero_sent_id, zero_word_decimal_id, end_word))
             representative = mentions[best_span]
             representative_text = extract_text(document, representative.sentence, representative.start_word, representative.end_word)
 
@@ -152,3 +166,44 @@ class CorefProcessor(UDProcessor):
 
         document.coref = clusters
         return document
+
+    def _handle_zero_anaphora(self, document, results, sent_ids, word_pos):
+        """Handle zero anaphora by creating zero nodes and updating coreference clusters."""
+        if results.zero_scores is None or results.word_clusters is None:
+            return
+            
+        zero_scores = results.zero_scores.squeeze(-1) if results.zero_scores.dim() > 1 else results.zero_scores
+        
+        # Flatten word_clusters to get the word indices that correspond to zero_scores
+        cluster_word_ids = []
+        for cluster in results.word_clusters:
+            cluster_word_ids.extend(cluster)
+        
+        # Find indices where zero_scores > 0
+        zero_indices = (zero_scores > 0).nonzero(as_tuple=True)[0]
+        
+        for zero_idx in zero_indices:
+            zero_idx = zero_idx.item()
+            if zero_idx >= len(cluster_word_ids):
+                continue
+                
+            word_idx = cluster_word_ids[zero_idx]
+            sent_id = sent_ids[word_idx]
+            word_id = word_pos[word_idx]
+            
+            # Create zero node - attach BEFORE the current word
+            # This means the zero node comes after word_id-1 but before word_id
+            if word_id > 0:
+                zero_word_id = (word_id, 1)  # attach after word_id-1, before word_id
+                zero_word = Word(document.sentences[sent_id], {
+                    "text": "_", 
+                    "lemma": "_", 
+                    "id": zero_word_id
+                })
+                document.sentences[sent_id]._empty_words.append(zero_word)
+                
+                # Track this zero node for adding to coreference clusters
+                cluster_idx, _ = cluster_mapping[zero_idx]
+                zero_nodes_created.append((cluster_idx, sent_id, word_id + 0.1))
+        
+        return zero_nodes_created
