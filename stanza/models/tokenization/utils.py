@@ -131,7 +131,7 @@ def load_lexicon(args):
     train_path = f"{tokenize_dir}/{shorthand}.train.gold.conllu"
     external_dict_path = f"{tokenize_dir}/{shorthand}-externaldict.txt"
     if not os.path.exists(external_dict_path):
-        logger.info("External dictionary not found! Checking training data...")
+        logger.info(f"External dictionary not found! Looked in {external_dict_path}  Checking training data...")
         external_dict_path = None
     if not os.path.exists(train_path):
         logger.info(f"Training dataset does not exist, thus cannot create dictionary {shorthand}")
