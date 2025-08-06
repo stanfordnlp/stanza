@@ -129,7 +129,7 @@ def process_documents(docs, augment=False):
                 if sentence_text[span[1]] == "_" and span[1] == span[2]:
                     is_zero.append([span[0], True])
                     zero = True
-                    # oo! thaht's a zero coref, we should merge it forwards 
+                    # oo! that's a zero coref, we should merge it forwards
                     # i.e. we pick the next word as the head!
                     span = [span[0], span[1]+1, span[2]+1]
                     # crap! there's two zeros right next to each other
@@ -163,7 +163,7 @@ def process_documents(docs, augment=False):
                         # words from 0, so we have to subtract 1 from the stanza heads
                         #print(span, candidate_head, parsed_sentence.words[candidate_head].head - 1)
                         # treat the head of the phrase as the first word that has a head outside the phrase
-                        if parsed_sentence.all_words[candidate_head].head and (
+                        if (parsed_sentence.all_words[candidate_head].head is not None) and (
                                 parsed_sentence.all_words[candidate_head].head - 1 < span[1] or
                                 parsed_sentence.all_words[candidate_head].head - 1 > span[2]
                         ):
@@ -205,7 +205,7 @@ def process_documents(docs, augment=False):
                     [(old_to_new[start], old_to_new[end - 1] + 1) for start, end in cluster]
                     for cluster in span_clusters
                 ]
-            except:
+            except (KeyError, TypeError) as _: # two errors, either end-1 = -1, or start/end is None
                 warnings.warn("Somehow, we are still coreffering to a zero. This is likely due to multiple zeros on top of each other. We are giving up.")
                 continue
             word_clusters = [

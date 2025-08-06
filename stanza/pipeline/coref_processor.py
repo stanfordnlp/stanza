@@ -174,7 +174,7 @@ class CorefProcessor(UDProcessor):
                 
             # if we ended up with no best span, then our "representative text"
             # is just underscore
-            if best_span:
+            if best_span is not None:
                 representative = mentions[best_span]
                 representative_text = extract_text(document, representative.sentence, representative.start_word, representative.end_word)
             else:
@@ -205,7 +205,6 @@ class CorefProcessor(UDProcessor):
             cluster_word_ids.extend(cluster)
         
         # Find indices where zero_scores > 0
-        print(zero_scores)
         zero_indices = (zero_scores > 0.0).nonzero()
 
         # this dict maps (cluster_id, word_id) to (cluster_id, start, end)
