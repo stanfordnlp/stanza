@@ -512,13 +512,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 else:
                     s_loss = torch.zeros_like(c_loss)
 
-                del res
-
                 (c_loss + s_loss + z_loss).backward()
 
                 running_c_loss += c_loss.item()
                 running_s_loss += s_loss.item()
-                if z_loss:
+                if res.zero_scores.size(0) != 0:
                     running_z_loss += z_loss.item()
 
                 # log every 100 docs
@@ -527,12 +525,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                         'train_c_loss': c_loss.item(),
                         'train_s_loss': s_loss.item(),
                     }
-                    if z_loss:
+                    if res.zero_scores.size(0) != 0:
                         logged['train_z_loss'] = z_loss.item()
                     wandb.log(logged)
 
-
-                del c_loss, s_loss, z_loss
+                del c_loss, s_loss, z_loss, res
 
                 for optim in self.optimizers.values():
                     optim.step()

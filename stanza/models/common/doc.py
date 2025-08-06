@@ -750,10 +750,10 @@ class Sentence(StanzaObject):
         words = self._words
         empty_words = self._empty_words
 
-        all = sorted(words + empty_words, key=lambda x:(x.id,)
-                     if isinstance(x.id, int) else x.id)
+        all_words = sorted(words + empty_words,
+                           key=lambda x:(x.id,) if isinstance(x.id, int) else x.id)
 
-        return all
+        return all_words
 
     @property
     def ents(self):
