@@ -22,6 +22,7 @@ logger = logging.getLogger('stanza')
 def add_sentiment_args(parser):
     parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
     parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
+    parser.add_argument('--use_charlm', action='store_true', help='If --use_bert is set, charlm will be turned off.  This turns it on anyway')
 
     parser.add_argument('--use_bert', default=False, action="store_true", help='Use the default transformer for this language')
 
@@ -38,7 +39,10 @@ def build_default_args(paths, short_language, dataset, command_args, extra_args)
     else:
         wordvec_args = []
 
-    charlm = choose_charlm(short_language, dataset, command_args.charlm, default_charlms, {})
+    if command_args.use_bert and not command_args.use_charlm:
+        charlm = None
+    else:
+        charlm = choose_charlm(short_language, dataset, command_args.charlm, default_charlms, {})
     charlm_args = build_charlm_args(short_language, charlm, base_args=False)
 
     bert_args = common.choose_transformer(short_language, command_args, extra_args)
