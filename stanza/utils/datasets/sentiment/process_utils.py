@@ -108,6 +108,19 @@ def get_ptb_tokenized_phrases(dataset):
     phrases = [SentimentDatum(x.sentiment, y.split()) for x, y in zip(dataset, tokenized)]
     return phrases
 
+def process_datum(nlp, text, mapping, sentiment):
+    doc = nlp(text.strip())
+
+    converted_sentiment = mapping.get(sentiment, None)
+    if converted_sentiment is None:
+        raise ValueError("Value {} not in mapping at line {} of {}".format(sentiment, idx, csv_filename))
+
+    text = []
+    for sentence in doc.sentences:
+        text.extend(token.text for token in sentence.tokens)
+    text = clean_tokenized_tweet(text)
+    return SentimentDatum(converted_sentiment, text)
+
 def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_language, mapping, delimiter='\t', quotechar=None, skip_first_line=False, nlp=None, encoding="utf-8"):
     """
     Read in a single CSV file and return a list of SentimentDatums
@@ -132,16 +145,7 @@ def read_snippets(csv_filename, sentiment_column, text_column, tokenizer_languag
         except IndexError as e:
             raise IndexError("Columns {} did not exist at line {}: {}".format(sentiment_column, idx, line)) from e
         text = line[text_column]
-        doc = nlp(text.strip())
-
-        converted_sentiment = mapping.get(sentiment, None)
-        if converted_sentiment is None:
-            raise ValueError("Value {} not in mapping at line {} of {}".format(sentiment, idx, csv_filename))
-
-        text = []
-        for sentence in doc.sentences:
-            text.extend(token.text for token in sentence.tokens)
-        text = clean_tokenized_tweet(text)
-        snippets.append(SentimentDatum(converted_sentiment, text))
+        datum = process_datum(nlp, text, mapping, sentiment)
+        snippets.append(datum)
     return snippets
 
