@@ -212,6 +212,19 @@ mr_l3cube
   python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset mr_l3cube
 
 
+Hindi
+-----
+
+odiagenai
+  https://huggingface.co/datasets/OdiaGenAI/sentiment_analysis_hindi
+
+  Uses datasets package from HF, so that needs to be installed
+
+  python3 -m stanza.utils.datasets.sentiment.prepare_sentiment_dataset hi_odiagenai
+
+  This dataset has 2497 sentences in a train section.
+  We randomly split them to make a usable dataset
+
 Italian
 -------
 
@@ -247,6 +260,7 @@ import os
 import random
 import sys
 
+import stanza
 import stanza.utils.default_paths as default_paths
 
 from stanza.utils.datasets.sentiment import process_airline
@@ -264,6 +278,8 @@ from stanza.utils.datasets.sentiment import process_usage_german
 from stanza.utils.datasets.sentiment import process_vsfc_vietnamese
 
 from stanza.utils.datasets.sentiment import process_utils
+
+from tqdm import tqdm
 
 def convert_sst_general(paths, dataset_name, version):
     in_directory = paths['SENTIMENT_BASE']
@@ -373,6 +389,33 @@ def convert_vi_vsfc(paths, dataset_name, *args):
     out_directory = paths['SENTIMENT_DATA_DIR']
     process_vsfc_vietnamese.main(in_directory, out_directory, dataset_name)
 
+def convert_hi_odiagenai(paths, dataset_name, *args):
+    out_directory = paths['SENTIMENT_DATA_DIR']
+    os.makedirs(out_directory, exist_ok=True)
+
+    import datasets
+    ds = datasets.load_dataset("OdiaGenAI/sentiment_analysis_hindi")
+
+    nlp = stanza.Pipeline("hi", processors='tokenize')
+    mapping = {"pos": 2, "neu": 1, "neg": 0}
+
+    train = []
+    dev = []
+    test = []
+    for datum in tqdm(ds['train']):
+        random_slice = random.randint(0, 9)
+        if random_slice == 0:
+            random_slice = dev
+        elif random_slice == 1:
+            random_slice = test
+        else:
+            random_slice = train
+        datum = process_utils.process_datum(nlp, datum['text'], mapping, datum['label'])
+        random_slice.append(datum)
+
+    dataset = [train, dev, test]
+    process_utils.write_dataset(dataset, out_directory, dataset_name)
+
 def convert_mr_l3cube(paths, dataset_name, *args):
     # csv_filename = 'extern_data/sentiment/MarathiNLP/L3CubeMahaSent Dataset/tweets-train.csv'
     MAPPING = {"-1": "0", "0": "1", "1": "2"}
@@ -416,6 +459,8 @@ DATASET_MAPPING = {
     "en_meld":      convert_meld,
 
     "es_tass2020":  convert_es_tass2020,
+
+    "hi_odiagenai": convert_hi_odiagenai,
 
     "it_sentipolc16": convert_it_sentipolc16,
 
