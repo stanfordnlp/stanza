@@ -208,6 +208,13 @@ lora = true
 lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_modules_to_save = [ "pooler" ]
 
+[muril_base_cased_lora]
+bert_model = "google/muril-base-cased"
+bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
 [indic_bert_lora]
 bert_model = "ai4bharat/indic-bert"
 bert_learning_rate = 0.0005
