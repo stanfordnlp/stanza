@@ -103,6 +103,8 @@ if __name__ == "__main__":
                            help="Adjust the dummy mix")
     argparser.add_argument("--bert_finetune_begin_epoch", type=float,
                            help="Adjust the bert finetune begin epoch")
+    argparser.add_argument("--bert_model", type=str,
+                           help="Use this transformer for the given experiment")
     argparser.add_argument("--warm_start", action="store_true",
                            help="If set, the training will resume from the"
                                 " last checkpoint saved if any. Ignored in"
@@ -160,6 +162,8 @@ if __name__ == "__main__":
         config.n_hidden_layers = args.n_hidden_layers
     if args.learning_rate is not None:
         config.learning_rate = args.learning_rate
+    if args.bert_model is not None:
+        config.bert_model = args.bert_model
     if args.bert_learning_rate is not None:
         config.bert_learning_rate = args.bert_learning_rate
     if args.bert_finetune_begin_epoch is not None:
