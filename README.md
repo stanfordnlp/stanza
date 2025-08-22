@@ -118,13 +118,13 @@ pip install -e .
 
 ### Getting Started with the neural pipeline
 
-To run your first Stanza pipeline, simply following these steps in your Python interactive interpreter:
+To run your first Stanza pipeline, simply follow these steps in your Python interactive interpreter:
 
 ```python
 >>> import stanza
->>> stanza.download('en')       # This downloads the English models for the neural pipeline
+>>> stanza.download('en')       # Optional: pre-download English models (Pipeline can auto-download if needed)
 >>> nlp = stanza.Pipeline('en') # This sets up a default neural pipeline in English
->>> doc = nlp("Barack Obama was born in Hawaii.  He was elected president in 2008.")
+>>> doc = nlp("Barack Obama was born in Hawaii. He was elected president in 2008.")
 >>> doc.sentences[0].print_dependencies()
 ```
 
@@ -133,9 +133,9 @@ If you encounter `requests.exceptions.ConnectionError`, please try to use a prox
 ```python
 >>> import stanza
 >>> proxies = {'http': 'http://ip:port', 'https': 'http://ip:port'}
->>> stanza.download('en', proxies=proxies)  # This downloads the English models for the neural pipeline
+>>> stanza.download('en', proxies=proxies)  # Optional: pre-download English models (Pipeline can auto-download if needed)
 >>> nlp = stanza.Pipeline('en')             # This sets up a default neural pipeline in English
->>> doc = nlp("Barack Obama was born in Hawaii.  He was elected president in 2008.")
+>>> doc = nlp("Barack Obama was born in Hawaii. He was elected president in 2008.")
 >>> doc.sentences[0].print_dependencies()
 ```
 
