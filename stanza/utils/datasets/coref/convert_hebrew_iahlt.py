@@ -37,12 +37,12 @@ CorefDoc = namedtuple("CorefDoc", ['doc_id', 'sentences', 'coref_spans'])
 # TODO: binary search for speed?
 def search_mention_start(doc, mention_start):
     for sent_idx, sentence in enumerate(doc.sentences):
-        if mention_start <= doc.sentences[sent_idx].words[-1].end_char:
+        if mention_start < doc.sentences[sent_idx].words[-1].end_char:
             break
     else:
         raise ValueError
     for word_idx, word in enumerate(sentence.words):
-        if mention_start <= word.end_char:
+        if mention_start < word.end_char:
             break
     else:
         raise ValueError
@@ -63,7 +63,7 @@ def extract_doc(tokenizer, lines):
     singletons = 0
     one_words = 0
     processed_docs = []
-    for line in tqdm(lines):
+    for line_idx, line in enumerate(tqdm(lines)):
         all_clusters = defaultdict(list)
         doc_id = line['metadata']['doc_id']
         text = line['text']
@@ -71,12 +71,8 @@ def extract_doc(tokenizer, lines):
         doc = tokenizer(text)
         for cluster_idx, cluster in enumerate(clusters):
             found_mentions = []
-            for mention in cluster['mentions']:
-                # +1 on the start index produces better clusters,
-                # according to a short review by Amir Zeldes
-                # an official response from the IAHLT people
-                # would be even better
-                mention_start = mention[0] + 1
+            for mention_idx, mention in enumerate(cluster['mentions']):
+                mention_start = mention[0]
                 mention_end = mention[1]
                 start_sent, start_word = search_mention_start(doc, mention_start)
                 end_sent, end_word = search_mention_end(doc, mention_end)
@@ -88,6 +84,21 @@ def extract_doc(tokenizer, lines):
                     if end_word == start_word:
                         one_words += 1
                     found_mentions.append((start_sent, start_word, end_word))
+
+                    #if cluster_idx == 0 and line_idx == 0:
+                    #    expanded_start = max(0, mention_start - 10)
+                    #    expanded_end = min(len(text), mention_end + 10)
+                    #    print("EXTRACTING MENTION: %d %d" % (mention[0], mention[1]))
+                    #    print(" context: |%s|" % text[expanded_start:expanded_end])
+                    #    print(" mention[0]:mention[1]: |%s|" % text[mention[0]:mention[1]])
+                    #    print(" search text: |%s|" % text[mention_start:mention_end])
+                    #    extracted_words = doc.sentences[start_sent].words[start_word:end_word+1]
+                    #    extracted_text = " ".join([x.text for x in extracted_words])
+                    #    print(" extracted words: |%s|" % extracted_text)
+                    #    print(" endpoints: %d %d" % (mention_start, mention_end))
+                    #    print(" number of extracted words: %d" % len(extracted_words))
+                    #    print(" first word endpoints: %d %d" % (extracted_words[0].start_char, extracted_words[0].end_char))
+                    #    print(" last word endpoints: %d %d" % (extracted_words[-1].start_char, extracted_words[-1].end_char))
             if len(found_mentions) == 0:
                 continue
             elif len(found_mentions) == 1:
@@ -107,7 +118,7 @@ def extract_doc(tokenizer, lines):
             for sent_idx, start_word, end_word in all_clusters[cluster_idx]:
                 coref_spans[sent_idx].append((cluster_idx, start_word, end_word))
         processed_docs.append(CorefDoc(doc_id, sentences, coref_spans))
-    #print(broken, singletons, one_words)
+    print("Found %d broken across two sentences, %d singleton mentions, %d one_word mentions" % (broken, singletons, one_words))
     return processed_docs
 
 def read_doc(tokenizer, filename):
@@ -118,7 +129,7 @@ def read_doc(tokenizer, filename):
 
 def write_json_file(output_filename, dataset):
     with open(output_filename, "w", encoding="utf-8") as fout:
-        json.dump(dataset, fout, indent=2)
+        json.dump(dataset, fout, indent=2, ensure_ascii=False)
 
 def main():
     paths = get_default_paths()
