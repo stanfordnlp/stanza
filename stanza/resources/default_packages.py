@@ -870,7 +870,9 @@ TRANSFORMER_NICKNAMES = {
     "altsoph/bert-base-ancientgreek-uncased": "grc-altsoph",
 
     # he
-    "imvladikon/alephbertgimmel-base-512" : "alephbertgimmel",
+    "HeNLP/HeRo": "hero-roberta",
+    "imvladikon/alephbertgimmel-base-512": "alephbertgimmel",
+    "onlplab/alephbert-base": "alephbert",
 
     # hy
     "xlm-roberta-base": "xlm-roberta-base",
@@ -930,6 +932,9 @@ TRANSFORMER_NICKNAMES = {
     "ai4bharat/indic-bert": "indic-bert",
     "google/muril-base-cased": "muril-base-cased",
     "google/muril-large-cased": "muril-large-cased",
+
+    # multi-lingual
+    "FacebookAI/xlm-roberta-large": "xlm-roberta-large",
 }
 
 def known_nicknames():

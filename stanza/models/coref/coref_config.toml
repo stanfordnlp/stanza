@@ -223,16 +223,39 @@ lora = true
 lora_target_modules = [ "query", "value", "dense", "ffn", "full_layer" ]
 lora_modules_to_save = [ "pooler" ]
 
-[aleph_lora]
+[alephbertgimmel_lora]
 bert_model = "imvladikon/alephbertgimmel-base-512"
 bert_learning_rate = 0.000025
 lora = true
 lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_modules_to_save = [ "pooler" ]
 
-[hero_lora]
-bert_model = "HeNLP/HeRo"
+[alephbert_lora]
+bert_model = "onlplab/alephbert-base"
 bert_learning_rate = 0.000025
+lora = true
+lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
+lora_modules_to_save = [ "pooler" ]
+
+[hero_lora]
+# LR sweep on Hebrew IAHLT coref dev scores
+# (although there may be tokenization problems)
+# 0.000005    0.44202
+# 0.00001     0.45271
+# 0.000015    0.45771
+# 0.00002     0.45877
+# 0.000025    0.46076
+# 0.00003     0.45957
+# 0.000035    0.46187
+# 0.00004     0.46066
+# 0.000045    0.46132
+# 0.00005     0.46238
+# 0.000055    0.46084
+# 0.00006     0.46047
+# 0.000075    0.45772
+# 0.0001      0.44910
+bert_model = "HeNLP/HeRo"
+bert_learning_rate = 0.00005
 lora = true
 lora_target_modules = [ "query", "value", "output.dense", "intermediate.dense" ]
 lora_modules_to_save = [ "pooler" ]
