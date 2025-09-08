@@ -646,7 +646,22 @@ def build_argparse():
     parser.add_argument('--no_use_silver_words', default=True, dest='use_silver_words', action='store_false', help="Train/don't train word vectors for words only in the silver dataset")
     parser.add_argument('--rare_word_unknown_frequency', default=0.02, type=float, help='How often to replace a rare word with UNK when training')
     parser.add_argument('--rare_word_threshold', default=0.02, type=float, help='How many words to consider as rare words as a fraction of the dataset')
-    parser.add_argument('--tag_unknown_frequency', default=0.001, type=float, help='How often to replace a tag with UNK when training')
+
+    # partial experiment to test the tag_dropout
+    # 200 iterations of WSJ using Adadelta (no madgrad restarting) and roberta-base
+    # for reference, the baseline was similar to 0.001 and got 0.951213
+    #     baseline:   0.951213
+    #     0.0001:     0.951221
+    #     0.001:      0.951901
+    #     0.005:      0.95138
+    #     0.01:       0.951623
+    #     0.02:       0.951892
+    #     0.05:       0.951704
+    #     0.1:        0.952506
+    #     0.2:        0.952131
+    #     0.3:        0.952333
+    #     0.4:        0.951272
+    parser.add_argument('--tag_dropout', default=0.1, type=float, help='Fraction of tags to replace with <UNK> at training time')
 
     parser.add_argument('--num_lstm_layers', default=2, type=int, help='How many layers to use in the LSTMs')
     parser.add_argument('--num_tree_lstm_layers', default=None, type=int, help='How many layers to use in the TREE_LSTMs, if used.  This also increases the width of the word outputs to match the tree lstm inputs.  Default 2 if TREE_LSTM or TREE_LSTM_CX, 1 otherwise')
@@ -869,6 +884,9 @@ def parse_args(args=None):
 
     if args['checkpoint']:
         args['checkpoint_save_name'] = utils.checkpoint_name(args['save_dir'], model_save_file, args['checkpoint_save_name'])
+
+    if args['mode'] == 'train' and args['tag_dropout'] <= 0.0:
+        raise ValueError("Model will not train correctly with tag_dropout <= 0")
 
     return args
 

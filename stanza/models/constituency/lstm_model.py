@@ -765,10 +765,8 @@ class LSTMModel(BaseModel, nn.Module):
             word_inputs = [word_input, delta_input]
 
             if self.tag_embedding_dim > 0:
-                if self.training:
-                    tag_labels = [None if random.random() < self.args['tag_unknown_frequency'] else word.label for word in tagged_words]
-                else:
-                    tag_labels = [word.label for word in tagged_words]
+                # at training time, some of the tags will have been replaced with <UNK>
+                tag_labels = [word.label for word in tagged_words]
                 tag_idx = torch.stack([self.tag_tensors[self.tag_map.get(tag, UNK_ID)] for tag in tag_labels])
                 tag_input = self.tag_embedding(tag_idx)
                 word_inputs.append(tag_input)
