@@ -161,6 +161,7 @@ Some alternate optimizer methods:
 import argparse
 import logging
 import os
+import random
 import re
 
 import torch
@@ -429,6 +430,7 @@ def build_argparse():
     parser.add_argument('--no_save_each_optimizer', dest='save_each_optimizer', default=True, action='store_false', help="Don't save the optimizer when saving 'each' model")
 
     parser.add_argument('--seed', type=int, default=1234)
+    parser.add_argument('--no_seed', action='store_const', const=None, dest='seed', help='Remove the random seed, resulting in a randomly chosen random seed')
 
     parser.add_argument('--no_check_valid_states', default=True, action='store_false', dest='check_valid_states', help="Don't check the constituents or transitions in the dev set when starting a new parser.  Warning: the parser will never guess unknown constituents")
     parser.add_argument('--no_strict_check_constituents', default=True, action='store_false', dest='strict_check_constituents', help="Don't check the constituents between the train & dev set.  May result in untrainable transitions")
@@ -867,6 +869,10 @@ def parse_args(args=None):
 
     retagging.postprocess_args(args)
     postprocess_predict_output_args(args)
+
+    if args['seed'] is None:
+        args['seed'] = random.randint(0, 1000000000)
+        logger.info("Using random seed %d", args['seed'])
 
     model_save_file = build_model_filename(args)
     args['save_name'] = model_save_file

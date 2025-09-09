@@ -3,6 +3,7 @@ import glob
 import logging
 import os
 import pathlib
+import random
 import sys
 import tempfile
 
@@ -108,6 +109,16 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
     # --save_name being specified for an invocation with multiple treebanks
     if command_args.save_dir:
         extra_args.extend(["--save_dir", command_args.save_dir])
+
+    # if --no_seed is added to the args, we actually want to pick a seed here
+    # that way, save file names will be consistent...
+    # otherwise, it might try to use different save names when using the
+    # train and dev sets, if the random seed is used as part of the save name
+    while '--no_seed' in extra_args:
+        idx = extra_args.index('--no_seed')
+        random_seed = random.randint(0, 1000000000)
+        logger.info("Using random seed %d", random_seed)
+        extra_args[idx:idx+1] = ['--seed', str(random_seed)]
 
     if callable(model_name):
         model_name = model_name(command_args)
