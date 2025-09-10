@@ -309,7 +309,6 @@ class DataLoader(TokenizationDataset):
         # one disadvantage of checking for sentence[1][idx] == 0
         #   would be that tokens of all punct, such as '...',
         #   should move but would not move if this is eliminated
-        print(sentence)
         commas = [idx for idx, c in enumerate(sentence[3])
                   if c in self.move_punct and idx > 0 and sentence[3][idx-1].isspace() and (idx == 1 or not sentence[3][idx-2].isdigit())]
         if len(commas) == 0:
