@@ -787,6 +787,7 @@ def build_model_filename(args):
                                                oracle_level=args['oracle_level'],
                                                embedding=embedding,
                                                finetune=maybe_finetune,
+                                               tag_dropout=args['tag_dropout'],
                                                transformer_finetune_begin=transformer_finetune_begin,
                                                transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
                                                tscheme=args['transition_scheme'].short_name,
