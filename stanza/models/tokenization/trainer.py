@@ -16,7 +16,6 @@ logger = logging.getLogger('stanza')
 class Trainer(BaseTrainer):
     def __init__(self, args=None, vocab=None, lexicon=None, dictionary=None, model_file=None, device=None, foundation_cache=None):
         # TODO: make a test of the training w/ and w/o charlm
-        # TODO: build the resources with the forward charlm
         if model_file is not None:
             # load everything from file
             self.load(model_file, args, foundation_cache)
