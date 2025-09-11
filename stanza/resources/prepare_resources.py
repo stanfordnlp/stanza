@@ -102,7 +102,7 @@ def split_model_name(model):
     lang, package = model.split('_', 1)
     return lang, package, processor
 
-def split_package(package):
+def split_package(package, default_use_charlm=True):
     if package.endswith("_finetuned"):
         package = package[:-10]
 
@@ -124,7 +124,7 @@ def split_package(package):
 
     # guess it was a model which wasn't built with the new naming convention of putting the pretrain type at the end
     # assume WV and charlm... if the language / package doesn't allow for one, that should be caught later
-    return package, True, True
+    return package, True, default_use_charlm
 
 def get_pretrain_package(lang, package, model_pretrains, default_pretrains):
     package, uses_pretrain, _ = split_package(package)
@@ -138,8 +138,8 @@ def get_pretrain_package(lang, package, model_pretrains, default_pretrains):
 
     raise RuntimeError("pretrain not specified for lang %s package %s" % (lang, package))
 
-def get_charlm_package(lang, package, model_charlms, default_charlms):
-    package, _, uses_charlm = split_package(package)
+def get_charlm_package(lang, package, model_charlms, default_charlms, default_use_charlm=True):
+    package, _, uses_charlm = split_package(package, default_use_charlm)
 
     if not uses_charlm:
         return None
@@ -209,6 +209,16 @@ def get_lemma_dependencies(lang, package):
 
     return dependencies
 
+
+def get_tokenizer_charlm_package(lang, package):
+    return get_charlm_package(lang, package, tokenizer_charlms, default_charlms, default_use_charlm=False)
+
+def get_tokenizer_dependencies(lang, package):
+    dependencies = []
+    charlm_package = get_tokenizer_charlm_package(lang, package)
+    if charlm_package is not None:
+        dependencies.append({'model': 'forward_charlm', 'package': charlm_package})
+    return dependencies
 
 def get_depparse_charlm_package(lang, package):
     return get_charlm_package(lang, package, depparse_charlms, default_charlms)
@@ -285,6 +295,8 @@ def get_dependencies(processor, lang, package):
         return get_sentiment_dependencies(lang, package)
     elif processor == 'constituency':
         return get_con_dependencies(lang, package)
+    elif processor == 'tokenize':
+        return get_tokenizer_dependencies(lang, package)
     return {}
 
 def process_dirs(args):
@@ -411,9 +423,14 @@ def get_default_processors(resources, lang):
     if lang in default_tokenizer:
         default_processors['tokenize'] = default_tokenizer[lang]
     else:
-        default_processors['tokenize'] = default_package
+        tokenize_package = default_package
+        if tokenize_package not in resources[lang]['tokenize']:
+            tokenize_package = tokenize_package + "_nocharlm"
+        if tokenize_package not in resources[lang]['tokenize']:
+            raise AssertionError("Can't find a tokenizer package for %s!  Tried %s and %s" % (lang, default_package, tokenize_package))
+        default_processors['tokenize'] = tokenize_package
 
-    if 'mwt' in resources[lang] and default_processors['tokenize'] in resources[lang]['mwt']:
+    if 'mwt' in resources[lang] and default_package in resources[lang]['mwt']:
         # if this doesn't happen, we just skip MWT
         default_processors['mwt'] = default_package
 
@@ -483,6 +500,15 @@ def get_default_accurate(resources, lang):
     A package that, if available, uses charlm and transformer models for each processor
     """
     default_processors = get_default_processors(resources, lang)
+
+    tokenizer_model = default_processors['tokenize']
+    if tokenizer_model.endswith('_nocharlm'):
+        tokenizer_model = tokenizer_model.replace('_nocharlm', '_charlm')
+    elif 'charlm' not in tokenizer_model:
+        tokenizer_model = tokenizer_model + '_charlm'
+    if tokenizer_model.endswith('_charlm') and tokenizer_model in resources[lang]['tokenize']:
+        default_processors['tokenize'] = tokenizer_model
+        print("TOKENIZE found a charlm version %s for %s default_accurate" % (tokenizer_model, lang))
 
     if 'lemma' in default_processors and default_processors['lemma'] != 'identity':
         lemma_model = default_processors['lemma']
@@ -594,7 +620,20 @@ def process_packages(args):
         # We then create a package in the packages dict for each of those treebanks
         if 'tokenize' in resources[lang]:
             for package in resources[lang]['tokenize']:
-                processors = {"tokenize": package}
+                package, _, _ = split_package(package)
+                if package in resources[lang][PACKAGES]:
+                    # can happen in the case of a _nocharlm and _charlm version of the tokenizer
+                    continue
+
+                processors = {}
+                # TODO: when we rebuild all the models, make all the tokenizers say _nocharlm
+                if package in resources[lang]['tokenize']:
+                    processors["tokenize"] = package
+                elif package + "_nocharlm" in resources[lang]['tokenize']:
+                    processors["tokenize"] = package + "_nocharlm"
+                else:
+                    raise AssertionError("Should have found a tokenizer for lang %s package %s" % (lang, package))
+
                 if "mwt" in resources[lang] and package in resources[lang]["mwt"]:
                     processors["mwt"] = package
 
