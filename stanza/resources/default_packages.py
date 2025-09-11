@@ -817,7 +817,12 @@ TRANSFORMERS = {
     #   hfl macbert:  0.9530
     # There is also a ShannonAI model, but our current codebase is
     # somehow not compatible
-    "zh-hans": "hfl/chinese-macbert-large",
+    # further comparing HFL:
+    #                    POS dev  Depparse dev LAS     NER dev
+    #   HFL Electra      96.90     85.66                77.90
+    #   HFL Macbert      96.53     84.72                78.46
+    # "zh-hans": "hfl/chinese-macbert-large",
+    "zh-hans": "hfl/chinese-electra-180g-large-discriminator",
 }
 
 TRANSFORMER_LAYERS = {

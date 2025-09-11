@@ -30,6 +30,7 @@ def update_max_length(model_name, tokenizer):
                       'airesearch/wangchanberta-base-att-spm-uncased',
                       'camembert/camembert-large',
                       'hfl/chinese-electra-180g-large-discriminator',
+                      'hfl/chinese-macbert-large',
                       'NYTK/electra-small-discriminator-hungarian'):
         tokenizer.model_max_length = 512
 
