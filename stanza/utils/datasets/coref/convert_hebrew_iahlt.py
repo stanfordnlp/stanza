@@ -37,11 +37,15 @@ CorefDoc = namedtuple("CorefDoc", ['doc_id', 'sentences', 'coref_spans'])
 # TODO: binary search for speed?
 def search_mention_start(doc, mention_start):
     for sent_idx, sentence in enumerate(doc.sentences):
-        if mention_start < doc.sentences[sent_idx].words[-1].end_char:
+        if mention_start < doc.sentences[sent_idx].tokens[-1].end_char:
             break
     else:
         raise ValueError
     for word_idx, word in enumerate(sentence.words):
+        if word.end_char is None:
+            print("Found weirdness on sentence:\n|%s|" % sentence.text)
+            print(word.parent)
+            return None, None
         if mention_start < word.end_char:
             break
     else:
@@ -50,7 +54,7 @@ def search_mention_start(doc, mention_start):
 
 def search_mention_end(doc, mention_end):
     for sent_idx, sentence in enumerate(doc.sentences):
-        if sent_idx + 1 == len(doc.sentences) or mention_end < doc.sentences[sent_idx+1].words[0].start_char:
+        if sent_idx + 1 == len(doc.sentences) or mention_end < doc.sentences[sent_idx+1].tokens[0].start_char:
             break
     for word_idx, word in enumerate(sentence.words):
         if word_idx + 1 == len(sentence.words) or mention_end < sentence.words[word_idx+1].start_char:
@@ -60,6 +64,7 @@ def search_mention_end(doc, mention_end):
 def extract_doc(tokenizer, lines):
     # 16, 1, 5 for the train, dev, test sets
     broken = 0
+    tok_error = 0
     singletons = 0
     one_words = 0
     processed_docs = []
@@ -75,30 +80,34 @@ def extract_doc(tokenizer, lines):
                 mention_start = mention[0]
                 mention_end = mention[1]
                 start_sent, start_word = search_mention_start(doc, mention_start)
+                if start_sent is None or start_word is None:
+                    tok_error += 1
+                    continue
                 end_sent, end_word = search_mention_end(doc, mention_end)
                 assert end_sent >= start_sent
                 if start_sent != end_sent:
                     broken += 1
-                else:
-                    assert end_word >= start_word
-                    if end_word == start_word:
-                        one_words += 1
-                    found_mentions.append((start_sent, start_word, end_word))
+                    continue
 
-                    #if cluster_idx == 0 and line_idx == 0:
-                    #    expanded_start = max(0, mention_start - 10)
-                    #    expanded_end = min(len(text), mention_end + 10)
-                    #    print("EXTRACTING MENTION: %d %d" % (mention[0], mention[1]))
-                    #    print(" context: |%s|" % text[expanded_start:expanded_end])
-                    #    print(" mention[0]:mention[1]: |%s|" % text[mention[0]:mention[1]])
-                    #    print(" search text: |%s|" % text[mention_start:mention_end])
-                    #    extracted_words = doc.sentences[start_sent].words[start_word:end_word+1]
-                    #    extracted_text = " ".join([x.text for x in extracted_words])
-                    #    print(" extracted words: |%s|" % extracted_text)
-                    #    print(" endpoints: %d %d" % (mention_start, mention_end))
-                    #    print(" number of extracted words: %d" % len(extracted_words))
-                    #    print(" first word endpoints: %d %d" % (extracted_words[0].start_char, extracted_words[0].end_char))
-                    #    print(" last word endpoints: %d %d" % (extracted_words[-1].start_char, extracted_words[-1].end_char))
+                assert end_word >= start_word
+                if end_word == start_word:
+                    one_words += 1
+                found_mentions.append((start_sent, start_word, end_word))
+
+                #if cluster_idx == 0 and line_idx == 0:
+                #    expanded_start = max(0, mention_start - 10)
+                #    expanded_end = min(len(text), mention_end + 10)
+                #    print("EXTRACTING MENTION: %d %d" % (mention[0], mention[1]))
+                #    print(" context: |%s|" % text[expanded_start:expanded_end])
+                #    print(" mention[0]:mention[1]: |%s|" % text[mention[0]:mention[1]])
+                #    print(" search text: |%s|" % text[mention_start:mention_end])
+                #    extracted_words = doc.sentences[start_sent].words[start_word:end_word+1]
+                #    extracted_text = " ".join([x.text for x in extracted_words])
+                #    print(" extracted words: |%s|" % extracted_text)
+                #    print(" endpoints: %d %d" % (mention_start, mention_end))
+                #    print(" number of extracted words: %d" % len(extracted_words))
+                #    print(" first word endpoints: %d %d" % (extracted_words[0].start_char, extracted_words[0].end_char))
+                #    print(" last word endpoints: %d %d" % (extracted_words[-1].start_char, extracted_words[-1].end_char))
             if len(found_mentions) == 0:
                 continue
             elif len(found_mentions) == 1:
@@ -118,7 +127,7 @@ def extract_doc(tokenizer, lines):
             for sent_idx, start_word, end_word in all_clusters[cluster_idx]:
                 coref_spans[sent_idx].append((cluster_idx, start_word, end_word))
         processed_docs.append(CorefDoc(doc_id, sentences, coref_spans))
-    print("Found %d broken across two sentences, %d singleton mentions, %d one_word mentions" % (broken, singletons, one_words))
+    print("Found %d broken across two sentences, %d tok errors, %d singleton mentions, %d one_word mentions" % (broken, tok_error, singletons, one_words))
     return processed_docs
 
 def read_doc(tokenizer, filename):
