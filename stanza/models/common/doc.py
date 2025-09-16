@@ -400,13 +400,16 @@ class Document(StanzaObject):
                     word.sent = sentence
                     word.parent = token
                     sentence.words.append(word)
-                if token.start_char is not None and token.end_char is not None and "".join(word.text for word in token.words) == token.text:
-                    start_char = token.start_char
-                    for word in token.words:
-                        end_char = start_char + len(word.text)
-                        word.start_char = start_char
-                        word.end_char = end_char
-                        start_char = end_char
+                if len(token.words) == 1:
+                    word.start_char = token.start_char
+                    word.end_char = token.end_char
+                elif token.start_char is not None and token.end_char is not None:
+                    search_string = "^%s$" % ("\\s*".join("(%s)" % re.escape(word.text) for word in token.words))
+                    match = re.compile(search_string).match(token.text)
+                    if match:
+                        for word_idx, word in enumerate(token.words):
+                            word.start_char = match.start(word_idx+1) + token.start_char
+                            word.end_char = match.end(word_idx+1) + token.start_char
 
             if fake_dependencies:
                 sentence.build_fake_dependencies()
