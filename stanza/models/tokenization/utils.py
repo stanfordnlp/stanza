@@ -143,20 +143,25 @@ def load_lexicon(args):
 
 
 def load_mwt_dict(filename):
-    if filename is not None:
-        with open(filename, 'r') as f:
-            mwt_dict0 = json.load(f)
+    """
+    Returns a dict from an MWT to its most common expansion and count.
 
-        mwt_dict = dict()
-        for item in mwt_dict0:
-            (key, expansion), count = item
+    Other less common expansions are discarded.
+    """
+    if filename is None:
+        return None
 
-            if key not in mwt_dict or mwt_dict[key][1] < count:
-                mwt_dict[key] = (expansion, count)
+    with open(filename, 'r') as f:
+        mwt_dict0 = json.load(f)
 
-        return mwt_dict
-    else:
-        return
+    mwt_dict = dict()
+    for item in mwt_dict0:
+        (key, expansion), count = item
+
+        if key not in mwt_dict or mwt_dict[key][1] < count:
+            mwt_dict[key] = (expansion, count)
+
+    return mwt_dict
 
 def process_sentence(sentence, mwt_dict=None):
     sent = []
