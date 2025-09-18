@@ -236,11 +236,35 @@ def build_move_punct_set(data, move_back_prob):
                 continue
     return move_punct
 
+def build_known_mwt(data, mwt_expansions):
+    known_mwts = set()
+    for chunk in data:
+        for idx, unit in enumerate(chunk):
+            if unit[1] != 3:
+                continue
+            # found an MWT
+            prev_idx = idx - 1
+            while prev_idx >= 0 and chunk[prev_idx][1] == 0:
+                prev_idx -= 1
+            prev_idx += 1
+            while chunk[prev_idx][0].isspace():
+                prev_idx += 1
+            if prev_idx == idx:
+                continue
+            mwt = "".join(x[0] for x in chunk[prev_idx:idx+1])
+            if mwt not in mwt_expansions:
+                continue
+            if len(mwt_expansions[mwt]) > 2:
+                # TODO: could split 3 word tokens as well
+                continue
+            known_mwts.add(mwt)
+    return known_mwts
+
 class DataLoader(TokenizationDataset):
     """
     This is the training version of the dataset.
     """
-    def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, vocab=None, evaluation=False, dictionary=None):
+    def __init__(self, args, input_files={'txt': None, 'label': None}, input_text=None, vocab=None, evaluation=False, dictionary=None, mwt_expansions=None):
         super().__init__(args, input_files, input_text, vocab, evaluation, dictionary)
 
         self.vocab = vocab if vocab is not None else self.init_vocab()
@@ -261,6 +285,15 @@ class DataLoader(TokenizationDataset):
                 logger.debug('Based on the training data, will augment space/punct combinations {}'.format(self.move_punct))
             else:
                 logger.debug('Based on the training data, no punct are eligible to be rearranged with extra whitespace')
+
+        split_mwt_prob = args.get('split_mwt_prob', 0.0)
+        if split_mwt_prob > 0.0 and not evaluation:
+            self.mwt_expansions = mwt_expansions
+            self.known_mwt = build_known_mwt(self.data, mwt_expansions)
+            if len(self.known_mwt) > 0:
+                logger.debug('Based on the training data, there are %d MWT which might be split at training time', len(self.known_mwt))
+            else:
+                logger.debug('Based on the training data, there are NO MWT to split at training time')
 
     def __len__(self):
         return len(self.sentence_ids)
@@ -299,6 +332,45 @@ class DataLoader(TokenizationDataset):
             encoded = self.para_to_sentences(new_units)
             return encoded
         return None
+
+    def split_mwt(self, sentence):
+        if len(sentence[3]) <= 1 or len(sentence[3]) >= self.args['max_seqlen']:
+            return None
+
+        # if we find a token in the sentence which ends with label 3,
+        # eg it is an MWT,
+        # with some probability we split it into two tokens
+        # and treat the split tokens as both label 1 instead of 3
+        # in this manner, we teach the tokenizer not to treat the
+        # entire sequence of characters with added spaces as an MWT,
+        # which weirdly can happen in some corner cases
+
+        mwt_ends = [idx for idx, label in enumerate(sentence[1]) if label == 3]
+        if len(mwt_ends) == 0:
+            return None
+        random_end = random.randint(0, len(mwt_ends)-1)
+        mwt_end = mwt_ends[random_end]
+        mwt_start = mwt_end - 1
+        while mwt_start >= 0 and sentence[1][mwt_start] == 0:
+            mwt_start -= 1
+        mwt_start += 1
+        while sentence[3][mwt_start].isspace():
+            mwt_start += 1
+        if mwt_start == mwt_end:
+            return None
+        mwt = "".join(x for x in sentence[3][mwt_start:mwt_end+1])
+        if mwt not in self.mwt_expansions:
+            return None
+
+        all_units = [(x, int(y)) for x, y in zip(sentence[3], sentence[1])]
+        w0_units = [(x, 0) for x in self.mwt_expansions[mwt][0]]
+        w0_units[-1] = (w0_units[-1][0], 1)
+        w1_units = [(x, 0) for x in self.mwt_expansions[mwt][1]]
+        w1_units[-1] = (w1_units[-1][0], 1)
+        split_units = w0_units + [(' ', 0)] + w1_units
+        new_units = all_units[:mwt_start] + split_units + all_units[mwt_end+1:]
+        encoded = self.para_to_sentences(new_units)
+        return encoded
 
     def move_punct_back(self, sentence):
         if len(sentence[3]) <= 1 or len(sentence[3]) >= self.args['max_seqlen']:
@@ -342,6 +414,7 @@ class DataLoader(TokenizationDataset):
             drop_last_char = False if self.eval or (self.args.get('last_char_drop_prob', 0) == 0) else (random.random() < self.args.get('last_char_drop_prob', 0))
             move_last_char_prob = 0.0 if self.eval else self.args.get('last_char_move_prob', 0.0)
             move_punct_back_prob = 0.0 if self.eval else self.args.get('punct_move_back_prob', 0.0)
+            split_mwt_prob = 0.0 if self.eval else self.args.get('split_mwt_prob', 0.0)
 
             pid, sid = id_pair if self.eval else random.choice(self.sentence_ids)
             sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
@@ -382,6 +455,14 @@ class DataLoader(TokenizationDataset):
                         # not having a space separated punct,
                         # so we need to do a two step checking process here
                         new_sentence = self.move_punct_back(sentence)
+                        if new_sentence is not None:
+                            total_len = total_len + len(new_sentence[0][3]) - len(sentences[sentence_idx][3])
+                            sentences[sentence_idx] = new_sentence[0]
+
+            if split_mwt_prob > 0.0:
+                for sentence_idx, sentence in enumerate(sentences):
+                    if random.random() < split_mwt_prob:
+                        new_sentence = self.split_mwt(sentence)
                         if new_sentence is not None:
                             total_len = total_len + len(new_sentence[0][3]) - len(sentences[sentence_idx][3])
                             sentences[sentence_idx] = new_sentence[0]
