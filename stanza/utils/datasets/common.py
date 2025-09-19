@@ -11,6 +11,7 @@ import unicodedata
 
 from stanza.models.common.short_name_to_treebank import canonical_treebank_name
 import stanza.utils.datasets.prepare_tokenizer_data as prepare_tokenizer_data
+import stanza.utils.datasets.conllu_to_text as conllu_to_text
 import stanza.utils.default_paths as default_paths
 
 logger = logging.getLogger('stanza')
@@ -23,8 +24,6 @@ MWT_OR_COPY_RE = re.compile("^[0-9]+[-.][0-9]+")
 
 # more restrictive than an actual int as we expect certain formats in the conllu files
 INT_RE = re.compile("^[0-9]+$")
-
-CONLLU_TO_TXT_PERL = os.path.join(os.path.split(__file__)[0], "conllu_to_text.pl")
 
 class ModelType(Enum):
     TOKENIZER        = 1
@@ -51,8 +50,7 @@ def convert_conllu_to_txt(tokenizer_dir, short_name, shards=("train", "dev", "te
         if not os.path.exists(output_conllu):
             # the perl script doesn't raise an error code for file not found!
             raise FileNotFoundError("Cannot convert %s as the file cannot be found" % output_conllu)
-        # use an external script to produce the txt files
-        subprocess.check_output(f"perl {CONLLU_TO_TXT_PERL} {output_conllu} > {output_txt}", shell=True)
+        conllu_to_text.main([output_conllu, output_txt])
 
 def strip_accents(word):
     """

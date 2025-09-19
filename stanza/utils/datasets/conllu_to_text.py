@@ -126,11 +126,11 @@ def convert_text(conllu_file, output_file):
             fout.write(output_buffer)
             fout.write("\n")
 
-def main():
+def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument('conllu_file', type=str, help="CoNLL-U file containing tokens and sentence breaks")
     parser.add_argument('output_file', type=str, help="Plaintext file containing the raw input")
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     convert_text(args.conllu_file, args.output_file)
 
