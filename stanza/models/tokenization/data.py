@@ -46,7 +46,7 @@ class TokenizationDataset:
         # set up text from file or input string
         assert txt_file is not None or input_text is not None
         if input_text is None:
-            with open(txt_file) as f:
+            with open(txt_file, encoding="utf-8") as f:
                 text = ''.join(f.readlines()).rstrip()
         else:
             text = input_text
@@ -55,7 +55,7 @@ class TokenizationDataset:
         text_chunks = [pt.rstrip() for pt in text_chunks]
         text_chunks = [pt for pt in text_chunks if pt]
         if label_file is not None:
-            with open(label_file) as f:
+            with open(label_file, encoding="utf-8") as f:
                 labels = ''.join(f.readlines()).rstrip()
                 labels = NEWLINE_WHITESPACE_RE.split(labels)
                 labels = [pt.rstrip() for pt in labels]
