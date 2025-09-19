@@ -39,16 +39,16 @@ class UnknownDatasetError(ValueError):
 
 def convert_conllu_to_txt(tokenizer_dir, short_name, shards=("train", "dev", "test")):
     """
-    Uses the udtools perl script to convert a conllu file to txt
+    Convert the conllu documents for this dataset to a .txt format
 
-    TODO: switch to a python version to get rid of some perl dependence
+    This follows the old conllu_to_text.pl script, except we never
+    used the ZH option anyway, so we didn't reimplement it here
     """
     for dataset in shards:
         output_conllu = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
         output_txt = f"{tokenizer_dir}/{short_name}.{dataset}.txt"
 
         if not os.path.exists(output_conllu):
-            # the perl script doesn't raise an error code for file not found!
             raise FileNotFoundError("Cannot convert %s as the file cannot be found" % output_conllu)
         conllu_to_text.main([output_conllu, output_txt])
 
