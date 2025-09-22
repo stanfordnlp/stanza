@@ -7,8 +7,8 @@ def contract_mwt(infile, outfile, ignore_gapping=True):
     The simplifications are to remove the expanded MWTs, and in the
     case of ignore_gapping=True, remove any copy words for the dependencies
     """
-    with open(outfile, 'w') as fout:
-        with open(infile, 'r') as fin:
+    with open(outfile, 'w', encoding='utf-8') as fout:
+        with open(infile, 'r', encoding='utf-8') as fin:
             idx = 0
             mwt_begin = 0
             mwt_end = -1
