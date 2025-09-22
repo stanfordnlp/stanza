@@ -77,9 +77,9 @@ def run_treebank(mode, paths, treebank, short_name,
     lemma_dir      = paths["LEMMA_DATA_DIR"]
     train_file     = f"{lemma_dir}/{short_name}.train.in.conllu"
     dev_in_file    = f"{lemma_dir}/{short_name}.dev.in.conllu"
-    dev_pred_file  = temp_output_file if temp_output_file else f"{lemma_dir}/{short_name}.dev.pred.conllu"
+    dev_pred_file  = f"{lemma_dir}/{short_name}.dev.pred.conllu"
     test_in_file   = f"{lemma_dir}/{short_name}.test.in.conllu"
-    test_pred_file = temp_output_file if temp_output_file else f"{lemma_dir}/{short_name}.test.pred.conllu"
+    test_pred_file = f"{lemma_dir}/{short_name}.test.pred.conllu"
 
     charlm_args = build_lemma_charlm_args(short_language, dataset, command_args.charlm)
 
@@ -94,15 +94,19 @@ def run_treebank(mode, paths, treebank, short_name,
         if mode == Mode.TRAIN or mode == Mode.SCORE_DEV:
             train_args = ["--train_file", train_file,
                           "--eval_file", dev_in_file,
-                          "--output_file", dev_pred_file,
+                          "--gold_file", dev_in_file,
                           "--shorthand", short_name]
+            if command_args.save_output:
+                train_args.extend(["--output_file", dev_pred_file])
             logger.info("Running identity lemmatizer for {} with args {}".format(treebank, train_args))
             identity_lemmatizer.main(train_args)
         elif mode == Mode.SCORE_TEST:
             train_args = ["--train_file", train_file,
                           "--eval_file", test_in_file,
-                          "--output_file", test_pred_file,
+                          "--gold_file", test_in_file,
                           "--shorthand", short_name]
+            if command_args.save_output:
+                train_args.extend(["--output_file", test_pred_file])
             logger.info("Running identity lemmatizer for {} with args {}".format(treebank, train_args))
             identity_lemmatizer.main(train_args)            
     else:
