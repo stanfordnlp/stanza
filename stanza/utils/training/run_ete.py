@@ -177,7 +177,7 @@ def run_treebank(mode, paths, treebank, short_name,
     elif mode == Mode.SCORE_TEST:
         dataset = 'test'
 
-    if command_args.temp_output:
+    if not command_args.save_output:
         with tempfile.TemporaryDirectory() as ete_dir:
             paths = dict(paths)
             paths["ETE_DATA_DIR"] = ete_dir

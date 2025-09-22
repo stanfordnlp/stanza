@@ -51,7 +51,7 @@ class ArgumentParserWithExtraHelp(argparse.ArgumentParser):
 
 def build_argparse(sub_argparse=None):
     parser = ArgumentParserWithExtraHelp(sub_argparse=sub_argparse, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--save_output', dest='temp_output', default=True, action='store_false', help="Save output - default is to use a temp directory.")
+    parser.add_argument('--save_output', dest='save_output', default=False, action='store_true', help="Save output - default is to use a temp directory.")
 
     parser.add_argument('treebanks', type=str, nargs='+', help='Which treebanks to run on.  Use all_ud or ud_all for all UD treebanks')
 
@@ -195,7 +195,7 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
                 else:
                     logger.info("%s: %s does not exist, training new model" % (treebank, model_path))
 
-        if command_args.temp_output and model_name != 'ete':
+        if not command_args.save_output and model_name != 'ete':
             with tempfile.NamedTemporaryFile() as temp_output_file:
                 run_treebank(mode, paths, treebank, short_name,
                              temp_output_file.name, command_args, extra_args + save_name_args)
