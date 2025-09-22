@@ -134,7 +134,7 @@ def run_treebank(mode, paths, treebank, short_name,
     if mode == Mode.SCORE_TRAIN:
         test_args = ["--mode", "predict", test_type, train_file, "--lang", short_language,
                      "--conll_file", train_pred, "--shorthand", short_name, "--mwt_json_file", train_mwt]
-        test_args = test_args + extra_args
+        test_args = test_args + charlm_args + extra_args
         logger.info("Running test step with args: {}".format(test_args))
         tokenizer.main(test_args)
 
