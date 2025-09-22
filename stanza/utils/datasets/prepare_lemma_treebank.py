@@ -31,7 +31,7 @@ def check_lemmas(train_file):
     # but what if a later dataset includes lemmas?
     #if short_language in ('vi', 'fro', 'th'):
     #    return False
-    with open(train_file) as fin:
+    with open(train_file, encoding="utf-8") as fin:
         for line in fin:
             line = line.strip()
             if not line or line.startswith("#"):
