@@ -1,3 +1,4 @@
+import io
 import logging
 import os
 
@@ -47,9 +48,9 @@ def run_treebank(mode, paths, treebank, short_name,
     depparse_dir   = paths["DEPPARSE_DATA_DIR"]
     train_file     = f"{depparse_dir}/{short_name}.train.in.conllu"
     dev_in_file    = f"{depparse_dir}/{short_name}.dev.in.conllu"
-    dev_pred_file  = temp_output_file if temp_output_file else f"{depparse_dir}/{short_name}.dev.pred.conllu"
+    dev_pred_file  = f"{depparse_dir}/{short_name}.dev.pred.conllu"
     test_in_file   = f"{depparse_dir}/{short_name}.test.in.conllu"
-    test_pred_file = temp_output_file if temp_output_file else f"{depparse_dir}/{short_name}.test.pred.conllu"
+    test_pred_file = f"{depparse_dir}/{short_name}.test.pred.conllu"
 
     eval_file = None
     if '--eval_file' in extra_args:
@@ -84,7 +85,6 @@ def run_treebank(mode, paths, treebank, short_name,
         train_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
                       "--train_file", train_file,
                       "--eval_file", eval_file if eval_file else dev_in_file,
-                      "--output_file", dev_pred_file,
                       "--batch_size", batch_size,
                       "--lang", short_language,
                       "--shorthand", short_name,
@@ -97,37 +97,45 @@ def run_treebank(mode, paths, treebank, short_name,
     if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
         dev_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
                     "--eval_file", eval_file if eval_file else dev_in_file,
-                    "--output_file", dev_pred_file,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
+        if command_args.save_output:
+            dev_args.extend(["--output_file", dev_pred_file])
         dev_args = dev_args + build_depparse_wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
         dev_args = dev_args + extra_args
         logger.info("Running dev depparse for {} with args {}".format(treebank, dev_args))
-        parser.main(dev_args)
+        _, dev_doc = parser.main(dev_args)
 
         if '--no_gold_labels' not in extra_args:
+            if not command_args.save_output:
+                dev_pred_file = "{:C}\n\n".format(dev_doc)
+                dev_pred_file = io.StringIO(dev_pred_file)
             results = common.run_eval_script_depparse(eval_file if eval_file else dev_in_file, dev_pred_file)
             logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
-        if not temp_output_file:
+        if command_args.save_output:
             logger.info("Output saved to %s", dev_pred_file)
 
     if mode == Mode.SCORE_TEST or mode == Mode.TRAIN:
         test_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
                      "--eval_file", eval_file if eval_file else test_in_file,
-                     "--output_file", test_pred_file,
                      "--lang", short_language,
                      "--shorthand", short_name,
                      "--mode", "predict"]
+        if command_args.save_output:
+            test_args.extend(["--output_file", test_pred_file])
         test_args = test_args + build_depparse_wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
         test_args = test_args + extra_args
         logger.info("Running test depparse for {} with args {}".format(treebank, test_args))
-        parser.main(test_args)
+        _, test_doc = parser.main(test_args)
 
         if '--no_gold_labels' not in extra_args:
+            if not command_args.save_output:
+                test_pred_file = "{:C}\n\n".format(test_doc)
+                test_pred_file = io.StringIO(test_pred_file)
             results = common.run_eval_script_depparse(eval_file if eval_file else test_in_file, test_pred_file)
             logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
-        if not temp_output_file:
+        if command_args.save_output:
             logger.info("Output saved to %s", test_pred_file)
 
 
