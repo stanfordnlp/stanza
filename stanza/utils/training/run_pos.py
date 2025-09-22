@@ -5,9 +5,8 @@ import os
 
 from stanza.models import tagger
 
-from stanza.resources.default_packages import no_pretrain_languages, pos_pretrains, default_pretrains
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, add_charlm_args, build_pos_charlm_args, choose_pos_charlm, find_wordvec_pretrain
+from stanza.utils.training.common import Mode, add_charlm_args, build_pos_charlm_args, choose_pos_charlm, find_wordvec_pretrain, build_pos_wordvec_args
 
 logger = logging.getLogger('stanza')
 
@@ -15,24 +14,6 @@ def add_pos_args(parser):
     add_charlm_args(parser)
 
     parser.add_argument('--use_bert', default=False, action="store_true", help='Use the default transformer for this language')
-
-# TODO: move this somewhere common
-def wordvec_args(short_language, dataset, extra_args):
-    if '--wordvec_pretrain_file' in extra_args or '--no_pretrain' in extra_args:
-        return []
-
-    if short_language in no_pretrain_languages:
-        # we couldn't find word vectors for a few languages...:
-        # coptic, naija, old russian, turkish german, swedish sign language
-        logger.warning("No known word vectors for language {}  If those vectors can be found, please update the training scripts.".format(short_language))
-        return ["--no_pretrain"]
-    else:
-        if short_language in pos_pretrains and dataset in pos_pretrains[short_language]:
-            dataset_pretrains = pos_pretrains
-        else:
-            dataset_pretrains = {}
-        wordvec_pretrain = find_wordvec_pretrain(short_language, default_pretrains, dataset_pretrains, dataset)
-        return ["--wordvec_pretrain_file", wordvec_pretrain]
 
 def build_model_filename(paths, short_name, command_args, extra_args):
     short_language, dataset = short_name.split("_", 1)
@@ -45,7 +26,7 @@ def build_model_filename(paths, short_name, command_args, extra_args):
     train_args = ["--shorthand", short_name,
                   "--mode", "train"]
     # TODO: also, this downloads the wordvec, which we might not want to do yet
-    train_args = train_args + wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args + extra_args
+    train_args = train_args + build_pos_wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args + extra_args
     if command_args.save_name is not None:
         train_args.extend(["--save_name", command_args.save_name])
     if command_args.save_dir is not None:
@@ -101,7 +82,7 @@ def run_treebank(mode, paths, treebank, short_name,
                       "--mode", "train"]
         if eval_file is None:
             train_args += ['--eval_file', dev_in_file]
-        train_args = train_args + wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
+        train_args = train_args + build_pos_wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
         train_args = train_args + extra_args
         logger.info("Running train POS for {} with args {}".format(treebank, train_args))
         tagger.main(train_args)
@@ -114,7 +95,7 @@ def run_treebank(mode, paths, treebank, short_name,
                     "--mode", "predict"]
         if eval_file is None:
             dev_args += ['--eval_file', dev_in_file]
-        dev_args = dev_args + wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
+        dev_args = dev_args + build_pos_wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
         dev_args = dev_args + extra_args
         logger.info("Running dev POS for {} with args {}".format(treebank, dev_args))
         tagger.main(dev_args)
@@ -132,7 +113,7 @@ def run_treebank(mode, paths, treebank, short_name,
                      "--mode", "predict"]
         if eval_file is None:
             test_args += ['--eval_file', test_in_file]
-        test_args = test_args + wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
+        test_args = test_args + build_pos_wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
         test_args = test_args + extra_args
         logger.info("Running test POS for {} with args {}".format(treebank, test_args))
         tagger.main(test_args)

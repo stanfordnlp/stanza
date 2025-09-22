@@ -10,6 +10,7 @@ import tempfile
 from enum import Enum
 
 from stanza.resources.default_packages import default_charlms, lemma_charlms, tokenizer_charlms, pos_charlms, depparse_charlms, TRANSFORMERS, TRANSFORMER_LAYERS
+from stanza.resources.default_packages import no_pretrain_languages, pos_pretrains, depparse_pretrains, default_pretrains
 from stanza.models.common.constant import treebank_to_short_name
 from stanza.models.common.utils import ud_scores
 from stanza.resources.common import download, DEFAULT_MODEL_DIR, UnknownLanguageError
@@ -421,3 +422,28 @@ def build_tokenizer_charlm_args(short_language, dataset, charlm, base_args=True,
     charlm = choose_tokenizer_charlm(short_language, dataset, charlm)
     charlm_args = build_charlm_args(short_language, charlm, base_args, model_dir, use_backward_model=False)
     return charlm_args
+
+
+def build_wordvec_args(short_language, dataset, extra_args, task_pretrains):
+    if '--wordvec_pretrain_file' in extra_args or '--no_pretrain' in extra_args:
+        return []
+
+    if short_language in no_pretrain_languages:
+        # we couldn't find word vectors for a few languages...:
+        # coptic, naija, old russian, turkish german, swedish sign language
+        logger.warning("No known word vectors for language {}  If those vectors can be found, please update the training scripts.".format(short_language))
+        return ["--no_pretrain"]
+    else:
+        if short_language in task_pretrains and dataset in task_pretrains[short_language]:
+            dataset_pretrains = task_pretrains
+        else:
+            dataset_pretrains = {}
+        wordvec_pretrain = find_wordvec_pretrain(short_language, default_pretrains, dataset_pretrains, dataset)
+        return ["--wordvec_pretrain_file", wordvec_pretrain]
+
+def build_pos_wordvec_args(short_language, dataset, extra_args):
+    return build_wordvec_args(short_language, dataset, extra_args, pos_pretrains)
+
+def build_depparse_wordvec_args(short_language, dataset, extra_args):
+    return build_wordvec_args(short_language, dataset, extra_args, depparse_pretrains)
+
