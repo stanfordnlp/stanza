@@ -27,6 +27,7 @@ import io
 import os
 import random
 import re
+import sys
 import tempfile
 import zipfile
 
@@ -501,7 +502,11 @@ def augment_quotes(sents, ratio=0.15):
 
         new_sents.append(new_sent)
 
-    print("Augmented {} quotes: {}".format(sum(counts.values()), counts))
+    # we go through this to make it simpler to execute on Windows
+    # rather than nagging the user to set utf-8
+    out = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", write_through=True)
+    print("Augmented {} quotes: {}".format(sum(counts.values()), counts), file=out)
+    out.detach()
     return new_sents
 
 def find_text_idx(sentence):
