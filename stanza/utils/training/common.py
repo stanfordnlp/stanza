@@ -196,7 +196,7 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
                 else:
                     logger.info("%s: %s does not exist, training new model" % (treebank, model_path))
 
-        if not command_args.save_output and model_name != 'ete' and model_name != 'tokenizer' and model_name != 'tagger' and model_name != 'mwt_expander':
+        if not command_args.save_output and model_name != 'ete' and model_name != 'tokenizer' and model_name != 'tagger' and model_name != 'mwt_expander' and model_name != 'parser':
             with tempfile.NamedTemporaryFile() as temp_output_file:
                 run_treebank(mode, paths, treebank, short_name,
                              temp_output_file.name, command_args, extra_args + save_name_args)

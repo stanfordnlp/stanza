@@ -118,7 +118,7 @@ class TestParser:
             args.extend(["--augment_nopunct", "0.0"])
         if extra_args is not None:
             args = args + extra_args
-        trainer = parser.main(args)
+        trainer, _ = parser.main(args)
 
         assert os.path.exists(save_file)
         pt = pretrain.Pretrain(wordvec_pretrain_file)

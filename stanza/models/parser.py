@@ -9,6 +9,7 @@ For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal
 Training and evaluation for the parser.
 """
 
+import io
 import sys
 import os
 import copy
@@ -153,7 +154,7 @@ def main(args=None):
     if args['mode'] == 'train':
         return train(args)
     else:
-        evaluate(args)
+        return evaluate(args)
 
 def model_file_name(args):
     return utils.standard_model_file_name(args, "parser")
@@ -233,9 +234,6 @@ def train(args):
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
-    # pred path
-    system_pred_file = args['output_file']
-
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
         logger.info("Skip training because no data available...")
@@ -296,7 +294,9 @@ def train(args):
                 dev_preds = predict_dataset(trainer, dev_batch)
 
                 dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
-                CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
+
+                system_pred_file = "{:C}\n\n".format(dev_batch.doc)
+                system_pred_file = io.StringIO(system_pred_file)
                 _, _, dev_score = scorer.score(system_pred_file, args['eval_file'])
 
                 train_loss = train_loss / args['eval_interval'] # avg loss per batch
@@ -333,7 +333,8 @@ def train(args):
 
                     dev_preds = predict_dataset(trainer, dev_batch)
                     dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
-                    CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
+                    system_pred_file = "{:C}\n\n".format(dev_batch.doc)
+                    system_pred_file = io.StringIO(system_pred_file)
                     _, _, dev_score = scorer.score(system_pred_file, args['eval_file'])
                     logger.info("Reloaded model with dev score %.4f", dev_score)
 
@@ -379,7 +380,7 @@ def train(args):
         logger.info("Dev set never evaluated.  Saving final model.")
         trainer.save(model_file)
 
-    return trainer
+    return trainer, _
 
 def evaluate(args):
     model_file = model_file_name(args)
@@ -392,7 +393,7 @@ def evaluate(args):
     # load model
     logger.info("Loading model from: {}".format(model_file))
     trainer = Trainer(pretrain=pretrain, model_file=model_file, device=args['device'], args=load_args)
-    return evaluate_trainer(args, trainer, pretrain)
+    return trainer, evaluate_trainer(args, trainer, pretrain)
 
 def evaluate_trainer(args, trainer, pretrain):
     system_pred_file = args['output_file']
@@ -412,7 +413,8 @@ def evaluate_trainer(args, trainer, pretrain):
 
     # write to file and score
     batch.doc.set([HEAD, DEPREL], [y for x in preds for y in x])
-    CoNLL.write_doc2conll(batch.doc, system_pred_file)
+    if system_pred_file:
+        CoNLL.write_doc2conll(batch.doc, system_pred_file)
 
     if args['gold_labels']:
         gold_doc = CoNLL.conll2doc(input_file=args['eval_file'])
@@ -424,10 +426,14 @@ def evaluate_trainer(args, trainer, pretrain):
                     raise ValueError("Gold document {} has a None at sentence {} word {}\n{:C}".format(args['eval_file'], sent_idx, word_idx, sentence))
 
         scorer.score_named_dependencies(batch.doc, gold_doc, args['output_latex'])
+        system_pred_file = "{:C}\n\n".format(batch.doc)
+        system_pred_file = io.StringIO(system_pred_file)            
         _, _, score = scorer.score(system_pred_file, args['eval_file'])
 
         logger.info("Parser score:")
         logger.info("{} {:.2f}".format(args['shorthand'], score*100))
+
+    return batch.doc
 
 if __name__ == '__main__':
     main()
