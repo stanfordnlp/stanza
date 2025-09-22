@@ -9,6 +9,7 @@ In the case of a dataset where all of the MWT exactly split into the words
 composing the MWT, a classifier over the characters is used instead of the seq2seq
 """
 
+import io
 import sys
 import os
 import shutil
@@ -104,9 +105,9 @@ def main(args=None):
     logger.info("Running MWT expander in {} mode".format(args['mode']))
 
     if args['mode'] == 'train':
-        train(args)
+        return train(args)
     else:
-        evaluate(args)
+        return evaluate(args)
 
 def train(args):
     # load data
@@ -129,7 +130,6 @@ def train(args):
         save_each_name = utils.build_save_each_filename(save_each_name)
 
     # pred and gold path
-    system_pred_file = args['output_file']
     gold_file = args['gold_file']
 
     # skip training if the language does not have training or dev data
@@ -174,8 +174,9 @@ def train(args):
     dev_preds = trainer.predict_dict(dev_batch.doc.get_mwt_expansions(evaluation=True))
     doc = copy.deepcopy(dev_batch.doc)
     doc.set_mwt_expansions(dev_preds, fake_dependencies=True)
-    CoNLL.write_doc2conll(doc, system_pred_file)
-    _, _, dev_f = scorer.score(system_pred_file, gold_file)
+    system_preds = "{:C}\n\n".format(doc)
+    system_preds = io.StringIO(system_preds)
+    _, _, dev_f = scorer.score(system_preds, gold_file)
     logger.info("Dev F1 = {:.2f}".format(dev_f * 100))
 
     if args.get('dict_only', False):
@@ -228,8 +229,9 @@ def train(args):
                 dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), dev_preds)
             doc = copy.deepcopy(dev_batch.doc)
             doc.set_mwt_expansions(dev_preds, fake_dependencies=True)
-            CoNLL.write_doc2conll(doc, system_pred_file)
-            _, _, dev_score = scorer.score(system_pred_file, gold_file)
+            system_preds = "{:C}\n\n".format(doc)
+            system_preds = io.StringIO(system_preds)
+            _, _, dev_score = scorer.score(system_preds, gold_file)
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
             logger.info("epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_score))
 
@@ -263,10 +265,13 @@ def train(args):
             dev_preds = trainer.ensemble(dev_batch.doc.get_mwt_expansions(evaluation=True), best_dev_preds)
             doc = copy.deepcopy(dev_batch.doc)
             doc.set_mwt_expansions(dev_preds, fake_dependencies=True)
-            CoNLL.write_doc2conll(doc, system_pred_file)
-            _, _, dev_score = scorer.score(system_pred_file, gold_file)
+            system_preds = "{:C}\n\n".format(doc)
+            system_preds = io.StringIO(system_preds)
+            _, _, dev_score = scorer.score(system_preds, gold_file)
             logger.info("Ensemble dev F1 = {:.2f}".format(dev_score*100))
             best_f = max(best_f, dev_score)
+
+    return trainer, _
 
 def evaluate(args):
     # file paths
@@ -310,13 +315,18 @@ def evaluate(args):
     # write to file and score
     doc = copy.deepcopy(batch.doc)
     doc.set_mwt_expansions(preds, fake_dependencies=True)
-    CoNLL.write_doc2conll(doc, system_pred_file)
+    if system_pred_file is not None:
+        CoNLL.write_doc2conll(doc, system_pred_file)
+    else:
+        system_pred_file = "{:C}\n\n".format(doc)
+        system_pred_file = io.StringIO(system_pred_file)
 
     if gold_file is not None:
         _, _, score = scorer.score(system_pred_file, gold_file)
 
         logger.info("MWT expansion score: {} {:.2f}".format(args['shorthand'], score*100))
 
+    return trainer, doc
 
 if __name__ == '__main__':
     main()

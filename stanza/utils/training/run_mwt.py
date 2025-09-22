@@ -16,6 +16,7 @@ parameter to mark where the mwt arguments start.
 """
 
 
+import io
 import logging
 import math
 
@@ -46,10 +47,10 @@ def run_treebank(mode, paths, treebank, short_name,
     train_file       = f"{mwt_dir}/{short_name}.train.in.conllu"
     dev_in_file      = f"{mwt_dir}/{short_name}.dev.in.conllu"
     dev_gold_file    = f"{mwt_dir}/{short_name}.dev.gold.conllu"
-    dev_output_file  = temp_output_file if temp_output_file else f"{mwt_dir}/{short_name}.dev.pred.conllu"
+    dev_output_file  = f"{mwt_dir}/{short_name}.dev.pred.conllu"
     test_in_file     = f"{mwt_dir}/{short_name}.test.in.conllu"
     test_gold_file   = f"{mwt_dir}/{short_name}.test.gold.conllu"
-    test_output_file = temp_output_file if temp_output_file else f"{mwt_dir}/{short_name}.test.pred.conllu"
+    test_output_file = f"{mwt_dir}/{short_name}.test.pred.conllu"
 
     train_json       = f"{mwt_dir}/{short_name}-ud-train-mwt.json"
     dev_json         = f"{mwt_dir}/{short_name}-ud-dev-mwt.json"
@@ -76,7 +77,6 @@ def run_treebank(mode, paths, treebank, short_name,
         logger.info("Max len: %f" % max_mwt_len)
         train_args = ['--train_file', train_file,
                       '--eval_file', eval_file if eval_file else dev_in_file,
-                      '--output_file', dev_output_file,
                       '--gold_file', gold_file if gold_file else dev_gold_file,
                       '--lang', short_language,
                       '--shorthand', short_name,
@@ -88,28 +88,36 @@ def run_treebank(mode, paths, treebank, short_name,
 
     if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
         dev_args = ['--eval_file', eval_file if eval_file else dev_in_file,
-                    '--output_file', dev_output_file,
                     '--gold_file', gold_file if gold_file else dev_gold_file,
                     '--lang', short_language,
                     '--shorthand', short_name,
                     '--mode', 'predict']
+        if command_args.save_output:
+            dev_args.extend(['--output_file', dev_output_file])
         dev_args = dev_args + extra_args
         logger.info("Running dev step with args: {}".format(dev_args))
-        mwt_expander.main(dev_args)
+        _, dev_doc = mwt_expander.main(dev_args)
+        if not command_args.save_output:
+            dev_output_file = "{:C}\n\n".format(dev_doc)
+            dev_output_file = io.StringIO(dev_output_file)
 
         results = common.run_eval_script_mwt(gold_file if gold_file else dev_gold_file, dev_output_file)
         logger.info("Finished running dev set on\n{}\n{}".format(treebank, results))
 
     if mode == Mode.SCORE_TEST:
         test_args = ['--eval_file', eval_file if eval_file else test_in_file,
-                     '--output_file', test_output_file,
                      '--gold_file', gold_file if gold_file else test_gold_file,
                      '--lang', short_language,
                      '--shorthand', short_name,
                      '--mode', 'predict']
+        if command_args.save_output:
+            test_args.extend(['--output_file', test_output_file])
         test_args = test_args + extra_args
         logger.info("Running test step with args: {}".format(test_args))
-        mwt_expander.main(test_args)
+        _, test_doc = mwt_expander.main(test_args)
+        if not command_args.save_output:
+            test_output_file = "{:C}\n\n".format(test_doc)
+            test_output_file = io.StringIO(test_output_file)
 
         results = common.run_eval_script_mwt(gold_file if gold_file else test_gold_file, test_output_file)
         logger.info("Finished running test set on\n{}\n{}".format(treebank, results))
