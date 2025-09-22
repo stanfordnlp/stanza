@@ -55,12 +55,17 @@ def main(args=None):
 
     # write to file and score
     batch.doc.set([LEMMA], preds)
-    CoNLL.write_doc2conll(batch.doc, system_pred_file)
+    if system_pred_file is not None:
+        CoNLL.write_doc2conll(batch.doc, system_pred_file)
     if gold_file is not None:
+        system_pred_file = "{:C}\n\n".format(batch.doc)
+        system_pred_file = io.StringIO(system_pred_file)
         _, _, score = scorer.score(system_pred_file, gold_file)
 
         logger.info("Lemma score:")
         logger.info("{} {:.2f}".format(args['shorthand'], score*100))
+
+    return None, batch.doc
 
 if __name__ == '__main__':
     main()
