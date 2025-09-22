@@ -140,15 +140,31 @@ def get_adaptive_eval_interval(cur_dev_size, thres_dev_size, base_interval):
 
 # ud utils
 def ud_scores(gold_conllu_file, system_conllu_file):
-    try:
-        gold_ud = ud_eval.load_conllu_file(gold_conllu_file)
-    except UDError as e:
-        raise UDError("Could not read %s" % gold_conllu_file) from e
+    def has_readline(f):
+        return hasattr(f, 'readline') and callable(f.readline)
 
-    try:
-        system_ud = ud_eval.load_conllu_file(system_conllu_file)
-    except UDError as e:
-        raise UDError("Could not read %s" % system_conllu_file) from e
+    if has_readline(gold_conllu_file):
+        try:
+            gold_ud = ud_eval.load_conllu(gold_conllu_file, '', {})
+        except UDError as e:
+            raise UDError("Could not process gold UD file") from e
+    else:
+        try:
+            gold_ud = ud_eval.load_conllu_file(gold_conllu_file)
+        except UDError as e:
+            raise UDError("Could not read %s" % gold_conllu_file) from e
+
+    if has_readline(system_conllu_file):
+        try:
+            system_ud = ud_eval.load_conllu(system_conllu_file, '', {})
+        except UDError as e:
+            raise UDError("Could not process system UD file") from e
+    else:
+        try:
+            system_ud = ud_eval.load_conllu_file(system_conllu_file)
+        except UDError as e:
+            raise UDError("Could not read %s" % system_conllu_file) from e
+
     evaluation = ud_eval.evaluate(gold_ud, system_ud)
 
     return evaluation

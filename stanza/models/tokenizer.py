@@ -135,9 +135,9 @@ def main(args=None):
     utils.ensure_dir(os.path.split(args['save_name'])[0])
 
     if args['mode'] == 'train':
-        train(args)
+        return train(args)
     else:
-        evaluate(args)
+        return evaluate(args)
 
 def train(args):
     if args['use_dictionary']:
@@ -242,6 +242,8 @@ def train(args):
         logger.info('Dev set never evaluated.  Saving final model')
         trainer.save(args['save_name'])
 
+    return trainer, None
+
 def evaluate(args):
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
     trainer = Trainer(args=args, model_file=args['load_name'] or args['save_name'], device=args['device'], foundation_cache=None)
@@ -259,10 +261,11 @@ def evaluate(args):
 
     batches = TokenizationDataset(args, input_files=eval_input_files, vocab=vocab, evaluation=True, dictionary=trainer.dictionary)
 
-    oov_count, N, _, _ = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
+    oov_count, N, _, doc = output_predictions(args['conll_file'], trainer, batches, vocab, mwt_dict, args['max_seqlen'])
 
     logger.info("OOV rate: {:6.3f}% ({:6d}/{:6d})".format(oov_count / N * 100, oov_count, N))
 
+    return trainer, doc
 
 if __name__ == '__main__':
     main()
