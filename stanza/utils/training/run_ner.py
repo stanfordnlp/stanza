@@ -93,8 +93,7 @@ def build_model_filename(paths, short_name, command_args, extra_args):
 # However, to keep the naming consistent, we leave the
 # method which does the training as run_treebank
 # TODO: rename treebank -> dataset everywhere
-def run_treebank(mode, paths, treebank, short_name,
-                 temp_output_file, command_args, extra_args):
+def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
     ner_dir = paths["NER_DATA_DIR"]
     language, dataset = short_name.split("_")
 

@@ -66,8 +66,7 @@ def uses_dictionary(short_language):
         return True
     return False
 
-def run_treebank(mode, paths, treebank, short_name,
-                 temp_output_file, command_args, extra_args):
+def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
 
     short_language, dataset = short_name.split("_", 1)

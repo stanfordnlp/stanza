@@ -168,8 +168,7 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
     results = common.run_eval_script(gold_file, ete_file)
     logger.info("{} {} models on {} {} data:\n{}".format(RESULTS_STRING, short_name, test_short_name, dataset, results))
 
-def run_treebank(mode, paths, treebank, short_name,
-                 temp_output_file, command_args, extra_args):
+def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
     if mode == Mode.TRAIN:
         dataset = 'train'
     elif mode == Mode.SCORE_DEV:

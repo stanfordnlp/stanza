@@ -38,8 +38,7 @@ def check_mwt(filename):
     data = doc.get_mwt_expansions(False)
     return len(data) > 0
 
-def run_treebank(mode, paths, treebank, short_name,
-                 temp_output_file, command_args, extra_args):
+def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
     short_language = short_name.split("_")[0]
 
     mwt_dir          = paths["MWT_DATA_DIR"]
