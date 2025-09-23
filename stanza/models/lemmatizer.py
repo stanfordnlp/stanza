@@ -145,8 +145,7 @@ def train(args):
     model_file = build_model_filename(args)
     logger.info("Using full savename: %s", model_file)
 
-    # pred and gold path
-    system_pred_file = args['output_file']
+    # gold path
     gold_file = args['eval_file']
 
     utils.print_config(args)
@@ -169,7 +168,8 @@ def train(args):
     logger.info("Evaluating on dev set...")
     dev_preds = trainer.predict_dict(dev_batch.doc.get([TEXT, UPOS]))
     dev_batch.doc.set([LEMMA], dev_preds)
-    CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
+    system_pred_file = "{:C}\n\n".format(dev_batch.doc)
+    system_pred_file = io.StringIO(system_pred_file)
     _, _, dev_f = scorer.score(system_pred_file, gold_file)
     logger.info("Dev F1 = {:.2f}".format(dev_f * 100))
 
@@ -223,7 +223,8 @@ def train(args):
                 logger.info("[Ensembling dict with seq2seq model...]")
                 dev_preds = trainer.ensemble(dev_batch.doc.get([TEXT, UPOS]), dev_preds)
             dev_batch.doc.set([LEMMA], dev_preds)
-            CoNLL.write_doc2conll(dev_batch.doc, system_pred_file)
+            system_pred_file = "{:C}\n\n".format(dev_batch.doc)
+            system_pred_file = io.StringIO(system_pred_file)
             _, _, dev_score = scorer.score(system_pred_file, gold_file)
 
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
@@ -302,8 +303,11 @@ def evaluate(args):
 
     # write to file and score
     batch.doc.set([LEMMA], preds)
-    CoNLL.write_doc2conll(batch.doc, system_pred_file)
+    if system_pred_file:
+        CoNLL.write_doc2conll(batch.doc, system_pred_file)
 
+    system_pred_file = "{:C}\n\n".format(batch.doc)
+    system_pred_file = io.StringIO(system_pred_file)
     _, _, score = scorer.score(system_pred_file, args['eval_file'])
     logger.info("Finished evaluation\nLemma score:\n{} {:.2f}".format(args['shorthand'], score*100))
 
