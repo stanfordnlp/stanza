@@ -5,7 +5,6 @@ import os
 import pathlib
 import random
 import sys
-import tempfile
 
 from enum import Enum
 
@@ -196,13 +195,7 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
                 else:
                     logger.info("%s: %s does not exist, training new model" % (treebank, model_path))
 
-        if not command_args.save_output and model_name != 'ete' and model_name != 'tokenizer' and model_name != 'tagger' and model_name != 'mwt_expander' and model_name != 'parser' and model_name != 'lemma':
-            with tempfile.NamedTemporaryFile() as temp_output_file:
-                run_treebank(mode, paths, treebank, short_name,
-                             temp_output_file.name, command_args, extra_args + save_name_args)
-        else:
-            run_treebank(mode, paths, treebank, short_name,
-                         None, command_args, extra_args + save_name_args)
+        run_treebank(mode, paths, treebank, short_name, command_args, extra_args + save_name_args)
 
 def run_eval_script(gold_conllu_file, system_conllu_file, evals=None):
     """ Wrapper for lemma scorer. """

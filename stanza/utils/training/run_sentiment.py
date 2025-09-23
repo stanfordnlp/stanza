@@ -66,8 +66,7 @@ def build_model_filename(paths, short_name, command_args, extra_args):
     return save_name
 
 
-def run_dataset(mode, paths, treebank, short_name,
-                temp_output_file, command_args, extra_args):
+def run_dataset(mode, paths, treebank, short_name, command_args, extra_args):
     sentiment_dir = paths["SENTIMENT_DATA_DIR"]
     short_language, dataset = short_name.split("_", 1)
 

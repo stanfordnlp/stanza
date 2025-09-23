@@ -22,7 +22,7 @@ def add_charlm_args(parser):
 
 
 def run_treebank(mode, paths, treebank, short_name,
-                 temp_output_file, command_args, extra_args):
+                 command_args, extra_args):
     short_language, dataset_name = short_name.split("_", 1)
 
     train_dir = os.path.join(paths["CHARLM_DATA_DIR"], short_language, dataset_name, "train")
