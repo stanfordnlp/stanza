@@ -157,8 +157,12 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
  
                 res = self.run(doc, True)
                 # measure zero prediction accuracy
-                zero_targets = torch.tensor(doc["is_zero"], device=res.zero_scores.device)
-                zero_preds = (res.zero_scores > 0).view(-1).to(zero_targets.dtype)
+                zero_preds = (res.zero_scores > 0).view(-1).to(device=res.zero_scores.device)
+                is_zero = doc.get("is_zero")
+                if is_zero is None:
+                    zero_targets = torch.zeros_like(zero_preds, device=zero_preds.device)
+                else:
+                    zero_targets = torch.tensor(is_zero, device=zero_preds.device)
                 z_correct += (zero_preds == zero_targets).sum().item()
                 z_total += zero_targets.numel()
 
@@ -499,10 +503,12 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 if res.zero_scores.size(0) == 0:
                     z_loss = 0.0 # since there are no corefs
                 else:
-                    z_loss = sigmoid_focal_loss(res.zero_scores.squeeze(-1),
-                                                     (torch.tensor(doc["is_zero"])
-                                                      .to(res.zero_scores.device).float()),
-                                                     reduction="mean")
+                    is_zero = doc.get("is_zero")
+                    if is_zero is None:
+                        is_zero = torch.zeros_like(res.zero_scores.squeeze(-1), device=res.zero_scores.device, dtype=torch.float)
+                    else:
+                        is_zero = torch.tensor(is_zero).to(res.zero_scores.device).float()
+                    z_loss = sigmoid_focal_loss(res.zero_scores.squeeze(-1), is_zero, reduction="mean")
 
                 c_loss = self._coref_criterion(res.coref_scores, res.coref_y)
 
