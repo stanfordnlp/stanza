@@ -311,12 +311,17 @@ def main():
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--directory', type=str, help="the name of the subfolder for data conversion")
     group.add_argument('--project', type=str, help="Look for and use a set of datasets for data conversion - Slavic or Hungarian")
+    group.add_argument('--languages', type=str, help="Only use these specific languages from the coref directory")
 
     args = parser.parse_args()
     coref_input_path = paths['COREF_BASE']
     coref_output_path = paths['COREF_DATA_DIR']
 
-    if args.project:
+    if args.languages:
+        langs = args.languages.split(",")
+        project = "_".join(langs)
+        train_filenames, dev_filenames = get_dataset_by_language(coref_input_path, langs)
+    elif args.project:
         if args.project == 'baltoslavic':
             project = "baltoslavic_udcoref"
             langs = ('Polish', 'Russian', 'Czech', 'Old_Church_Slavonic', 'Lithuanian')
