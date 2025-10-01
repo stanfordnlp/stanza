@@ -478,6 +478,14 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         docs_ids = list(range(len(docs)))
         avg_spans = docs.avg_span
 
+        # for a brand new model, we set the zeros prediction to all 0 if the dataset has no zeros
+        training_has_zeros = any('is_zero' in doc for doc in docs)
+        if not training_has_zeros:
+            logger.info("No zeros found in the dataset.  The zeros predictor will set to 0")
+            if self.epochs_trained == 0:
+                # new model, set it to always predict not-zero
+                self.disable_zeros_predictor()
+
         best_f1 = None
         for epoch in range(self.epochs_trained, self.config.train_epochs):
             self.training = True
@@ -500,7 +508,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 res = self.run(doc)
 
-                if res.zero_scores.size(0) == 0:
+                if res.zero_scores.size(0) == 0 or not training_has_zeros:
                     z_loss = 0.0 # since there are no corefs
                 else:
                     is_zero = doc.get("is_zero")
@@ -522,7 +530,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 running_c_loss += c_loss.item()
                 running_s_loss += s_loss.item()
-                if res.zero_scores.size(0) != 0:
+                if res.zero_scores.size(0) != 0 and training_has_zeros:
                     running_z_loss += z_loss.item()
 
                 # log every 100 docs
@@ -531,7 +539,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                         'train_c_loss': c_loss.item(),
                         'train_s_loss': s_loss.item(),
                     }
-                    if res.zero_scores.size(0) != 0:
+                    if res.zero_scores.size(0) != 0 and training_has_zeros:
                         logged['train_z_loss'] = z_loss.item()
                     wandb.log(logged)
 
@@ -666,6 +674,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             nn.ReLU(),
             nn.Linear(bert_emb, 1)
         ).to(self.config.device)
+        if not hasattr(self.config, 'use_zeros') or not self.config.use_zeros:
+            self.disable_zeros_predictor()
 
         self.trainable: Dict[str, torch.nn.Module] = {
             "bert": self.bert, "we": self.we,
@@ -673,6 +683,10 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             "pw": self.pw, "a_scorer": self.a_scorer,
             "sp": self.sp, "zeros_predictor": self.zeros_predictor
         }
+
+    def disable_zeros_predictor(self):
+        nn.init.zeros_(self.zeros_predictor[-1].weight)
+        nn.init.zeros_(self.zeros_predictor[-1].bias)
 
     def _build_optimizers(self):
         n_docs = len(self._get_docs(self.config.train_data))
