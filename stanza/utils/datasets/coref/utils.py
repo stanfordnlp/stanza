@@ -56,7 +56,7 @@ def find_cconj_head(heads, upos, start, end):
         return cc_indexes[0] + start
     return None
 
-def process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_speakers, use_cconj_heads=True):
+def process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_speakers, use_cconj_heads=True, lang=None):
     """
     doc_id: a string naming the document
     part_id: if the document has a particular subpart (can be blank)
@@ -154,4 +154,6 @@ def process_document(pipe, doc_id, part_id, sentences, coref_spans, sentence_spe
     }
     if part_id is not None:
         processed["part_id"] = part_id
+    if lang is not None:
+        processed["lang"] = lang
     return processed
