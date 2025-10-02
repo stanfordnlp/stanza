@@ -156,7 +156,7 @@ def main():
         input_filename = os.path.join(hebrew_base_path, input_filename)
         assert os.path.exists(input_filename)
         docs = read_doc(tokenizer, input_filename)
-        dataset = [process_document(pipe, doc.doc_id, "", doc.sentences, doc.coref_spans, None) for doc in tqdm(docs)]
+        dataset = [process_document(pipe, doc.doc_id, "", doc.sentences, doc.coref_spans, None, lang="he") for doc in tqdm(docs)]
 
         output_filename = os.path.join(paths["COREF_DATA_DIR"], output_filename)
         write_json_file(output_filename, dataset)
