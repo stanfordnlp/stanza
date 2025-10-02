@@ -1,5 +1,4 @@
-"""
-Convert the coref annotation of IAHLT to the Stanza coref format
+"""Convert the coref annotation of IAHLT to the Stanza coref format
 
 This dataset is available at
 
@@ -16,8 +15,10 @@ Then run
 
 python3 stanza/utils/datasets/coref/convert_hebrew_iahlt.py
 
-TODO: the scores from this model are horrible, only 30 F1.
-Need to either verify the usage elsewhere or double check the outputs of the conversion
+The scores for models built from the dataset are pretty lousy in
+general, but seem to be in line with the scores obtained by other
+people working on this data.  For example, the authors said they had a
+52 F1, whereas if we use roberta-xlm, we get 50.
 """
 
 from collections import defaultdict, namedtuple
