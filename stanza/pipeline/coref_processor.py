@@ -83,6 +83,11 @@ class CorefProcessor(UDProcessor):
 
         self._model = model
 
+        # coref_use_zeros=False will turn off creating new nodes and attaching mentions to those zero nodes
+        self._use_zeros = config.get('use_zeros', True)
+        if isinstance(self._use_zeros, str):
+            self._use_zeros = self._use_zeros.lower() != 'false'
+
     def process(self, document):
         sentences = document.sentences
 
@@ -189,8 +194,10 @@ class CorefProcessor(UDProcessor):
     def _handle_zero_anaphora(self, document, results, sent_ids, word_pos):
         """Handle zero anaphora by creating zero nodes and updating coreference clusters."""
         if results.zero_scores is None or results.word_clusters is None:
-            return
-            
+            return {}
+        if not self._use_zeros:
+            return {}
+
         zero_scores = results.zero_scores.squeeze(-1) if results.zero_scores.dim() > 1 else results.zero_scores
         is_zero = []
         
