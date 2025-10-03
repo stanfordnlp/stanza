@@ -486,6 +486,19 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 # new model, set it to always predict not-zero
                 self.disable_zeros_predictor()
 
+        attenuated_languages = set()
+        if self.config.lang_lr_attenuation:
+            attenuated_languages = self.config.lang_lr_attenuation.split(",")
+            logger.info("Attenuating LR for the following languages: %s", attenuated_languages)
+
+        lr_scaled_languages = dict()
+        if self.config.lang_lr_weights:
+            scaled_languages = self.config.lang_lr_weights.split(",")
+            for piece in scaled_languages:
+                pieces = piece.split("=")
+                lr_scaled_languages[pieces[0]] = float(pieces[1])
+            logger.info("Scaling LR for the following languages: %s", lr_scaled_languages)
+
         best_f1 = None
         for epoch in range(self.epochs_trained, self.config.train_epochs):
             self.training = True
@@ -525,6 +538,13 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                               + self._span_criterion(res.span_scores[:, :, 1], res.span_y[1])) / avg_spans / 2
                 else:
                     s_loss = torch.zeros_like(c_loss)
+
+                lr_scale = lr_scaled_languages.get(doc.get("lang"), 1.0)
+                if doc.get("lang") in attenuated_languages:
+                    lr_scale = lr_scale / max(epoch, 1.0)
+                c_loss = c_loss * lr_scale
+                s_loss = s_loss * lr_scale
+                z_loss = z_loss * lr_scale
 
                 (c_loss + s_loss + z_loss).backward()
 

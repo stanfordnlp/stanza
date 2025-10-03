@@ -122,6 +122,22 @@ max_train_len = 5000
 # if this is set to false, the model will set its zero_predictor to, well, 0
 use_zeros = true
 
+# two different methods for specifying how to weaken the LR for certain languages
+# however, in their current forms, on an HE experiment, neither worked
+# better than just mixing the two datasets together unweighted
+# Starting from the HE IAHLT dataset, and possibly mixing in the ger/rom ud coref,
+# averaging over 5 different seeds, we got the following results:
+#   HE only:    0.497
+#   Attenuated: 0.508
+#   Scaled:     0.517
+#   Mixed:      0.517
+# the attenuation scheme for that experiment was 1/epoch
+# These were the settings
+#   --lang_lr_weights es=0.2,en=0.2,de=0.2,ca=0.2,fr=0.2,no=0.2
+#   --lang_lr_attenuation es,en,de,ca,fr,no
+lang_lr_attenuation = ""
+lang_lr_weights = ""
+
 # =============================================================================
 # Extra keyword arguments to be passed to bert tokenizers of specified models
 [DEFAULT.tokenizer_kwargs]
