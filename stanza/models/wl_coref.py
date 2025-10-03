@@ -134,6 +134,11 @@ if __name__ == "__main__":
     argparser.add_argument("--seed", type=int, default=2020,
                            help="Random seed to set")
 
+    argparser.add_argument("--lang_lr_attenuation", type=str, default=None,
+                           help="A comma-separated list of languages where the LR will be scaled by 1/epoch, such as --lang_lr_attenuation=es,en,de,...")
+    argparser.add_argument("--lang_lr_weights", type=str, default=None,
+                           help="A comma-separated list of languages and their weights of LR scaling for different languages, such as es=0.5,en=1.0,...")
+
     argparser.add_argument("--max_train_len", type=int, default=5000,
                            help="Skip any documents longer than this maximum length")
     argparser.add_argument("--no_max_train_len", action="store_const", const=float("inf"), dest="max_train_len",
@@ -195,6 +200,11 @@ if __name__ == "__main__":
 
     if args.max_train_len:
         config.max_train_len = args.max_train_len
+
+    if args.lang_lr_attenuation:
+        config.lang_lr_attenuation = args.lang_lr_attenuation
+    if args.lang_lr_weights:
+        config.lang_lr_weights = args.lang_lr_weights
 
     # if wandb, generate wandb configuration 
     if args.mode == "train":

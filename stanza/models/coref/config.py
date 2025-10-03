@@ -67,3 +67,5 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
     max_train_len: int
     use_zeros: bool
 
+    lang_lr_attenuation: str
+    lang_lr_weights: str
