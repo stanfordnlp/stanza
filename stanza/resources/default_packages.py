@@ -442,6 +442,7 @@ optional_coref = {
     "en": "udcoref_xlm-roberta-lora",
     "es": "udcoref_xlm-roberta-lora",
     "fr": "udcoref_xlm-roberta-lora",
+    "he": "iahlt_xlm-roberta-lora",
     "hi": "deeph_muril-large-cased-lora",
     # UD Coref has both nb and nn datasets for Norwegian
     "nb": "udcoref_xlm-roberta-lora",
