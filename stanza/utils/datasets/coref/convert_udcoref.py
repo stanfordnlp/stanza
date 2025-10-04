@@ -282,13 +282,16 @@ def process_dataset(short_name, coref_output_path, split_test, train_files, dev_
         sections.append(full_test_section)
 
 
+    output_filenames = []
     for section_data, section_name in zip(sections, section_names):
         converted_section = process_documents(section_data, augment=(section_name=="train"))
 
         os.makedirs(coref_output_path, exist_ok=True)
-        output_filename = os.path.join(coref_output_path, "%s.%s.json" % (short_name, section_name))
+        output_filenames.append("%s.%s.json" % (short_name, section_name))
+        output_filename = os.path.join(coref_output_path, output_filenames[-1])
         with open(output_filename, "w", encoding="utf-8") as fout:
             json.dump(converted_section, fout, indent=2)
+    return output_filenames
 
 def get_dataset_by_language(coref_input_path, langs):
     conll_path = os.path.join(coref_input_path, "CorefUD-1.3-public", "data")
@@ -301,21 +304,22 @@ def get_dataset_by_language(coref_input_path, langs):
     dev_filenames = sorted(dev_filenames)
     return train_filenames, dev_filenames
 
-def main():
+def main(args=None):
     paths = get_default_paths()
     parser = argparse.ArgumentParser(
         prog='Convert UDCoref Data',
     )
     parser.add_argument('--split_test', default=None, type=float, help='How much of the data to randomly split from train to make a test set')
+    parser.add_argument('--output_directory', default=None, type=str, help='Where to output the data (defaults to %s)' % paths['COREF_DATA_DIR'])
 
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument('--directory', type=str, help="the name of the subfolder for data conversion")
     group.add_argument('--project', type=str, help="Look for and use a set of datasets for data conversion - Slavic or Hungarian")
     group.add_argument('--languages', type=str, help="Only use these specific languages from the coref directory")
 
-    args = parser.parse_args()
+    args = parser.parse_args(args=args)
     coref_input_path = paths['COREF_BASE']
-    coref_output_path = paths['COREF_DATA_DIR']
+    coref_output_path = args.output_directory if args.output_directory else paths['COREF_DATA_DIR']
 
     if args.languages:
         langs = args.languages.split(",")
@@ -369,7 +373,7 @@ def main():
             conll_path = args.directory
         train_filenames = sorted(glob.glob(os.path.join(conll_path, f"*train.conllu")))
         dev_filenames = sorted(glob.glob(os.path.join(conll_path, f"*dev.conllu")))
-    process_dataset(project, coref_output_path, args.split_test, train_filenames, dev_filenames)
+    return process_dataset(project, coref_output_path, args.split_test, train_filenames, dev_filenames)
 
 if __name__ == '__main__':
     main()
