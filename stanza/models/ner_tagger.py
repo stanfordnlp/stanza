@@ -488,8 +488,8 @@ def load_model(args, model_file):
         if k.endswith('_dir') or k.endswith('_file') or k in ['batch_size', 'ignore_tag_scores', 'log_norms', 'mode', 'scheme', 'shorthand']:
             loaded_args[k] = args[k]
     save_dir, save_name = os.path.split(model_file)
-    args['save_dir'] = save_dir
-    args['save_name'] = save_name
+    loaded_args['save_dir'] = save_dir
+    loaded_args['save_name'] = save_name
     return loaded_args, trainer, vocab
 
 
