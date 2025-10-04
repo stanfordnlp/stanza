@@ -469,6 +469,15 @@ IAHLT contains NER for Hebrew in the knesset treebank
     https://github.com/UniversalDependencies/UD_Hebrew-IAHLTknesset
   - change to the dev branch in that repo
     python3 stanza/utils/datasets/ner/prepare_ner_dataset.py he_iahlt
+
+ang_ewt is an Old English dataset available here:
+  https://github.com/dmetola/Old_English-OEDT/tree/main
+  As more information, including a citation, will be added here
+  - install in NERBASE:
+    mkdir $NERBASE/ang
+    cd $NERBASE/ang
+    git clone git@github.com:dmetola/Old_English-OEDT.git
+  - python3 stanza/utils/datasets/ner/prepare_ner_dataset.py ang_ewt
 """
 
 import glob
@@ -1471,8 +1480,13 @@ def process_he_iahlt(paths, short_name):
     base_output_path = paths["NER_DATA_DIR"]
     convert_he_iahlt.convert_iahlt(udbase, base_output_path, "he_iahlt")
 
+def process_ang_ewt(paths, short_name):
+    assert short_name == 'ang_ewt'
+    base_input_path = os.path.join(paths["NERBASE"], "ang", "Old_English-OEDT")
+    convert_bio_to_json(base_input_path, paths["NER_DATA_DIR"], short_name)
 
 DATASET_MAPPING = {
+    "ang_ewt":           process_ang_ewt,
     "ar_aqmar":          process_ar_aqmar,
     "bn_daffodil":       process_bn_daffodil,
     "da_ddt":            process_da_ddt,
