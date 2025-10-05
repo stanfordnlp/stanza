@@ -35,7 +35,7 @@ def main():
             udcoref_train = json.load(fin)
         mixed_train = hebrew_train + udcoref_train
         with open(os.path.join(coref_output_path, "he_mixed.train.json"), "w", encoding="utf-8") as fout:
-            json.dump(mixed_train, fout, indent=2, ensure_ascii=False))
+            json.dump(mixed_train, fout, indent=2, ensure_ascii=False)
 
         shutil.copyfile(os.path.join(temp_dir_path, hebrew_filenames[1]),
                         os.path.join(coref_output_path, "he_mixed.dev.json"))
