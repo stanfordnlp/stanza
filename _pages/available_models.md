@@ -16,11 +16,15 @@ Pretrained models in Stanza can be divided into two categories, based on the dat
 ## Available UD Models
 
 Tokenization, MWT (if applicable), POS, Lemma, and dependency parsing
-is provided using data from [Universal Dependencies
-v2.12](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5150).
+is provided using data from
+[Universal Dependencies v2.12](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5150).
 Results for these models are on the
 [performance](https://stanfordnlp.github.io/stanza/performance.html) page.
 There are also past results from previous versions of the models.
+
+## Combined Models
+
+For some languages, [we built models out of multiple datasets at once](combined_models.md), getting wider coverage and better performance.  New languages can be added on request.  When available, the combined models are the defaults.
 
 ## Other Available Pipelines
 

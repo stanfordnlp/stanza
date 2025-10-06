@@ -11,12 +11,15 @@ parent: Models
 
 The default models for some languages are "combined".  The goal is to get better coverage of the language, hopefully without sacrificing consistency in the annotation scheme.  In each case, the data used to train the models is a combination of multiple UD datasets.
 
-| Language | Datasets | Other |
+| Language | UD Datasets | Other |
 | :------- | :------------ | :------ |
 | English | EWT, GUM, GUMReddit, PUD, Pronouns | |
 | French  | GSD, ParisStories, Rhapsodie, Sequoia | |
+| German  | GSD | [Lemmas data composed from German Wiktionary](https://github.com/stanfordnlp/handparsed-treebank/blob/master/german-lemmas-wiki/de_wiki_lemmas.conllu) |
 | Hebrew  | IAHLTwiki | [HTB fork from IAHLT](https://github.com/IAHLT/UD_Hebrew) |
 | Italian | ISDT, VIT, PoSTWITA, and TWITTIRO | [MWT list from Prof. Attardi](https://github.com/stanfordnlp/handparsed-treebank/blob/master/italian-mwt/italian.mwt) |
+| Japanese | GSD | [Parsed data from CMU](https://github.com/stanfordnlp/handparsed-treebank/blob/master/japanese-handparsed/spaces-ready-checked.conllu) |
+| Spanish | AnCora, GSD | [MWT and lemmas for clitics and adjectives](https://github.com/stanfordnlp/handparsed-treebank/blob/master/spanish-mwt/adjectives.conllu) |
 
 Other data sets would be added, or combined models for other languages
 created, but there are often data problems preventing that.  For
