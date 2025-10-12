@@ -361,7 +361,7 @@ ner_charlms = {
 # default ner for languages
 default_ners = {
     "af": "nchlt",
-    "ang": "ewt_charlm",
+    "ang": "oedt_charlm",
     "ar": "aqmar_charlm",
     "bg": "bsnlp19",
     "da": "ddt",
