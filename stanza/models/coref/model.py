@@ -145,6 +145,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         s_total = 0
         z_correct = 0
         z_total = 0
+        z_tp = 0  # true positives
+        z_fp = 0  # false positives
+        z_fn = 0  # false negatives
 
         with conll.open_(self.config, self.epochs_trained, data_split) \
                 as (gold_f, pred_f):
@@ -165,6 +168,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     zero_targets = torch.tensor(is_zero, device=zero_preds.device)
                 z_correct += (zero_preds == zero_targets).sum().item()
                 z_total += zero_targets.numel()
+
+                # Calculate precision/recall metrics
+                z_tp += ((zero_preds == 1) & (zero_targets == 1)).sum().item()
+                z_fp += ((zero_preds == 1) & (zero_targets == 0)).sum().item()
+                z_fn += ((zero_preds == 0) & (zero_targets == 1)).sum().item()
 
                 if (res.coref_y.argmax(dim=1) == 1).all():
                     logger.warning(f"EVAL: skipping document with no corefs...")
@@ -196,6 +204,11 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 del res
 
+                # Calculate zero anaphora metrics
+                z_precision = z_tp / (z_tp + z_fp) if (z_tp + z_fp) > 0 else 0
+                z_recall = z_tp / (z_tp + z_fn) if (z_tp + z_fn) > 0 else 0
+                z_f1 = 2 * z_precision * z_recall / (z_precision + z_recall) if (z_precision + z_recall) > 0 else 0
+
                 pbar.set_description(
                     f"{data_split}:"
                     f" | WL: "
@@ -208,12 +221,13 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                     f" f1: {s_lea[0]:.5f},"
                     f" p: {s_lea[1]:.5f},"
                     f" r: {s_lea[2]:<.5f}"
-                    f" | ZA: {z_correct / z_total:<.5f}"
+                    f" | Zero: acc {z_correct / z_total:<.5f}, f1: {z_f1:.5f}, p: {z_precision:.5f}, r: {z_recall:.5f}"
                 )
             logger.info(f"CoNLL-2012 3-Score Average : {w_checker.bakeoff:.5f}")
             logger.info(f"Zero prediction accuracy: {z_correct / z_total:.5f}")
+            logger.info(f"Zero prediction P/R/F1: p: {z_tp / (z_tp + z_fp) if (z_tp + z_fp) > 0 else 0:.5f}, r: {z_tp / (z_tp + z_fn) if (z_tp + z_fn) > 0 else 0:.5f}, f1: {z_f1:.5f}")
 
-        return (running_loss / len(docs), *s_checker.total_lea, *w_checker.total_lea, *s_checker.mbc, *w_checker.mbc, w_checker.bakeoff, s_checker.bakeoff)
+        return (running_loss / len(docs), *s_checker.total_lea, *w_checker.total_lea, *s_checker.mbc, *w_checker.mbc, w_checker.bakeoff, s_checker.bakeoff, (z_correct / z_total, z_f1, z_precision, z_recall))
 
     def load_weights(self,
                      path: Optional[str] = None,
@@ -583,7 +597,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             prev_best_f1 = best_f1
             if log:
                 wandb.log({'dev_score': scores[1]})
-                wandb.log({'dev_bakeoff': scores[-1]})
+                wandb.log({'dev_bakeoff': scores[-2]})
 
             if best_f1 is None or scores[1] > best_f1:
 
