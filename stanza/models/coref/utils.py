@@ -38,8 +38,8 @@ def add_dummy(tensor: torch.Tensor, eps: bool = False):
 def sigmoid_focal_loss(
         inputs: torch.Tensor,
         targets: torch.Tensor,
-        alpha: float = 0.25,
-        gamma: float = 2,
+        alpha: float = 0.30,
+        gamma: float = 4,
         reduction: str = "none",
 ) -> torch.Tensor:
     """

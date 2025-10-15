@@ -543,7 +543,12 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                         is_zero = torch.zeros_like(res.zero_scores.squeeze(-1), device=res.zero_scores.device, dtype=torch.float)
                     else:
                         is_zero = torch.tensor(is_zero).to(res.zero_scores.device).float()
-                    z_loss = sigmoid_focal_loss(res.zero_scores.squeeze(-1), is_zero, reduction="mean")
+                    # only forward pass zeros when there is one zero to be had
+                    # otherwise we will be massively sample imbalanced
+                    if is_zero.sum() == 0:
+                        z_loss = 0.0
+                    else:
+                        z_loss = sigmoid_focal_loss(res.zero_scores.squeeze(-1), is_zero, reduction="mean")
 
                 c_loss = self._coref_criterion(res.coref_scores, res.coref_y)
 
@@ -564,7 +569,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
 
                 running_c_loss += c_loss.item()
                 running_s_loss += s_loss.item()
-                if res.zero_scores.size(0) != 0 and training_has_zeros:
+                if res.zero_scores.size(0) != 0 and training_has_zeros and is_zero.sum() > 0:
                     running_z_loss += z_loss.item()
 
                 # log every 100 docs
@@ -573,7 +578,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                         'train_c_loss': c_loss.item(),
                         'train_s_loss': s_loss.item(),
                     }
-                    if res.zero_scores.size(0) != 0 and training_has_zeros:
+                    if res.zero_scores.size(0) != 0 and training_has_zeros and is_zero.sum() > 0:
                         logged['train_z_loss'] = z_loss.item()
                     wandb.log(logged)
 
