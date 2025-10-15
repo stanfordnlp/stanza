@@ -596,8 +596,15 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             scores = self.evaluate()
             prev_best_f1 = best_f1
             if log:
+                acc, f1, p, r = scores[-1]
                 wandb.log({'dev_score': scores[1]})
                 wandb.log({'dev_bakeoff': scores[-2]})
+                wandb.log({
+                    'dev_zero_acc': acc,
+                    'dev_zero_f1': f1,
+                    'dev_zero_prec': p,
+                    'dev_zero_recc': r
+                })
 
             if best_f1 is None or scores[1] > best_f1:
 
