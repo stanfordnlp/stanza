@@ -7,6 +7,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_sequence, pad_sequence, PackedSequence
 
+from xLSTM import sLSTM
+
 from stanza.models.common.data import map_to_ids, get_long_tensor
 from stanza.models.common.exceptions import ForwardCharlmNotFoundError, BackwardCharlmNotFoundError
 from stanza.models.common.packed_lstm import PackedLSTM
@@ -103,23 +105,25 @@ class NERTagger(nn.Module):
             self.input_transform = None
        
         # recurrent layers
-        self.taggerlstm = PackedLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, \
-                bidirectional=True, dropout=0 if self.args['num_layers'] == 1 else self.args['dropout'])
+        #self.taggerlstm = PackedLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, \
+        #                             bidirectional=True, dropout=0 if self.args['num_layers'] == 1 else self.args['dropout'])
+        #self.taggerlstm = PackedLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first = True,
+        #                             dropout=0 if self.args['num_layers'] == 1 else self.args['dropout'])
+        self.taggerlstm = sLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'],
+                                dropout=0 if self.args['num_layers'] == 1 else self.args['dropout'])
         # self.drop_replacement = nn.Parameter(torch.randn(input_size) / np.sqrt(input_size))
         self.drop_replacement = None
-        self.taggerlstm_h_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']), requires_grad=False)
-        self.taggerlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']), requires_grad=False)
 
         # tag classifier
         tag_lengths = self.vocab['tag'].lens()
         self.num_output_layers = len(tag_lengths)
         if self.args.get('connect_output_layers'):
-            tag_clfs = [nn.Linear(self.args['hidden_dim']*2, tag_lengths[0])]
+            tag_clfs = [nn.Linear(self.args['hidden_dim'], tag_lengths[0])]
             for prev_length, next_length in zip(tag_lengths[:-1], tag_lengths[1:]):
-                tag_clfs.append(nn.Linear(self.args['hidden_dim']*2 + prev_length, next_length))
+                tag_clfs.append(nn.Linear(self.args['hidden_dim'] + prev_length, next_length))
             self.tag_clfs = nn.ModuleList(tag_clfs)
         else:
-            self.tag_clfs = nn.ModuleList([nn.Linear(self.args['hidden_dim']*2, num_tag) for num_tag in tag_lengths])
+            self.tag_clfs = nn.ModuleList([nn.Linear(self.args['hidden_dim'], num_tag) for num_tag in tag_lengths])
         for tag_clf in self.tag_clfs:
             tag_clf.bias.data.zero_()
         self.crits = nn.ModuleList([CRFLoss(num_tag) for num_tag in tag_lengths])
@@ -235,21 +239,17 @@ class NERTagger(nn.Module):
         lstm_inputs = self.drop(lstm_inputs)
         lstm_inputs = pad(lstm_inputs)
         lstm_inputs = self.lockeddrop(lstm_inputs)
-        lstm_inputs = pack(lstm_inputs).data
+        #lstm_inputs = pack(lstm_inputs).data
 
         if self.input_transform:
             lstm_inputs = self.input_transform(lstm_inputs)
 
-        lstm_inputs = PackedSequence(lstm_inputs, inputs[0].batch_sizes)
-        lstm_outputs, _ = self.taggerlstm(lstm_inputs, sentlens, hx=(\
-                self.taggerlstm_h_init.expand(2 * self.args['num_layers'], batch_size, self.args['hidden_dim']).contiguous(), \
-                self.taggerlstm_c_init.expand(2 * self.args['num_layers'], batch_size, self.args['hidden_dim']).contiguous()))
-        lstm_outputs = lstm_outputs.data
+        #lstm_inputs = PackedSequence(lstm_inputs, inputs[0].batch_sizes)
+        lstm_outputs, _ = self.taggerlstm(lstm_inputs)
 
 
         # prediction layer
         lstm_outputs = self.drop(lstm_outputs)
-        lstm_outputs = pad(lstm_outputs)
         lstm_outputs = self.lockeddrop(lstm_outputs)
         lstm_outputs = pack(lstm_outputs).data
 
