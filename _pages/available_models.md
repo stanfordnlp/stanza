@@ -39,11 +39,7 @@ https://github.com/stanfordnlp/stanza/blob/v1.5.1/stanza/utils/datasets/tokeniza
 
 ### Sindhi
 
-The NLP team at [ISRA](https://isra.edu.pk/) graciously provided us with several passages of tokenized Sindhi text.
-We used this to add a tokenizer for Sindhi to Stanza.  This is particularly useful in that it
-allows us to incorporate a Sindhi NER model.
-
-With permission, we are currently [hosting the Sindhi tokenization data on StanfordNLP's github](https://github.com/stanfordnlp/sindhi-tokenization).
+In conjunction with the NLP team at [ISRA](https://isra.edu.pk/), we have published a [UD dataset](https://aclanthology.org/2025.udw-1.11/) which is mostly finished, but has not been part of an updated UD release yet.  We built a pipeline out of the current candidate dataset.  Included is an NER model built from [an NER dataset published elsewhere](https://aclanthology.org/2020.lrec-1.361/).
 
 ### Thai
 
