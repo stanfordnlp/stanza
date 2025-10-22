@@ -21,6 +21,7 @@ The dependency parsing module builds a tree structure of words from the input se
 | --- | --- | --- | --- |
 | depparse_batch_size | int | 5000 | When annotating, this argument specifies the maximum number of words to process as a minibatch for efficient processing. <br>**Caveat**: the larger this number is, the more working memory is required (main RAM or GPU RAM, depending on the computating device). This parameter should be set larger than the number of words in the longest sentence in your input document, or you might run into unexpected behaviors. |
 | depparse_pretagged | bool | False | Assume the document is tokenized and pretagged. Only run dependency parsing on the document. |
+| depparse_min_length_to_batch_separately | int | None | When set, any sentence which is this many words or longer will go in a separate batch, hopefully making it easier to avoid OOM errors |
 
 ## Example Usage
 
