@@ -37,6 +37,10 @@ Stanza includes a script which converts the trees and the officially proposed tr
 
 https://github.com/stanfordnlp/stanza/blob/v1.5.1/stanza/utils/datasets/tokenization/convert_my_alt.py
 
+### Old English
+
+The Nerthus project is building an Old English UD dataset.  While it is currently not published with UD, [a prototype is available on github](https://github.com/dmetola/Old_English-OEDT).
+
 ### Sindhi
 
 In conjunction with the NLP team at [ISRA](https://isra.edu.pk/), we have published a [UD dataset](https://aclanthology.org/2025.udw-1.11/) which is mostly finished, but has not been part of an updated UD release yet.  We built a pipeline out of the current candidate dataset.  Included is an NER model built from [an NER dataset published elsewhere](https://aclanthology.org/2020.lrec-1.361/).
