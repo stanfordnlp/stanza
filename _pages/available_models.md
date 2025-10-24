@@ -41,6 +41,12 @@ https://github.com/stanfordnlp/stanza/blob/v1.5.1/stanza/utils/datasets/tokeniza
 
 The Nerthus project is building an Old English UD dataset.  While it is currently not published with UD, [a prototype is available on github](https://github.com/dmetola/Old_English-OEDT).
 
+Here is the performance on this dataset when trained with a charlm provided by Nerthus:
+
+| Tokens | Sentences | Words | UPOS  | XPOS | UFeats | AllTags | Lemmas | UAS   | LAS   | CLAS  | MLAS  | BLEX  |
+| :----- | :-------- | :---- | :---  | :--- | :----- | :------ | :----- | :--   | :--   | :---  | :---  | :---  |
+|  99.93 |   71.13   | 99.93 | 93.35 | 81.96 | 85.87 | 72.27   | 64.19  | 81.71 | 75.62 | 70.45 | 55.32 | 45.93 |
+
 ### Sindhi
 
 In conjunction with the NLP team at [ISRA](https://isra.edu.pk/), we have published a [UD dataset](https://aclanthology.org/2025.udw-1.11/) which is mostly finished, but has not been part of an updated UD release yet.  We built a pipeline out of the current candidate dataset.  Included is an NER model built from [an NER dataset published elsewhere](https://aclanthology.org/2020.lrec-1.361/).
