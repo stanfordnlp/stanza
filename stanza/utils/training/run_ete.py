@@ -31,10 +31,9 @@ from stanza.models import tokenizer
 from stanza.models.common.constant import treebank_to_short_name
 
 from stanza.utils.training import common
-from stanza.utils.training.common import Mode, build_pos_charlm_args, build_lemma_charlm_args, build_depparse_charlm_args
+from stanza.utils.training.common import Mode, build_tokenizer_charlm_args, build_pos_charlm_args, build_lemma_charlm_args, build_depparse_charlm_args, build_pos_wordvec_args, build_depparse_wordvec_args
 from stanza.utils.training.run_lemma import check_lemmas
 from stanza.utils.training.run_mwt import check_mwt
-from stanza.utils.training.run_pos import wordvec_args
 
 logger = logging.getLogger('stanza')
 
@@ -76,9 +75,13 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
 
     tokenizer_output = f"{ete_dir}/{short_name}.{dataset}.tokenizer.conllu"
 
-    tokenizer_args = ["--mode", "predict", tokenizer_type, tokenizer_file, "--lang", short_language,
-                      "--conll_file", tokenizer_output, "--shorthand", short_name]
-    tokenizer_args = tokenizer_args + extra_args
+    tokenizer_args = ["--mode", "predict",
+                      tokenizer_type, tokenizer_file,
+                      "--lang", short_language,
+                      "--conll_file", tokenizer_output,
+                      "--shorthand", short_name]
+    tokenizer_charlm_args = build_tokenizer_charlm_args(short_language, package, command_args.charlm)
+    tokenizer_args = tokenizer_args + tokenizer_charlm_args + extra_args
     logger.info("-----  TOKENIZER  ----------")
     logger.info("Running tokenizer step with args: {}".format(tokenizer_args))
     tokenizer.main(tokenizer_args)
@@ -119,7 +122,7 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
 
     pos_charlm_args = build_pos_charlm_args(short_language, package, command_args.charlm)
 
-    pos_args = pos_args + wordvec_args(short_language, package, extra_args) + pos_charlm_args + extra_args
+    pos_args = pos_args + build_pos_wordvec_args(short_language, package, extra_args) + pos_charlm_args + extra_args
     logger.info("Running pos step with args: {}".format(pos_args))
     tagger.main(pos_args)
 
@@ -156,9 +159,11 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
                      '--output_file', depparse_output,
                      '--lang', short_name,
                      '--shorthand', short_name,
-                     '--mode', 'predict']
+                     '--mode', 'predict',
+                     # we don't ask the parser to report a score either
+                     '--no_gold_labels']
     depparse_charlm_args = build_depparse_charlm_args(short_language, package, command_args.charlm)
-    depparse_args = depparse_args + wordvec_args(short_language, package, extra_args) + depparse_charlm_args + extra_args
+    depparse_args = depparse_args + build_depparse_wordvec_args(short_language, package, extra_args) + depparse_charlm_args + extra_args
     logger.info("Running depparse step with args: {}".format(depparse_args))
     parser.main(depparse_args)
 
