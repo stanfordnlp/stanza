@@ -173,6 +173,7 @@ def main():
     if args.semgrex_file:
         with open(args.semgrex_file) as fin:
             args.semgrex = [x.strip() for x in fin.readlines() if x.strip()]
+            args.semgrex = [x for x in args.semgrex if not x.startswith("#")]
 
     if args.input:
         if os.path.isfile(args.input):
