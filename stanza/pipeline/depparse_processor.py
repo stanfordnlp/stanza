@@ -44,7 +44,7 @@ class DepparseProcessor(UDProcessor):
         self._pretrain = pipeline.foundation_cache.load_pretrain(config['pretrain_path']) if 'pretrain_path' in config else None
         args = {'charlm_forward_file': config.get('forward_charlm_path', None),
                 'charlm_backward_file': config.get('backward_charlm_path', None)}
-        self._trainer = Trainer(args=args, pretrain=self.pretrain, model_file=config['model_path'], device=device, foundation_cache=pipeline.foundation_cache)
+        self._trainer = Trainer.load(filename=config['model_path'], args=args, pretrain=self.pretrain, device=device, foundation_cache=pipeline.foundation_cache)
 
     def get_known_relations(self):
         """
