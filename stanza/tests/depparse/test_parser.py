@@ -123,7 +123,7 @@ class TestParser:
         assert os.path.exists(save_file)
         pt = pretrain.Pretrain(wordvec_pretrain_file)
         # test loading the saved model
-        saved_model = Trainer(pretrain=pt, model_file=save_file)
+        saved_model = Trainer.load(filename=save_file, pretrain=pt)
         return trainer
 
     def test_train(self, tmp_path, wordvec_pretrain_file):
@@ -176,7 +176,7 @@ class TestParser:
         # even if we have set bert_finetune to False for this incarnation
         pt = pretrain.Pretrain(wordvec_pretrain_file)
         args = {"bert_finetune": False}
-        saved_model = Trainer(pretrain=pt, model_file=filename, args=args)
+        saved_model = Trainer.load(filename=filename, pretrain=pt, args=args)
 
         saved_model.save(filename)
 
@@ -205,7 +205,7 @@ class TestParser:
             assert isinstance(opt, torch.optim.Adam)
 
         pt = pretrain.Pretrain(wordvec_pretrain_file)
-        checkpoint = Trainer(args=trainer.args, pretrain=pt, model_file=checkpoint_name)
+        checkpoint = Trainer.load(filename=checkpoint_name, args=trainer.args, pretrain=pt)
         assert checkpoint.optimizer is not None
         assert len(checkpoint.optimizer) == 1
         for opt in checkpoint.optimizer.values():
@@ -227,7 +227,7 @@ class TestParser:
             assert isinstance(opt, torch.optim.SGD)
 
         pt = pretrain.Pretrain(wordvec_pretrain_file)
-        checkpoint = Trainer(args=trainer.args, pretrain=pt, model_file=checkpoint_name)
+        checkpoint = Trainer.load(filename=checkpoint_name, args=trainer.args, pretrain=pt)
         assert checkpoint.optimizer is not None
         assert len(checkpoint.optimizer) == 1
         for opt in trainer.optimizer.values():
