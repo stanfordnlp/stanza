@@ -26,7 +26,7 @@ from torch import nn, optim
 
 import stanza.models.depparse.data as data
 from stanza.models.depparse.data import DataLoader
-from stanza.models.depparse.trainer import Trainer
+from stanza.models.depparse.trainer import Trainer, GraphTrainer
 from stanza.models.depparse import scorer
 from stanza.models.common import utils
 from stanza.models.common import pretrain
@@ -336,15 +336,16 @@ def train(args):
         args["checkpoint_save_name"] = checkpoint_file
 
     if args.get("checkpoint") and os.path.exists(args["checkpoint_save_name"]):
-        trainer = Trainer(args=args, pretrain=pretrain, vocab=vocab, model_file=args["checkpoint_save_name"], device=args['device'], ignore_model_config=True)
+        trainer = Trainer.load(filename=args["checkpoint_save_name"], pretrain=pretrain, args=args, device=args['device'])
         if len(trainer.dev_score_history) > 0:
             logger.info("Continuing from checkpoint %s  Model was previously trained for %d steps, with a best dev score of %.4f", args["checkpoint_save_name"], trainer.global_step, max(trainer.dev_score_history))
     elif args["continue_from"]:
         if not os.path.exists(args["continue_from"]):
             raise FileNotFoundError("--continue_from specified, but the file %s does not exist" % args["continue_from"])
-        trainer = Trainer(args=args, pretrain=pretrain, vocab=vocab, model_file=args["continue_from"], device=args['device'], ignore_model_config=True, reset_history=True)
+        trainer = Trainer.load(filename=args["continue_from"], pretrain=pretrain, args=args, device=args['device'], reset_history=True)
     else:
-        trainer = Trainer(args=args, vocab=vocab, pretrain=pretrain, device=args['device'])
+        model_type = GraphTrainer
+        trainer = model_type(args=args, vocab=vocab, pretrain=pretrain, device=args['device'])
 
     max_steps = args['max_steps']
     current_lr = args['lr']
@@ -409,8 +410,7 @@ def train(args):
                     args["second_stage"] = True
                     # if the loader gets a model file, it uses secondary optimizer
                     # (because of the second_stage = True argument)
-                    trainer = Trainer(args=args, vocab=trainer.vocab, pretrain=pretrain,
-                                      model_file=model_file, device=args['device'])
+                    trainer = Trainer.load(filename=model_file, args=args, pretrain=pretrain, device=args['device'])
                     logger.info('Reloading best model to continue from current local optimum')
 
                     dev_preds = predict_dataset(trainer, dev_batch)
@@ -474,7 +474,7 @@ def evaluate(args):
 
     # load model
     logger.info("Loading model from: {}".format(model_file))
-    trainer = Trainer(pretrain=pretrain, model_file=model_file, device=args['device'], args=load_args)
+    trainer = Trainer.load(pretrain=pretrain, filename=model_file, device=args['device'], args=load_args)
     if args['log_norms']:
         trainer.model.log_norms()
     return trainer, evaluate_trainer(args, trainer, pretrain)

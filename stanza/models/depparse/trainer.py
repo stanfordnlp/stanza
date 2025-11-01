@@ -2,6 +2,7 @@
 A trainer class to handle training and testing of models.
 """
 
+from abc import ABC, abstractmethod
 import copy
 import sys
 import logging
@@ -34,29 +35,28 @@ def unpack_batch(batch, device):
     text = batch[15]
     return inputs, orig_idx, word_orig_idx, sentlens, wordlens, text
 
-class Trainer(BaseTrainer):
+# TODO: there was an ignore_model_config option which is mostly
+# replaced by having the load() method use the passed-in args.
+# double check that all of that works
+class Trainer(BaseTrainer, ABC):
     """ A trainer for training models. """
-    def __init__(self, args=None, vocab=None, pretrain=None, model_file=None,
-                 device=None, foundation_cache=None, ignore_model_config=False, reset_history=False):
+    def __init__(self, args=None, vocab=None, pretrain=None, model=None,
+                 device=None, foundation_cache=None):
         self.global_step = 0
         self.last_best_step = 0
         self.dev_score_history = []
 
-        orig_args = copy.deepcopy(args)
         # whether the training is in primary or secondary stage
         # during FT (loading weights), etc., the training is considered to be in "secondary stage"
         # during this time, we (optionally) use a different set of optimizers than that during "primary stage".
         #
         # Regardless, we use TWO SETS of optimizers; once primary converges, we switch to secondary
 
-        if model_file is not None:
+        if model is not None:
             # load everything from file
-            self.load(model_file, pretrain, args, foundation_cache, device)
-
-            if reset_history:
-                self.global_step = 0
-                self.last_best_step = 0
-                self.dev_score_history = []
+            self.model = model
+            self.args = args
+            self.vocab = vocab
         else:
             # build model from scratch
             self.args = args
@@ -70,19 +70,22 @@ class Trainer(BaseTrainer):
                 peft_name = "depparse"
                 bert_model = build_peft_wrapper(bert_model, self.args, logger, adapter_name=peft_name)
 
-            self.model = Parser(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=self.args['bert_finetune'], peft_name=peft_name)
+            self.model = self.build_model(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=self.args['bert_finetune'], peft_name=peft_name)
             self.model = self.model.to(device)
-            self.__init_optim()
 
         self.fallback = self.vocab['deprel'].unit2id('dep') if 'dep' in self.vocab['deprel'] else None
 
-        if ignore_model_config:
-            self.args = orig_args
+        self.__init_optim()
 
         if self.args.get('wandb'):
             import wandb
             # track gradients!
             wandb.watch(self.model, log_freq=4, log="all", log_graph=True)
+
+    @staticmethod
+    @abstractmethod
+    def build_model():
+        """ Create a model for this particular type of parser """
 
     def __init_optim(self):
         # TODO: can get rid of args.get when models are rebuilt
@@ -191,7 +194,8 @@ class Trainer(BaseTrainer):
         except BaseException as e:
             logger.warning("Saving failed... continuing anyway.  Error was: %s" % e)
 
-    def load(self, filename, pretrain, args=None, foundation_cache=None, device=None):
+    @staticmethod
+    def load(filename, pretrain, args=None, foundation_cache=None, device=None, reset_history=False):
         """
         Load a model from file, with preloaded pretrain embeddings. Here we allow the pretrain to be None or a dummy input,
         and the actual use of pretrain embeddings will depend on the boolean config "pretrain" in the loaded args.
@@ -201,56 +205,66 @@ class Trainer(BaseTrainer):
         except BaseException:
             logger.error("Cannot load model from {}".format(filename))
             raise
-        self.args = checkpoint['config']
-        if args is not None: self.args.update(args)
+        loaded_args = checkpoint['config']
+        if args is not None: loaded_args.update(args)
 
         # preserve old models which were created before transformers were added
-        if 'bert_model' not in self.args:
-            self.args['bert_model'] = None
+        if 'bert_model' not in loaded_args:
+            loaded_args['bert_model'] = None
 
         lora_weights = checkpoint.get('bert_lora')
         if lora_weights:
             logger.debug("Found peft weights for depparse; loading a peft adapter")
-            self.args["use_peft"] = True
+            loaded_args["use_peft"] = True
 
-        self.vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
+        vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
         # load model
         emb_matrix = None
-        if self.args['pretrain'] and pretrain is not None: # we use pretrain only if args['pretrain'] == True and pretrain is not None
+        if loaded_args['pretrain'] and pretrain is not None: # we use pretrain only if args['pretrain'] == True and pretrain is not None
             emb_matrix = pretrain.emb
 
         # TODO: refactor this common block of code with NER
         force_bert_saved = False
         peft_name = None
-        if self.args.get('use_peft', False):
+        if loaded_args.get('use_peft', False):
             force_bert_saved = True
-            bert_model, bert_tokenizer, peft_name = load_bert_with_peft(self.args['bert_model'], "depparse", foundation_cache)
-            bert_model = load_peft_wrapper(bert_model, lora_weights, self.args, logger, peft_name)
+            bert_model, bert_tokenizer, peft_name = load_bert_with_peft(loaded_args['bert_model'], "depparse", foundation_cache)
+            bert_model = load_peft_wrapper(bert_model, lora_weights, loaded_args, logger, peft_name)
             logger.debug("Loaded peft with name %s", peft_name)
         else:
             if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
                 logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
                 foundation_cache = NoTransformerFoundationCache(foundation_cache)
                 force_bert_saved = True
-            bert_model, bert_tokenizer = load_bert(self.args.get('bert_model'), foundation_cache)
+            bert_model, bert_tokenizer = load_bert(loaded_args.get('bert_model'), foundation_cache)
 
-        self.model = Parser(self.args, self.vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
-        self.model.load_state_dict(checkpoint['model'], strict=False)
-
+        model = GraphTrainer.build_model(loaded_args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
+        model.load_state_dict(checkpoint['model'], strict=False)
         if device is not None:
-            self.model = self.model.to(device)
+            model = model.to(device)
+        trainer = GraphTrainer(args=loaded_args, vocab=vocab, pretrain=pretrain, model=model, device=device, foundation_cache=foundation_cache)
 
-        self.__init_optim()
         optim_state_dict = checkpoint.get("optimizer_state_dict")
         if optim_state_dict:
             for k, state in optim_state_dict.items():
-                self.optimizer[k].load_state_dict(state)
+                trainer.optimizer[k].load_state_dict(state)
 
         scheduler_state_dict = checkpoint.get("scheduler_state_dict")
         if scheduler_state_dict:
             for k, state in scheduler_state_dict.items():
-                self.scheduler[k].load_state_dict(state)
+                trainer.scheduler[k].load_state_dict(state)
 
-        self.global_step = checkpoint.get("global_step", 0)
-        self.last_best_step = checkpoint.get("last_best_step", 0)
-        self.dev_score_history = checkpoint.get("dev_score_history", list())
+        if reset_history:
+            trainer.global_step = 0
+            trainer.last_best_step = 0
+            trainer.dev_score_history = []
+        else:
+            trainer.global_step = checkpoint.get("global_step", 0)
+            trainer.last_best_step = checkpoint.get("last_best_step", 0)
+            trainer.dev_score_history = checkpoint.get("dev_score_history", list())
+        return trainer
+
+class GraphTrainer(Trainer):
+    @staticmethod
+    def build_model(*args, **kwargs):
+        return Parser(*args, **kwargs)
