@@ -60,16 +60,16 @@ class Parser(nn.Module):
 
         if self.args['char'] and self.args['char_emb_dim'] > 0:
             if self.args.get('charlm', None):
-                if args['charlm_forward_file'] is None or not os.path.exists(args['charlm_forward_file']):
-                    raise FileNotFoundError('Could not find forward character model: {}  Please specify with --charlm_forward_file'.format(args['charlm_forward_file']))
-                if args['charlm_backward_file'] is None or not os.path.exists(args['charlm_backward_file']):
-                    raise FileNotFoundError('Could not find backward character model: {}  Please specify with --charlm_backward_file'.format(args['charlm_backward_file']))
-                logger.debug("Depparse model loading charmodels: %s and %s", args['charlm_forward_file'], args['charlm_backward_file'])
-                self.add_unsaved_module('charmodel_forward', load_charlm(args['charlm_forward_file'], foundation_cache=foundation_cache))
-                self.add_unsaved_module('charmodel_backward', load_charlm(args['charlm_backward_file'], foundation_cache=foundation_cache))
+                if self.args['charlm_forward_file'] is None or not os.path.exists(self.args['charlm_forward_file']):
+                    raise FileNotFoundError('Could not find forward character model: {}  Please specify with --charlm_forward_file'.format(self.args['charlm_forward_file']))
+                if self.args['charlm_backward_file'] is None or not os.path.exists(self.args['charlm_backward_file']):
+                    raise FileNotFoundError('Could not find backward character model: {}  Please specify with --charlm_backward_file'.format(self.args['charlm_backward_file']))
+                logger.debug("Depparse model loading charmodels: %s and %s", self.args['charlm_forward_file'], self.args['charlm_backward_file'])
+                self.add_unsaved_module('charmodel_forward', load_charlm(self.args['charlm_forward_file'], foundation_cache=foundation_cache))
+                self.add_unsaved_module('charmodel_backward', load_charlm(self.args['charlm_backward_file'], foundation_cache=foundation_cache))
                 input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
             else:
-                self.charmodel = CharacterModel(args, vocab)
+                self.charmodel = CharacterModel(self.args, vocab)
                 self.trans_char = nn.Linear(self.args['char_hidden_dim'], self.args['transformed_dim'], bias=False)
                 input_size += self.args['transformed_dim']
 
@@ -77,10 +77,10 @@ class Parser(nn.Module):
         attach_bert_model(self, bert_model, bert_tokenizer, self.args.get('use_peft', False), force_bert_saved)
         if self.args.get('bert_model', None):
             # TODO: refactor bert_hidden_layers between the different models
-            if args.get('bert_hidden_layers', False):
+            if self.args.get('bert_hidden_layers', False):
                 # The average will be offset by 1/N so that the default zeros
                 # represents an average of the N layers
-                self.bert_layer_mix = nn.Linear(args['bert_hidden_layers'], 1, bias=False)
+                self.bert_layer_mix = nn.Linear(self.args['bert_hidden_layers'], 1, bias=False)
                 nn.init.zeros_(self.bert_layer_mix.weight)
             else:
                 # an average of layers 2, 3, 4 will be used
@@ -101,18 +101,18 @@ class Parser(nn.Module):
         self.parserlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
 
         # classifiers
-        self.unlabeled = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=args['dropout'])
-        self.deprel = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], len(vocab['deprel']), pairwise=True, dropout=args['dropout'])
-        if args['linearization']:
-            self.linearization = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=args['dropout'])
-        if args['distance']:
-            self.distance = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=args['dropout'])
+        self.unlabeled = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
+        self.deprel = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], len(vocab['deprel']), pairwise=True, dropout=self.args['dropout'])
+        if self.args['linearization']:
+            self.linearization = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
+        if self.args['distance']:
+            self.distance = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
 
         # criterion
         self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
 
-        self.drop = nn.Dropout(args['dropout'])
-        self.worddrop = WordDropout(args['word_dropout'])
+        self.drop = nn.Dropout(self.args['dropout'])
+        self.worddrop = WordDropout(self.args['word_dropout'])
 
     def add_unsaved_module(self, name, module):
         self.unsaved_modules += [name]
