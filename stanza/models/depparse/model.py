@@ -10,11 +10,12 @@ from torch.nn.utils.rnn import pad_packed_sequence, pack_padded_sequence, pack_s
 
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.biaffine import DeepBiaffineScorer
+from stanza.models.common.chuliu_edmonds import chuliu_edmonds_one_root
 from stanza.models.common.foundation_cache import load_charlm
 from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
 from stanza.models.common.utils import attach_bert_model
-from stanza.models.common.vocab import CompositeVocab
+from stanza.models.common.vocab import CompositeVocab, VOCAB_PREFIX_SIZE
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanza.models.common import utils
 
@@ -107,10 +108,20 @@ class BaseParser(nn.Module, ABC):
     def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         """ Return loss & predictions for this batch of sentences """
 
+    @abstractmethod
+    def loss(self, *args, **kwargs):
+        """ Return just the loss for this batch.  Should be a torch tensor """
+
+    @abstractmethod
+    def predict(self, *args, **kwargs):
+        """ Return a list of predictions for each sentence, where each prediction is a list of (head, deprel) """
+
 
 class GraphParser(BaseParser):
     def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
         super().__init__(args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
+
+        self.fallback = self.vocab['deprel'].unit2id('dep') if 'dep' in self.vocab['deprel'] else None
 
         # recurrent layers
         self.parserlstm = HighwayLSTM(self.input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'], rec_dropout=self.args['rec_dropout'], highway_func=torch.tanh)
@@ -296,3 +307,18 @@ class GraphParser(BaseParser):
 
         return loss, preds
 
+    def loss(self, *args, **kwargs):
+        loss, _ = self.forward(*args, **kwargs)
+        return loss
+
+    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+        batch_size = word.size(0)
+        _, preds = self(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+        # TODO: would be cleaner for the model to not have the capability to produce predictions < VOCAB_PREFIX_SIZE
+        if self.fallback is not None:
+            preds[1][preds[1] < VOCAB_PREFIX_SIZE] = self.fallback
+        head_seqs = [chuliu_edmonds_one_root(adj[:l, :l])[1:] for adj, l in zip(preds[0], sentlens)] # remove attachment for the root
+        deprel_seqs = [self.vocab['deprel'].unmap([preds[1][i][j+1][h] for j, h in enumerate(hs)]) for i, hs in enumerate(head_seqs)]
+
+        pred_tokens = [[[head_seqs[i][j], deprel_seqs[i][j]] for j in range(sentlens[i]-1)] for i in range(batch_size)]
+        return pred_tokens
