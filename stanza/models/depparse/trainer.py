@@ -17,9 +17,7 @@ except ImportError:
 from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common import utils, loss
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, NoTransformerFoundationCache
-from stanza.models.common.chuliu_edmonds import chuliu_edmonds_one_root
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
-from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
 from stanza.models.depparse.model import GraphParser
 from stanza.models.pos.vocab import MultiVocab
 
@@ -72,8 +70,6 @@ class Trainer(BaseTrainer, ABC):
 
             self.model = self.build_model(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=self.args['bert_finetune'], peft_name=peft_name)
             self.model = self.model.to(device)
-
-        self.fallback = self.vocab['deprel'].unit2id('dep') if 'dep' in self.vocab['deprel'] else None
 
         self.__init_optim()
 
@@ -132,7 +128,7 @@ class Trainer(BaseTrainer, ABC):
             self.model.train()
             for opt in self.optimizer.values():
                 opt.zero_grad()
-        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+        loss = self.model.loss(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -151,15 +147,7 @@ class Trainer(BaseTrainer, ABC):
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel = inputs
 
         self.model.eval()
-        batch_size = word.size(0)
-        _, preds = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
-        # TODO: would be cleaner for the model to not have the capability to produce predictions < VOCAB_PREFIX_SIZE
-        if self.fallback is not None:
-            preds[1][preds[1] < VOCAB_PREFIX_SIZE] = self.fallback
-        head_seqs = [chuliu_edmonds_one_root(adj[:l, :l])[1:] for adj, l in zip(preds[0], sentlens)] # remove attachment for the root
-        deprel_seqs = [self.vocab['deprel'].unmap([preds[1][i][j+1][h] for j, h in enumerate(hs)]) for i, hs in enumerate(head_seqs)]
-
-        pred_tokens = [[[head_seqs[i][j], deprel_seqs[i][j]] for j in range(sentlens[i]-1)] for i in range(batch_size)]
+        pred_tokens = self.model.predict(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         if unsort:
             pred_tokens = utils.unsort(pred_tokens, orig_idx)
         return pred_tokens
