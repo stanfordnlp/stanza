@@ -1,6 +1,7 @@
 import logging
 import os
 
+from abc import ABC, abstractmethod
 import numpy as np
 import torch
 import torch.nn as nn
@@ -19,7 +20,7 @@ from stanza.models.common import utils
 
 logger = logging.getLogger('stanza')
 
-class Parser(nn.Module):
+class BaseParser(nn.Module, ABC):
     def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
         super().__init__()
 
@@ -93,9 +94,27 @@ class Parser(nn.Module):
             self.trans_pretrained = nn.Linear(emb_matrix.shape[1], self.args['transformed_dim'], bias=False)
             input_size += self.args['transformed_dim']
 
+        self.input_size = input_size
+
+    def add_unsaved_module(self, name, module):
+        self.unsaved_modules += [name]
+        setattr(self, name, module)
+
+    def log_norms(self):
+        utils.log_norms(self)
+
+    @abstractmethod
+    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+        """ Return loss & predictions for this batch of sentences """
+
+
+class GraphParser(BaseParser):
+    def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
+        super().__init__(args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
+
         # recurrent layers
-        self.parserlstm = HighwayLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'], rec_dropout=self.args['rec_dropout'], highway_func=torch.tanh)
-        self.drop_replacement = nn.Parameter(torch.randn(input_size) / np.sqrt(input_size))
+        self.parserlstm = HighwayLSTM(self.input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'], rec_dropout=self.args['rec_dropout'], highway_func=torch.tanh)
+        self.drop_replacement = nn.Parameter(torch.randn(self.input_size) / np.sqrt(self.input_size))
         self.parserlstm_h_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
         self.parserlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
 
@@ -127,13 +146,6 @@ class Parser(nn.Module):
         # criterion
         self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
 
-
-    def add_unsaved_module(self, name, module):
-        self.unsaved_modules += [name]
-        setattr(self, name, module)
-
-    def log_norms(self):
-        utils.log_norms(self)
 
     def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         def pack(x):
@@ -283,3 +295,4 @@ class Parser(nn.Module):
             preds.append(deprel_scores.max(3)[1].detach().cpu().numpy())
 
         return loss, preds
+
