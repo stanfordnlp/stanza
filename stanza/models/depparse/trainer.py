@@ -20,7 +20,7 @@ from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft
 from stanza.models.common.chuliu_edmonds import chuliu_edmonds_one_root
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
-from stanza.models.depparse.model import Parser
+from stanza.models.depparse.model import GraphParser
 from stanza.models.pos.vocab import MultiVocab
 
 logger = logging.getLogger('stanza')
@@ -267,4 +267,4 @@ class Trainer(BaseTrainer, ABC):
 class GraphTrainer(Trainer):
     @staticmethod
     def build_model(*args, **kwargs):
-        return Parser(*args, **kwargs)
+        return GraphParser(*args, **kwargs)
