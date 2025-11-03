@@ -605,6 +605,7 @@ def download(
             md5=resources[lang]['default_md5'],
         )
         unzip(os.path.join(model_dir, lang), 'default.zip')
+        download_list = [['zip', 'default.zip']]
     # Customize: maintain download list
     else:
         download_list = maintain_processor_list(resources, lang, package, processors, allow_pretrain=True)
@@ -619,3 +620,4 @@ def download(
                         proxies=proxies,
                         log_info=True)
     logger.info(f'Finished downloading models and saved to {model_dir}')
+    return download_list
