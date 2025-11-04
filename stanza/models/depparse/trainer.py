@@ -19,6 +19,7 @@ from stanza.models.common import utils, loss
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, NoTransformerFoundationCache
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.depparse.model import GraphParser
+from stanza.models.depparse.transition.model import TransitionParser
 from stanza.models.pos.vocab import MultiVocab
 
 logger = logging.getLogger('stanza')
@@ -226,11 +227,17 @@ class Trainer(BaseTrainer, ABC):
                 force_bert_saved = True
             bert_model, bert_tokenizer = load_bert(loaded_args.get('bert_model'), foundation_cache)
 
-        model = GraphTrainer.build_model(loaded_args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
+        if 'output_basic.weight' in checkpoint['model']:
+            model = TransitionTrainer.build_model(loaded_args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
+        else:
+            model = GraphTrainer.build_model(loaded_args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
         model.load_state_dict(checkpoint['model'], strict=False)
         if device is not None:
             model = model.to(device)
-        trainer = GraphTrainer(args=loaded_args, vocab=vocab, pretrain=pretrain, model=model, device=device, foundation_cache=foundation_cache)
+        if 'output_basic.weight' in checkpoint['model']:
+            trainer = TransitionTrainer(args=loaded_args, vocab=vocab, pretrain=pretrain, model=model, device=device, foundation_cache=foundation_cache)
+        else:
+            trainer = GraphTrainer(args=loaded_args, vocab=vocab, pretrain=pretrain, model=model, device=device, foundation_cache=foundation_cache)
 
         optim_state_dict = checkpoint.get("optimizer_state_dict")
         if optim_state_dict:
@@ -256,3 +263,8 @@ class GraphTrainer(Trainer):
     @staticmethod
     def build_model(*args, **kwargs):
         return GraphParser(*args, **kwargs)
+
+class TransitionTrainer(Trainer):
+    @staticmethod
+    def build_model(*args, **kwargs):
+        return TransitionParser(*args, **kwargs)
