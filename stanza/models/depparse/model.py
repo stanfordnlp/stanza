@@ -116,49 +116,7 @@ class BaseParser(nn.Module, ABC):
     def predict(self, *args, **kwargs):
         """ Return a list of predictions for each sentence, where each prediction is a list of (head, deprel) """
 
-
-class GraphParser(BaseParser):
-    def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
-        super().__init__(args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
-
-        self.fallback = self.vocab['deprel'].unit2id('dep') if 'dep' in self.vocab['deprel'] else None
-
-        # recurrent layers
-        self.parserlstm = HighwayLSTM(self.input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'], rec_dropout=self.args['rec_dropout'], highway_func=torch.tanh)
-        self.drop_replacement = nn.Parameter(torch.randn(self.input_size) / np.sqrt(self.input_size))
-        self.parserlstm_h_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
-        self.parserlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
-
-        # dropout
-        self.drop = nn.Dropout(self.args['dropout'])
-        self.worddrop = WordDropout(self.args['word_dropout'])
-
-        # classifiers
-        # args.get to preserve old models, including models other people might have created
-        if self.args.get('use_arc_embedding'):
-            logger.debug("Using arc embedding enhancement")
-            self.arc_embedding = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], self.args['deep_biaff_output_dim'], pairwise=True, dropout=self.args['dropout'])
-            self.unlabeled_linear = nn.Sequential(self.drop,
-                                                  nn.Linear(self.args['deep_biaff_output_dim'], 1))
-            self.deprel_linear = nn.Sequential(self.drop,
-                                               nn.Linear(self.args['deep_biaff_output_dim'], 2 * self.args['deep_biaff_output_dim']),
-                                               nn.ReLU(),
-                                               self.drop,
-                                               nn.Linear(self.args['deep_biaff_output_dim'] * 2, len(vocab['deprel'])))
-        else:
-            logger.debug("Not using arc embedding enhancement")
-            self.unlabeled = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
-            self.deprel = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], len(vocab['deprel']), pairwise=True, dropout=self.args['dropout'])
-        if self.args['linearization']:
-            self.linearization = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
-        if self.args['distance']:
-            self.distance = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
-
-        # criterion
-        self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
-
-
-    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+    def embed(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
 
@@ -242,6 +200,50 @@ class GraphParser(BaseParser):
 
         lstm_outputs, _ = self.parserlstm(lstm_inputs, sentlens, hx=(self.parserlstm_h_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous(), self.parserlstm_c_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous()))
         lstm_outputs, _ = pad_packed_sequence(lstm_outputs, batch_first=True)
+
+        return lstm_outputs
+
+class GraphParser(BaseParser):
+    def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
+        super().__init__(args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
+
+        self.fallback = self.vocab['deprel'].unit2id('dep') if 'dep' in self.vocab['deprel'] else None
+
+        # recurrent layers
+        self.parserlstm = HighwayLSTM(self.input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'], rec_dropout=self.args['rec_dropout'], highway_func=torch.tanh)
+        self.drop_replacement = nn.Parameter(torch.randn(self.input_size) / np.sqrt(self.input_size))
+        self.parserlstm_h_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
+        self.parserlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
+
+        # classifiers
+        # args.get to preserve old models, including models other people might have created
+        if self.args.get('use_arc_embedding'):
+            logger.debug("Using arc embedding enhancement")
+            self.arc_embedding = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], self.args['deep_biaff_output_dim'], pairwise=True, dropout=self.args['dropout'])
+            self.unlabeled_linear = nn.Sequential(self.drop,
+                                                  nn.Linear(self.args['deep_biaff_output_dim'], 1))
+            self.deprel_linear = nn.Sequential(self.drop,
+                                               nn.Linear(self.args['deep_biaff_output_dim'], 2 * self.args['deep_biaff_output_dim']),
+                                               nn.ReLU(),
+                                               self.drop,
+                                               nn.Linear(self.args['deep_biaff_output_dim'] * 2, len(vocab['deprel'])))
+        else:
+            logger.debug("Not using arc embedding enhancement")
+            self.unlabeled = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
+            self.deprel = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], len(vocab['deprel']), pairwise=True, dropout=self.args['dropout'])
+        if self.args['linearization']:
+            self.linearization = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
+        if self.args['distance']:
+            self.distance = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
+
+        # criterion
+        self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
+
+        self.drop = nn.Dropout(self.args['dropout'])
+        self.worddrop = WordDropout(self.args['word_dropout'])
+
+    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+        lstm_outputs = self.embed(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
 
         if self.args.get('use_arc_embedding'):
             arc_scores = self.arc_embedding(self.drop(lstm_outputs), self.drop(lstm_outputs))
