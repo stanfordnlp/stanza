@@ -244,10 +244,14 @@ def chuliu_edmonds(scores):
 
 #===============================================================
 def chuliu_edmonds_one_root(scores):
-    """"""
+    """
+    Return the results of the dependency tree search, but with exactly one link to root (0)
 
+    scores is a numpy array, with scores[x][y] should be the cost for assigning y to be the head of x
+    """
     scores = scores.astype(np.float64)
     tree = chuliu_edmonds(scores)
+    # +1 because we cut off the first column of the tree
     roots_to_try = np.where(np.equal(tree[1:], 0))[0]+1
     if len(roots_to_try) == 1:
         return tree
