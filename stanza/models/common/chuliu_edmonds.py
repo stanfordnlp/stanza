@@ -249,7 +249,12 @@ def chuliu_edmonds_one_root(scores):
 
     scores is a numpy array, with scores[x][y] should be the cost for assigning y to be the head of x
     """
+    # we fiddle the scores to prevent double root arcs
+    # we therefore copy the array so it doesn't get messed up at the source
+    scores = scores.copy()
     scores = scores.astype(np.float64)
+    min_score = scores[np.isfinite(scores)].min()
+    scores[:, 0] = scores[:, 0] + (min_score * scores.shape[0])
     tree = chuliu_edmonds(scores)
     # +1 because we cut off the first column of the tree
     roots_to_try = np.where(np.equal(tree[1:], 0))[0]+1
