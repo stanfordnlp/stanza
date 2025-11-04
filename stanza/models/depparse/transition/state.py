@@ -16,7 +16,7 @@ from stanza.models.depparse.transition.transitions import ProjectiveRight, Nonpr
 # gold_graph and gold_sequence are gold, if that information exists
 # current_heads is a list of the word IDs for the heads of the subtrees
 State = namedtuple('State', ['transitions', 'parsed_graph', 'word_position', 'num_words', 'current_heads',
-                             'gold_graph', 'gold_sequence'])
+                             'gold_graph', 'gold_sequence', 'word_embeddings', 'subtree_embeddings'])
 
 def is_nonproj(gold_graph, node, pred):
     for middle in range(node+1, pred):
@@ -28,7 +28,7 @@ def is_nonproj(gold_graph, node, pred):
 
 def build_gold_sequence(gold_graph):
     num_words = len(gold_graph.nodes()) - 1
-    state = State([], nx.DiGraph(), 0, num_words, [], None, None)
+    state = State([], nx.DiGraph(), 0, num_words, [], None, None, None, None)
 
     # determine which arcs are non-projective
     # key is the head, value is a set of the children which are non-proj
@@ -112,17 +112,38 @@ def build_gold_sequence(gold_graph):
 
     return state.transitions
 
-def from_gold(sentence):
+def state_from_graph(gold_graph):
     transitions = []
-
-    gold_graph = nx.DiGraph()
-    for word_idx, word in enumerate(sentence.words):
-        # +1 as the nodes are indexed from 1, with 0 as the root
-        gold_graph.add_edge(word_idx+1, word.head, deprel=word.deprel)
-
     empty_graph = nx.DiGraph()
 
     gold_sequence = build_gold_sequence(gold_graph)
     num_words = len(gold_graph.nodes()) - 1
-    return State(transitions, empty_graph, 0, num_words, [], gold_graph, gold_sequence)
+    return State(transitions, empty_graph, 0, num_words, [], gold_graph, gold_sequence, None, None)
 
+def from_gold(sentence):
+    gold_graph = nx.DiGraph()
+    for word_idx, word in enumerate(sentence.words):
+        # +1 as the nodes are indexed from 1, with 0 as the root
+        gold_graph.add_edge(word_idx+1, word.head, deprel=word.deprel)
+    return state_from_graph(gold_graph)
+
+def states_from_heads(heads, deprels, texts, sentlens):
+    """
+    the head and text as passed around by the dependency parser training.
+    deprel should be the actual names, perhaps using vocab.unmap
+    sentlens should be the exact length - the data module adds 1, so subtract that first
+    """
+    states = []
+    for head, deprel, text, sentlen in zip(heads, deprels, texts, sentlens):
+        gold_graph = nx.DiGraph()
+        for word_idx in range(sentlen):
+            gold_graph.add_edge(word_idx+1, head[word_idx].item(), deprel=deprel[word_idx])
+        states.append(state_from_graph(gold_graph))
+    return states
+
+def state_from_text(text):
+    """ text should be a list of words """
+    transitions = []
+    num_words = len(text)
+    empty_graph = nx.DiGraph()
+    return State(transitions, empty_graph, 0, num_words, [], None, None, None, None)

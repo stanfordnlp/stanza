@@ -97,6 +97,15 @@ class BaseParser(nn.Module, ABC):
 
         self.input_size = input_size
 
+        # recurrent layers
+        self.parserlstm = HighwayLSTM(self.input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'], rec_dropout=self.args['rec_dropout'], highway_func=torch.tanh)
+        self.drop_replacement = nn.Parameter(torch.randn(self.input_size) / np.sqrt(self.input_size))
+        self.parserlstm_h_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
+        self.parserlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
+
+        self.drop = nn.Dropout(self.args['dropout'])
+        self.worddrop = WordDropout(self.args['word_dropout'])
+
     def add_unsaved_module(self, name, module):
         self.unsaved_modules += [name]
         setattr(self, name, module)
@@ -209,12 +218,6 @@ class GraphParser(BaseParser):
 
         self.fallback = self.vocab['deprel'].unit2id('dep') if 'dep' in self.vocab['deprel'] else None
 
-        # recurrent layers
-        self.parserlstm = HighwayLSTM(self.input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'], rec_dropout=self.args['rec_dropout'], highway_func=torch.tanh)
-        self.drop_replacement = nn.Parameter(torch.randn(self.input_size) / np.sqrt(self.input_size))
-        self.parserlstm_h_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
-        self.parserlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
-
         # classifiers
         # args.get to preserve old models, including models other people might have created
         if self.args.get('use_arc_embedding'):
@@ -238,9 +241,6 @@ class GraphParser(BaseParser):
 
         # criterion
         self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
-
-        self.drop = nn.Dropout(self.args['dropout'])
-        self.worddrop = WordDropout(self.args['word_dropout'])
 
     def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         lstm_outputs = self.embed(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
