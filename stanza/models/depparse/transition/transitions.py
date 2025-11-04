@@ -233,6 +233,7 @@ class NonprojectiveLeft():
     def __hash__(self):
         return hash((self.deprel, 65))
 
+# TODO: do we actually need this?
 class Finalize():
     def apply(self, state):
         state.parsed_graph.add_edge(state.current_heads[-1], 0, deprel="root")

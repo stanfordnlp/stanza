@@ -26,7 +26,7 @@ from torch import nn, optim
 
 import stanza.models.depparse.data as data
 from stanza.models.depparse.data import DataLoader
-from stanza.models.depparse.trainer import Trainer, GraphTrainer
+from stanza.models.depparse.trainer import Trainer, GraphTrainer, TransitionTrainer
 from stanza.models.depparse import scorer
 from stanza.models.common import utils
 from stanza.models.common import pretrain
@@ -201,6 +201,10 @@ def build_argparse():
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
 
     parser.add_argument('--train_size', type=int, default=None, help='If specified, randomly select this many sentences from the training data')
+
+    parser.add_argument('--model_type', default='graph', choices=['graph', 'transition'], help='Which model to use')
+    parser.add_argument('--transition_embedding_dim', type=int, default=20, help="Embedding size for a transition")
+    parser.add_argument('--transition_hidden_dim', type=int, default=20, help="Embedding size for transition stack")
     return parser
 
 def parse_args(args=None):
@@ -344,7 +348,12 @@ def train(args):
             raise FileNotFoundError("--continue_from specified, but the file %s does not exist" % args["continue_from"])
         trainer = Trainer.load(filename=args["continue_from"], pretrain=pretrain, args=args, device=args['device'], reset_history=True)
     else:
-        model_type = GraphTrainer
+        if args['model_type'] == 'graph':
+            model_type = GraphTrainer
+        elif args['model_type'] == 'transition':
+            model_type = TransitionTrainer
+        else:
+            raise ValueError("Unknown model type %s" % args['model_type'])
         trainer = model_type(args=args, vocab=vocab, pretrain=pretrain, device=args['device'])
 
     max_steps = args['max_steps']
