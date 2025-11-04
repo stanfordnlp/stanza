@@ -258,33 +258,5 @@ def chuliu_edmonds_one_root(scores):
     tree = chuliu_edmonds(scores)
     # +1 because we cut off the first column of the tree
     roots_to_try = np.where(np.equal(tree[1:], 0))[0]+1
-    if len(roots_to_try) == 1:
-        return tree
-
-    #-------------------------------------------------------------
-    def set_root(scores, root):
-        root_score = scores[root,0]
-        scores = np.array(scores)
-        scores[1:,0] = -float('inf')
-        scores[root] = -float('inf')
-        scores[root,0] = 0
-        return scores, root_score
-    #-------------------------------------------------------------
-
-    best_score, best_tree = -np.inf, None # This is what's causing it to crash
-    for root in roots_to_try:
-        _scores, root_score = set_root(scores, root)
-        _tree = chuliu_edmonds(_scores)
-        tree_probs = _scores[np.arange(len(_scores)), _tree]
-        tree_score = (tree_probs).sum()+(root_score) if (tree_probs > -np.inf).all() else -np.inf
-        if tree_score > best_score:
-            best_score = tree_score
-            best_tree = _tree
-    try:
-        assert best_tree is not None
-    except:
-        with open('debug.log', 'w') as f:
-            f.write('{}: {}, {}\n'.format(tree, scores, roots_to_try))
-            f.write('{}: {}, {}, {}\n'.format(_tree, _scores, tree_probs, tree_score))
-        raise
-    return best_tree
+    assert len(roots_to_try) == 1, "Rescaling by the lowest score should have prevented using multiple root edges"
+    return tree
