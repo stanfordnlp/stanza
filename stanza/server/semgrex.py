@@ -33,6 +33,7 @@ same document over and over, though.
 """
 
 import argparse
+from collections import namedtuple
 import copy
 import os
 import re
@@ -44,6 +45,8 @@ from stanza.utils.conll import CoNLL
 
 SEMGREX_JAVA = "edu.stanford.nlp.semgraph.semgrex.ProcessSemgrexRequest"
 
+SemgrexQuery = namedtuple("SemgrexQuery", "pattern comments")
+
 def send_semgrex_request(request):
     return send_request(request, SemgrexResponse, SEMGREX_JAVA)
 
@@ -51,8 +54,9 @@ def build_request(doc, semgrex_patterns, enhanced=False):
     request = SemgrexRequest()
     if isinstance(semgrex_patterns, str):
         semgrex_patterns = [semgrex_patterns]
+    semgrex_patterns = [x if isinstance(x, SemgrexQuery) else SemgrexQuery(x, []) for x in semgrex_patterns]
     for semgrex in semgrex_patterns:
-        request.semgrex.append(semgrex)
+        request.semgrex.append(semgrex.pattern)
 
     for sent_idx, sentence in enumerate(doc.sentences):
         query = request.query.add()
@@ -104,15 +108,16 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
     doc = copy.deepcopy(doc)
     if isinstance(semgrex_patterns, str):
         semgrex_patterns = [semgrex_patterns]
+    semgrex_patterns = [x if isinstance(x, SemgrexQuery) else SemgrexQuery(x, []) for x in semgrex_patterns]
     matching_sentences = []
     nonmatching_sentences = []
     for sentence, graph_result in zip(doc.sentences, semgrex_result.result):
         sentence_matched = False
         for semgrex_pattern, pattern_result in zip(semgrex_patterns, graph_result.result):
-            semgrex_pattern = semgrex_pattern.replace("\n", " ")
+            pattern_text = semgrex_pattern.pattern.replace("\n", " ")
             if len(pattern_result.match) == 0:
                 if not matches_only:
-                    sentence.add_comment("# semgrex pattern |%s| did not match!" % semgrex_pattern)
+                    sentence.add_comment("# semgrex pattern |%s| did not match!" % pattern_text)
             else:
                 sentence_matched = True
                 highlight_tokens = []
@@ -125,7 +130,9 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
                         node_matches = ["%s=%d:%s" % (node.name, node.matchIndex, sentence.words[node.matchIndex-1].text)
                                         for node in match.node]
                         node_matches = "  " + " ".join(node_matches)
-                    sentence.add_comment("# semgrex pattern |%s| matched at %s%s" % (semgrex_pattern, match_word, node_matches))
+                    sentence.add_comment("# semgrex pattern |%s| matched at %s%s" % (pattern_text, match_word, node_matches))
+                    for comment in semgrex_pattern.comments:
+                        sentence.add_comment("# semgrex comment: %s" % comment)
                     highlight_tokens.append(match.matchIndex)
                     for edge in match.edge:
                         highlight_edges.append(edge.target)
@@ -172,8 +179,19 @@ def main():
 
     if args.semgrex_file:
         with open(args.semgrex_file) as fin:
-            args.semgrex = [x.strip() for x in fin.readlines() if x.strip()]
-            args.semgrex = [x for x in args.semgrex if not x.startswith("#")]
+            args.semgrex = [x.strip() for x in fin.readlines()]
+
+    semgrex_patterns = []
+    current_comments = []
+    for line in args.semgrex:
+        if not line:
+            current_comments = []
+        elif line.startswith("#"):
+            current_comments.append(line[1:].strip())
+        else:
+            semgrex_patterns.append(SemgrexQuery(line, current_comments))
+            current_comments = []
+        args.semgrex = semgrex_patterns
 
     if args.input:
         if os.path.isfile(args.input):
