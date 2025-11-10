@@ -1131,6 +1131,7 @@ class LSTMModel(BaseModel, nn.Module):
         hx = torch.cat((word_hx, transition_hx, constituent_hx), axis=1)
         for idx, output_layer in enumerate(self.output_layers):
             hx = self.predict_dropout(hx)
+            # TODO: why self.output_layers - 1?
             if not self.maxout_k and idx < len(self.output_layers) - 1:
                 hx = self.nonlinearity(hx)
             hx = output_layer(hx)
