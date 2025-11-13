@@ -12,11 +12,15 @@ import networkx as nx
 
 from stanza.models.depparse.transition.transitions import ProjectiveRight, NonprojectiveRight, ProjectiveLeft, NonprojectiveLeft, Shift, Finalize
 
+TransitionLSTMEmbedding = namedtuple('TransitionLSTMEmbedding', 'h0 c0')
+
 # transitions and parsed_graph represent the current state of a parse
 # gold_graph and gold_sequence are gold, if that information exists
 # current_heads is a list of the word IDs for the heads of the subtrees
+# transition_lstm_embeddings is a list of the above TransitionLSTMEmbedding namedtuple - one per transition
 State = namedtuple('State', ['transitions', 'parsed_graph', 'word_position', 'num_words', 'current_heads',
-                             'gold_graph', 'gold_sequence', 'word_embeddings', 'subtree_embeddings'])
+                             'gold_graph', 'gold_sequence', 'word_embeddings', 'subtree_embeddings',
+                             'transition_lstm_embeddings'])
 
 def is_nonproj(gold_graph, node, pred):
     for middle in range(node+1, pred):
@@ -28,7 +32,7 @@ def is_nonproj(gold_graph, node, pred):
 
 def build_gold_sequence(gold_graph):
     num_words = len(gold_graph.nodes()) - 1
-    state = State([], nx.DiGraph(), 0, num_words, [], None, None, None, None)
+    state = State([], nx.DiGraph(), 0, num_words, [], None, None, None, None, [])
 
     # determine which arcs are non-projective
     # key is the head, value is a set of the children which are non-proj
@@ -118,7 +122,7 @@ def state_from_graph(gold_graph):
 
     gold_sequence = build_gold_sequence(gold_graph)
     num_words = len(gold_graph.nodes()) - 1
-    return State(transitions, empty_graph, 0, num_words, [], gold_graph, gold_sequence, None, None)
+    return State(transitions, empty_graph, 0, num_words, [], gold_graph, gold_sequence, None, None, [])
 
 def from_gold(sentence):
     gold_graph = nx.DiGraph()
@@ -146,4 +150,4 @@ def state_from_text(text):
     transitions = []
     num_words = len(text)
     empty_graph = nx.DiGraph()
-    return State(transitions, empty_graph, 0, num_words, [], None, None, None, None)
+    return State(transitions, empty_graph, 0, num_words, [], None, None, None, None, [])

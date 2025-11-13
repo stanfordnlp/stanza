@@ -5,7 +5,7 @@ from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence
 from stanza.models.common.utils import unsort
 from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
 from stanza.models.depparse.model import BaseParser
-from stanza.models.depparse.transition.state import state_from_text, states_from_heads
+from stanza.models.depparse.transition.state import state_from_text, states_from_heads, TransitionLSTMEmbedding
 from stanza.models.depparse.transition.transitions import Shift, Finalize, ProjectiveLeft, ProjectiveRight, NonprojectiveLeft, NonprojectiveRight
 
 class TransitionParser(BaseParser):
@@ -27,6 +27,8 @@ class TransitionParser(BaseParser):
         self.transition_lstm = nn.LSTM(input_size=self.transition_embedding_dim, hidden_size=self.transition_hidden_dim, num_layers=self.args['num_layers'], dropout=self.args['dropout'])
         # random note: this does properly train when built from a .zeros()
         self.transition_start = nn.Parameter(torch.zeros(self.args['transition_hidden_dim']))
+        self.transition_h0 = nn.Parameter(torch.zeros(self.args['num_layers'], self.args['transition_hidden_dim']))
+        self.transition_c0 = nn.Parameter(torch.zeros(self.args['num_layers'], self.args['transition_hidden_dim']))
 
         self.partial_tree_lstm = nn.LSTM(input_size=self.args['hidden_dim'] * 2, hidden_size=self.args['hidden_dim'], num_layers=self.args['num_layers'], dropout=self.args['dropout'])
         self.partial_tree_start = nn.Parameter(torch.zeros(self.args['hidden_dim'] * 2))
@@ -60,27 +62,35 @@ class TransitionParser(BaseParser):
         """
         device = next(self.parameters()).device
 
-        transitions = []
+        # first, we build the transition embeddings LSTM input
+        # the states each keep track of the embeddings and most recent
+        # output from the transition LSTM
+        # in this way, when concatenating a new transition, we just need
+        # to run one LSTM cell, rather than rerunning the whole LSTM
+        transition_embeddings = []
+        transition_h0 = []
+        transition_c0 = []
         for state in states:
-            state_transitions = []
-            for transition in state.transitions:
+            if len(state.transitions) == 0:
+                transition_embeddings.append(self.transition_start)
+                transition_h0.append(self.transition_h0)
+                transition_c0.append(self.transition_c0)
+            else:
+                transition = state.transitions[-1]
                 if isinstance(transition, NonprojectiveRight):
                     transition = ProjectiveRight(transition.deprel)
                 elif isinstance(transition, NonprojectiveLeft):
                     transition = ProjectiveLeft(transition.deprel)
-                state_transitions.append(transition)
-            transition_ids = torch.tensor([self.transition_to_id[transition] for transition in state_transitions], requires_grad=False, dtype=torch.long, device=device)
-            transition_embedding = self.transition_embedding(transition_ids)
-            state_transitions = self.transition_start.unsqueeze(0)
-            state_transitions = torch.cat([state_transitions, transition_embedding])
-            transitions.append(state_transitions)
-        packed_transition_input = torch.nn.utils.rnn.pack_sequence(transitions, enforce_sorted=False)
-        transition_output, _ = self.transition_lstm(packed_transition_input)
-        transition_output, transition_lens = pad_packed_sequence(transition_output)
-        transition_lens = transition_lens - 1
-        transition_embeddings = torch.zeros_like(transition_output[0, :, :])
-        for idx, length in enumerate(transition_lens):
-            transition_embeddings[idx, :] = transition_output[length, idx, :]
+                transition_id = torch.tensor(self.transition_to_id[transition], requires_grad=False, dtype=torch.long, device=device)
+                transition_emb = self.transition_embedding(transition_id)
+                transition_embeddings.append(transition_emb)
+                transition_h0.append(state.transition_lstm_embeddings[-1].h0)
+                transition_c0.append(state.transition_lstm_embeddings[-1].c0)
+        transition_embeddings = torch.stack(transition_embeddings, dim=0).unsqueeze(0)
+        transition_h0 = torch.stack(transition_h0, dim=1)
+        transition_c0 = torch.stack(transition_c0, dim=1)
+        transition_embeddings, (transition_h0, transition_c0) = self.transition_lstm(transition_embeddings, (transition_h0, transition_c0))
+        transition_embeddings = transition_embeddings.squeeze(0)
 
         partial_trees = []
         for state in states:
@@ -144,7 +154,7 @@ class TransitionParser(BaseParser):
             left_deprels.append(left_deprel)
             right_deprels.append(right_deprel)
         final_output = [torch.cat(x) for x in final_output]
-        return final_output, left_deprels, right_deprels
+        return final_output, left_deprels, right_deprels, transition_h0, transition_c0
 
     def loss(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         # lstm_outputs will be a list of tensors for each sentence
@@ -159,7 +169,7 @@ class TransitionParser(BaseParser):
         while len(states) > 0:
             iteration += 1
             #print("ITERATION %d" % iteration)
-            output_hx, left_deprels, right_deprels = self.forward(states)
+            output_hx, left_deprels, right_deprels, transition_h0, transition_c0 = self.forward(states)
             new_states = []
             for state_idx, state in enumerate(states):
                 # one hot vectors will be made in the following order:
@@ -224,6 +234,8 @@ class TransitionParser(BaseParser):
                 # TODO: would need to include a callback for combining words, if we use a subtree combination embedding
                 state = gold_transition.apply(state)
                 if not isinstance(gold_transition, Finalize):
+                    # TODO: can this be moved into .apply()
+                    state.transition_lstm_embeddings.append(TransitionLSTMEmbedding(transition_h0[:, state_idx, :], transition_c0[:, state_idx, :]))
                     new_states.append(state)
             states = new_states
 
@@ -241,7 +253,7 @@ class TransitionParser(BaseParser):
         while len(states) > 0:
             iteration += 1
             #print("ITERATION %d" % iteration)
-            output_hx, left_deprels, right_deprels = self.forward(states)
+            output_hx, left_deprels, right_deprels, transition_h0, transition_c0 = self.forward(states)
             transitions = []
             for state_idx, state in enumerate(states):
                 #print(state.word_position, state.current_heads)
@@ -278,6 +290,9 @@ class TransitionParser(BaseParser):
                     # no actions were legal?  this is a serious problem
                     raise AssertionError("Found a state with no legal actions!")
             states = [transition.apply(state) for state, transition in zip(states, transitions)]
+            for state_idx, state in enumerate(states):
+                # TODO: can this be moved into .apply()
+                state.transition_lstm_embeddings.append(TransitionLSTMEmbedding(transition_h0[:, state_idx, :], transition_c0[:, state_idx, :]))
             new_states = []
             new_state_idx = []
             for state_idx, (state, transition, orig_idx) in enumerate(zip(states, transitions, orig_state_idx)):
