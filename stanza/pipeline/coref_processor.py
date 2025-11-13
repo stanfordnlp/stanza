@@ -94,16 +94,22 @@ class CorefProcessor(UDProcessor):
         cased_words = []
         sent_ids = []
         word_pos = []
+        speaker = []
         for sent_idx, sentence in enumerate(sentences):
             for word_idx, word in enumerate(sentence.words):
                 cased_words.append(word.text)
                 sent_ids.append(sent_idx)
                 word_pos.append(word_idx)
+                if sentence.speaker:
+                    speaker.append(sentence.speaker)
+                else:
+                    speaker.append("_")
 
         coref_input = {
             "document_id": "wb_doc_1",
             "cased_words": cased_words,
-            "sent_id": sent_ids
+            "sent_id": sent_ids,
+            "speaker": speaker,
         }
         coref_input = self._model.build_doc(coref_input)
         results = self._model.run(coref_input)
