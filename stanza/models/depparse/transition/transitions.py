@@ -77,6 +77,7 @@ class ProjectiveRight():
         state.parsed_graph.add_edge(state.current_heads[-2], state.current_heads[-1], deprel=self.deprel)
         state.transitions.append(self)
         state.current_heads.pop(-2)
+        state = state._replace(subtree_lstm_embeddings=state.subtree_lstm_embeddings[:-2])
         return state
 
     def is_legal(self, state):
@@ -115,6 +116,10 @@ class NonprojectiveRight():
         # this is only legal to apply when the node being merged is a subtree head
         head_idx = state.current_heads.index(self.word_idx)
         state.current_heads.pop(head_idx)
+        if head_idx == 0:
+            state = state._replace(subtree_lstm_embeddings=[])
+        else:
+            state = state._replace(subtree_lstm_embeddings=state.subtree_lstm_embeddings[:head_idx-1])
         return state
 
     def is_legal(self, state):
@@ -152,6 +157,7 @@ class ProjectiveLeft():
         state.parsed_graph.add_edge(state.current_heads[-1], state.current_heads[-2], deprel=self.deprel)
         state.transitions.append(self)
         state.current_heads.pop(-1)
+        state = state._replace(subtree_lstm_embeddings=state.subtree_lstm_embeddings[:-2])
         return state
 
     def is_legal(self, state):
@@ -186,6 +192,24 @@ class NonprojectiveLeft():
         state.parsed_graph.add_edge(state.current_heads[-1], self.word_idx, deprel=self.deprel)
         state.transitions.append(self)
         state.current_heads.pop(-1)
+
+        word_idx = self.word_idx
+        # out_degree is head, which should be either 0 (no head) or 1 (has a head)
+        # checked is a sanity check for if someone feeds in a circular graph
+        checked = 0
+        while state.parsed_graph.out_degree(word_idx) > 0:
+            checked += 1
+            if checked > state.num_words:
+                raise AssertionError("Found a circular graph!")
+            for successor in state.parsed_graph.successors(word_idx):
+                word_idx = successor
+                # there should only be one
+                break
+        head_idx = state.current_heads.index(word_idx)
+        if head_idx == 0:
+            state = state._replace(subtree_lstm_embeddings=[])
+        else:
+            state = state._replace(subtree_lstm_embeddings=state.subtree_lstm_embeddings[:head_idx-1])
         return state
 
     def is_legal(self, state):
