@@ -209,11 +209,14 @@ class TestEnglishPipeline:
     def test_conllu(self, processed_doc):
         assert "{:C}".format(processed_doc) == EN_DOC_CONLLU_GOLD
 
-    def test_process_conllu(self, pretokenized_pipeline):
+    def test_process_conllu(self, pipeline):
         """
-        process a conllu text directly - note that this uses the pretokenized pipeline
+        Process a conllu text directly
+
+        This can use the pipeline which still uses tokenization, as
+        process_conllu skips the tokenize and mwt processors
         """
-        doc = pretokenized_pipeline.process_conllu(EN_DOC_CONLLU_GOLD)
+        doc = pipeline.process_conllu(EN_DOC_CONLLU_GOLD)
         result = "{:C}".format(doc)
         assert result == EN_DOC_CONLLU_GOLD
 
