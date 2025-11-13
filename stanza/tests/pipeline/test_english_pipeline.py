@@ -209,6 +209,13 @@ class TestEnglishPipeline:
     def test_conllu(self, processed_doc):
         assert "{:C}".format(processed_doc) == EN_DOC_CONLLU_GOLD
 
+    def test_process_conllu(self, pretokenized_pipeline):
+        """
+        process a conllu text directly - note that this uses the pretokenized pipeline
+        """
+        doc = pretokenized_pipeline.process_conllu(EN_DOC_CONLLU_GOLD)
+        result = "{:C}".format(doc)
+        assert result == EN_DOC_CONLLU_GOLD
 
     def test_tokens(self, processed_doc):
         assert "\n\n".join([sent.tokens_string() for sent in processed_doc.sentences]) == EN_DOC_TOKENS_GOLD
