@@ -393,6 +393,8 @@ def evaluate(args):
     # load model
     logger.info("Loading model from: {}".format(model_file))
     trainer = Trainer(pretrain=pretrain, model_file=model_file, device=args['device'], args=load_args)
+    if args['log_norms']:
+        trainer.model.log_norms()
     return trainer, evaluate_trainer(args, trainer, pretrain)
 
 def evaluate_trainer(args, trainer, pretrain):
