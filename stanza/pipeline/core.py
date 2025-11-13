@@ -433,6 +433,12 @@ class Pipeline:
 
     def process_conllu(self, doc, ignore_gapping=True, processors=None):
         """ Convenience method: treat the doc as a conllu text, convert it, and process it accordingly """
+        if processors is None:
+            processors = set(self.processors.keys())
+            if TOKENIZE in processors:
+                processors.remove(TOKENIZE)
+            if MWT in processors:
+                processors.remove(MWT)
         doc = CoNLL.conll2doc(input_str=doc, ignore_gapping=ignore_gapping)
         return self.process(doc, processors=processors)
 
