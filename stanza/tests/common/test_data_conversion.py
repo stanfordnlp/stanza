@@ -585,3 +585,34 @@ def test_line_numbers():
     for word_idx, word in enumerate(doc.sentences[0].words):
         # the test sentence has two comments in it
         assert word.line_number == word_idx + 2
+
+
+SPEAKER_EXAMPLE = """
+# sent_id = GUM_fiction_pag-57
+# speaker = Siri
+# addressee = Pag
+# text = "Sorry."
+1	"	"	PUNCT	``	_	2	punct	2:punct	Discourse=joint-sequence_m:130->128:1:_|SpaceAfter=No
+2	Sorry	sorry	ADJ	JJ	Degree=Pos	0	root	0:root	MSeg=Sorr-y|SpaceAfter=No
+3	.	.	PUNCT	.	_	2	punct	2:punct	SpaceAfter=No
+4	"	"	PUNCT	''	_	2	punct	2:punct	_
+""".lstrip()
+
+def test_speaker():
+    doc = CoNLL.conll2doc(input_str=SPEAKER_EXAMPLE)
+    assert len(doc.sentences) == 1
+    assert doc.sentences[0].speaker == 'Siri'
+    assert "# speaker = Siri" in doc.sentences[0].comments
+
+    doc.sentences[0].speaker = "foo"
+    assert doc.sentences[0].speaker == 'foo'
+    assert any(comment.startswith("# speaker") for comment in doc.sentences[0].comments)
+    assert "# speaker = foo" in doc.sentences[0].comments
+
+    doc.sentences[0].speaker = None
+    assert not any(comment.startswith("# speaker") for comment in doc.sentences[0].comments)
+    assert doc.sentences[0].speaker is None
+
+    doc.sentences[0].speaker = "Siri"
+    assert doc.sentences[0].speaker == 'Siri'
+    assert "# speaker = Siri" in doc.sentences[0].comments
