@@ -431,6 +431,11 @@ class Pipeline:
                 doc = process(doc)
         return doc
 
+    def process_conllu(self, doc, ignore_gapping=True, processors=None):
+        """ Convenience method: treat the doc as a conllu text, convert it, and process it accordingly """
+        doc = CoNLL.conll2doc(input_str=doc, ignore_gapping=ignore_gapping)
+        return self.process(doc, processors=processors)
+
     def bulk_process(self, docs, *args, **kwargs):
         """
         Run the pipeline in bulk processing mode
