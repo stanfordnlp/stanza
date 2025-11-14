@@ -246,12 +246,13 @@ def load_pretrain(args):
     return pt
 
 def predict_dataset(trainer, dev_batch):
-    dev_preds = []
-    if len(dev_batch) > 0:
-        for batch in dev_batch:
-            preds = trainer.predict(batch)
-            dev_preds += preds
-        dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
+    with torch.no_grad():
+        dev_preds = []
+        if len(dev_batch) > 0:
+            for batch in dev_batch:
+                preds = trainer.predict(batch)
+                dev_preds += preds
+            dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
     return dev_preds
 
 def train(args):
