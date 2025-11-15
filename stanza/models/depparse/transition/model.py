@@ -105,8 +105,7 @@ class TransitionParser(BaseParser):
                 partial_tree_c0.append(self.partial_tree_c0)
             else:
                 head = state.current_heads[-1]
-                # TODO: is this not incorrect?  the head counts from 1
-                partial_tree_embeddings.append(state.word_embeddings[head-1])
+                partial_tree_embeddings.append(state.word_embeddings[head])
                 partial_tree_h0.append(state.subtree_lstm_embeddings[-1].h0)
                 partial_tree_c0.append(state.subtree_lstm_embeddings[-1].c0)
             #print("Incremental partial tree:", torch.linalg.norm(partial_tree_embeddings[-1]))
@@ -192,8 +191,7 @@ class TransitionParser(BaseParser):
                 else:
                     head = len(state.subtree_lstm_embeddings) - 1
                     head = state.current_heads[head]
-                    # TODO: check if this is off by one
-                    partial_tree_embeddings.append(state.word_embeddings[head-1])
+                    partial_tree_embeddings.append(state.word_embeddings[head])
                     partial_tree_h0.append(state.subtree_lstm_embeddings[-1].h0)
                     partial_tree_c0.append(state.subtree_lstm_embeddings[-1].c0)
             partial_tree_embeddings = torch.stack(partial_tree_embeddings, dim=0).unsqueeze(0)
