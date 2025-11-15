@@ -80,8 +80,8 @@ class PairwiseEncoder(torch.nn.Module):
         
         # speaker string -> speaker id
         str2int = {s: i for i, s in enumerate(set(doc.get("speaker", ["speaker#1"
-                                                                      for _ in range(len(doc["deprel"]))])))}
+                                                                      for _ in range(len(doc["cased_words"]))])))}
 
         # word id -> speaker id
         return [str2int[s] for s in doc.get("speaker", ["speaker#1"
-                                                        for _ in range(len(doc["deprel"]))])]
+                                                        for _ in range(len(doc["cased_words"]))])]
