@@ -19,7 +19,7 @@ from stanza.models.common import utils, loss
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, NoTransformerFoundationCache
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.depparse.model import GraphParser
-from stanza.models.depparse.transition.model import TransitionParser
+from stanza.models.depparse.transition.model import SubtreeCombination, TransitionParser
 from stanza.models.pos.vocab import MultiVocab
 
 logger = logging.getLogger('stanza')
@@ -160,14 +160,18 @@ class Trainer(BaseTrainer, ABC):
             skipped = [k for k in model_state.keys() if k.split('.')[0] in self.model.unsaved_modules]
             for k in skipped:
                 del model_state[k]
+        config = dict(self.args)
+        # sanitize enums for torch.load(weights_only=True)
+        if 'transition_subtree_combination' in config:
+            config['transition_subtree_combination'] = config['transition_subtree_combination'].name
         params = {
-                'model': model_state,
-                'vocab': self.vocab.state_dict(),
-                'config': self.args,
-                'global_step': self.global_step,
-                'last_best_step': self.last_best_step,
-                'dev_score_history': self.dev_score_history,
-                }
+            'model': model_state,
+            'vocab': self.vocab.state_dict(),
+            'config': config,
+            'global_step': self.global_step,
+            'last_best_step': self.last_best_step,
+            'dev_score_history': self.dev_score_history,
+        }
         if self.args.get('use_peft', False):
             # Hide import so that peft dependency is optional
             from peft import get_peft_model_state_dict
@@ -195,6 +199,10 @@ class Trainer(BaseTrainer, ABC):
             logger.error("Cannot load model from {}".format(filename))
             raise
         loaded_args = checkpoint['config']
+        # enums were sanitized so that weights_only=True works correctly
+        transition_subtree_combination = loaded_args.get('transition_subtree_combination')
+        transition_subtree_combination = SubtreeCombination[transition_subtree_combination] if transition_subtree_combination is not None else SubtreeCombination.NONE
+        loaded_args['transition_subtree_combination'] = transition_subtree_combination
         if args is not None: loaded_args.update(args)
 
         # preserve old models which were created before transformers were added
