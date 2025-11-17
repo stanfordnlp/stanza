@@ -667,6 +667,8 @@ def standard_model_file_name(args, model_type, **kwargs):
 
     if not os.path.exists(os.path.join(args['save_dir'], model_file)) and os.path.exists(model_file):
         return model_file
+    if model_dir.startswith(args['save_dir']):
+        return model_file
     return os.path.join(args['save_dir'], model_file)
 
 def escape_misc_space(space):
