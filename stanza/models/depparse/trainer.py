@@ -182,8 +182,8 @@ class Trainer(BaseTrainer):
         try:
             torch.save(params, filename, _use_new_zipfile_serialization=False)
             logger.info("Model saved to {}".format(filename))
-        except BaseException:
-            logger.warning("Saving failed... continuing anyway.")
+        except BaseException as e:
+            logger.warning("Saving failed... continuing anyway.  Error was: %s" % e)
 
     def load(self, filename, pretrain, args=None, foundation_cache=None, device=None):
         """
