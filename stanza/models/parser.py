@@ -27,6 +27,7 @@ from torch import nn, optim
 import stanza.models.depparse.data as data
 from stanza.models.depparse.data import DataLoader
 from stanza.models.depparse.trainer import Trainer, GraphTrainer, TransitionTrainer
+from stanza.models.depparse.transition.model import SubtreeCombination
 from stanza.models.depparse import scorer
 from stanza.models.common import utils
 from stanza.models.common import pretrain
@@ -205,6 +206,10 @@ def build_argparse():
     parser.add_argument('--model_type', default='graph', choices=['graph', 'transition'], help='Which model to use')
     parser.add_argument('--transition_embedding_dim', type=int, default=20, help="Embedding size for a transition")
     parser.add_argument('--transition_hidden_dim', type=int, default=20, help="Embedding size for transition stack")
+    parser.add_argument('--transition_subtree_combination', type=lambda x: SubtreeCombination[x.upper()], default=SubtreeCombination.NONE,
+                        help="Which subtree combination method to use.  {}".format(", ".join(x.name for x in SubtreeCombination)))
+    parser.add_argument('--transition_subtree_nonlinearity', type=str, default='none',
+                        help="Which non-linearity to use when combining subtrees")
     return parser
 
 def parse_args(args=None):

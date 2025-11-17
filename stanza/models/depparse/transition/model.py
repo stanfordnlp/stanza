@@ -1,8 +1,10 @@
+from enum import Enum
+
 import torch
 from torch import nn
 from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence
 
-from stanza.models.common.utils import unsort
+from stanza.models.common.utils import build_nonlinearity, unsort
 from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
 from stanza.models.depparse.model import BaseParser
 from stanza.models.depparse.transition.state import state_from_text, states_from_heads, TransitionLSTMEmbedding, SubtreeLSTMEmbedding
@@ -67,7 +69,20 @@ from stanza.models.depparse.transition.transitions import Shift, Finalize, Proje
 # 0.0001   89.01
 # 0.0002   89.05
 # 0.0003   88.90
+#
+# We experimented with a wide variety of subtree combination methods,
+# but unfortunately the one that worked the best was simply passing through
+# the original embedding of the word for the embedding of the new subtree
 
+class SubtreeCombination(Enum):
+    NONE             = 1
+    LINEAR           = 2
+    HEAD_LINEAR      = 3
+    UNTIED_LINEAR    = 4
+    BILINEAR         = 5
+    MAX              = 6
+    LSTM             = 7
+    BILSTM           = 8
 
 class TransitionParser(BaseParser):
     def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
@@ -101,6 +116,8 @@ class TransitionParser(BaseParser):
         self.output_layers = nn.ModuleList([nn.Linear(self.final_hidden_dim, self.final_hidden_dim)])
 
         self.nonlinearity = nn.ReLU()
+        self.transition_subtree_nonlinearity = build_nonlinearity(self.args.get('transition_subtree_nonlinearity'))
+
         self.output_basic = nn.Linear(self.final_hidden_dim, 2)
         self.output_left = nn.Linear(self.final_hidden_dim, 1)
         self.output_right = nn.Linear(self.final_hidden_dim, 1)
@@ -110,6 +127,30 @@ class TransitionParser(BaseParser):
         # TODO: maybe make an attention layer?
         # maybe split this across different relations or right/left?
         self.merge_words = nn.Linear(self.args['hidden_dim'] * 4, self.args['hidden_dim'] * 2)
+
+        # TODO: again, left/right or include a relation embedding
+        if self.args['transition_subtree_combination'] in (SubtreeCombination.LINEAR, SubtreeCombination.HEAD_LINEAR):
+            self.merge_subtrees = nn.Linear(self.args['hidden_dim'] * 4, self.args['hidden_dim'] * 2)
+        elif self.args['transition_subtree_combination'] is SubtreeCombination.UNTIED_LINEAR:
+            self.merge_subtrees = nn.ModuleDict()
+            for relation in self.relations:
+                self.merge_subtrees[relation] = nn.Linear(self.args['hidden_dim'] * 4, self.args['hidden_dim'] * 2)
+        elif self.args['transition_subtree_combination'] is SubtreeCombination.BILINEAR:
+            self.merge_subtrees = nn.Bilinear(self.args['hidden_dim'] * 2, self.args['hidden_dim'] * 2, self.args['hidden_dim'] * 2)
+        elif self.args['transition_subtree_combination'] is SubtreeCombination.MAX:
+            self.reduce_linear = nn.Linear(self.args['hidden_dim'] * 2, self.args['hidden_dim'] * 2)
+        elif self.args['transition_subtree_combination'] is SubtreeCombination.NONE:
+            pass
+        elif self.args['transition_subtree_combination'] is SubtreeCombination.LSTM:
+            self.reduce_lstm = nn.LSTM(input_size=self.args['hidden_dim'] * 2, hidden_size=self.args['hidden_dim'] * 2, num_layers=self.args['num_layers'], dropout=self.args['dropout'])
+            self.reduce_relation_embedding = nn.Embedding(num_embeddings = len(self.relations),
+                                                          embedding_dim = self.args['hidden_dim'] * 2)
+        elif self.args['transition_subtree_combination'] is SubtreeCombination.BILSTM:
+            self.reduce_lstm = nn.LSTM(input_size=self.args['hidden_dim'] * 2, hidden_size=self.args['hidden_dim'], num_layers=self.args['num_layers'], dropout=self.args['dropout'], bidirectional=True)
+            self.reduce_relation_embedding = nn.Embedding(num_embeddings = len(self.relations),
+                                                          embedding_dim = self.args['hidden_dim'] * 2)
+        else:
+            raise ValueError("Unknown transition_subtree_combination %s" % self.args['transition_subtree_combination'])
 
         self.transition_loss_function = nn.CrossEntropyLoss(reduction='sum')
         self.deprel_loss_function = nn.CrossEntropyLoss(reduction='sum')
@@ -195,7 +236,6 @@ class TransitionParser(BaseParser):
             right_deprel = None
             if len(state.current_heads) > 1:
                 # TODO: add a position embedding for the projective / non-projective attachments?
-                # TODO: use a tensor to combine words into tree embeddings
                 attachment_embeddings = [torch.cat([state.subtree_embeddings[x], state.subtree_embeddings[state.current_heads[-1]]])
                                          for x in range(1, state.word_position+1)]
                 attachment_embeddings = [self.merge_words(x) for x in attachment_embeddings]
@@ -224,6 +264,148 @@ class TransitionParser(BaseParser):
             right_deprels.append(right_deprel)
         final_output = [torch.cat(x) for x in final_output]
         return final_output, left_deprels, right_deprels, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0
+
+    def update_subtree_embeddings(self, states, transitions):
+        embeddings = []
+        if self.args['transition_subtree_combination'] == SubtreeCombination.NONE:
+            for state, transition in zip(states, transitions):
+                if isinstance(transition, (ProjectiveRight, NonprojectiveRight)):
+                    embeddings.append(state.subtree_embeddings[state.current_heads[-1]])
+                elif isinstance(transition, ProjectiveLeft):
+                    embeddings.append(state.subtree_embeddings[state.current_heads[-2]])
+                elif isinstance(transition, NonprojectiveLeft):
+                    embeddings.append(state.subtree_embeddings[transition.word_idx])
+                else:
+                    continue
+            if len(embeddings) == 0:
+                return states
+        elif self.args['transition_subtree_combination'] in (SubtreeCombination.HEAD_LINEAR, SubtreeCombination.LINEAR, SubtreeCombination.UNTIED_LINEAR):
+            head_first = self.args['transition_subtree_combination'] is not SubtreeCombination.LINEAR
+            relations = []
+            for state, transition in zip(states, transitions):
+                if isinstance(transition, (ProjectiveRight, ProjectiveLeft)):
+                    relations.append(transition.deprel)
+                    left = state.subtree_embeddings[state.current_heads[-2]]
+                    right = state.subtree_embeddings[state.current_heads[-1]]
+                    if head_first and isinstance(transition, ProjectiveRight):
+                        embeddings.append(torch.cat([right, left]))
+                    else:
+                        embeddings.append(torch.cat([left, right]))
+                elif isinstance(transition, (NonprojectiveRight, NonprojectiveLeft)):
+                    relations.append(transition.deprel)
+                    left = state.subtree_embeddings[transition.word_idx]
+                    right = state.subtree_embeddings[state.current_heads[-1]]
+                    if head_first and isinstance(transition, NonprojectiveRight):
+                        embeddings.append(torch.cat([right, left]))
+                    else:
+                        embeddings.append(torch.cat([left, right]))
+                else:
+                    continue
+            if len(embeddings) == 0:
+                return states
+            stacked_embeddings = torch.stack(embeddings, dim=0)
+            # the initial attempt was a single merge matrix
+            # without the /2, effectively doubling the magnitude of the inputs led to the embeddings blowing up
+            if self.args['transition_subtree_combination'] is SubtreeCombination.LINEAR:
+                stacked_embeddings = self.transition_subtree_nonlinearity(stacked_embeddings)
+                embeddings = self.merge_subtrees(stacked_embeddings) / 2
+            elif self.args['transition_subtree_combination'] is SubtreeCombination.HEAD_LINEAR:
+                heads = stacked_embeddings[:, :self.args['hidden_dim'] * 2]
+                stacked_embeddings = self.transition_subtree_nonlinearity(stacked_embeddings)
+                embeddings = self.merge_subtrees(stacked_embeddings) / 10 + heads * 0.8
+            elif self.args['transition_subtree_combination'] is SubtreeCombination.UNTIED_LINEAR:
+                heads = stacked_embeddings[:, :self.args['hidden_dim'] * 2]
+                stacked_embeddings = self.transition_subtree_nonlinearity(stacked_embeddings)
+                embeddings = [self.merge_subtrees[deprel](emb) / 10 + head * 0.8 for deprel, emb, head in zip(relations, stacked_embeddings, heads)]
+        elif self.args['transition_subtree_combination'] == SubtreeCombination.BILINEAR:
+            # TODO: this one explodes almost immediately
+            left = []
+            right = []
+            for state, transition in zip(states, transitions):
+                if isinstance(transition, (ProjectiveRight, ProjectiveLeft)):
+                    left.append(state.subtree_embeddings[state.current_heads[-2]])
+                    right.append(state.subtree_embeddings[state.current_heads[-1]])
+                elif isinstance(transition, (NonprojectiveRight, NonprojectiveLeft)):
+                    left.append(state.subtree_embeddings[transition.word_idx])
+                    right.append(state.subtree_embeddings[state.current_heads[-1]])
+                else:
+                    continue
+            if len(left) == 0:
+                return states
+            left = torch.stack(left, dim=0)
+            right = torch.stack(right, dim=0)
+            embeddings = self.merge_subtrees(left, right) / 2
+        elif self.args['transition_subtree_combination'] == SubtreeCombination.MAX:
+            for state, transition in zip(states, transitions):
+                if isinstance(transition, (ProjectiveRight, ProjectiveLeft)):
+                    left = state.subtree_embeddings[state.current_heads[-2]]
+                    right = state.subtree_embeddings[state.current_heads[-1]]
+                elif isinstance(transition, (NonprojectiveRight, NonprojectiveLeft)):
+                    left = state.subtree_embeddings[transition.word_idx]
+                    right = state.subtree_embeddings[state.current_heads[-1]]
+                else:
+                    continue
+                stacked = torch.stack([left, right], dim=1)
+                embeddings.append(torch.max(stacked, 1).values)
+            if len(embeddings) == 0:
+                return states
+            stacked_embeddings = torch.stack(embeddings, dim=0)
+            embeddings = self.reduce_linear(stacked_embeddings)
+        elif self.args['transition_subtree_combination'] in (SubtreeCombination.LSTM, SubtreeCombination.BILSTM):
+            device = next(self.parameters()).device
+            pieces = []
+            heads = []
+            for state, transition in zip(states, transitions):
+                if isinstance(transition, ProjectiveLeft):
+                    first = state.subtree_embeddings[state.current_heads[-2]]
+                    second = state.subtree_embeddings[state.current_heads[-1]]
+                elif isinstance(transition, ProjectiveRight):
+                    first = state.subtree_embeddings[state.current_heads[-1]]
+                    second = state.subtree_embeddings[state.current_heads[-2]]
+                elif isinstance(transition, NonprojectiveLeft):
+                    first = state.subtree_embeddings[transition.word_idx]
+                    second = state.subtree_embeddings[state.current_heads[-1]]
+                elif isinstance(transition, NonprojectiveRight):
+                    first = state.subtree_embeddings[state.current_heads[-1]]
+                    second = state.subtree_embeddings[transition.word_idx]
+                else:
+                    continue
+                relation_id = torch.tensor(self.relation_to_id[transition.deprel], requires_grad=False, dtype=torch.long, device=device)
+                relation_emb = self.reduce_relation_embedding(relation_id)
+                heads.append(first)
+                if self.args['transition_subtree_combination'] is SubtreeCombination.LSTM:
+                    pieces.append((relation_emb, second, first))
+                else:
+                    pieces.append((relation_emb, first, second, relation_emb))
+            if len(pieces) == 0:
+                return states
+            pieces = [torch.stack(piece, dim=0) for piece in pieces]
+            lstm_input = torch.stack(pieces, dim=1)
+            embeddings, _ = self.reduce_lstm(lstm_input)
+            if self.args['transition_subtree_combination'] is SubtreeCombination.LSTM:
+                embeddings = embeddings[-1, :, :]
+            else:
+                emb_forward = embeddings[2, :, :self.args['hidden_dim']]   # use the embedding for rel, first, second
+                emb_reverse = embeddings[1, :, self.args['hidden_dim']:]   # use the embedding for rel, second, first
+                embeddings = torch.cat([emb_forward, emb_reverse], dim=1)
+            heads = torch.stack(heads, dim=0)
+            embeddings = embeddings * 0.2 + heads * 0.8
+        else:
+            raise ValueError("Unknown transition_subtree_combination %s" % self.args['transition_subtree_combination'])
+        embedding_idx = 0
+        # TODO: when NonprojectiveLeft is below the top head of the subtree
+        # it is in, we should propagate the changes up the subtree
+        for state, transition in zip(states, transitions):
+            if isinstance(transition, (ProjectiveRight, NonprojectiveRight)):
+                state.subtree_embeddings[state.current_heads[-1]] = embeddings[embedding_idx]
+                embedding_idx += 1
+            elif isinstance(transition, ProjectiveLeft):
+                state.subtree_embeddings[state.current_heads[-2]] = embeddings[embedding_idx]
+                embedding_idx += 1
+            elif isinstance(transition, NonprojectiveLeft):
+                state.subtree_embeddings[transition.word_idx] = embeddings[embedding_idx]
+                embedding_idx += 1
+        return states
 
     def update_partial_tree_lstm(self, states, state_idxs, partial_tree_h0, partial_tree_c0):
         new_states = []
@@ -349,15 +531,14 @@ class TransitionParser(BaseParser):
                     total_loss += self.deprel_loss_function(deprel_output, deprel_one_hot)
                 one_hot = one_hot.to(device)
                 total_loss += self.transition_loss_function(output_hx[state_idx], one_hot)
-                # TODO: would need to include a callback for combining words, if we use a subtree combination embedding
-                state = gold_transition.apply(state)
-                if not isinstance(gold_transition, Finalize):
-                    # TODO: can this be moved into .apply()
-                    state.transition_lstm_embeddings.append(TransitionLSTMEmbedding(transition_h0[:, state_idx, :], transition_c0[:, state_idx, :]))
-                states[state_idx] = state
+            gold_transitions = [state.gold_sequence[len(state.transitions)] for state in states]
+            states = self.update_subtree_embeddings(states, gold_transitions)
+            states = [gold_transition.apply(state) for state, gold_transition in zip(states, gold_transitions)]
+            for state_idx, state in enumerate(states):
+                # TODO: can this be moved into .apply()
+                state.transition_lstm_embeddings.append(TransitionLSTMEmbedding(transition_h0[:, state_idx, :], transition_c0[:, state_idx, :]))
             self.update_partial_tree_lstm(states, range(len(states)), partial_tree_h0, partial_tree_c0)
-            new_states = [state for state in states if not isinstance(state.transitions[-1], Finalize)]
-            states = new_states
+            states = [state for state in states if not isinstance(state.transitions[-1], Finalize)]
 
         return total_loss
 
@@ -414,6 +595,7 @@ class TransitionParser(BaseParser):
             #      len(states[0].current_heads), states[0].current_heads)
             #if len(states[0].subtree_lstm_embeddings) > 0:
             #    print(torch.linalg.norm(states[0].subtree_lstm_embeddings[-1].h0), torch.linalg.norm(states[0].subtree_lstm_embeddings[-1].c0))
+            states = self.update_subtree_embeddings(states, transitions)
             states = [transition.apply(state) for state, transition in zip(states, transitions)]
             #print(len(states[0].subtree_lstm_embeddings),
             #      len(states[0].current_heads), states[0].current_heads)
