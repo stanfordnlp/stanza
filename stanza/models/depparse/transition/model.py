@@ -166,7 +166,7 @@ class TransitionParser(BaseParser):
                 partial_tree_c0.append(self.partial_tree_c0)
             else:
                 head = state.current_heads[-1]
-                partial_tree_embeddings.append(state.word_embeddings[head])
+                partial_tree_embeddings.append(state.subtree_embeddings[head])
                 partial_tree_h0.append(state.subtree_lstm_embeddings[-1].h0)
                 partial_tree_c0.append(state.subtree_lstm_embeddings[-1].c0)
             #print("Incremental partial tree:", torch.linalg.norm(partial_tree_embeddings[-1]))
@@ -196,7 +196,7 @@ class TransitionParser(BaseParser):
             if len(state.current_heads) > 1:
                 # TODO: add a position embedding for the projective / non-projective attachments?
                 # TODO: use a tensor to combine words into tree embeddings
-                attachment_embeddings = [torch.cat([state.word_embeddings[x], state.word_embeddings[state.current_heads[-1]]])
+                attachment_embeddings = [torch.cat([state.subtree_embeddings[x], state.subtree_embeddings[state.current_heads[-1]]])
                                          for x in range(1, state.word_position+1)]
                 attachment_embeddings = [self.merge_words(x) for x in attachment_embeddings]
                 attachment_embeddings = torch.stack(attachment_embeddings, dim=0)
@@ -231,8 +231,10 @@ class TransitionParser(BaseParser):
         for state_idx, state in zip(state_idxs, states):
             # TODO: if we switch to a partial tree representation, this may not be true any more
             # (eg, if creating a partial tree updates the word embedding to a tree embedding)
+            # in which case we would need to update the h0/c0 and convert the word embedding when doing the Shift
             if isinstance(state.transitions[-1], Shift):
                 state.subtree_lstm_embeddings.append(SubtreeLSTMEmbedding(partial_tree_h0[:, state_idx, :], partial_tree_c0[:, state_idx, :]))
+                state.subtree_embeddings[state.current_heads[-1]] = state.word_embeddings[state.current_heads[-1]]
             elif isinstance(state.transitions[-1], Finalize):
                 continue
             else:
@@ -252,7 +254,7 @@ class TransitionParser(BaseParser):
                 else:
                     head = len(state.subtree_lstm_embeddings) - 1
                     head = state.current_heads[head]
-                    partial_tree_embeddings.append(state.word_embeddings[head])
+                    partial_tree_embeddings.append(state.subtree_embeddings[head])
                     partial_tree_h0.append(state.subtree_lstm_embeddings[-1].h0)
                     partial_tree_c0.append(state.subtree_lstm_embeddings[-1].c0)
             partial_tree_embeddings = torch.stack(partial_tree_embeddings, dim=0).unsqueeze(0)
@@ -460,6 +462,7 @@ class TransitionParser(BaseParser):
         for state, lstm_output, sentlen in zip(states, lstm_outputs, sentlens):
             # the sentences are all prepended with root
             # which is fine, since we need an embedding for word 0
-            state = state._replace(word_embeddings=lstm_output)
+            state = state._replace(word_embeddings=lstm_output,
+                                   subtree_embeddings={})
             updated_states.append(state)
         return updated_states
