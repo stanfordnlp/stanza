@@ -213,7 +213,7 @@ class CNNClassifier(BaseClassifier):
         if bert_model is not None:
             if self.config.bert_hidden_layers:
                 # The average will be offset by 1/N so that the default zeros
-                # repressents an average of the N layers
+                # represents an average of the N layers
                 if self.config.bert_hidden_layers > bert_model.config.num_hidden_layers:
                     # limit ourselves to the number of layers actually available
                     # note that we can +1 because of the initial embedding layer
@@ -303,7 +303,7 @@ class CNNClassifier(BaseClassifier):
         tlogger.info("Intermediate layers: %s" % str(self.config.fc_shapes))
 
     def log_norms(self):
-        lines = ["NORMS FOR MODEL PARAMTERS"]
+        lines = ["NORMS FOR MODEL PARAMETERS"]
         for name, param in self.named_parameters():
             if param.requires_grad and name.split(".")[0] not in ('forward_charlm', 'backward_charlm'):
                 lines.append("%s %.6g" % (name, torch.norm(param).item()))
