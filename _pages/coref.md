@@ -152,6 +152,7 @@ Currently, there are models available for several languages, with more to come:
 | EN       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
 | ES       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
 | FR       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
+| HE       | IAHLT(https://github.com/IAHLT/iahlt_coref_he) |
 | HI       | DeepH   |
 | NB       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
 | NN       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
