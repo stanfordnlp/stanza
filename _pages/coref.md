@@ -15,7 +15,9 @@ by Karel D'Oosterlinck.
 This was based on previous work, [Word-Level Coreference Resolution](https://aclanthology.org/2021.emnlp-main.605/)
 by Vladimir Dobrovolskii.
 
-If you use the Stanza coref implementation in your work, please cite both of the following:
+If you use the Stanza coref implementation in your work, please cite the following:
+
+> Houjun Liu, John Bauer, Karel D’Oosterlinck, Christopher Potts, Christopher D. Manning.  2024.  [MSCAW-coref: Multilingual, Singleton and Conjunction-Aware Word-Level Coreference Resolution](https://aclanthology.org/2024.crac-1.4).  In [CRAC 2024](https://sites.google.com/view/crac2024). \[[pdf](https://aclanthology.org/2024.crac-1.4.pdf)\]
 
 > Karel D'Oosterlinck, Semere Kiros Bitew, Brandon Papineau, Christopher Potts, Thomas Demeester, and Chris Develder. 2023. [CAW-coref: Conjunction-Aware Word-level Coreference Resolution.](https://arxiv.org/abs/2310.06165) In [CRAC 2023](https://sites.google.com/view/crac2023/). \[[pdf](https://arxiv.org/pdf/2310.06165.pdf)\]
 {: .citation }
