@@ -28,8 +28,9 @@ If you use the Stanza coref implementation in your work, please cite the followi
 
 ## Pipeline
 
-Currently there is just one model available, an English model trained
-on OntoNotes using Electra-Large.  Because this uses a transformer,
+[There are multiple languages supported by coref now!](coref.md#available-languages)
+
+Because this model uses a transformer,
 whereas the rest of the standard pipeline does not, this is not loaded
 by default.  By adding it to the list of annotators, however, Stanza
 will download the model and add it to the pipeline.
@@ -161,3 +162,33 @@ Currently, there are models available for several languages, with more to come:
 | NN       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
 | PL       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
 | RU       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
+| TA       | [KBC](https://aclanthology.org/2020.wildre-1.4.pdf) |
+
+
+### English GUM
+
+The GUM dataset includes speaker information.  Previously, models were
+trained with no speaker information included, but the model has an
+embedding which allows for distinguishing speakers.  In Stanza version
+1.11, we provide two versions of this model: with and without speaker
+training.
+
+To retrain a GUM model with speakers, the `convert_udcoref.py` should
+suffice for rebuilding the dataset.
+
+Currently there is not a script that converts GUM without speakers,
+but it should be easy enough to remove the speaker information if
+retraining this model is called for.
+
+### Hebrew IAHLT
+
+As it turns out, F1 slightly improves (from 50 to 52) if we mix Hebrew
+with the germanic and romance languages from CorefUD.  We ran
+experiments with reweighting the Hebrew data or training more on
+Hebrew as the training process continued, but none of those
+experiments improved the 52 F1.
+
+Although that number is not particularly high, it does match the published results from IAHLT.
+
+`convert_hebrew_iahlt.py` converts the dataset as published.
+`convert_hebrew_mixed.py` includes the CorefUD data.
