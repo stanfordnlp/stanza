@@ -8,6 +8,42 @@ from stanza.models.depparse.model import BaseParser
 from stanza.models.depparse.transition.state import state_from_text, states_from_heads, TransitionLSTMEmbedding, SubtreeLSTMEmbedding
 from stanza.models.depparse.transition.transitions import Shift, Finalize, ProjectiveLeft, ProjectiveRight, NonprojectiveLeft, NonprojectiveRight
 
+# A few notes on some experiments crossvalidating the hyperparameters for this model
+#
+# On some experiments with the original combination method
+#   (no transformer of the word vectors):
+# Adam topped out around 87 LAS dev set
+# AdaDelta seems to work better
+# LAS dev score:
+#    LR     WD       LAS
+#   1.0   0.02     19.16
+#   1.0   0.01     32.27
+#   1.0   0.002    73.98
+#   1.0   0.001    80.18
+#   1.0   0.0005   83.54
+#   1.0   0.0002   87.04
+#   1.0   0.0001   87.42
+#   1.0   0.00005  87.65
+#   1.0   0.00002  87.76
+#   1.0   0.00001  87.81
+#   1.0   0.000005 87.86
+#
+#   2.0   0.002    74.84
+#   2.0   0.0005   84.59
+#   2.0   0.0002   86.99
+#   2.0   0.00005  87.84
+#   2.0   0.00002  87.92
+#   2.0   0.00001  88.07
+#   2.0   0.000005 88.05
+#
+#   5.0   0.0002   85.41
+#   5.0   0.0001   87.39
+#   5.0   0.00005  87.35
+#   5.0   0.00002  88.01
+#   5.0   0.00001  87.36
+#   5.0   0.000005 87.54
+
+
 class TransitionParser(BaseParser):
     def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
         super().__init__(args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
