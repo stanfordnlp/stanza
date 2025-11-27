@@ -42,6 +42,23 @@ from stanza.models.depparse.transition.transitions import Shift, Finalize, Proje
 #   5.0   0.00002  88.01
 #   5.0   0.00001  87.36
 #   5.0   0.000005 87.54
+#
+# Continued training from one of the base models, using Adam with the default beta:
+#
+#    lr     dev
+# 0.00003  0.8884
+# 0.00005  0.8881
+# 0.00008  0.8895
+# 0.0001   0.8893
+# 0.0002   0.8895
+# 0.0003   0.8892
+# 0.0005   0.8865
+# 0.001    0.8865
+# 0.002    0.8817
+# 0.003    0.8760
+# 0.005    0.8609
+# 0.01     0.7893
+# 0.02     0.6428
 
 
 class TransitionParser(BaseParser):
