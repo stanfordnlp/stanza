@@ -59,6 +59,14 @@ from stanza.models.depparse.transition.transitions import Shift, Finalize, Proje
 # 0.005    0.8609
 # 0.01     0.7893
 # 0.02     0.6428
+#
+# Using beta=0.999 (like the pytorch default) might be slightly better:
+#
+#   lr      dev
+# 0.00008  88.93
+# 0.0001   89.01
+# 0.0002   89.05
+# 0.0003   88.90
 
 
 class TransitionParser(BaseParser):
