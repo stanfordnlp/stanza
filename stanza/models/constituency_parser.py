@@ -170,12 +170,13 @@ import stanza
 from stanza.models.common import constant
 from stanza.models.common import utils
 from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
+from stanza.models.common.utils import NONLINEARITY
 from stanza.models.constituency import parser_training
 from stanza.models.constituency import retagging
 from stanza.models.constituency.lstm_model import ConstituencyComposition, SentenceBoundary, StackHistory
 from stanza.models.constituency.parse_transitions import TransitionScheme
 from stanza.models.constituency.text_processing import load_model_parse_text
-from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, NONLINEARITY, add_predict_output_args, postprocess_predict_output_args
+from stanza.models.constituency.utils import DEFAULT_LEARNING_EPS, DEFAULT_LEARNING_RATES, DEFAULT_MOMENTUM, DEFAULT_LEARNING_RHO, DEFAULT_WEIGHT_DECAY, add_predict_output_args, postprocess_predict_output_args
 from stanza.resources.common import DEFAULT_MODEL_DIR
 
 logger = logging.getLogger('stanza')
