@@ -139,6 +139,7 @@ def retag_trees(trees, pipelines, xpos=True):
 # Hardshrink: failed
 # Softshrink: failed
 NONLINEARITY = {
+    'none':       nn.Identity,
     'celu':       nn.CELU,
     'elu':        nn.ELU,
     'gelu':       nn.GELU,
