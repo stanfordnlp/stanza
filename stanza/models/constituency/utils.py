@@ -142,37 +142,26 @@ NONLINEARITY = {
     'celu':       nn.CELU,
     'elu':        nn.ELU,
     'gelu':       nn.GELU,
+    'glu':        nn.GLU,
+    'hardsigmoid':nn.Hardsigmoid,
     'hardshrink': nn.Hardshrink,
+    'hardswish':  nn.Hardswish,
     'hardtanh':   nn.Hardtanh,
     'leaky_relu': nn.LeakyReLU,
     'logsigmoid': nn.LogSigmoid,
+    'mish':       nn.Mish,
     'prelu':      nn.PReLU,
     'relu':       nn.ReLU,
     'relu6':      nn.ReLU6,
     'rrelu':      nn.RReLU,
     'selu':       nn.SELU,
+    'silu':       nn.SiLU,
     'softplus':   nn.Softplus,
     'softshrink': nn.Softshrink,
     'softsign':   nn.Softsign,
     'tanhshrink': nn.Tanhshrink,
     'tanh':       nn.Tanh,
 }
-
-# separating these out allows for backwards compatibility with earlier versions of pytorch
-# NOTE torch compatibility: if we ever *release* models with these
-# activation functions, we will need to break that compatibility
-
-nonlinearity_list = [
-    'GLU',
-    'Hardsigmoid',
-    'Hardswish',
-    'Mish',
-    'SiLU',
-]
-
-for nonlinearity in nonlinearity_list:
-    if hasattr(nn, nonlinearity):
-        NONLINEARITY[nonlinearity.lower()] = getattr(nn, nonlinearity)
 
 def build_nonlinearity(nonlinearity):
     """
