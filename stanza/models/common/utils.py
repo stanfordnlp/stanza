@@ -902,6 +902,8 @@ def build_nonlinearity(nonlinearity):
     """
     Look up "nonlinearity" in a map from function name to function, build the appropriate layer.
     """
+    if nonlinearity is None:
+        return nn.Identity()
     if nonlinearity in NONLINEARITY:
         return NONLINEARITY[nonlinearity]()
     raise ValueError('Chosen value of nonlinearity, "%s", not handled' % nonlinearity)
