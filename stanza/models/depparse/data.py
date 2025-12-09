@@ -72,6 +72,7 @@ class DataLoader:
         self.shuffled = not self.eval
         self.sort_during_eval = sort_during_eval
         self.doc = doc
+        self.reversed = args.get('reversed', False)
         data = self.load_doc(doc)
 
         # handle vocab
@@ -193,7 +194,19 @@ class DataLoader:
         data = doc.get([TEXT, UPOS, XPOS, FEATS, LEMMA, HEAD, DEPREL], as_sentences=True)
         data = self.resolve_none(data)
         data = simplify_punct(data)
+        if self.reversed:
+            data = self.reverse_sentences(data)
         return data
+
+    def reverse_sentences(self, data):
+        new_data = []
+        for sentence in data:
+            sentence = sentence[::-1]
+            for word in sentence:
+                if word[5] != 0:
+                    word[5] = len(sentence) + 1 - word[5]
+            new_data.append(sentence)
+        return new_data
 
     def resolve_none(self, data):
         # replace None to '_'

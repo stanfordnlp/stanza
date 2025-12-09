@@ -151,7 +151,21 @@ class Trainer(BaseTrainer, ABC):
         pred_tokens = self.model.predict(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         if unsort:
             pred_tokens = utils.unsort(pred_tokens, orig_idx)
+        if self.args.get('reversed', False):
+            pred_tokens = self.reverse_predictions(pred_tokens)
         return pred_tokens
+
+    def reverse_predictions(self, pred_tokens):
+        new_predictions = []
+        for sentence in pred_tokens:
+            new_sentence = []
+            for token in sentence[::-1]:
+                if token[0] == 0:
+                    new_sentence.append(token)
+                else:
+                    new_sentence.append((len(sentence) + 1 - token[0], token[1]))
+            new_predictions.append(new_sentence)
+        return new_predictions
 
     def save(self, filename, skip_modules=True, save_optimizer=False):
         model_state = self.model.state_dict()
