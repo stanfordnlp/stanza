@@ -143,7 +143,10 @@ def states_from_heads(heads, deprels, texts, sentlens):
         gold_graph = nx.DiGraph()
         for word_idx in range(sentlen):
             gold_graph.add_edge(word_idx+1, head[word_idx].item(), deprel=deprel[word_idx])
-        states.append(state_from_graph(gold_graph))
+        try:
+            states.append(state_from_graph(gold_graph))
+        except ValueError as e:
+            raise ValueError("Found an error building a sequence from:\n%s\n%s\n%s" % (text, head, deprel)) from e
     return states
 
 def state_from_text(text):
