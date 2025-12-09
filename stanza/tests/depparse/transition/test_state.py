@@ -5,7 +5,9 @@ from collections import Counter
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
 from stanza.utils.conll import CoNLL
-from stanza.models.depparse.transition.state import from_gold
+from stanza.models.depparse.data import DataLoader
+from stanza.models.depparse.trainer import unpack_batch
+from stanza.models.depparse.transition.state import from_gold, states_from_heads
 from stanza.models.depparse.transition.transitions import ProjectiveRight, NonprojectiveRight, ProjectiveLeft, NonprojectiveLeft, Shift
 
 sample_sentence = """
@@ -174,6 +176,23 @@ difficult_legal_transitions_sentence = """
 36	.	.	PUNCT	.	_	2	punct	2:punct	_
 """.lstrip()
 
+# this sentence uncovered an error parsing in reverse
+difficult_reversed_sentence = """
+# sent_id = answers-20111107175720AAlb2TB_ans-0026
+# text = Waterproof clothing and footwear are essential plus an umbrella..
+1	Waterproof	waterproof	ADJ	JJ	Degree=Pos	2	amod	2:amod	_
+2	clothing	clothing	NOUN	NN	Number=Sing	6	nsubj	6:nsubj	_
+3	and	and	CCONJ	CC	_	4	cc	4:cc	_
+4	footwear	footwear	NOUN	NN	Number=Sing	2	conj	2:conj:and|6:nsubj	_
+5	are	be	AUX	VBP	Mood=Ind|Number=Plur|Person=3|Tense=Pres|VerbForm=Fin	6	cop	6:cop	_
+6	essential	essential	ADJ	JJ	Degree=Pos	0	root	0:root	_
+7	plus	plus	CCONJ	CC	_	9	cc	9:cc	_
+8	an	a	DET	DT	Definite=Ind|PronType=Art	9	det	9:det	_
+9	umbrella	umbrella	NOUN	NN	Number=Sing	4	conj	4:conj:plus	SpaceAfter=No
+10	..	..	PUNCT	.	_	6	punct	6:punct	_
+""".lstrip()
+
+
 def check_rebuilt_graph(state):
     gold_sequence = state.gold_sequence
     for transition in gold_sequence:
@@ -221,7 +240,45 @@ def test_difficult_transition():
     state = from_gold(sample_doc.sentences[0])
     check_rebuilt_graph(state)
 
-    
+def test_reversed():
+    """
+    Test the conversion in both the regular and reversed direction for this sentence using the DataLoader
+    """
+    batch_size = 1
+    device = "cpu"
+
+    sample_doc = CoNLL.conll2doc(input_str=difficult_reversed_sentence)
+
+    # test in the regular direction
+    args = {"shorthand": "en"}
+    data = DataLoader(sample_doc, batch_size, args, None)
+    for batch in data:
+        inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
+        word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel = inputs
+
+        # TODO: better to go through a method in the model rather than recreate the steps here
+        sentlens = [x-1 for x in sentlens]
+        deprel = [data.vocab['deprel'].unmap(deps) for deps in deprel]
+        states = states_from_heads(head, deprel, text, sentlens)
+
+        for state in states:
+            check_rebuilt_graph(state)
+
+    # test in the reversed direction
+    args = {"shorthand": "en", "reversed": True}
+    data = DataLoader(sample_doc, batch_size, args, None)
+    for batch in data:
+        inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
+        word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel = inputs
+
+        # TODO: better to go through a method in the model rather than recreate the steps here
+        sentlens = [x-1 for x in sentlens]
+        deprel = [data.vocab['deprel'].unmap(deps) for deps in deprel]
+        states = states_from_heads(head, deprel, text, sentlens)
+
+        for state in states:
+            check_rebuilt_graph(state)
+
 def ztest_pud():
     doc = CoNLL.conll2doc("../data/ud2/UD_English-PUD/en_pud-ud-test.conllu")
     for sentence in doc.sentences:
