@@ -87,7 +87,7 @@ setup(
         'tomli;python_version<"3.11"',
         'torch>=1.13.0',
         'tqdm',
-        'udtools',
+        'udtools>=0.2.1',
     ],
 
     # List required Python versions
