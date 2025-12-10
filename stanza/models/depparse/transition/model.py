@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence
 from stanza.models.common.utils import build_nonlinearity, unsort
 from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
 from stanza.models.depparse.model import BaseParser
-from stanza.models.depparse.transition.state import state_from_text, states_from_heads, TransitionLSTMEmbedding, SubtreeLSTMEmbedding
+from stanza.models.depparse.transition.state import state_from_text, states_from_data_batch, TransitionLSTMEmbedding, SubtreeLSTMEmbedding
 from stanza.models.depparse.transition.transitions import Shift, Finalize, ProjectiveLeft, ProjectiveRight, NonprojectiveLeft, NonprojectiveRight
 
 # A few notes on some experiments crossvalidating the hyperparameters for this model
@@ -634,9 +634,7 @@ class TransitionParser(BaseParser):
 
     def build_initial_states(self, head, deprel, text, lstm_outputs, sentlens):
         if self.training:
-            sentlens = [x-1 for x in sentlens]
-            deprel = [self.vocab['deprel'].unmap(deps) for deps in deprel]
-            states = states_from_heads(head, deprel, text, sentlens)
+            states = states_from_data_batch(self.vocab['deprel'], head, deprel, text, sentlens)
         else:
             states = [state_from_text(sentence) for sentence in text]
         updated_states = []
