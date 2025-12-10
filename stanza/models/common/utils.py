@@ -20,11 +20,12 @@ import torch
 import torch.nn as nn
 import numpy as np
 
+from udtools import eval as ud_eval
+from udtools.eval import UDError
+
 from stanza.models.common.constant import lcode2lang
 import stanza.models.common.seq2seq_constant as constant
 from stanza.resources.default_packages import TRANSFORMER_NICKNAMES
-import stanza.utils.conll18_ud_eval as ud_eval
-from stanza.utils.conll18_ud_eval import UDError
 
 logger = logging.getLogger('stanza')
 

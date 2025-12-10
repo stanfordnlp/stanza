@@ -7,6 +7,7 @@ import random
 import sys
 
 from enum import Enum
+from udtools import eval as ud_eval
 
 from stanza.resources.default_packages import default_charlms, lemma_charlms, tokenizer_charlms, pos_charlms, depparse_charlms, TRANSFORMERS, TRANSFORMER_LAYERS
 from stanza.resources.default_packages import no_pretrain_languages, pos_pretrains, depparse_pretrains, default_pretrains
@@ -15,7 +16,6 @@ from stanza.models.common.utils import ud_scores
 from stanza.resources.common import download, DEFAULT_MODEL_DIR, UnknownLanguageError
 from stanza.utils.datasets import common
 import stanza.utils.default_paths as default_paths
-from stanza.utils import conll18_ud_eval as ud_eval
 
 logger = logging.getLogger('stanza')
 
