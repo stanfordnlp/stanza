@@ -149,6 +149,12 @@ def states_from_heads(heads, deprels, texts, sentlens):
             raise ValueError("Found an error building a sequence from:\n%s\n%s\n%s" % (text, head, deprel)) from e
     return states
 
+def states_from_data_batch(vocab, heads, deprels, texts, sentlens):
+    sentlens = [x-1 for x in sentlens]
+    deprels = [vocab.unmap(deps) for deps in deprels]
+    states = states_from_heads(heads, deprels, texts, sentlens)
+    return states
+
 def state_from_text(text):
     """ text should be a list of words """
     transitions = []
