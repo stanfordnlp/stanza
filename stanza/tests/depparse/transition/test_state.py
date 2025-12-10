@@ -7,7 +7,7 @@ pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 from stanza.utils.conll import CoNLL
 from stanza.models.depparse.data import DataLoader
 from stanza.models.depparse.trainer import unpack_batch
-from stanza.models.depparse.transition.state import from_gold, states_from_heads
+from stanza.models.depparse.transition.state import from_gold, states_from_data_batch
 from stanza.models.depparse.transition.transitions import ProjectiveRight, NonprojectiveRight, ProjectiveLeft, NonprojectiveLeft, Shift
 
 sample_sentence = """
@@ -256,11 +256,7 @@ def test_reversed():
         inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel = inputs
 
-        # TODO: better to go through a method in the model rather than recreate the steps here
-        sentlens = [x-1 for x in sentlens]
-        deprel = [data.vocab['deprel'].unmap(deps) for deps in deprel]
-        states = states_from_heads(head, deprel, text, sentlens)
-
+        states = states_from_data_batch(data.vocab['deprel'], head, deprel, text, sentlens)
         for state in states:
             check_rebuilt_graph(state)
 
@@ -271,11 +267,7 @@ def test_reversed():
         inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel = inputs
 
-        # TODO: better to go through a method in the model rather than recreate the steps here
-        sentlens = [x-1 for x in sentlens]
-        deprel = [data.vocab['deprel'].unmap(deps) for deps in deprel]
-        states = states_from_heads(head, deprel, text, sentlens)
-
+        states = states_from_data_batch(data.vocab['deprel'], head, deprel, text, sentlens)
         for state in states:
             check_rebuilt_graph(state)
 
