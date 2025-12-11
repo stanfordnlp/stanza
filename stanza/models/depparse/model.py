@@ -20,12 +20,11 @@ from stanza.models.common import utils
 logger = logging.getLogger('stanza')
 
 class Parser(nn.Module):
-    def __init__(self, args, vocab, emb_matrix=None, share_hid=False, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
+    def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
         super().__init__()
 
         self.vocab = vocab
         self.args = args
-        self.share_hid = share_hid
         self.unsaved_modules = []
 
         # input layers
