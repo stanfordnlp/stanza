@@ -20,8 +20,15 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from udtools import eval as ud_eval
-from udtools.eval import UDError
+try:
+    from udtools import eval as ud_eval
+except ImportError:
+    from tools import eval as ud_eval
+
+try:
+    from udtools.eval import UDError
+except ImportError:
+    from tools.eval import UDError
 
 from stanza.models.common.constant import lcode2lang
 import stanza.models.common.seq2seq_constant as constant

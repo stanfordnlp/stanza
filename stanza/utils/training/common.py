@@ -7,7 +7,10 @@ import random
 import sys
 
 from enum import Enum
-from udtools import eval as ud_eval
+try:
+    from udtools import eval as ud_eval
+except ImportError:
+    from tools import eval as ud_eval
 
 from stanza.resources.default_packages import default_charlms, lemma_charlms, tokenizer_charlms, pos_charlms, depparse_charlms, TRANSFORMERS, TRANSFORMER_LAYERS
 from stanza.resources.default_packages import no_pretrain_languages, pos_pretrains, depparse_pretrains, default_pretrains
