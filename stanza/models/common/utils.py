@@ -21,14 +21,14 @@ import torch.nn as nn
 import numpy as np
 
 try:
-    from udtools import eval as ud_eval
+    from udtools import udeval
 except ImportError:
-    from tools import eval as ud_eval
+    from udtools.src.udtools import udeval
 
 try:
-    from udtools.eval import UDError
+    from udtools.udeval import UDError
 except ImportError:
-    from tools.eval import UDError
+    from udtools.src.udtools.udeval import UDError
 
 from stanza.models.common.constant import lcode2lang
 import stanza.models.common.seq2seq_constant as constant
@@ -154,27 +154,27 @@ def ud_scores(gold_conllu_file, system_conllu_file):
 
     if has_readline(gold_conllu_file):
         try:
-            gold_ud = ud_eval.load_conllu(gold_conllu_file, '', {})
+            gold_ud = udeval.load_conllu(gold_conllu_file, '', {})
         except UDError as e:
             raise UDError("Could not process gold UD file") from e
     else:
         try:
-            gold_ud = ud_eval.load_conllu_file(gold_conllu_file)
+            gold_ud = udeval.load_conllu_file(gold_conllu_file)
         except UDError as e:
             raise UDError("Could not read %s" % gold_conllu_file) from e
 
     if has_readline(system_conllu_file):
         try:
-            system_ud = ud_eval.load_conllu(system_conllu_file, '', {})
+            system_ud = udeval.load_conllu(system_conllu_file, '', {})
         except UDError as e:
             raise UDError("Could not process system UD file") from e
     else:
         try:
-            system_ud = ud_eval.load_conllu_file(system_conllu_file)
+            system_ud = udeval.load_conllu_file(system_conllu_file)
         except UDError as e:
             raise UDError("Could not read %s" % system_conllu_file) from e
 
-    evaluation = ud_eval.evaluate(gold_ud, system_ud)
+    evaluation = udeval.evaluate(gold_ud, system_ud)
 
     return evaluation
 

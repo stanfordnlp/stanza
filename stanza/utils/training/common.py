@@ -8,9 +8,9 @@ import sys
 
 from enum import Enum
 try:
-    from udtools import eval as ud_eval
+    from udtools.udeval import build_evaluation_table
 except ImportError:
-    from tools import eval as ud_eval
+    from udtools.src.udtools.udeval import build_evaluation_table
 
 from stanza.resources.default_packages import default_charlms, lemma_charlms, tokenizer_charlms, pos_charlms, depparse_charlms, TRANSFORMERS, TRANSFORMER_LAYERS
 from stanza.resources.default_packages import no_pretrain_languages, pos_pretrains, depparse_pretrains, default_pretrains
