@@ -168,12 +168,7 @@ class Trainer(BaseTrainer, ABC):
         return new_predictions
 
     def save(self, filename, skip_modules=True, save_optimizer=False):
-        model_state = self.model.state_dict()
-        # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
-        if skip_modules:
-            skipped = [k for k in model_state.keys() if k.split('.')[0] in self.model.unsaved_modules]
-            for k in skipped:
-                del model_state[k]
+        model_state = self.model.get_params(skip_modules)
         config = dict(self.args)
         # sanitize enums for torch.load(weights_only=True)
         if 'transition_subtree_combination' in config:
@@ -253,7 +248,7 @@ class Trainer(BaseTrainer, ABC):
             model = TransitionTrainer.build_model(loaded_args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
         else:
             model = GraphTrainer.build_model(loaded_args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
-        model.load_state_dict(checkpoint['model'], strict=False)
+        model.load_params(checkpoint['model'])
         if device is not None:
             model = model.to(device)
         if 'output_basic.weight' in checkpoint['model']:
