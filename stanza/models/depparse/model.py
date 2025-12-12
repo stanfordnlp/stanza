@@ -110,6 +110,18 @@ class BaseParser(nn.Module, ABC):
         self.unsaved_modules += [name]
         setattr(self, name, module)
 
+    def get_params(self, skip_modules):
+        model_state = self.state_dict()
+        # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
+        if skip_modules:
+            skipped = [k for k in model_state.keys() if k.split('.')[0] in self.unsaved_modules]
+            for k in skipped:
+                del model_state[k]
+        return model_state
+
+    def load_params(self, checkpoint):
+        return self.load_state_dict(checkpoint, strict=False)
+
     def log_norms(self):
         utils.log_norms(self)
 
