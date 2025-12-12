@@ -242,7 +242,17 @@ class GraphParser(BaseParser):
         # criterion
         self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
 
-    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+    @staticmethod
+    def decode_graph_predictions(vocab, fallback, batch_size, preds, sentlens):
+        # TODO: would be cleaner for the model to not have the capability to produce predictions < VOCAB_PREFIX_SIZE
+        if fallback is not None:
+            preds[1][preds[1] < VOCAB_PREFIX_SIZE] = fallback
+        head_seqs = [chuliu_edmonds_one_root(adj[:l, :l])[1:] for adj, l in zip(preds[0], sentlens)] # remove attachment for the root
+        deprel_seqs = [vocab.unmap([preds[1][i][j+1][h] for j, h in enumerate(hs)]) for i, hs in enumerate(head_seqs)]
+        pred_tokens = [[[head_seqs[i][j], deprel_seqs[i][j]] for j in range(sentlens[i]-1)] for i in range(batch_size)]
+        return pred_tokens
+
+    def forward_scores(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         lstm_outputs = self.embed(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
 
         if self.args.get('use_arc_embedding'):
@@ -256,13 +266,16 @@ class GraphParser(BaseParser):
         #goldmask = head.new_zeros(*head.size(), head.size(-1)+1, dtype=torch.uint8)
         #goldmask.scatter_(2, head.unsqueeze(2), 1)
 
+        head_offset = None
         if self.args['linearization'] or self.args['distance']:
             head_offset = torch.arange(word.size(1), device=head.device).view(1, 1, -1).expand(word.size(0), -1, -1) - torch.arange(word.size(1), device=head.device).view(1, -1, 1).expand(word.size(0), -1, -1)
 
+        lin_scores = None
         if self.args['linearization']:
             lin_scores = self.linearization(self.drop(lstm_outputs), self.drop(lstm_outputs)).squeeze(3)
             unlabeled_scores += F.logsigmoid(lin_scores * torch.sign(head_offset).float()).detach()
 
+        dist_kld = None
         if self.args['distance']:
             dist_scores = self.distance(self.drop(lstm_outputs), self.drop(lstm_outputs)).squeeze(3)
             dist_pred = 1 + F.softplus(dist_scores)
@@ -273,8 +286,12 @@ class GraphParser(BaseParser):
         diag = torch.eye(head.size(-1)+1, dtype=torch.bool, device=head.device).unsqueeze(0)
         unlabeled_scores.masked_fill_(diag, -float('inf'))
 
-        preds = []
+        return unlabeled_scores, deprel_scores, head_offset, lin_scores, dist_kld
 
+    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+        unlabeled_scores, deprel_scores, head_offset, lin_scores, dist_kld = self.forward_scores(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+
+        preds = []
         if self.training:
             unlabeled_scores = unlabeled_scores[:, 1:, :] # exclude attachment for the root symbol
             unlabeled_scores = unlabeled_scores.masked_fill(word_mask.unsqueeze(1), -float('inf'))
@@ -316,11 +333,6 @@ class GraphParser(BaseParser):
     def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         batch_size = word.size(0)
         _, preds = self(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
-        # TODO: would be cleaner for the model to not have the capability to produce predictions < VOCAB_PREFIX_SIZE
-        if self.fallback is not None:
-            preds[1][preds[1] < VOCAB_PREFIX_SIZE] = self.fallback
-        head_seqs = [chuliu_edmonds_one_root(adj[:l, :l])[1:] for adj, l in zip(preds[0], sentlens)] # remove attachment for the root
-        deprel_seqs = [self.vocab['deprel'].unmap([preds[1][i][j+1][h] for j, h in enumerate(hs)]) for i, hs in enumerate(head_seqs)]
-
-        pred_tokens = [[[head_seqs[i][j], deprel_seqs[i][j]] for j in range(sentlens[i]-1)] for i in range(batch_size)]
+        pred_tokens = self.decode_graph_predictions(self.vocab['deprel'], self.fallback, batch_size, preds, sentlens)
         return pred_tokens
+
