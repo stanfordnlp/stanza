@@ -22,12 +22,50 @@ from stanza.models.common import utils
 logger = logging.getLogger('stanza')
 
 class BaseParser(nn.Module, ABC):
-    def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
+    def __init__(self, args, vocab):
         super().__init__()
 
         self.vocab = vocab
         self.args = args
         self.unsaved_modules = []
+
+    def add_unsaved_module(self, name, module):
+        self.unsaved_modules += [name]
+        setattr(self, name, module)
+
+    def get_params(self, skip_modules):
+        model_state = self.state_dict()
+        # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
+        if skip_modules:
+            skipped = [k for k in model_state.keys() if k.split('.')[0] in self.unsaved_modules]
+            for k in skipped:
+                del model_state[k]
+        return model_state
+
+    def load_params(self, checkpoint):
+        return self.load_state_dict(checkpoint, strict=False)
+
+    def log_norms(self):
+        utils.log_norms(self)
+
+    @abstractmethod
+    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+        """ Return loss & predictions for this batch of sentences """
+
+    @abstractmethod
+    def loss(self, *args, **kwargs):
+        """ Return just the loss for this batch.  Should be a torch tensor """
+
+    @abstractmethod
+    def predict(self, *args, **kwargs):
+        """ Return a list of predictions for each sentence, where each prediction is a list of (head, deprel) """
+
+    def get_device(self):
+        return next(self.parameters()).device
+
+class EmbeddingParser(BaseParser):
+    def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
+        super().__init__(args, vocab)
 
         # input layers
         input_size = 0
@@ -105,37 +143,6 @@ class BaseParser(nn.Module, ABC):
 
         self.drop = nn.Dropout(self.args['dropout'])
         self.worddrop = WordDropout(self.args['word_dropout'])
-
-    def add_unsaved_module(self, name, module):
-        self.unsaved_modules += [name]
-        setattr(self, name, module)
-
-    def get_params(self, skip_modules):
-        model_state = self.state_dict()
-        # skip saving modules like pretrained embeddings, because they are large and will be saved in a separate file
-        if skip_modules:
-            skipped = [k for k in model_state.keys() if k.split('.')[0] in self.unsaved_modules]
-            for k in skipped:
-                del model_state[k]
-        return model_state
-
-    def load_params(self, checkpoint):
-        return self.load_state_dict(checkpoint, strict=False)
-
-    def log_norms(self):
-        utils.log_norms(self)
-
-    @abstractmethod
-    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
-        """ Return loss & predictions for this batch of sentences """
-
-    @abstractmethod
-    def loss(self, *args, **kwargs):
-        """ Return just the loss for this batch.  Should be a torch tensor """
-
-    @abstractmethod
-    def predict(self, *args, **kwargs):
-        """ Return a list of predictions for each sentence, where each prediction is a list of (head, deprel) """
 
     def embed(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         def pack(x):
@@ -224,7 +231,7 @@ class BaseParser(nn.Module, ABC):
 
         return lstm_outputs
 
-class GraphParser(BaseParser):
+class GraphParser(EmbeddingParser):
     def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
         super().__init__(args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
 
@@ -347,4 +354,62 @@ class GraphParser(BaseParser):
         _, preds = self(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         pred_tokens = self.decode_graph_predictions(self.vocab['deprel'], self.fallback, batch_size, preds, sentlens)
         return pred_tokens
+
+class EnsembleGraphParser(BaseParser):
+    def __init__(self, args, vocab, models):
+        super().__init__(args, vocab)
+        self.models = nn.ModuleList(models)
+        self.fallback = self.models[0].fallback
+
+    def get_params(self, skip_modules):
+        params = []
+        args = []
+        for model in self.models:
+            params.append(model.get_params(skip_modules))
+            config = dict(model.args)
+            # sanitize enums for torch.load(weights_only=True)
+            if 'transition_subtree_combination' in config:
+                config['transition_subtree_combination'] = config['transition_subtree_combination'].name
+            args.append(config)
+        checkpoint = {
+            "num_models": len(self.models),
+            "params": params,
+            "args": args,
+        }
+        return checkpoint
+
+    def load_params(self, checkpoint):
+        for model, params in zip(self.models, checkpoint["params"]):
+            model.load_params(params)
+
+    def loss(self, *args, **kwargs):
+        raise NotImplementedError("Cannot train ensemble parser")
+
+    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+        unlabeled_scores = 0
+        deprel_scores = 0
+        for model in self.models:
+            model_unlabeled_scores, model_deprel_scores, _, _, _ = model.forward_scores(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+            unlabeled_scores += model_unlabeled_scores
+            deprel_scores += model_deprel_scores
+
+        if self.training:
+            raise NotImplementedError("Cannot train ensemble parser")
+        else:
+            loss = 0
+            preds = []
+            preds.append(F.log_softmax(unlabeled_scores, 2).detach().cpu().numpy())
+            preds.append(deprel_scores.max(3)[1].detach().cpu().numpy())
+
+        return loss, preds
+
+    # TODO: refactor this?
+    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+        batch_size = word.size(0)
+        _, preds = self(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+        pred_tokens = GraphParser.decode_graph_predictions(self.vocab['deprel'], self.fallback, batch_size, preds, sentlens)
+        return pred_tokens
+
+    def get_device(self):
+        return self.models[0].get_device()
 
