@@ -18,7 +18,7 @@ from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common import utils, loss
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, NoTransformerFoundationCache
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
-from stanza.models.depparse.model import GraphParser
+from stanza.models.depparse.model import EnsembleGraphParser, GraphParser
 from stanza.models.depparse.transition.model import SubtreeCombination, TransitionParser
 from stanza.models.pos.vocab import MultiVocab
 
@@ -40,7 +40,7 @@ def unpack_batch(batch, device):
 class Trainer(BaseTrainer, ABC):
     """ A trainer for training models. """
     def __init__(self, args=None, vocab=None, pretrain=None, model=None,
-                 device=None, foundation_cache=None):
+                 device=None, foundation_cache=None, build_optimizer=True):
         self.global_step = 0
         self.last_best_step = 0
         self.dev_score_history = []
@@ -72,7 +72,10 @@ class Trainer(BaseTrainer, ABC):
             self.model = self.build_model(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=self.args['bert_finetune'], peft_name=peft_name)
             self.model = self.model.to(device)
 
-        self.__init_optim()
+        self.optimizer = None
+        self.scheduler = None
+        if build_optimizer:
+            self.__init_optim()
 
         if self.args.get('wandb'):
             import wandb
@@ -80,9 +83,9 @@ class Trainer(BaseTrainer, ABC):
             wandb.watch(self.model, log_freq=4, log="all", log_graph=True)
 
     @staticmethod
-    @abstractmethod
     def build_model():
         """ Create a model for this particular type of parser """
+        raise NotImplementedError()
 
     def __init_optim(self):
         # TODO: can get rid of args.get when models are rebuilt
@@ -119,7 +122,7 @@ class Trainer(BaseTrainer, ABC):
                     milestones=[self.args['bert_start_finetuning']])
 
     def update(self, batch, eval=False):
-        device = next(self.model.parameters()).device
+        device = self.model.get_device()
         inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel = inputs
 
@@ -143,7 +146,7 @@ class Trainer(BaseTrainer, ABC):
         return loss_val
 
     def predict(self, batch, unsort=True):
-        device = next(self.model.parameters()).device
+        device = self.model.get_device()
         inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel = inputs
 
@@ -173,6 +176,14 @@ class Trainer(BaseTrainer, ABC):
         # sanitize enums for torch.load(weights_only=True)
         if 'transition_subtree_combination' in config:
             config['transition_subtree_combination'] = config['transition_subtree_combination'].name
+        if isinstance(self.model, GraphParser):
+            model_type = "graph"
+        elif isinstance(self.model, TransitionParser):
+            model_type = "transition"
+        elif isinstance(self.model, EnsembleGraphParser):
+            model_type = "ensemble_graph"
+        else:
+            raise ValueError("Unknown model type: %s" % type(self.model))
         params = {
             'model': model_state,
             'vocab': self.vocab.state_dict(),
@@ -180,6 +191,7 @@ class Trainer(BaseTrainer, ABC):
             'global_step': self.global_step,
             'last_best_step': self.last_best_step,
             'dev_score_history': self.dev_score_history,
+            'model_type': model_type,
         }
         if self.args.get('use_peft', False):
             # Hide import so that peft dependency is optional
@@ -207,6 +219,10 @@ class Trainer(BaseTrainer, ABC):
         except BaseException:
             logger.error("Cannot load model from {}".format(filename))
             raise
+        return Trainer.load_checkpoint(filename, checkpoint, pretrain, args, foundation_cache, device, reset_history)
+
+    @staticmethod
+    def load_checkpoint(model_name, checkpoint, pretrain, args=None, foundation_cache=None, device=None, reset_history=False):
         loaded_args = checkpoint['config']
         # enums were sanitized so that weights_only=True works correctly
         transition_subtree_combination = loaded_args.get('transition_subtree_combination')
@@ -214,47 +230,70 @@ class Trainer(BaseTrainer, ABC):
         loaded_args['transition_subtree_combination'] = transition_subtree_combination
         if args is not None: loaded_args.update(args)
 
-        # preserve old models which were created before transformers were added
-        if 'bert_model' not in loaded_args:
-            loaded_args['bert_model'] = None
-
-        lora_weights = checkpoint.get('bert_lora')
-        if lora_weights:
-            logger.debug("Found peft weights for depparse; loading a peft adapter")
-            loaded_args["use_peft"] = True
+        model_type = checkpoint.get("model_type")
+        if not model_type:
+            if 'output_basic.weight' in checkpoint['model']:
+                model_type = "transition"
+            else:
+                model_type = "graph"
 
         vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
-        # load model
-        emb_matrix = None
-        if loaded_args['pretrain'] and pretrain is not None: # we use pretrain only if args['pretrain'] == True and pretrain is not None
-            emb_matrix = pretrain.emb
 
-        # TODO: refactor this common block of code with NER
-        force_bert_saved = False
-        peft_name = None
-        if loaded_args.get('use_peft', False):
-            force_bert_saved = True
-            bert_model, bert_tokenizer, peft_name = load_bert_with_peft(loaded_args['bert_model'], "depparse", foundation_cache)
-            bert_model = load_peft_wrapper(bert_model, lora_weights, loaded_args, logger, peft_name)
-            logger.debug("Loaded peft with name %s", peft_name)
+        if model_type == 'ensemble_graph':
+            models = []
+            for model_idx, (sub_params, sub_args) in enumerate(zip(checkpoint['model']['params'], checkpoint['model']['args'])):
+                # TODO: refactor
+                sub_checkpoint = {
+                    'model': sub_params,
+                    'vocab': checkpoint['vocab'],
+                    'config': sub_args,
+                    'model_type': 'graph',
+                }
+                sub_trainer = Trainer.load_checkpoint("%s-%d" % (model_name, model_idx), sub_checkpoint, pretrain, args, foundation_cache, device, reset_history)
+                models.append(sub_trainer.model)
+            model = EnsembleGraphParser(loaded_args, vocab, models)
+            trainer = Trainer(args=loaded_args, vocab=vocab, model=model, build_optimizer=False)
         else:
-            if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
-                logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", filename)
-                foundation_cache = NoTransformerFoundationCache(foundation_cache)
+            # preserve old models which were created before transformers were added
+            if 'bert_model' not in loaded_args:
+                loaded_args['bert_model'] = None
+
+            lora_weights = checkpoint.get('bert_lora')
+            if lora_weights:
+                logger.debug("Found peft weights for depparse; loading a peft adapter")
+                loaded_args["use_peft"] = True
+
+            # load model
+            emb_matrix = None
+            if loaded_args['pretrain'] and pretrain is not None: # we use pretrain only if args['pretrain'] == True and pretrain is not None
+                emb_matrix = pretrain.emb
+
+            # TODO: refactor this common block of code with NER
+            force_bert_saved = False
+            peft_name = None
+            if loaded_args.get('use_peft', False):
                 force_bert_saved = True
-            bert_model, bert_tokenizer = load_bert(loaded_args.get('bert_model'), foundation_cache)
+                bert_model, bert_tokenizer, peft_name = load_bert_with_peft(loaded_args['bert_model'], "depparse", foundation_cache)
+                bert_model = load_peft_wrapper(bert_model, lora_weights, loaded_args, logger, peft_name)
+                logger.debug("Loaded peft with name %s", peft_name)
+            else:
+                if any(x.startswith("bert_model.") for x in checkpoint['model'].keys()):
+                    logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", model_name)
+                    foundation_cache = NoTransformerFoundationCache(foundation_cache)
+                    force_bert_saved = True
+                bert_model, bert_tokenizer = load_bert(loaded_args.get('bert_model'), foundation_cache)
 
-        if 'output_basic.weight' in checkpoint['model']:
-            model = TransitionTrainer.build_model(loaded_args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
-        else:
-            model = GraphTrainer.build_model(loaded_args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
-        model.load_params(checkpoint['model'])
-        if device is not None:
-            model = model.to(device)
-        if 'output_basic.weight' in checkpoint['model']:
-            trainer = TransitionTrainer(args=loaded_args, vocab=vocab, pretrain=pretrain, model=model, device=device, foundation_cache=foundation_cache)
-        else:
-            trainer = GraphTrainer(args=loaded_args, vocab=vocab, pretrain=pretrain, model=model, device=device, foundation_cache=foundation_cache)
+            if 'output_basic.weight' in checkpoint['model']:
+                model = TransitionTrainer.build_model(loaded_args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
+            else:
+                model = GraphTrainer.build_model(loaded_args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
+            model.load_params(checkpoint['model'])
+            if device is not None:
+                model = model.to(device)
+            if 'output_basic.weight' in checkpoint['model']:
+                trainer = TransitionTrainer(args=loaded_args, vocab=vocab, pretrain=pretrain, model=model, device=device, foundation_cache=foundation_cache)
+            else:
+                trainer = GraphTrainer(args=loaded_args, vocab=vocab, pretrain=pretrain, model=model, device=device, foundation_cache=foundation_cache)
 
         optim_state_dict = checkpoint.get("optimizer_state_dict")
         if optim_state_dict:

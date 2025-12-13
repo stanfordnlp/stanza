@@ -6,7 +6,7 @@ from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence
 
 from stanza.models.common.utils import build_nonlinearity, unsort
 from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
-from stanza.models.depparse.model import BaseParser
+from stanza.models.depparse.model import EmbeddingParser
 from stanza.models.depparse.transition.state import state_from_text, states_from_data_batch, TransitionLSTMEmbedding, SubtreeLSTMEmbedding
 from stanza.models.depparse.transition.transitions import Shift, Finalize, ProjectiveLeft, ProjectiveRight, NonprojectiveLeft, NonprojectiveRight
 
@@ -84,7 +84,7 @@ class SubtreeCombination(Enum):
     LSTM             = 7
     BILSTM           = 8
 
-class TransitionParser(BaseParser):
+class TransitionParser(EmbeddingParser):
     def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
         super().__init__(args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
 
