@@ -33,6 +33,7 @@ from stanza.models.common import utils
 from stanza.models.common import pretrain
 from stanza.models.common.data import augment_punct
 from stanza.models.common.doc import *
+from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
 from stanza.models.common.utils import log_training_args
 from stanza.utils.conll import CoNLL
@@ -490,7 +491,9 @@ def evaluate(args):
 
     # load model
     logger.info("Loading model from: {}".format(model_file))
-    trainer = Trainer.load(pretrain=pretrain, filename=model_file, device=args['device'], args=load_args)
+    # we make and use a blank FoundationCache in case the model is an ensemble,
+    # in which case we don't need N different copies of the same charlm/bert
+    trainer = Trainer.load(pretrain=pretrain, filename=model_file, device=args['device'], args=load_args, foundation_cache=FoundationCache())
     if args['log_norms']:
         trainer.model.log_norms()
     return trainer, evaluate_trainer(args, trainer, pretrain)
