@@ -48,8 +48,10 @@ class MultiVocab(BaseMultiVocab):
                       'WordVocab': WordVocab.load_state_dict}
         new = cls()
         assert '_key2class' in state_dict, "Cannot find class name mapping in state dict!"
-        key2class = state_dict.pop('_key2class')
+        key2class = state_dict['_key2class']
         for k,v in state_dict.items():
+            if k == '_key2class':
+                continue
             classname = key2class[k]
             new[k] = class_dict[classname](v)
         return new
