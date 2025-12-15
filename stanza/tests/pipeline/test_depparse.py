@@ -1,6 +1,8 @@
 """
 Basic tests of the depparse processor boolean flags
 """
+import gc
+
 import pytest
 
 import stanza
@@ -64,6 +66,7 @@ EN_DOC_DEPENDENCY_PARSES_GOLD = """
 @pytest.fixture(scope="module")
 def en_depparse_pipeline():
     nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors='tokenize,pos,lemma,depparse')
+    gc.collect()
     return nlp
 
 def test_depparse(en_depparse_pipeline):

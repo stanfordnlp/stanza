@@ -14,6 +14,9 @@ TEST_TOKENS = [["This", "is", "a", "test", "."], ["Another", "sentence", "."], [
 
 @pytest.fixture(scope="module")
 def foundation_cache():
+    # the test suite sometimes winds up holding on to GPU memory for too long,
+    # resulting in an OOM error
+    # occasionally calling gc.collect() will help
     gc.collect()
     return FoundationCache()
 
