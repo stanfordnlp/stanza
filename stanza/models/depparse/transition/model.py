@@ -6,7 +6,7 @@ from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence
 
 from stanza.models.common.utils import build_nonlinearity, unsort
 from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
-from stanza.models.depparse.model import EmbeddingParser
+from stanza.models.depparse.model import BaseParser, EmbeddingParser
 from stanza.models.depparse.transition.state import state_from_text, states_from_data_batch, TransitionLSTMEmbedding, SubtreeLSTMEmbedding
 from stanza.models.depparse.transition.transitions import Shift, Finalize, ProjectiveLeft, ProjectiveRight, NonprojectiveLeft, NonprojectiveRight
 
@@ -542,6 +542,47 @@ class TransitionParser(EmbeddingParser):
 
         return total_loss
 
+    @staticmethod
+    def idx_to_action(relations, state, idx, left_deprel, right_deprel):
+        if idx == 0:
+            return Shift()
+        if idx == 1:
+            return Finalize()
+        if idx < state.word_position + 2:
+            # again, head of 0 is not possible for a left transition
+            # so we start counting as if the first left index (idx==2) represents 1
+            head = idx - 1
+            # ... but we need to index this by -1 extra
+            max_deprel = torch.argmax(left_deprel[head-1]).item()
+            deprel = relations[max_deprel]
+            if head == state.current_heads[-2]:
+                return ProjectiveLeft(deprel=deprel)
+            return NonprojectiveLeft(deprel=deprel, word_idx=head)
+        if idx < state.word_position + len(state.current_heads) + 1:
+            head = idx - 2 - state.word_position
+            max_deprel = torch.argmax(right_deprel[head]).item()
+            deprel = relations[max_deprel]
+            if head == len(state.current_heads) - 2:
+                return ProjectiveRight(deprel=deprel)
+            return NonprojectiveRight(deprel=deprel, word_idx=state.current_heads[head])
+        raise AssertionError("Prediction idx was outside the expected number of transitions")
+
+    @staticmethod
+    def choose_transitions(relations, states, output_hx, left_deprels, right_deprels):
+        transitions = []
+        for state_idx, state in enumerate(states):
+            #print(state.word_position, state.current_heads)
+            _, indices = output_hx[state_idx].sort(descending=True)
+            for idx in indices:
+                action = TransitionParser.idx_to_action(relations, state, idx.item(), left_deprels[state_idx], right_deprels[state_idx])
+                if action.is_legal(state):
+                    transitions.append(action)
+                    break
+            else:
+                # no actions were legal?  this is a serious problem
+                raise AssertionError("Found a state with no legal actions!")
+        return transitions
+
     def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         lstm_outputs = self.embed(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         states = self.build_initial_states(head, deprel, text, lstm_outputs, sentlens)
@@ -555,41 +596,7 @@ class TransitionParser(EmbeddingParser):
             iteration += 1
             #print("ITERATION %d" % iteration)
             output_hx, left_deprels, right_deprels, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0 = self.forward(states)
-            transitions = []
-            for state_idx, state in enumerate(states):
-                #print(state.word_position, state.current_heads)
-                def idx_to_action(idx, left_deprel, right_deprel):
-                    if idx == 0:
-                        return Shift()
-                    if idx == 1:
-                        return Finalize()
-                    if idx < state.word_position + 2:
-                        # again, head of 0 is not possible for a left transition
-                        # so we start counting as if the first left index (idx==2) represents 1
-                        head = idx - 1
-                        # ... but we need to index this by -1 extra
-                        max_deprel = torch.argmax(left_deprel[head-1]).item()
-                        deprel = self.relations[max_deprel]
-                        if head == state.current_heads[-2]:
-                            return ProjectiveLeft(deprel=deprel)
-                        return NonprojectiveLeft(deprel=deprel, word_idx=head)
-                    if idx < state.word_position + len(state.current_heads) + 1:
-                        head = idx - 2 - state.word_position
-                        max_deprel = torch.argmax(right_deprel[head]).item()
-                        deprel = self.relations[max_deprel]
-                        if head == len(state.current_heads) - 2:
-                            return ProjectiveRight(deprel=deprel)
-                        return NonprojectiveRight(deprel=deprel, word_idx=state.current_heads[head])
-                    raise AssertionError("Prediction idx was outside the expected number of transitions")
-                _, indices = output_hx[state_idx].sort(descending=True)
-                for idx in indices:
-                    action = idx_to_action(idx.item(), left_deprels[state_idx], right_deprels[state_idx])
-                    if action.is_legal(state):
-                        transitions.append(action)
-                        break
-                else:
-                    # no actions were legal?  this is a serious problem
-                    raise AssertionError("Found a state with no legal actions!")
+            transitions = self.choose_transitions(self.relations, states, output_hx, left_deprels, right_deprels)
             #print(transitions[0])
             #print(len(states[0].subtree_lstm_embeddings),
             #      len(states[0].current_heads), states[0].current_heads)
@@ -646,3 +653,132 @@ class TransitionParser(EmbeddingParser):
                                    subtree_embeddings={})
             updated_states.append(state)
         return updated_states
+
+class EnsembleTransitionParser(BaseParser):
+    def __init__(self, args, vocab, models):
+        super().__init__(args, vocab)
+        self.models = nn.ModuleList(models)
+
+    # TODO: refactor with EnsembleGraphParser
+    def get_params(self, skip_modules):
+        params = []
+        args = []
+        for model in self.models:
+            params.append(model.get_params(skip_modules))
+            config = dict(model.args)
+            # sanitize enums for torch.load(weights_only=True)
+            if 'transition_subtree_combination' in config:
+                config['transition_subtree_combination'] = config['transition_subtree_combination'].name
+            args.append(config)
+        checkpoint = {
+            "num_models": len(self.models),
+            "params": params,
+            "args": args,
+        }
+        return checkpoint
+
+    def load_params(self, checkpoint):
+        for model, params in zip(self.models, checkpoint["params"]):
+            model.load_params(params)
+
+    def loss(self, *args, **kwargs):
+        raise NotImplementedError("Cannot train ensemble parser")
+
+
+    def get_device(self):
+        return self.models[0].get_device()
+
+    def forward(self, model_states):
+        model_forwards = [model.forward(states) for model, states in zip(self.models, model_states)]
+
+        output_hx = []
+        left_deprels = []
+        right_deprels = []
+        for state_idx in range(len(model_forwards[0][0])):
+            model_output_hx = torch.stack([x[0][state_idx] for x in model_forwards], dim=0)
+            output_hx.append(torch.sum(model_output_hx, dim=0))
+
+            # TODO: would it be simpler to return a 0 dim tensor?
+            if model_forwards[0][1][state_idx] is not None:
+                model_left_deprels = torch.stack([x[1][state_idx] for x in model_forwards], dim=0)
+                left_deprels.append(torch.sum(model_left_deprels, dim=0))
+            else:
+                left_deprels.append([])
+
+            if model_forwards[0][2][state_idx] is not None:
+                model_right_deprels = torch.stack([x[2][state_idx] for x in model_forwards], dim=0)
+                right_deprels.append(torch.sum(model_right_deprels, dim=0))
+            else:
+                right_deprels.append([])
+
+        model_transition_h0 = [x[3] for x in model_forwards]
+        model_transition_c0 = [x[4] for x in model_forwards]
+        model_partial_tree_h0 = [x[5] for x in model_forwards]
+        model_partial_tree_c0 = [x[6] for x in model_forwards]
+        return output_hx, left_deprels, right_deprels, model_transition_h0, model_transition_c0, model_partial_tree_h0, model_partial_tree_c0
+
+    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+        device = self.get_device()
+
+        model_states = []
+        for model in self.models:
+            lstm_outputs = model.embed(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+            states = model.build_initial_states(head, deprel, text, lstm_outputs, sentlens)
+            model_states.append(states)
+
+        finished_states = []
+        orig_state_idx = list(range(len(sentlens)))
+
+        iteration = 0
+        while len(model_states[0]) > 0:
+            iteration += 1
+
+            # output_hx, left_deprels, and right_deprels are already collapsed into one summed value
+            # the transition and partial_tree vectors are a list of M items long (M=#models)
+            output_hx, left_deprels, right_deprels, model_transition_h0, model_transition_c0, model_partial_tree_h0, model_partial_tree_c0 = self.forward(model_states)
+
+            transitions = TransitionParser.choose_transitions(self.models[0].relations, model_states[0], output_hx, left_deprels, right_deprels)
+
+            new_model_states = []
+            for model, states, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0 in zip(self.models, model_states, model_transition_h0, model_transition_c0, model_partial_tree_h0, model_partial_tree_c0):
+                states = model.update_subtree_embeddings(states, transitions)
+                states = [transition.apply(state) for state, transition in zip(states, transitions)]
+                for state_idx, state in enumerate(states):
+                    state.transition_lstm_embeddings.append(TransitionLSTMEmbedding(transition_h0[:, state_idx, :], transition_c0[:, state_idx, :]))
+                model.update_partial_tree_lstm(states, range(len(states)), partial_tree_h0, partial_tree_c0)
+                new_model_states.append(states)
+            model_states = new_model_states
+
+            # currently we only keep the results from one state - we
+            # don't pay attention to the outputs further downstream,
+            # after all
+            new_state_idx = []
+            for state_idx, (state, transition, orig_idx) in enumerate(zip(model_states[0], transitions, orig_state_idx)):
+                if isinstance(transition, Finalize):
+                    finished_states.append((state, orig_idx))
+                else:
+                    new_state_idx.append(orig_idx)
+            orig_state_idx = new_state_idx
+
+            new_model_states = []
+            for model, states in zip(self.models, model_states):
+                new_states = []
+                for state_idx, (state, transition) in enumerate(zip(states, transitions)):
+                    if not isinstance(transition, Finalize):
+                        new_states.append(state)
+                new_model_states.append(new_states)
+            model_states = new_model_states
+
+        states = [x[0] for x in finished_states]
+        orig_idx = [x[1] for x in finished_states]
+        states = unsort(states, orig_idx)
+        predictions = []
+        for state in states:
+            state_predictions = []
+            for word_idx in range(1, state.num_words+1):
+                head = next(state.parsed_graph.successors(word_idx))
+                deprel = state.parsed_graph.get_edge_data(word_idx, head)['deprel']
+                state_predictions.append((head, deprel))
+            predictions.append(state_predictions)
+        return predictions
+
