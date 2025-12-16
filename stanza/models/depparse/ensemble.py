@@ -6,6 +6,7 @@ import argparse
 from stanza.models.common import pretrain
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.depparse.model import GraphParser, EnsembleGraphParser
+from stanza.models.depparse.transition.model import TransitionParser, EnsembleTransitionParser
 from stanza.models.depparse.trainer import Trainer
 
 def main():
@@ -36,6 +37,8 @@ def main():
 
     if all(isinstance(x, GraphParser) for x in models):
         ensemble = EnsembleGraphParser(args, models[0].vocab, models)
+    elif all(isinstance(x, TransitionParser) for x in models):
+        ensemble = EnsembleTransitionParser(args, models[0].vocab, models)
     else:
         raise ValueError("Not all models are an ensemble type!  %s" % ([type(x) for x in models]))
     tr = Trainer(args=args, vocab=ensemble.vocab, model=ensemble, build_optimizer=False)

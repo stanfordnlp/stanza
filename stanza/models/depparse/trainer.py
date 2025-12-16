@@ -19,7 +19,7 @@ from stanza.models.common import utils, loss
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, NoTransformerFoundationCache
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
 from stanza.models.depparse.model import EnsembleGraphParser, GraphParser
-from stanza.models.depparse.transition.model import SubtreeCombination, TransitionParser
+from stanza.models.depparse.transition.model import SubtreeCombination, EnsembleTransitionParser, TransitionParser
 from stanza.models.pos.vocab import MultiVocab
 
 logger = logging.getLogger('stanza')
@@ -182,6 +182,8 @@ class Trainer(BaseTrainer, ABC):
             model_type = "transition"
         elif isinstance(self.model, EnsembleGraphParser):
             model_type = "ensemble_graph"
+        elif isinstance(self.model, EnsembleTransitionParser):
+            model_type = "ensemble_transition"
         else:
             raise ValueError("Unknown model type: %s" % type(self.model))
         params = {
@@ -239,7 +241,7 @@ class Trainer(BaseTrainer, ABC):
 
         vocab = MultiVocab.load_state_dict(checkpoint['vocab'])
 
-        if model_type == 'ensemble_graph':
+        if model_type in ('ensemble_graph', 'ensemble_transition'):
             models = []
             for model_idx, (sub_params, sub_args) in enumerate(zip(checkpoint['model']['params'], checkpoint['model']['args'])):
                 # TODO: refactor
@@ -247,11 +249,14 @@ class Trainer(BaseTrainer, ABC):
                     'model': sub_params,
                     'vocab': checkpoint['vocab'],
                     'config': sub_args,
-                    'model_type': 'graph',
+                    'model_type': 'graph' if model_type == 'ensemble_graph' else 'transition',
                 }
                 sub_trainer = Trainer.load_checkpoint("%s-%d" % (model_name, model_idx), sub_checkpoint, pretrain, args, foundation_cache, device, reset_history)
                 models.append(sub_trainer.model)
-            model = EnsembleGraphParser(loaded_args, vocab, models)
+            if model_type == 'ensemble_graph':
+                model = EnsembleGraphParser(loaded_args, vocab, models)
+            else:
+                model = EnsembleTransitionParser(loaded_args, vocab, models)
             trainer = Trainer(args=loaded_args, vocab=vocab, model=model, build_optimizer=False)
         else:
             # preserve old models which were created before transformers were added
