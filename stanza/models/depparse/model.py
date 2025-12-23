@@ -99,9 +99,26 @@ class Parser(nn.Module):
         self.parserlstm_h_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
         self.parserlstm_c_init = nn.Parameter(torch.zeros(2 * self.args['num_layers'], 1, self.args['hidden_dim']))
 
+        # dropout
+        self.drop = nn.Dropout(self.args['dropout'])
+        self.worddrop = WordDropout(self.args['word_dropout'])
+
         # classifiers
-        self.unlabeled = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
-        self.deprel = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], len(vocab['deprel']), pairwise=True, dropout=self.args['dropout'])
+        # args.get to preserve old models, including models other people might have created
+        if self.args.get('use_arc_embedding'):
+            logger.debug("Using arc embedding enhancement")
+            self.arc_embedding = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], self.args['deep_biaff_output_dim'], pairwise=True, dropout=self.args['dropout'])
+            self.unlabeled_linear = nn.Sequential(self.drop,
+                                                  nn.Linear(self.args['deep_biaff_output_dim'], 1))
+            self.deprel_linear = nn.Sequential(self.drop,
+                                               nn.Linear(self.args['deep_biaff_output_dim'], 2 * self.args['deep_biaff_output_dim']),
+                                               nn.ReLU(),
+                                               self.drop,
+                                               nn.Linear(self.args['deep_biaff_output_dim'] * 2, len(vocab['deprel'])))
+        else:
+            logger.debug("Not using arc embedding enhancement")
+            self.unlabeled = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
+            self.deprel = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], len(vocab['deprel']), pairwise=True, dropout=self.args['dropout'])
         if self.args['linearization']:
             self.linearization = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
         if self.args['distance']:
@@ -110,8 +127,6 @@ class Parser(nn.Module):
         # criterion
         self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
 
-        self.drop = nn.Dropout(self.args['dropout'])
-        self.worddrop = WordDropout(self.args['word_dropout'])
 
     def add_unsaved_module(self, name, module):
         self.unsaved_modules += [name]
@@ -205,8 +220,13 @@ class Parser(nn.Module):
         lstm_outputs, _ = self.parserlstm(lstm_inputs, sentlens, hx=(self.parserlstm_h_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous(), self.parserlstm_c_init.expand(2 * self.args['num_layers'], word.size(0), self.args['hidden_dim']).contiguous()))
         lstm_outputs, _ = pad_packed_sequence(lstm_outputs, batch_first=True)
 
-        unlabeled_scores = self.unlabeled(self.drop(lstm_outputs), self.drop(lstm_outputs)).squeeze(3)
-        deprel_scores = self.deprel(self.drop(lstm_outputs), self.drop(lstm_outputs))
+        if self.args.get('use_arc_embedding'):
+            arc_scores = self.arc_embedding(self.drop(lstm_outputs), self.drop(lstm_outputs))
+            unlabeled_scores = self.unlabeled_linear(arc_scores).squeeze(3)
+            deprel_scores = self.deprel_linear(arc_scores).squeeze(3)
+        else:
+            unlabeled_scores = self.unlabeled(self.drop(lstm_outputs), self.drop(lstm_outputs)).squeeze(3)
+            deprel_scores = self.deprel(self.drop(lstm_outputs), self.drop(lstm_outputs))
 
         #goldmask = head.new_zeros(*head.size(), head.size(-1)+1, dtype=torch.uint8)
         #goldmask.scatter_(2, head.unsqueeze(2), 1)
