@@ -56,6 +56,24 @@ def build_argparse():
     parser.add_argument('--hidden_dim', type=int, default=400)
     parser.add_argument('--char_hidden_dim', type=int, default=400)
     parser.add_argument('--deep_biaff_hidden_dim', type=int, default=400)
+    parser.add_argument('--deep_biaff_output_dim', type=int, default=160)
+    # As an additional option, we implement arc embeddings
+    #  described in https://arxiv.org/pdf/2501.09451
+    #  Scaling Graph-Based Dependency Parsing with Arc Vectorization and Attention-Based Refinement
+    #  Nicolas Floquet, Joseph Le Roux, Nadi Tomeh, Thierry Charnois
+    # Unfortunately, the current implementation and hyperparameters do not seem to help
+    # when combined with a transformer as the input embedding
+    # LAS Scores on a few dev sets, UD 2.17, averaged over 5 seeds
+    # This is with a version where the arc -> unlabeled is one layer, arc -> label is two layers
+    # Using two layers for the arc -> unlabeled hurts scores a bit more
+    #  treebank   w/     w/o
+    #   en_ewt  93.46  93.47
+    #   de_gsd  89.02  89.12
+    #   it_vit  90.15  90.19
+    # However, this is without the transformer over the arcs, which is
+    # an important component of making the arcs more useful
+    parser.add_argument('--use_arc_embedding', action='store_true', default=False, help='Use arc embeddings, as per Scaling Graph-Based Dependency Parsing')
+    parser.add_argument('--no_use_arc_embedding', dest='use_arc_embedding', action='store_false', help="Don't use arc embeddings")
     parser.add_argument('--word_emb_dim', type=int, default=75)
     parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--tag_emb_dim', type=int, default=50)

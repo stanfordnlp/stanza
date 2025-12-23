@@ -132,6 +132,18 @@ class TestParser:
         """
         self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA)
 
+    def test_arc_embedding(self, tmp_path, wordvec_pretrain_file):
+        """
+        Simple test w/ and w/o arc embedding
+        """
+        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--use_arc_embedding'])
+
+    def test_no_arc_embedding(self, tmp_path, wordvec_pretrain_file):
+        """
+        Simple test w/ and w/o arc embedding
+        """
+        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--no_use_arc_embedding'])
+
     def test_zipfile_train(self, tmp_path, wordvec_pretrain_file):
         """
         Simple test of a few 'epochs' of tagger training with a zipfile
