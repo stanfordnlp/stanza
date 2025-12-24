@@ -431,8 +431,7 @@ def evaluate_trainer(args, trainer, pretrain):
         system_pred_file = io.StringIO(system_pred_file)            
         _, _, score = scorer.score(system_pred_file, args['eval_file'])
 
-        logger.info("Parser score:")
-        logger.info("{} {:.2f}".format(args['shorthand'], score*100))
+        logger.info("Parser score on %s file %s: %.2f", args['shorthand'], args['eval_file'], score*100)
 
     return batch.doc
 
