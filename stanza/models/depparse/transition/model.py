@@ -112,21 +112,33 @@ class TransitionParser(EmbeddingParser):
         self.partial_tree_c0 = nn.Parameter(torch.zeros(self.args['num_layers'], self.args['hidden_dim']))
 
         # the bidirectional LSTM is x2, adding in the partial trees is another x1
-        self.final_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] * 3
-        self.output_layers = nn.ModuleList([nn.Linear(self.final_hidden_dim, self.final_hidden_dim)])
+        self.word_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] * 3
+        self.word_output_layers = nn.ModuleList([nn.Linear(self.word_hidden_dim, self.word_hidden_dim)])
+        self.transition_merge_hidden_dim = self.args['transition_merge_hidden_dim']
+        self.merge_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] + self.transition_merge_hidden_dim
+        self.merge_output_layers = nn.ModuleList([nn.Linear(self.merge_hidden_dim, self.merge_hidden_dim)])
 
         self.nonlinearity = nn.ReLU()
         self.transition_subtree_nonlinearity = build_nonlinearity(self.args.get('transition_subtree_nonlinearity'))
+        self.drop = nn.Dropout(self.args['dropout'])
 
-        self.output_basic = nn.Linear(self.final_hidden_dim, 2)
-        self.output_left = nn.Linear(self.final_hidden_dim, 1)
-        self.output_right = nn.Linear(self.final_hidden_dim, 1)
+        self.output_basic = nn.Linear(self.word_hidden_dim, 2)
+        self.output_left = nn.Linear(self.merge_hidden_dim, 1)
+        self.output_right = nn.Linear(self.merge_hidden_dim, 1)
         # this will be used to predict the relation if a transition is chosen
-        self.output_deprel = nn.Linear(self.final_hidden_dim, len(self.relations))
+        self.output_deprel = nn.Linear(self.merge_hidden_dim, len(self.relations))
 
-        # TODO: maybe make an attention layer?
-        # maybe split this across different relations or right/left?
-        self.merge_words = nn.Linear(self.args['hidden_dim'] * 4, self.args['hidden_dim'] * 2)
+        # Previously we used one merge_words layer for both the right and left
+        # Splitting it into two pieces makes a noticeable difference in accuracy
+        # On an experiment using transformers, on UD 2.17, repeated 5x for averaging, we had
+        #         combined   split
+        #  de_gsd  88.09     88.33
+        #  en_ewt  92.55     93.06
+        #  it_vit  89.38     89.53
+        # The first experiment with using a Bilinear layer instead of a Linear
+        # greatly hurt scores and was much slower.  Perhaps it can be redone better
+        self.merge_words_right = nn.Linear(self.args['hidden_dim'] * 4, self.transition_merge_hidden_dim)
+        self.merge_words_left = nn.Linear(self.args['hidden_dim'] * 4, self.transition_merge_hidden_dim)
 
         # TODO: again, left/right or include a relation embedding
         if self.args['transition_subtree_combination'] in (SubtreeCombination.LINEAR, SubtreeCombination.HEAD_LINEAR):
@@ -221,7 +233,7 @@ class TransitionParser(EmbeddingParser):
         word_embeddings = [state.word_embeddings[state.word_position] for state in states]
         word_embeddings = torch.stack(word_embeddings)
         output_hx = torch.cat([transition_embeddings, partial_tree_embeddings, word_embeddings], dim=1)
-        for output_layer in self.output_layers:
+        for output_layer in self.word_output_layers:
             # TODO: dropout?
             output_hx = self.nonlinearity(output_hx)
             output_hx = output_layer(output_hx)
@@ -238,17 +250,17 @@ class TransitionParser(EmbeddingParser):
                 # TODO: add a position embedding for the projective / non-projective attachments?
                 attachment_embeddings = [torch.cat([state.subtree_embeddings[x], state.subtree_embeddings[state.current_heads[-1]]])
                                          for x in range(1, state.word_position+1)]
-                attachment_embeddings = [self.merge_words(x) for x in attachment_embeddings]
                 attachment_embeddings = torch.stack(attachment_embeddings, dim=0)
+                attachment_embeddings_left = self.merge_words_left(attachment_embeddings)
 
                 # in addition to the current words, we also use the current transition and partial tree
                 # LSTM outputs to determine the scores of each attachment (and possible dependency)
                 attachment_input = torch.cat([transition_embeddings[state_idx, :], partial_tree_embeddings[state_idx, :]])
-                attachment_input = attachment_input.unsqueeze(0).expand(state.word_position, attachment_input.shape[0])
-                #print(attachment_input.shape, attachment_embeddings.shape)
-                output_hx = torch.cat([attachment_input, attachment_embeddings], axis=1)
-                for output_layer in self.output_layers:
+                attachment_input_left = attachment_input.expand(state.word_position, attachment_input.shape[0])
+                output_hx = torch.cat([attachment_input_left, attachment_embeddings_left], axis=1)
+                for output_layer in self.merge_output_layers:
                     output_hx = self.nonlinearity(output_hx)
+                    output_hx = self.drop(output_hx)
                     output_hx = output_layer(output_hx)
                 left_output = self.output_left(self.nonlinearity(output_hx))
                 left_deprel = self.output_deprel(self.nonlinearity(output_hx))
@@ -256,7 +268,14 @@ class TransitionParser(EmbeddingParser):
                 # truncate the outputs to only be the current heads,
                 # then judge the right attachments
                 current_heads = torch.tensor(state.current_heads[:-1], dtype=torch.long)
-                output_hx = output_hx[current_heads, :]
+                attachment_embeddings_right = attachment_embeddings[current_heads, :]
+                attachment_embeddings_right = self.merge_words_right(attachment_embeddings_right)
+                attachment_input_right = attachment_input.unsqueeze(0).expand(current_heads.shape[0], attachment_input.shape[0])
+                output_hx = torch.cat([attachment_input_right, attachment_embeddings_right], axis=1)
+                for output_layer in self.merge_output_layers:
+                    output_hx = self.nonlinearity(output_hx)
+                    output_hx = self.drop(output_hx)
+                    output_hx = output_layer(output_hx)
                 right_output = self.output_right(self.nonlinearity(output_hx))
                 right_deprel = self.output_deprel(self.nonlinearity(output_hx))
                 final_output[state_idx] = [final_output[state_idx][0], left_output.squeeze(1), right_output.squeeze(1)]
