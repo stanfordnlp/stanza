@@ -108,13 +108,13 @@ class Parser(nn.Module):
         if self.args.get('use_arc_embedding'):
             logger.debug("Using arc embedding enhancement")
             self.arc_embedding = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], self.args['deep_biaff_output_dim'], pairwise=True, dropout=self.args['dropout'])
-            self.unlabeled_linear = nn.Sequential(self.drop,
-                                                  nn.Linear(self.args['deep_biaff_output_dim'], 1))
             self.deprel_linear = nn.Sequential(self.drop,
                                                nn.Linear(self.args['deep_biaff_output_dim'], 2 * self.args['deep_biaff_output_dim']),
                                                nn.ReLU(),
                                                self.drop,
                                                nn.Linear(self.args['deep_biaff_output_dim'] * 2, len(vocab['deprel'])))
+            self.unlabeled_linear = nn.Sequential(self.drop,
+                                                  nn.Linear(self.args['deep_biaff_output_dim'], len(vocab['deprel'])))
         else:
             logger.debug("Not using arc emedding enhancement")
             self.unlabeled = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
@@ -222,8 +222,10 @@ class Parser(nn.Module):
 
         if self.args.get('use_arc_embedding'):
             arc_scores = self.arc_embedding(self.drop(lstm_outputs), self.drop(lstm_outputs))
-            unlabeled_scores = self.unlabeled_linear(arc_scores).squeeze(3)
-            deprel_scores = self.deprel_linear(arc_scores).squeeze(3)
+            deprel_scores = self.deprel_linear(arc_scores)
+            deprel_softmax = F.softmax(deprel_scores, dim=3)
+            unlabeled_scores = self.unlabeled_linear(arc_scores)
+            unlabeled_scores = torch.einsum("Babd,Babd->Bab", deprel_softmax, unlabeled_scores)
         else:
             unlabeled_scores = self.unlabeled(self.drop(lstm_outputs), self.drop(lstm_outputs)).squeeze(3)
             deprel_scores = self.deprel(self.drop(lstm_outputs), self.drop(lstm_outputs))
