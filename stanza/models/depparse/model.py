@@ -108,13 +108,17 @@ class Parser(nn.Module):
         if self.args.get('use_arc_embedding'):
             logger.debug("Using arc embedding enhancement")
             self.arc_embedding = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], self.args['deep_biaff_output_dim'], pairwise=True, dropout=self.args['dropout'])
+            self.arc_linear = nn.Linear(self.args['deep_biaff_output_dim'], 2 * self.args['deep_biaff_output_dim'])
             self.deprel_linear = nn.Sequential(self.drop,
-                                               nn.Linear(self.args['deep_biaff_output_dim'], 2 * self.args['deep_biaff_output_dim']),
+                                               self.arc_linear,
                                                nn.ReLU(),
                                                self.drop,
                                                nn.Linear(self.args['deep_biaff_output_dim'] * 2, len(vocab['deprel'])))
             self.unlabeled_linear = nn.Sequential(self.drop,
-                                                  nn.Linear(self.args['deep_biaff_output_dim'], len(vocab['deprel'])))
+                                                  self.arc_linear,
+                                                  nn.ReLU(),
+                                                  self.drop,
+                                                  nn.Linear(self.args['deep_biaff_output_dim'] * 2, len(vocab['deprel'])))
         else:
             logger.debug("Not using arc emedding enhancement")
             self.unlabeled = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
