@@ -123,18 +123,23 @@ class TransitionParser(EmbeddingParser):
         self.drop = nn.Dropout(self.args['dropout'])
 
         self.output_basic = nn.Linear(self.word_hidden_dim, 2)
-        self.output_left = nn.Linear(self.merge_hidden_dim, 1)
-        self.output_right = nn.Linear(self.merge_hidden_dim, 1)
+        self.output_left_transition = nn.Linear(self.merge_hidden_dim, 1)
+        self.output_right_transition = nn.Linear(self.merge_hidden_dim, 1)
         # this will be used to predict the relation if a transition is chosen
-        self.output_deprel = nn.Linear(self.merge_hidden_dim, len(self.relations))
+        self.output_left_deprel = nn.Linear(self.merge_hidden_dim, len(self.relations))
+        self.output_right_deprel = nn.Linear(self.merge_hidden_dim, len(self.relations))
 
         # Previously we used one merge_words layer for both the right and left
         # Splitting it into two pieces makes a noticeable difference in accuracy
-        # On an experiment using transformers, on UD 2.17, repeated 5x for averaging, we had
-        #         combined   split
-        #  de_gsd  88.09     88.33
-        #  en_ewt  92.55     93.06
-        #  it_vit  89.38     89.53
+        # Splitting output_deprel into output_left_reprel and output_right_deprel
+        #   also made a slight difference
+        # On an experiment using transformers, on UD 2.17, repeated 5x
+        # for averaging, using the adadelta optimizer but not the
+        # second pass, we had
+        #         combined   split_merge   split_relations
+        #  de_gsd  88.09         88.33         88.41
+        #  en_ewt  92.55         93.06         93.08
+        #  it_vit  89.38         89.53         89.68
         # The first experiment with using a Bilinear layer instead of a Linear
         # greatly hurt scores and was much slower.  Perhaps it can be redone better
         self.merge_words_right = nn.Linear(self.args['hidden_dim'] * 4, self.transition_merge_hidden_dim)
@@ -262,8 +267,8 @@ class TransitionParser(EmbeddingParser):
                     output_hx = self.nonlinearity(output_hx)
                     output_hx = self.drop(output_hx)
                     output_hx = output_layer(output_hx)
-                left_output = self.output_left(self.nonlinearity(output_hx))
-                left_deprel = self.output_deprel(self.nonlinearity(output_hx))
+                left_output = self.output_left_transition(self.nonlinearity(output_hx))
+                left_deprel = self.output_left_deprel(self.nonlinearity(output_hx))
 
                 # truncate the outputs to only be the current heads,
                 # then judge the right attachments
@@ -276,8 +281,8 @@ class TransitionParser(EmbeddingParser):
                     output_hx = self.nonlinearity(output_hx)
                     output_hx = self.drop(output_hx)
                     output_hx = output_layer(output_hx)
-                right_output = self.output_right(self.nonlinearity(output_hx))
-                right_deprel = self.output_deprel(self.nonlinearity(output_hx))
+                right_output = self.output_right_transition(self.nonlinearity(output_hx))
+                right_deprel = self.output_right_deprel(self.nonlinearity(output_hx))
                 final_output[state_idx] = [final_output[state_idx][0], left_output.squeeze(1), right_output.squeeze(1)]
             left_deprels.append(left_deprel)
             right_deprels.append(right_deprel)
