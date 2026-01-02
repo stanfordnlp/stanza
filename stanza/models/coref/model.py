@@ -500,6 +500,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             logger.info("Scaling LR for the following languages: %s", lr_scaled_languages)
 
         best_f1 = None
+        best_epoch = self.epochs_trained
         for epoch in range(self.epochs_trained, self.config.train_epochs):
             self.training = True
             if self.config.log_norms:
@@ -586,7 +587,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 wandb.log({'dev_bakeoff': scores[-1]})
 
             if best_f1 is None or scores[1] > best_f1:
-
+                best_epoch = epoch
                 if best_f1 is None:
                     logger.info("Saving new best model: F1 %.4f", scores[1])
                 else:
@@ -613,6 +614,9 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
                 logger.info("Epoch %d finished.\nSentence F1 %.5f p %.5f r %.5f\nBest F1 %.5f\nPrevious best F1 %.5f", self.epochs_trained, scores[1], scores[2], scores[3], best_f1, prev_best_f1)
             else:
                 logger.info("Epoch %d finished.\nSentence F1 %.5f p %.5f r %.5f\nBest F1 %.5f", self.epochs_trained, scores[1], scores[2], scores[3], best_f1)
+            if self.config.plateau_epochs > 0 and best_epoch + self.config.plateau_epochs < epoch:
+                logger.info("Have plateaued for too long (%d epochs).  Will terminate training", self.config.plateau_epochs)
+                break
 
     # ========================================================= Private methods
 

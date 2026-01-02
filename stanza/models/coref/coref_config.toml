@@ -110,6 +110,9 @@ learning_rate = 3e-4
 # For how many epochs the training is done
 train_epochs = 32
 
+# plateau for this many epochs = early terminate
+plateau_epochs = 0
+
 # Controls the weight of binary cross entropy loss added to nlml loss
 bce_loss_weight = 0.5
 

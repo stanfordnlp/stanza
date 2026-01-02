@@ -144,6 +144,11 @@ if __name__ == "__main__":
     argparser.add_argument("--no_max_train_len", action="store_const", const=float("inf"), dest="max_train_len",
                            help="Do not skip any documents for being too long")
 
+    argparser.add_argument("--train_epochs", type=int, default=None,
+                           help="Train this many epochs")
+    argparser.add_argument("--plateau_epochs", type=int, default=None,
+                           help="Stop training if plateaued for this many epochs (only applies if positive)")
+
     argparser.add_argument("--train_data", default=None, help="File to use for train data")
     argparser.add_argument("--dev_data", default=None, help="File to use for dev data")
     argparser.add_argument("--test_data", default=None, help="File to use for test data")
@@ -200,6 +205,11 @@ if __name__ == "__main__":
 
     if args.max_train_len:
         config.max_train_len = args.max_train_len
+
+    if args.train_epochs:
+        config.train_epochs = args.train_epochs
+    if args.plateau_epochs:
+        config.plateau_epochs = args.plateau_epochs
 
     if args.lang_lr_attenuation:
         config.lang_lr_attenuation = args.lang_lr_attenuation

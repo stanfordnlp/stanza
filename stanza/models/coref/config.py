@@ -55,6 +55,8 @@ class Config:  # pylint: disable=too-many-instance-attributes, too-few-public-me
     # makes the model less likely to forget how to do anything
     bert_finetune_begin_epoch: float
     train_epochs: int
+    # if plateaued for this many epochs, stop training
+    plateau_epochs: int
     bce_loss_weight: float
 
     tokenizer_kwargs: Dict[str, dict]
