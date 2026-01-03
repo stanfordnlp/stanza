@@ -111,16 +111,26 @@ class TransitionParser(EmbeddingParser):
         self.partial_tree_h0 = nn.Parameter(torch.zeros(self.args['num_layers'], self.args['hidden_dim']))
         self.partial_tree_c0 = nn.Parameter(torch.zeros(self.args['num_layers'], self.args['hidden_dim']))
 
-        # the bidirectional LSTM is x2, adding in the partial trees is another x1
-        self.word_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] * 3
-        self.word_output_layers = nn.ModuleList([nn.Linear(self.word_hidden_dim, self.word_hidden_dim)])
-        self.transition_merge_hidden_dim = self.args['transition_merge_hidden_dim']
-        self.merge_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] + self.transition_merge_hidden_dim
-        self.merge_output_layers = nn.ModuleList([nn.Linear(self.merge_hidden_dim, self.merge_hidden_dim)])
-
         self.nonlinearity = nn.ReLU()
         self.transition_subtree_nonlinearity = build_nonlinearity(self.args.get('transition_subtree_nonlinearity'))
         self.drop = nn.Dropout(self.args['dropout'])
+
+        # the bidirectional LSTM is x2, adding in the partial trees is another x1
+        self.word_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] * 3
+        self.word_output_layers = nn.Sequential(self.nonlinearity,
+                                                self.drop,
+                                                nn.Linear(self.word_hidden_dim, self.word_hidden_dim),
+                                                self.nonlinearity,
+                                                self.drop,
+                                                nn.Linear(self.word_hidden_dim, self.word_hidden_dim))
+        self.transition_merge_hidden_dim = self.args['transition_merge_hidden_dim']
+        self.merge_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] + self.transition_merge_hidden_dim
+        self.merge_output_layers = nn.Sequential(self.nonlinearity,
+                                                 self.drop,
+                                                 nn.Linear(self.merge_hidden_dim, self.merge_hidden_dim),
+                                                 self.nonlinearity,
+                                                 self.drop,
+                                                 nn.Linear(self.merge_hidden_dim, self.merge_hidden_dim))
 
         self.output_basic = nn.Linear(self.word_hidden_dim, 2)
         self.output_left_transition = nn.Linear(self.merge_hidden_dim, 1)
@@ -238,12 +248,9 @@ class TransitionParser(EmbeddingParser):
         word_embeddings = [state.word_embeddings[state.word_position] for state in states]
         word_embeddings = torch.stack(word_embeddings)
         output_hx = torch.cat([transition_embeddings, partial_tree_embeddings, word_embeddings], dim=1)
-        for output_layer in self.word_output_layers:
-            # TODO: dropout?
-            output_hx = self.nonlinearity(output_hx)
-            output_hx = output_layer(output_hx)
+        output_hx = self.word_output_layers(output_hx)
         # batch size x 2 - Shift or Finalize
-        basic_output = self.output_basic(self.nonlinearity(output_hx))
+        basic_output = self.output_basic(self.drop(self.nonlinearity(output_hx)))
         final_output = [[x] for x in basic_output]
         left_deprels = []
         right_deprels = []
@@ -263,12 +270,9 @@ class TransitionParser(EmbeddingParser):
                 attachment_input = torch.cat([transition_embeddings[state_idx, :], partial_tree_embeddings[state_idx, :]])
                 attachment_input_left = attachment_input.expand(state.word_position, attachment_input.shape[0])
                 output_hx = torch.cat([attachment_input_left, attachment_embeddings_left], axis=1)
-                for output_layer in self.merge_output_layers:
-                    output_hx = self.nonlinearity(output_hx)
-                    output_hx = self.drop(output_hx)
-                    output_hx = output_layer(output_hx)
-                left_output = self.output_left_transition(self.nonlinearity(output_hx))
-                left_deprel = self.output_left_deprel(self.nonlinearity(output_hx))
+                output_hx = self.merge_output_layers(output_hx)
+                left_output = self.output_left_transition(self.drop(self.nonlinearity(output_hx)))
+                left_deprel = self.output_left_deprel(self.drop(self.nonlinearity(output_hx)))
 
                 # truncate the outputs to only be the current heads,
                 # then judge the right attachments
@@ -277,12 +281,9 @@ class TransitionParser(EmbeddingParser):
                 attachment_embeddings_right = self.merge_words_right(attachment_embeddings_right)
                 attachment_input_right = attachment_input.unsqueeze(0).expand(current_heads.shape[0], attachment_input.shape[0])
                 output_hx = torch.cat([attachment_input_right, attachment_embeddings_right], axis=1)
-                for output_layer in self.merge_output_layers:
-                    output_hx = self.nonlinearity(output_hx)
-                    output_hx = self.drop(output_hx)
-                    output_hx = output_layer(output_hx)
-                right_output = self.output_right_transition(self.nonlinearity(output_hx))
-                right_deprel = self.output_right_deprel(self.nonlinearity(output_hx))
+                output_hx = self.merge_output_layers(output_hx)
+                right_output = self.output_right_transition(self.drop(self.nonlinearity(output_hx)))
+                right_deprel = self.output_right_deprel(self.drop(self.nonlinearity(output_hx)))
                 final_output[state_idx] = [final_output[state_idx][0], left_output.squeeze(1), right_output.squeeze(1)]
             left_deprels.append(left_deprel)
             right_deprels.append(right_deprel)
