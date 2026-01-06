@@ -22,6 +22,11 @@ class Vocab(BaseVocab):
         self._id2unit = [PAD, UNK] + list(sorted(list(counter.keys()), key=lambda k: counter[k], reverse=True))
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
 
+    def append(self, unit):
+        self._id2unit.append(unit)
+        idx = len(self._id2unit) - 1
+        self._unit2id[unit] = idx
+
     def normalize_unit(self, unit):
         # Normalize minimal units used by the tokenizer
         return unit
