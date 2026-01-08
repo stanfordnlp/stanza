@@ -1,4 +1,5 @@
 from bisect import bisect_right
+from collections import defaultdict
 from copy import copy
 import numpy as np
 import random
@@ -295,12 +296,52 @@ class DataLoader(TokenizationDataset):
             else:
                 logger.debug('Based on the training data, there are NO MWT to split at training time')
 
+        augment_final_punct_prob = 0.0 if evaluation else args.get('augment_final_punct_prob', 0.0)
+        if augment_final_punct_prob > 0:
+            self.augmentations = defaultdict(list)
+            AUGMENT_PAIRS = [("?", "？"),
+                             ("?", "︖"),
+                             ("?", "﹖"),
+                             ("?", "⁇"),
+                             ("!", "！"),
+                             ("!", "︕"),
+                             ("!", "﹗"),
+                             ("!", "‼"),]
+            for orig, target in AUGMENT_PAIRS:
+                if self.augment_vocab(self.vocab, self.data, orig, target):
+                    logger.debug('Based on the training data, augmenting |%s| to |%s|' % (orig, target))
+                    self.augmentations[orig].append(target)
+                if self.augment_vocab(self.vocab, self.data, target, orig):
+                    logger.debug('Based on the training data, augmenting |%s| to |%s|' % (target, orig))
+                    self.augmentations[target].append(orig)
+
     def __len__(self):
         return len(self.sentence_ids)
 
     def init_vocab(self):
         vocab = Vocab(self.data, self.args['lang'])
         return vocab
+
+    @staticmethod
+    def augment_vocab(vocab, data, existing_unit, new_unit):
+        if existing_unit not in vocab:
+            return False
+        new_unit_count = 0
+        existing_unit_count = 0
+        for sentence in data:
+            unit = sentence[-1][0]
+            if unit == new_unit:
+                new_unit_count += 1
+            elif unit == existing_unit:
+                existing_unit_count += 1
+        if existing_unit_count == 0:
+            return False
+        if new_unit_count > 0:
+            return False
+        if new_unit not in vocab:
+            vocab.append(new_unit)
+        logger.debug("Found %d |%s| and %d |%s|", new_unit_count, new_unit, existing_unit_count, existing_unit)
+        return True
 
     def init_sent_ids(self):
         self.sentence_ids = []
@@ -399,6 +440,18 @@ class DataLoader(TokenizationDataset):
         encoded = self.para_to_sentences(new_units)
         return encoded
 
+    def augment_final_punct(self, sentence):
+        if len(sentence[3]) > 1 and len(sentence[3]) < self.args['max_seqlen']:
+            if sentence[3][-1] in self.augmentations:
+                augmented = random.choice(self.augmentations[sentence[3][-1]])
+                new_units = [(x, int(y)) for x, y in zip(sentence[3][:-1], sentence[1][:-1])]
+                new_units.append((augmented, sentence[1][-1]))
+            else:
+                return None
+            encoded = self.para_to_sentences(new_units)
+            return encoded
+        return None
+
 
     def next(self, eval_offsets=None, unit_dropout=0.0, feat_unit_dropout=0.0):
         ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
@@ -415,6 +468,7 @@ class DataLoader(TokenizationDataset):
             move_last_char_prob = 0.0 if self.eval else self.args.get('last_char_move_prob', 0.0)
             move_punct_back_prob = 0.0 if self.eval else self.args.get('punct_move_back_prob', 0.0)
             split_mwt_prob = 0.0 if self.eval else self.args.get('split_mwt_prob', 0.0)
+            augment_final_punct_prob = 0.0 if self.eval else self.args.get('augment_final_punct_prob', 0.0)
 
             pid, sid = id_pair if self.eval else random.choice(self.sentence_ids)
             sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
@@ -465,6 +519,13 @@ class DataLoader(TokenizationDataset):
                         new_sentence = self.split_mwt(sentence)
                         if new_sentence is not None:
                             total_len = total_len + len(new_sentence[0][3]) - len(sentences[sentence_idx][3])
+                            sentences[sentence_idx] = new_sentence[0]
+
+            if augment_final_punct_prob > 0.0:
+                for sentence_idx, sentence in enumerate(sentences):
+                    if random.random() < split_mwt_prob:
+                        new_sentence = self.augment_final_punct(sentence)
+                        if new_sentence is not None:
                             sentences[sentence_idx] = new_sentence[0]
 
             if drop_sents and len(sentences) > 1:

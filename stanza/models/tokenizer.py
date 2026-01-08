@@ -74,6 +74,7 @@ def build_argparse():
     parser.add_argument('--last_char_move_prob', type=float, default=0.02, help="Probability to move the sentence final punctuation of a sentence during training, uniformly at random.  Idea is to teach the tokenizer that a space separated sentence final punct still ends the sentence")
     parser.add_argument('--punct_move_back_prob', type=float, default=0.02, help="Probability to move a comma in the sentence one over, removing the previous space, during training.  Idea is to teach the tokenizer that commas can appear next to words even in languages where the dataset doesn't allow it, such as Vietnamese")
     parser.add_argument('--split_mwt_prob', type=float, default=0.01, help="Probably to split an MWT into its component pieces and turn it into separate words")
+    parser.add_argument('--augment_final_punct_prob', type=float, default=0.05, help="Probability to replace a ? with a ？ or other similar augmentations")
     parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")
     parser.add_argument('--max_seqlen', type=int, default=100, help="Maximum sequence length to consider at a time")
     parser.add_argument('--batch_size', type=int, default=32, help="Batch size to use")
