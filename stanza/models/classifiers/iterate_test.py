@@ -26,7 +26,7 @@ logger = logging.getLogger('stanza')
 
 def parse_args():
     """Add and parse arguments."""
-    parser = classifier.build_parser()
+    parser = classifier.build_argparse()
 
     parser.add_argument('--glob', type=str, default='saved_models/classifier/*classifier*pt', help='Model file(s) to test.')
 
