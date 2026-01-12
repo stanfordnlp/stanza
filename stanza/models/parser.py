@@ -28,6 +28,7 @@ import stanza.models.depparse.data as data
 from stanza.models.depparse.data import DataLoader
 from stanza.models.depparse.trainer import Trainer, GraphTrainer, TransitionTrainer
 from stanza.models.depparse.transition.model import SubtreeCombination
+from stanza.models.depparse.utils import predict_dataset
 from stanza.models.depparse import scorer
 from stanza.models.common import utils
 from stanza.models.common import pretrain
@@ -252,16 +253,6 @@ def load_pretrain(args):
             vec_file = args['wordvec_file'] if args['wordvec_file'] else utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
         pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
-
-def predict_dataset(trainer, dev_batch):
-    with torch.no_grad():
-        dev_preds = []
-        if len(dev_batch) > 0:
-            for batch in dev_batch:
-                preds = trainer.predict(batch)
-                dev_preds += preds
-            dev_preds = utils.unsort(dev_preds, dev_batch.data_orig_idx)
-    return dev_preds
 
 def train(args):
     model_file = model_file_name(args)
