@@ -44,6 +44,7 @@ class Trainer(BaseTrainer, ABC):
         self.global_step = 0
         self.last_best_step = 0
         self.dev_score_history = []
+        self.model_name = None
 
         # whether the training is in primary or secondary stage
         # during FT (loading weights), etc., the training is considered to be in "secondary stage"
@@ -318,6 +319,7 @@ class Trainer(BaseTrainer, ABC):
             trainer.global_step = checkpoint.get("global_step", 0)
             trainer.last_best_step = checkpoint.get("last_best_step", 0)
             trainer.dev_score_history = checkpoint.get("dev_score_history", list())
+        trainer.model_name = model_name
         return trainer
 
 class GraphTrainer(Trainer):
