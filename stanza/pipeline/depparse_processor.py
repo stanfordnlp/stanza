@@ -37,6 +37,10 @@ class DepparseProcessor(UDProcessor):
             self._requires = self.__class__.REQUIRES_DEFAULT
 
     def _set_up_model(self, config, pipeline, device):
+        self._trainer = config.get('trainer')
+        if self._trainer is not None:
+            return
+
         self._pretrain = pipeline.foundation_cache.load_pretrain(config['pretrain_path']) if 'pretrain_path' in config else None
         args = {'charlm_forward_file': config.get('forward_charlm_path', None),
                 'charlm_backward_file': config.get('backward_charlm_path', None)}
