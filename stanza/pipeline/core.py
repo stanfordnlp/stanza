@@ -498,6 +498,7 @@ def main():
     parser.add_argument('--processors', type=str, default='tokenize,pos,lemma,depparse', help='Processors to use')
     parser.add_argument('--package', type=str, default='default', help='Which package to use')
     parser.add_argument('--tokenize_no_ssplit', default=False, action='store_true', help="Don't ssplit")
+    parser.add_argument('--tokenize_pretokenized', default=False, action='store_true', help="Text is pretokenized")
     args, extra_args = parser.parse_known_args()
 
     try:
@@ -513,6 +514,8 @@ def main():
     extra_args['package'] = args.package
     if args.tokenize_no_ssplit:
         extra_args['tokenize_no_ssplit'] = True
+    if args.tokenize_pretokenized:
+        extra_args['tokenize_pretokenized'] = True
 
     pipe = Pipeline(args.lang, processors=args.processors, **extra_args)
 
