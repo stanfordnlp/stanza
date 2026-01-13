@@ -247,3 +247,16 @@ def to_int(string, ignore_error=False):
             raise err
     return res
 
+class InfiniteBatch:
+    def __init__(self, batch):
+        self.batch = batch
+        self.iterator = iter(self.batch)
+
+    def next_batch(self):
+        batch = next(self.iterator, None)
+        if batch is None:
+            self.batch.reshuffle()
+            self.iterator = iter(self.batch)
+            batch = next(self.iterator)
+        return batch
+
