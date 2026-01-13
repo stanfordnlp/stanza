@@ -48,8 +48,36 @@ def build_argparse():
     parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors.')
     parser.add_argument('--wordvec_file', type=str, default=None, help='Word vectors filename.')
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
-    parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
-    parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
+    parser.add_argument('--train_file', type=str, default=None, help='Input train file for data loader.')
+    # Depending on how they are produced, a --silver_file can provide
+    # a small but real improvement in quality in the final model.
+    # This can also be used to train a model using two separate data
+    # sources, such as a historical dataset you want to be the primary
+    # dataset and a more modern dataset you want to have as a
+    # secondary training set
+    # When constructed using a combination of a graph parser and a
+    # transition parser, following the same general approach from the
+    # constituency parser, adding a silver dataset improves results on
+    # multiple UD datasets
+    # Unfortunately, the same general improvement occurs when using
+    # two sets of graph parsers built with different seeds, which
+    # makes the transition parser look substantially less useful
+    # Baseline: graph w/ transformer trained with adadelta and adam
+    # 2x graph: two sets of 5 graph models trained with different seeds
+    # g/t: 5 graph models and 5 transition models
+    #  dev             base    g+t      2g
+    # de_gsd          89.83   89.62   89.64
+    # en_ewt          93.89   94.04   94.15
+    # it_vit          90.60   90.69   90.78
+    # zh-hans_gsdsimp 85.89   86.53   86.55
+    #  test            base    g+t      2g
+    # de_gsd          87.09   87.12   87.15
+    # en_ewt          93.72   93.78   93.98
+    # it_vit          90.88   91.03   91.15
+    # zh-hans_gsdsimp 86.34   86.60   86.49
+    parser.add_argument('--silver_file', type=str, default=None, help='Supplemental training file with silver trees.')
+    parser.add_argument('--silver_weight', type=float, default=0.5, help='Relative weight of the silver trees, if present')
+    parser.add_argument('--eval_file', type=str, default=None, help='Input dev file for data loader.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
     parser.add_argument('--no_gold_labels', dest='gold_labels', action='store_false', help="Don't score the eval file - perhaps it has no gold labels, for example.  Cannot be used at training time")
     parser.add_argument('--output_latex', default=False, action='store_true', help='Output the per-relation table in Latex form')
@@ -325,6 +353,13 @@ def train(args):
         logger.info("Skip training because no data available...")
         sys.exit(0)
 
+    if args['silver_file'] is None:
+        infinite_batch = InfiniteBatch(train_batch)
+    else:
+        silver_doc = CoNLL.conll2doc(input_file=args['silver_file'])
+        silver_batch = DataLoader(silver_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
+        infinite_batch = InfiniteBatch(train_batch, silver_batch, weights=[1.0, args['silver_weight']])
+
     if args['wandb']:
         import wandb
         wandb_name = args['wandb_name'] if args['wandb_name'] else "%s_depparse" % args['shorthand']
@@ -368,7 +403,6 @@ def train(args):
         trainer.model.log_norms()
     do_break = False
 
-    infinite_batch = InfiniteBatch(train_batch)
     while not do_break:
         batch = infinite_batch.next_batch()
 
@@ -396,6 +430,8 @@ def train(args):
 
             train_loss = train_loss / args['eval_interval'] # avg loss per batch
             logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(trainer.global_step, train_loss, dev_score))
+            if len(infinite_batch.batches) > 1:
+                logger.debug("  training batch usage: %s", infinite_batch.counts)
 
             if args['wandb']:
                 wandb.log({'train_loss': train_loss, 'dev_score': dev_score})

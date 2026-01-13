@@ -1,3 +1,4 @@
+from collections import Counter
 import random
 import logging
 import torch
@@ -248,15 +249,27 @@ def to_int(string, ignore_error=False):
     return res
 
 class InfiniteBatch:
-    def __init__(self, batch):
-        self.batch = batch
-        self.iterator = iter(self.batch)
+    def __init__(self, *batches, weights=None):
+        self.batches = batches
+        self.iterators = [iter(batch) for batch in self.batches]
+        if weights is None:
+            self.weights = [1.0 for _ in batches]
+        else:
+            assert len(weights) == len(batches), "Got a weights parameter of a different length from the batches parameter"
+            self.weights = weights
+
+        self.counts = Counter()
 
     def next_batch(self):
-        batch = next(self.iterator, None)
+        if len(self.batches) == 1:
+            batch_idx = 0
+        else:
+            batch_idx = random.choices(range(len(self.batches)), self.weights)[0]
+        self.counts[batch_idx] += 1
+        batch = next(self.iterators[batch_idx], None)
         if batch is None:
-            self.batch.reshuffle()
-            self.iterator = iter(self.batch)
-            batch = next(self.iterator)
+            self.batches[batch_idx].reshuffle()
+            self.iterators[batch_idx] = iter(self.batches[batch_idx])
+            batch = next(self.iterators[batch_idx])
         return batch
 
