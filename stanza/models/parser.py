@@ -25,7 +25,7 @@ import torch
 from torch import nn, optim
 
 import stanza.models.depparse.data as data
-from stanza.models.depparse.data import DataLoader
+from stanza.models.depparse.data import DataLoader, InfiniteBatch
 from stanza.models.depparse.trainer import Trainer, GraphTrainer, TransitionTrainer
 from stanza.models.depparse.transition.model import SubtreeCombination
 from stanza.models.depparse.utils import predict_dataset
@@ -366,95 +366,94 @@ def train(args):
     train_loss = 0
     if args['log_norms']:
         trainer.model.log_norms()
-    while True:
-        do_break = False
-        for i, batch in enumerate(train_batch):
-            start_time = time.time()
-            trainer.global_step += 1
-            loss = trainer.update(batch, eval=False) # update step
-            train_loss += loss
+    do_break = False
 
-            # will checkpoint if we switch optimizers or score a new best score
-            force_checkpoint = False
-            if trainer.global_step % args['log_step'] == 0:
-                duration = time.time() - start_time
-                logger.info(format_str.format(trainer.global_step, max_steps, loss, duration, current_lr))
+    infinite_batch = InfiniteBatch(train_batch)
+    while not do_break:
+        batch = infinite_batch.next_batch()
 
-            if trainer.global_step % args['eval_interval'] == 0:
-                # eval on dev
-                logger.info("Evaluating on dev set...")
+        start_time = time.time()
+        trainer.global_step += 1
+        loss = trainer.update(batch, eval=False) # update step
+        train_loss += loss
+
+        # will checkpoint if we switch optimizers or score a new best score
+        force_checkpoint = False
+        if trainer.global_step % args['log_step'] == 0:
+            duration = time.time() - start_time
+            logger.info(format_str.format(trainer.global_step, max_steps, loss, duration, current_lr))
+
+        if trainer.global_step % args['eval_interval'] == 0:
+            # eval on dev
+            logger.info("Evaluating on dev set...")
+            dev_preds = predict_dataset(trainer, dev_batch)
+
+            dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
+
+            system_pred_file = "{:C}\n\n".format(dev_batch.doc)
+            system_pred_file = io.StringIO(system_pred_file)
+            _, _, dev_score = scorer.score(system_pred_file, args['eval_file'])
+
+            train_loss = train_loss / args['eval_interval'] # avg loss per batch
+            logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(trainer.global_step, train_loss, dev_score))
+
+            if args['wandb']:
+                wandb.log({'train_loss': train_loss, 'dev_score': dev_score})
+
+            train_loss = 0
+
+            # save best model
+            trainer.dev_score_history += [dev_score]
+            if dev_score >= max(trainer.dev_score_history):
+                trainer.last_best_step = trainer.global_step
+                trainer.save(model_file)
+                logger.info("new best model saved.")
+                force_checkpoint = True
+
+            for scheduler_name, scheduler in trainer.scheduler.items():
+                logger.info('scheduler %s learning rate: %s', scheduler_name, scheduler.get_last_lr())
+            if args['log_norms']:
+                trainer.model.log_norms()
+
+        if not is_second_stage and args.get('second_optim', None) is not None:
+            if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop'] or (args['second_optim_start_step'] is not None and trainer.global_step >= args['second_optim_start_step']):
+                logger.info("Switching to second optimizer: {}".format(args.get('second_optim', None)))
+                global_step = trainer.global_step
+                args["second_stage"] = True
+                # if the loader gets a model file, it uses secondary optimizer
+                # (because of the second_stage = True argument)
+                trainer = Trainer.load(filename=model_file, args=args, pretrain=pretrain, device=args['device'])
+                logger.info('Reloading best model to continue from current local optimum')
+
                 dev_preds = predict_dataset(trainer, dev_batch)
-
                 dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
-
                 system_pred_file = "{:C}\n\n".format(dev_batch.doc)
                 system_pred_file = io.StringIO(system_pred_file)
                 _, _, dev_score = scorer.score(system_pred_file, args['eval_file'])
+                logger.info("Reloaded model with dev score %.4f", dev_score)
 
-                train_loss = train_loss / args['eval_interval'] # avg loss per batch
-                logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(trainer.global_step, train_loss, dev_score))
-
-                if args['wandb']:
-                    wandb.log({'train_loss': train_loss, 'dev_score': dev_score})
-
-                train_loss = 0
-
-                # save best model
-                trainer.dev_score_history += [dev_score]
-                if dev_score >= max(trainer.dev_score_history):
-                    trainer.last_best_step = trainer.global_step
-                    trainer.save(model_file)
-                    logger.info("new best model saved.")
-                    force_checkpoint = True
-
-                for scheduler_name, scheduler in trainer.scheduler.items():
-                    logger.info('scheduler %s learning rate: %s', scheduler_name, scheduler.get_last_lr())
-                if args['log_norms']:
-                    trainer.model.log_norms()
-
-            if not is_second_stage and args.get('second_optim', None) is not None:
-                if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop'] or (args['second_optim_start_step'] is not None and trainer.global_step >= args['second_optim_start_step']):
-                    logger.info("Switching to second optimizer: {}".format(args.get('second_optim', None)))
-                    global_step = trainer.global_step
-                    args["second_stage"] = True
-                    # if the loader gets a model file, it uses secondary optimizer
-                    # (because of the second_stage = True argument)
-                    trainer = Trainer.load(filename=model_file, args=args, pretrain=pretrain, device=args['device'])
-                    logger.info('Reloading best model to continue from current local optimum')
-
-                    dev_preds = predict_dataset(trainer, dev_batch)
-                    dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
-                    system_pred_file = "{:C}\n\n".format(dev_batch.doc)
-                    system_pred_file = io.StringIO(system_pred_file)
-                    _, _, dev_score = scorer.score(system_pred_file, args['eval_file'])
-                    logger.info("Reloaded model with dev score %.4f", dev_score)
-
-                    is_second_stage = True
-                    trainer.global_step = global_step
-                    trainer.last_best_step = global_step
-                    if args['second_batch_size'] is not None:
-                        train_batch.set_batch_size(args['second_batch_size'])
-                    force_checkpoint = True
-            else:
-                if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop']:
-                    do_break = True
-                    break
-
-            if trainer.global_step % args['eval_interval'] == 0 or force_checkpoint:
-                # if we need to save checkpoint, do so
-                # (save after switching the optimizer, if applicable, so that
-                # the new optimizer is the optimizer used if a restart happens)
-                if checkpoint_file is not None:
-                    trainer.save(checkpoint_file, save_optimizer=True)
-                    logger.info("new model checkpoint saved.")
-
-            if trainer.global_step >= args['max_steps']:
+                is_second_stage = True
+                trainer.global_step = global_step
+                trainer.last_best_step = global_step
+                if args['second_batch_size'] is not None:
+                    train_batch.set_batch_size(args['second_batch_size'])
+                force_checkpoint = True
+        else:
+            if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop']:
                 do_break = True
                 break
 
-        if do_break: break
+        if trainer.global_step % args['eval_interval'] == 0 or force_checkpoint:
+            # if we need to save checkpoint, do so
+            # (save after switching the optimizer, if applicable, so that
+            # the new optimizer is the optimizer used if a restart happens)
+            if checkpoint_file is not None:
+                trainer.save(checkpoint_file, save_optimizer=True)
+                logger.info("new model checkpoint saved.")
 
-        train_batch.reshuffle()
+        if trainer.global_step >= args['max_steps']:
+            do_break = True
+            break
 
     logger.info("Training ended with {} steps.".format(trainer.global_step))
 
