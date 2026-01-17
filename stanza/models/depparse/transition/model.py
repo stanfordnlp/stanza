@@ -269,10 +269,10 @@ class TransitionParser(EmbeddingParser):
                 # LSTM outputs to determine the scores of each attachment (and possible dependency)
                 attachment_input = torch.cat([transition_embeddings[state_idx, :], partial_tree_embeddings[state_idx, :]])
                 attachment_input_left = attachment_input.expand(state.word_position, attachment_input.shape[0])
-                output_hx = torch.cat([attachment_input_left, attachment_embeddings_left], axis=1)
-                output_hx = self.merge_output_layers(output_hx)
-                left_output = self.output_left_transition(self.drop(self.nonlinearity(output_hx)))
-                left_deprel = self.output_left_deprel(self.drop(self.nonlinearity(output_hx)))
+                left_arc_hx = torch.cat([attachment_input_left, attachment_embeddings_left], axis=1)
+                left_arc_hx = self.merge_output_layers(left_arc_hx)
+                left_output = self.output_left_transition(self.drop(self.nonlinearity(left_arc_hx)))
+                left_deprel = self.output_left_deprel(self.drop(self.nonlinearity(left_arc_hx)))
 
                 # truncate the outputs to only be the current heads,
                 # then judge the right attachments
@@ -280,10 +280,10 @@ class TransitionParser(EmbeddingParser):
                 attachment_embeddings_right = attachment_embeddings[current_heads, :]
                 attachment_embeddings_right = self.merge_words_right(attachment_embeddings_right)
                 attachment_input_right = attachment_input.unsqueeze(0).expand(current_heads.shape[0], attachment_input.shape[0])
-                output_hx = torch.cat([attachment_input_right, attachment_embeddings_right], axis=1)
-                output_hx = self.merge_output_layers(output_hx)
-                right_output = self.output_right_transition(self.drop(self.nonlinearity(output_hx)))
-                right_deprel = self.output_right_deprel(self.drop(self.nonlinearity(output_hx)))
+                right_arc_hx = torch.cat([attachment_input_right, attachment_embeddings_right], axis=1)
+                right_arc_hx = self.merge_output_layers(right_arc_hx)
+                right_output = self.output_right_transition(self.drop(self.nonlinearity(right_arc_hx)))
+                right_deprel = self.output_right_deprel(self.drop(self.nonlinearity(right_arc_hx)))
                 final_output[state_idx] = [final_output[state_idx][0], left_output.squeeze(1), right_output.squeeze(1)]
             left_deprels.append(left_deprel)
             right_deprels.append(right_deprel)
