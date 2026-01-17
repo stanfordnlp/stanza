@@ -2,7 +2,7 @@ from enum import Enum
 
 import torch
 from torch import nn
-from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence
+from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
 from stanza.models.common.utils import build_nonlinearity, unsort
 from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
@@ -173,7 +173,7 @@ class TransitionParser(EmbeddingParser):
             self.reduce_relation_embedding = nn.Embedding(num_embeddings = len(self.relations),
                                                           embedding_dim = self.args['hidden_dim'] * 2)
         elif self.args['transition_subtree_combination'] is SubtreeCombination.BILSTM:
-            self.reduce_lstm = nn.LSTM(input_size=self.args['hidden_dim'] * 2, hidden_size=self.args['hidden_dim'], num_layers=self.args['num_layers'], dropout=self.args['dropout'], bidirectional=True)
+            self.reduce_lstm = nn.LSTM(input_size=self.args['hidden_dim'] * 2, hidden_size=self.args['hidden_dim'] * 2, num_layers=self.args['num_layers'], dropout=self.args['dropout'], bidirectional=True)
             self.reduce_relation_embedding = nn.Embedding(num_embeddings = len(self.relations),
                                                           embedding_dim = self.args['hidden_dim'] * 2)
         else:
@@ -382,37 +382,48 @@ class TransitionParser(EmbeddingParser):
             heads = []
             for state, transition in zip(states, transitions):
                 if isinstance(transition, ProjectiveLeft):
-                    first = state.subtree_embeddings[state.current_heads[-2]]
-                    second = state.subtree_embeddings[state.current_heads[-1]]
+                    head = state.current_heads[-2]
+                    child = state.current_heads[-1]
                 elif isinstance(transition, ProjectiveRight):
-                    first = state.subtree_embeddings[state.current_heads[-1]]
-                    second = state.subtree_embeddings[state.current_heads[-2]]
+                    head = state.current_heads[-1]
+                    child = state.current_heads[-2]
                 elif isinstance(transition, NonprojectiveLeft):
-                    first = state.subtree_embeddings[transition.word_idx]
-                    second = state.subtree_embeddings[state.current_heads[-1]]
+                    head = transition.word_idx
+                    child = state.current_heads[-1]
                 elif isinstance(transition, NonprojectiveRight):
-                    first = state.subtree_embeddings[state.current_heads[-1]]
-                    second = state.subtree_embeddings[transition.word_idx]
+                    head = state.current_heads[-1]
+                    child = transition.word_idx
                 else:
                     continue
-                relation_id = torch.tensor(self.relation_to_id[transition.deprel], requires_grad=False, dtype=torch.long, device=device)
-                relation_emb = self.reduce_relation_embedding(relation_id)
-                heads.append(first)
-                if self.args['transition_subtree_combination'] is SubtreeCombination.LSTM:
-                    pieces.append((relation_emb, second, first))
-                else:
-                    pieces.append((relation_emb, first, second, relation_emb))
+                children = [child]
+                if head in state.parsed_graph:
+                    children.extend([x for x in state.parsed_graph.predecessors(head)])
+                children.sort()
+                children = [state.word_embeddings[child] for child in children]
+                # TODO: in some way incorporate the relation used for the children?
+                head_emb = state.word_embeddings[head]
+                heads.append(head_emb)
+                pieces.append([head_emb] + children + [head_emb])
             if len(pieces) == 0:
                 return states
+            piece_lens = [len(x) for x in pieces]
+            max_len = max(piece_lens)
             pieces = [torch.stack(piece, dim=0) for piece in pieces]
-            lstm_input = torch.stack(pieces, dim=1)
-            embeddings, _ = self.reduce_lstm(lstm_input)
+            lstm_input = torch.zeros((max_len, len(pieces), pieces[0].shape[1]), dtype=pieces[0].dtype, device=device)
+            for piece_idx, piece in enumerate(pieces):
+                lstm_input[:len(piece), piece_idx, :] = piece
+            lstm_input = pack_padded_sequence(lstm_input, piece_lens, enforce_sorted=False)
+            lstm_output, _ = self.reduce_lstm(lstm_input)
+            lstm_output, _ = pad_packed_sequence(lstm_output)
+
             if self.args['transition_subtree_combination'] is SubtreeCombination.LSTM:
-                embeddings = embeddings[-1, :, :]
+                embeddings = [lstm_output[piece_len-1, piece_idx, :] for piece_idx, piece_len in enumerate(piece_lens)]
+                embeddings = torch.stack(embeddings, dim=0)
             else:
-                emb_forward = embeddings[2, :, :self.args['hidden_dim']]   # use the embedding for rel, first, second
-                emb_reverse = embeddings[1, :, self.args['hidden_dim']:]   # use the embedding for rel, second, first
-                embeddings = torch.cat([emb_forward, emb_reverse], dim=1)
+                emb_forward = [lstm_output[piece_len-1, piece_idx, :2*self.args['hidden_dim']] for piece_idx, piece_len in enumerate(piece_lens)]
+                emb_forward = torch.stack(emb_forward, dim=0)
+                emb_reverse = lstm_output[0, :, 2*self.args['hidden_dim']:]
+                embeddings = emb_forward + emb_reverse
             heads = torch.stack(heads, dim=0)
             embeddings = embeddings * 0.2 + heads * 0.8
         else:

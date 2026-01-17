@@ -78,3 +78,15 @@ class TestParser:
         """
         self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA)
 
+    def test_train_bilstm_merge(self, tmp_path, wordvec_pretrain_file):
+        """
+        Test training with the bilstm merge method
+        """
+        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--transition_subtree_combination', 'BILSTM'])
+
+    def test_train_lstm_merge(self, tmp_path, wordvec_pretrain_file):
+        """
+        Test training with the lstm merge method
+        """
+        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--transition_subtree_combination', 'LSTM'])
+
