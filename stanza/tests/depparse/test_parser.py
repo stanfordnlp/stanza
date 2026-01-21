@@ -6,14 +6,13 @@ Uses a couple sentences of UD_English-EWT as training/dev data
 
 import os
 import pytest
-import zipfile
 
 import torch
 
-from stanza.models import parser
 from stanza.models.common import pretrain
 from stanza.models.depparse.trainer import Trainer
 from stanza.tests import TEST_WORKING_DIR
+from stanza.tests.depparse.parser_training import run_training
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
@@ -78,83 +77,35 @@ class TestParser:
     def wordvec_pretrain_file(self):
         return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
 
-    def run_training(self, tmp_path, wordvec_pretrain_file, train_text, dev_text, augment_nopunct=False, extra_args=None, zip_train_data=False):
-        """
-        Run the training for a few iterations, load & return the model
-        """
-        train_file = str(tmp_path / "train.zip") if zip_train_data else str(tmp_path / "train.conllu")
-        dev_file = str(tmp_path / "dev.conllu")
-        pred_file = str(tmp_path / "pred.conllu")
-
-        save_name = "test_parser.pt"
-        save_file = str(tmp_path / save_name)
-
-        if zip_train_data:
-            with zipfile.ZipFile(train_file, "w") as zout:
-                with zout.open('train.conllu', 'w') as fout:
-                    fout.write(train_text.encode())
-        else:
-            with open(train_file, "w", encoding="utf-8") as fout:
-                fout.write(train_text)
-
-        with open(dev_file, "w", encoding="utf-8") as fout:
-            fout.write(dev_text)
-
-        args = ["--wordvec_pretrain_file", wordvec_pretrain_file,
-                "--train_file", train_file,
-                "--eval_file", dev_file,
-                "--output_file", pred_file,
-                "--log_step", "10",
-                "--eval_interval", "20",
-                "--max_steps", "100",
-                "--shorthand", "en_test",
-                "--save_dir", str(tmp_path),
-                "--save_name", save_name,
-                # in case we are doing a bert test
-                "--bert_start_finetuning", "10",
-                "--bert_warmup_steps", "10",
-                "--lang", "en"]
-        if not augment_nopunct:
-            args.extend(["--augment_nopunct", "0.0"])
-        if extra_args is not None:
-            args = args + extra_args
-        trainer, _ = parser.main(args)
-
-        assert os.path.exists(save_file)
-        pt = pretrain.Pretrain(wordvec_pretrain_file)
-        # test loading the saved model
-        saved_model = Trainer.load(filename=save_file, pretrain=pt)
-        return trainer
-
     def test_train(self, tmp_path, wordvec_pretrain_file):
         """
         Simple test of a few 'epochs' of tagger training
         """
-        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA)
+        run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA)
 
     def test_arc_embedding(self, tmp_path, wordvec_pretrain_file):
         """
         Simple test w/ and w/o arc embedding
         """
-        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--use_arc_embedding'])
+        run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--use_arc_embedding'])
 
     def test_no_arc_embedding(self, tmp_path, wordvec_pretrain_file):
         """
         Simple test w/ and w/o arc embedding
         """
-        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--no_use_arc_embedding'])
+        run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--no_use_arc_embedding'])
 
     def test_zipfile_train(self, tmp_path, wordvec_pretrain_file):
         """
         Simple test of a few 'epochs' of tagger training with a zipfile
         """
-        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, zip_train_data=True)
+        run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, zip_train_data=True)
 
     def test_with_bert_nlayers(self, tmp_path, wordvec_pretrain_file):
-        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_hidden_layers', '2'])
+        run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_hidden_layers', '2'])
 
     def test_with_bert_finetuning(self, tmp_path, wordvec_pretrain_file):
-        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2'])
+        trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2'])
         assert 'bert_optimizer' in trainer.optimizer.keys()
         assert 'bert_scheduler' in trainer.scheduler.keys()
 
@@ -162,7 +113,7 @@ class TestParser:
         """
         Check that if we save, then load, then save a model with a finetuned bert, that bert isn't lost
         """
-        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2'])
+        trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2'])
         assert 'bert_optimizer' in trainer.optimizer.keys()
         assert 'bert_scheduler' in trainer.scheduler.keys()
 
@@ -185,12 +136,12 @@ class TestParser:
         assert any(x.startswith("bert_model") for x in checkpoint['model'].keys())
 
     def test_with_peft(self, tmp_path, wordvec_pretrain_file):
-        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2', '--use_peft'])
+        trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2', '--use_peft'])
         assert 'bert_optimizer' in trainer.optimizer.keys()
         assert 'bert_scheduler' in trainer.scheduler.keys()
 
     def test_single_optimizer_checkpoint(self, tmp_path, wordvec_pretrain_file):
-        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam'])
+        trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam'])
 
         save_dir = trainer.args['save_dir']
         save_name = trainer.args['save_name']
@@ -212,7 +163,7 @@ class TestParser:
             assert isinstance(opt, torch.optim.Adam)
 
     def test_two_optimizers_checkpoint(self, tmp_path, wordvec_pretrain_file):
-        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam', '--second_optim', 'sgd', '--second_optim_start_step', '40'])
+        trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam', '--second_optim', 'sgd', '--second_optim_start_step', '12'])
 
         save_dir = trainer.args['save_dir']
         save_name = trainer.args['save_name']

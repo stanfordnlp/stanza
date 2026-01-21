@@ -6,14 +6,13 @@ Uses a couple sentences of UD_English-EWT as training/dev data
 
 import os
 import pytest
-import zipfile
 
 import torch
 
-from stanza.models import parser
 from stanza.models.common import pretrain
 from stanza.models.depparse.trainer import Trainer
 from stanza.tests import TEST_WORKING_DIR
+from stanza.tests.depparse.parser_training import run_training
 from stanza.tests.depparse.test_parser import TRAIN_DATA, DEV_DATA
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
@@ -23,70 +22,22 @@ class TestParser:
     def wordvec_pretrain_file(self):
         return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
 
-    def run_training(self, tmp_path, wordvec_pretrain_file, train_text, dev_text, augment_nopunct=False, extra_args=None, zip_train_data=False):
-        """
-        Run the training for a few iterations, load & return the model
-        """
-        train_file = str(tmp_path / "train.zip") if zip_train_data else str(tmp_path / "train.conllu")
-        dev_file = str(tmp_path / "dev.conllu")
-        pred_file = str(tmp_path / "pred.conllu")
-
-        save_name = "test_parser.pt"
-        save_file = str(tmp_path / save_name)
-
-        if zip_train_data:
-            with zipfile.ZipFile(train_file, "w") as zout:
-                with zout.open('train.conllu', 'w') as fout:
-                    fout.write(train_text.encode())
-        else:
-            with open(train_file, "w", encoding="utf-8") as fout:
-                fout.write(train_text)
-
-        with open(dev_file, "w", encoding="utf-8") as fout:
-            fout.write(dev_text)
-
-        args = ["--wordvec_pretrain_file", wordvec_pretrain_file,
-                "--train_file", train_file,
-                "--eval_file", dev_file,
-                "--output_file", pred_file,
-                "--log_step", "3",
-                "--eval_interval", "6",
-                "--max_steps", "18",
-                "--shorthand", "en_test",
-                "--save_dir", str(tmp_path),
-                "--save_name", save_name,
-                # in case we are doing a bert test
-                "--bert_start_finetuning", "6",
-                "--bert_warmup_steps", "6",
-                "--model_type", "transition",
-                "--lang", "en"]
-        if not augment_nopunct:
-            args.extend(["--augment_nopunct", "0.0"])
-        if extra_args is not None:
-            args = args + extra_args
-        trainer, _ = parser.main(args)
-
-        assert os.path.exists(save_file)
-        pt = pretrain.Pretrain(wordvec_pretrain_file)
-        # test loading the saved model
-        saved_model = Trainer.load(filename=save_file, pretrain=pt)
-        return trainer
-
     def test_train(self, tmp_path, wordvec_pretrain_file):
         """
         Simple test of a few 'epochs' of tagger training
         """
-        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA)
+        trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, model_type="transition")
+        assert trainer.args['model_type'] == 'transition'
 
     def test_train_bilstm_merge(self, tmp_path, wordvec_pretrain_file):
         """
         Test training with the bilstm merge method
         """
-        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--transition_subtree_combination', 'BILSTM'])
+        run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, model_type="transition", extra_args=['--transition_subtree_combination', 'BILSTM'])
 
     def test_train_lstm_merge(self, tmp_path, wordvec_pretrain_file):
         """
         Test training with the lstm merge method
         """
-        self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--transition_subtree_combination', 'LSTM'])
+        run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, model_type="transition", extra_args=['--transition_subtree_combination', 'LSTM'])
 
