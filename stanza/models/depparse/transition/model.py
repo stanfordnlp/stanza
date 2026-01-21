@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from stanza.models.common.utils import build_nonlinearity, unsort
 from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
 from stanza.models.depparse.model import BaseParser, EmbeddingParser
-from stanza.models.depparse.transition.state import state_from_text, states_from_data_batch, TransitionLSTMEmbedding, SubtreeLSTMEmbedding
+from stanza.models.depparse.transition.state import state_from_text, states_from_data_batch, TransitionLSTMEmbedding, SubtreeLSTMEmbedding, ArcLSTMEmbedding
 from stanza.models.depparse.transition.transitions import Shift, Finalize, ProjectiveLeft, ProjectiveRight, NonprojectiveLeft, NonprojectiveRight
 
 # A few notes on some experiments crossvalidating the hyperparameters for this model
@@ -115,16 +115,18 @@ class TransitionParser(EmbeddingParser):
         self.transition_subtree_nonlinearity = build_nonlinearity(self.args.get('transition_subtree_nonlinearity'))
         self.drop = nn.Dropout(self.args['dropout'])
 
+        self.merge_words_output_dim = self.args['transition_merge_words_output_dim']
+        self.merge_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] + self.merge_words_output_dim
+
         # the bidirectional LSTM is x2, adding in the partial trees is another x1
-        self.word_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] * 3
+        # the arc embeddings take up merge_hidden_dim
+        self.word_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] * 3 + self.merge_hidden_dim
         self.word_output_layers = nn.Sequential(self.nonlinearity,
                                                 self.drop,
                                                 nn.Linear(self.word_hidden_dim, self.word_hidden_dim),
                                                 self.nonlinearity,
                                                 self.drop,
                                                 nn.Linear(self.word_hidden_dim, self.word_hidden_dim))
-        self.merge_words_output_dim = self.args['transition_merge_words_output_dim']
-        self.merge_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] + self.merge_words_output_dim
         # Splitting this into a left and right version is close,
         # but seems to be somewhat more accurate than one layer
         #  5 model dev avg LAS  baseline  merge-two-sides
@@ -154,6 +156,11 @@ class TransitionParser(EmbeddingParser):
                                                 self.nonlinearity,
                                                 self.drop,
                                                 nn.Linear(self.merge_hidden_dim, self.merge_hidden_dim))
+
+        self.arc_embedding_lstm = nn.LSTM(input_size=self.merge_hidden_dim, hidden_size=self.merge_hidden_dim, num_layers=self.args['num_layers'], dropout=self.args['dropout'])
+        self.arc_embedding_start = nn.Parameter(torch.zeros(self.merge_hidden_dim))
+        self.arc_embedding_h0 = nn.Parameter(torch.zeros(self.args['num_layers'], self.merge_hidden_dim))
+        self.arc_embedding_c0 = nn.Parameter(torch.zeros(self.args['num_layers'], self.merge_hidden_dim))
 
         self.output_basic = nn.Linear(self.word_hidden_dim, 2)
         self.output_left_transition = nn.Linear(self.merge_hidden_dim, 1)
@@ -274,19 +281,26 @@ class TransitionParser(EmbeddingParser):
         partial_tree_embeddings = partial_tree_embeddings.squeeze(0)
         #print(torch.linalg.norm(partial_tree_embeddings))
 
+        arc_embeddings = [state.arc_lstm_embeddings[-1].hx for state in states]
+        arc_embeddings = torch.stack(arc_embeddings, dim=0)
+
         word_embeddings = [state.word_embeddings[state.word_position] for state in states]
         word_embeddings = torch.stack(word_embeddings)
-        output_hx = torch.cat([transition_embeddings, partial_tree_embeddings, word_embeddings], dim=1)
+
+        output_hx = torch.cat([transition_embeddings, partial_tree_embeddings, arc_embeddings, word_embeddings], dim=1)
         output_hx = self.word_output_layers(output_hx)
         # batch size x 2 - Shift or Finalize
         basic_output = self.output_basic(self.drop(self.nonlinearity(output_hx)))
         final_output = [[x] for x in basic_output]
         left_deprels = []
         right_deprels = []
-
+        left_arc_hxs = []
+        right_arc_hxs = []
         for state_idx, state in enumerate(states):
             left_deprel = None
             right_deprel = None
+            left_arc_hx = None
+            right_arc_hx = None
             if len(state.current_heads) > 1:
                 # TODO: add a position embedding for the projective / non-projective attachments?
                 attachment_embeddings = [torch.cat([state.subtree_embeddings[x], state.subtree_embeddings[state.current_heads[-1]]])
@@ -316,8 +330,10 @@ class TransitionParser(EmbeddingParser):
                 final_output[state_idx] = [final_output[state_idx][0], left_output.squeeze(1), right_output.squeeze(1)]
             left_deprels.append(left_deprel)
             right_deprels.append(right_deprel)
+            left_arc_hxs.append(left_arc_hx)
+            right_arc_hxs.append(right_arc_hx)
         final_output = [torch.cat(x) for x in final_output]
-        return final_output, left_deprels, right_deprels, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0
+        return final_output, left_deprels, right_deprels, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0, left_arc_hxs, right_arc_hxs
 
     def update_subtree_embeddings(self, states, transitions):
         embeddings = []
@@ -591,6 +607,42 @@ class TransitionParser(EmbeddingParser):
             total_loss += self.deprel_loss_function(deprel_hx, deprel_one_hots)
         return total_loss
 
+    def extract_arc_embeddings(self, states, transitions, left_arc_hxs, right_arc_hxs):
+        arc_embeddings = []
+        for state_idx, (state, transition) in enumerate(zip(states, transitions)):
+            if isinstance(transition, Shift):
+                arc_embeddings.append(None)
+            elif isinstance(transition, Finalize):
+                arc_embeddings.append(None)
+            elif isinstance(transition, ProjectiveLeft) or isinstance(transition, NonprojectiveLeft):
+                if isinstance(transition, ProjectiveLeft):
+                    head = state.current_heads[-2]
+                else:
+                    head = transition.word_idx
+                arc_embeddings.append(left_arc_hxs[state_idx][head-1])
+            elif isinstance(transition, ProjectiveRight) or isinstance(transition, NonprojectiveRight):
+                if isinstance(transition, ProjectiveRight):
+                    head = len(state.current_heads) - 2
+                else:
+                    head = state.current_heads.index(transition.word_idx)
+                arc_embeddings.append(right_arc_hxs[state_idx][head])
+        return arc_embeddings
+
+    def update_arc_embedding_lstm(self, states, arc_embeddings):
+        arc_states = [state for state_idx, state in enumerate(states) if arc_embeddings[state_idx] is not None]
+        arc_embeddings = [arc for arc in arc_embeddings if arc is not None]
+        if len(arc_embeddings) == 0:
+            return
+        arc_embedding_hx = torch.stack(arc_embeddings, dim=0).unsqueeze(0)
+        arc_embedding_h0 = torch.stack([state.arc_lstm_embeddings[-1].h0 for state in arc_states], dim=1)
+        arc_embedding_c0 = torch.stack([state.arc_lstm_embeddings[-1].c0 for state in arc_states], dim=1)
+        arc_embedding_hx, (arc_embedding_h0, arc_embedding_c0) = self.arc_embedding_lstm(arc_embedding_hx, (arc_embedding_h0, arc_embedding_c0))
+        for state_idx, state in enumerate(arc_states):
+            state.arc_embeddings.append(arc_embeddings[state_idx])
+            state.arc_lstm_embeddings.append(ArcLSTMEmbedding(arc_embedding_hx[0, state_idx, :],
+                                                              arc_embedding_h0[:, state_idx, :],
+                                                              arc_embedding_c0[:, state_idx, :]))
+
     def loss(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         # lstm_outputs will be a list of tensors for each sentence
         #   max(len) x args['hidden_dim']*2
@@ -603,18 +655,20 @@ class TransitionParser(EmbeddingParser):
         while len(states) > 0:
             iteration += 1
             #print("ITERATION %d" % iteration)
-            output_hx, left_deprels, right_deprels, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0 = self.forward(states)
+            output_hx, left_deprels, right_deprels, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0, left_arc_hxs, right_arc_hxs = self.forward(states)
             gold_transitions = [state.gold_sequence[len(state.transitions)] for state in states]
 
             iteration_loss = self.calculate_iteration_loss(states, gold_transitions, output_hx, left_deprels, right_deprels)
             total_loss += iteration_loss
 
+            arc_embeddings = self.extract_arc_embeddings(states, gold_transitions, left_arc_hxs, right_arc_hxs)
             states = self.update_subtree_embeddings(states, gold_transitions)
             states = [gold_transition.apply(state) for state, gold_transition in zip(states, gold_transitions)]
             for state_idx, state in enumerate(states):
                 # TODO: can this be moved into .apply()
                 state.transition_lstm_embeddings.append(TransitionLSTMEmbedding(transition_h0[:, state_idx, :], transition_c0[:, state_idx, :]))
             self.update_partial_tree_lstm(states, range(len(states)), partial_tree_h0, partial_tree_c0)
+            self.update_arc_embedding_lstm(states, arc_embeddings)
             states = [state for state in states if not isinstance(state.transitions[-1], Finalize)]
 
         return total_loss
@@ -672,8 +726,11 @@ class TransitionParser(EmbeddingParser):
         while len(states) > 0:
             iteration += 1
             #print("ITERATION %d" % iteration)
-            output_hx, left_deprels, right_deprels, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0 = self.forward(states)
+            output_hx, left_deprels, right_deprels, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0, left_arc_hxs, right_arc_hxs = self.forward(states)
             transitions = self.choose_transitions(self.relations, states, output_hx, left_deprels, right_deprels)
+
+            arc_embeddings = self.extract_arc_embeddings(states, transitions, left_arc_hxs, right_arc_hxs)
+
             #print(transitions[0])
             #print(len(states[0].subtree_lstm_embeddings),
             #      len(states[0].current_heads), states[0].current_heads)
@@ -689,6 +746,7 @@ class TransitionParser(EmbeddingParser):
                 # TODO: can this be moved into .apply()
                 state.transition_lstm_embeddings.append(TransitionLSTMEmbedding(transition_h0[:, state_idx, :], transition_c0[:, state_idx, :]))
             self.update_partial_tree_lstm(states, range(len(states)), partial_tree_h0, partial_tree_c0)
+            self.update_arc_embedding_lstm(states, arc_embeddings)
             #print(len(states[0].subtree_lstm_embeddings),
             #      len(states[0].current_heads), states[0].current_heads)
             #if len(states[0].subtree_lstm_embeddings) > 0:
@@ -727,7 +785,9 @@ class TransitionParser(EmbeddingParser):
             # the sentences are all prepended with root
             # which is fine, since we need an embedding for word 0
             state = state._replace(word_embeddings=lstm_output,
-                                   subtree_embeddings={})
+                                   subtree_embeddings={},
+                                   arc_embeddings=[],
+                                   arc_lstm_embeddings=[ArcLSTMEmbedding(self.arc_embedding_start, self.arc_embedding_h0, self.arc_embedding_c0)])
             updated_states.append(state)
         return updated_states
 
@@ -792,7 +852,9 @@ class EnsembleTransitionParser(BaseParser):
         model_transition_c0 = [x[4] for x in model_forwards]
         model_partial_tree_h0 = [x[5] for x in model_forwards]
         model_partial_tree_c0 = [x[6] for x in model_forwards]
-        return output_hx, left_deprels, right_deprels, model_transition_h0, model_transition_c0, model_partial_tree_h0, model_partial_tree_c0
+        model_left_arc_hx = [x[7] for x in model_forwards]
+        model_right_arc_hx = [x[8] for x in model_forwards]
+        return output_hx, left_deprels, right_deprels, model_transition_h0, model_transition_c0, model_partial_tree_h0, model_partial_tree_c0, model_left_arc_hx, model_right_arc_hx
 
     def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         device = self.get_device()
@@ -812,7 +874,8 @@ class EnsembleTransitionParser(BaseParser):
 
             # output_hx, left_deprels, and right_deprels are already collapsed into one summed value
             # the transition and partial_tree vectors are a list of M items long (M=#models)
-            output_hx, left_deprels, right_deprels, model_transition_h0, model_transition_c0, model_partial_tree_h0, model_partial_tree_c0 = self.forward(model_states)
+            output_hx, left_deprels, right_deprels, model_transition_h0, model_transition_c0, model_partial_tree_h0, model_partial_tree_c0, model_left_arc_hx, model_right_arc_hx = self.forward(model_states)
+            # TODO: use the left & right arcs
 
             transitions = TransitionParser.choose_transitions(self.models[0].relations, model_states[0], output_hx, left_deprels, right_deprels)
 
