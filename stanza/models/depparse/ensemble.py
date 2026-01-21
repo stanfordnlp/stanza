@@ -9,6 +9,24 @@ from stanza.models.depparse.model import GraphParser, EnsembleGraphParser
 from stanza.models.depparse.transition.model import TransitionParser, EnsembleTransitionParser
 from stanza.models.depparse.trainer import Trainer
 
+def build_ensemble(args, pt, model_names, foundation_cache, device=None):
+    models = []
+    trainers = []
+    for load_name in model_names:
+        tr = Trainer.load(load_name, pt, args=args, device=device, foundation_cache=foundation_cache)
+        models.append(tr.model)
+        trainers.append(tr)
+    if all(isinstance(x, GraphParser) for x in models):
+        ensemble = EnsembleGraphParser(args, models[0].vocab, models)
+    elif all(isinstance(x, TransitionParser) for x in models):
+        ensemble = EnsembleTransitionParser(args, models[0].vocab, models)
+    else:
+        raise ValueError("Not all models are an ensemble type!  %s" % ([type(x) for x in models]))
+    tr = Trainer(args=args, vocab=ensemble.vocab, model=ensemble, build_optimizer=False)
+    tr.model_name = ",".join(model_names)
+    return tr, trainers
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--save_name', type=str, default="graph_ensemble.pt", help="File name to save the model")
@@ -27,21 +45,7 @@ def main():
 
     foundation_cache = FoundationCache()
 
-    models = []
-    for load_name in args['load_name']:
-        tr = Trainer.load(load_name, pt, args=args, foundation_cache=foundation_cache)
-        models.append(tr.model)
-
-    # TODO:
-    # check the vocabs are the same
-
-    if all(isinstance(x, GraphParser) for x in models):
-        ensemble = EnsembleGraphParser(args, models[0].vocab, models)
-    elif all(isinstance(x, TransitionParser) for x in models):
-        ensemble = EnsembleTransitionParser(args, models[0].vocab, models)
-    else:
-        raise ValueError("Not all models are an ensemble type!  %s" % ([type(x) for x in models]))
-    tr = Trainer(args=args, vocab=ensemble.vocab, model=ensemble, build_optimizer=False)
+    tr, _ = build_ensemble(args, pt, args['load_name'], foundation_cache)
     tr.save(args['save_name'])
 
 if __name__ == '__main__':
