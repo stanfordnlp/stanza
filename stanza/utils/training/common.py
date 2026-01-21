@@ -247,7 +247,7 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
             if dataset is not None and dataset_pretrains is not None and language in dataset_pretrains and dataset in dataset_pretrains[language]:
                 logger.info(f"Using default pretrain for {language}:{dataset}, found in {default_pt_path}  To use a different pretrain, specify --wordvec_pretrain_file")
             else:
-                logger.info(f"Using default pretrain for language, found in {default_pt_path}  To use a different pretrain, specify --wordvec_pretrain_file")
+                logger.info(f"Using default pretrain for language {language}, found in {default_pt_path}  To use a different pretrain, specify --wordvec_pretrain_file")
             return default_pt_path
 
     pretrain_path = '{}/{}/pretrain/*.pt'.format(model_dir, language)
@@ -273,6 +273,11 @@ def find_wordvec_pretrain(language, default_pretrains, dataset_pretrains=None, d
     pt = pretrains[0]
     logger.info(f"Using pretrain found in {pt}  To use a different pretrain, specify --wordvec_pretrain_file")
     return pt
+
+def choose_depparse_pretrain(language, dataset):
+    if language in no_pretrain_languages:
+        return None
+    return find_wordvec_pretrain(language, default_pretrains, depparse_pretrains, dataset)
 
 def find_charlm_file(direction, language, charlm, model_dir=DEFAULT_MODEL_DIR):
     """
