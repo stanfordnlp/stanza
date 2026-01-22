@@ -242,12 +242,21 @@ def train(args):
             logger.info("Limiting training data to %d entries", len(train_data))
         else:
             logger.info("Train data less than %d already, not limiting train data", args['train_size'])
+    # build the training data once, before augmentation, so that random variation
+    # (which might be different based on the random seed)
+    # doesn't have an effect on the vocab being cut off at the word limit
+    # otherwise different models will have different vocabs
+    # based on how often the words were duplicated in the augmentation
+    # TODO: put the augmentation into the dataloader,
+    # such as is done with the POS or the tokenizer
+    train_doc = Document(train_data)
+    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
+    vocab = train_batch.vocab
     train_data.extend(augment_punct(train_data, args['augment_nopunct'],
                                     keep_original_sentences=False))
     logger.info("Augmented data size: {}".format(len(train_data)))
     train_doc = Document(train_data)
-    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
-    vocab = train_batch.vocab
+    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
