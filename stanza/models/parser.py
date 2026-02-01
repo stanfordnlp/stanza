@@ -115,20 +115,48 @@ def build_argparse():
     parser.add_argument('--no_linearization', dest='linearization', action='store_false', help="Turn off linearization term.")
     parser.add_argument('--no_distance', dest='distance', action='store_false', help="Turn off distance term.")
 
+    # Originally, we used a single adam optimizer, stopping after 1000 stalled iterations,
+    # with a couple other hyperparameters corresponding to:  TODO
+    #   --max_steps_before_stop 1000
+    #   --beta2 0.95
+    #   --lr 3e-3
+    #   --weight_decay 0.0
+    #   --optim adam
+    #   --no_second_optim
+    # Later experiments found the current defaults helped the results
+    # on several different datasets (using a transformer as the input embedding)
+    # These experiements are averaged across 5 models,
+    # with multiple early stopping values as well
+    #   5 model dev avg LAS  1 stage  1 stage 2k  1 stage 4k   2 stage
+    # de_gsd                  89.03    89.50       89.71        89.83
+    # en_ewt                  93.47    93.69       93.74        93.89
+    # fi_tdt                  92.16    92.56       92.69        93.15
+    # it_vit                  90.12    90.37       90.44        90.60
+    # ta_ttb                  71.26    71.39       71.45        72.19
+    # zh-hans_gsdsimp         85.47    85.69       85.76        85.89
+    #
+    #   5 model test avg LAS 1 stage  1 stage 2k  1 stage 4k   2 stage
+    # de_gsd                  86.60    86.96       87.04        87.09
+    # en_ewt                  93.37    93.51       93.55        93.72
+    # fi_tdt                  92.56    92.92       93.10        93.47
+    # it_vit                  90.51    90.74       90.75        90.88
+    # ta_ttb                  68.22    68.27       68.42        69.06
+    # zh-hans_gsdsimp         85.66    85.92       86.04        86.34
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
-    parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam or adamax.')
-    parser.add_argument('--second_optim', type=str, default=None, help='sgd, adagrad, adam or adamax.')
-    parser.add_argument('--lr', type=float, default=3e-3, help='Learning rate')
-    parser.add_argument('--second_lr', type=float, default=3e-4, help='Secondary stage learning rate')
-    parser.add_argument('--weight_decay', type=float, default=None, help='Weight decay for the first optimizer')
-    parser.add_argument('--beta2', type=float, default=0.95)
-    parser.add_argument('--second_optim_start_step', type=int, default=None, help='If set, switch to the second optimizer when stalled or at this step regardless of performance.  Normally, the optimizer only switches when the dev scores have stalled for --max_steps_before_stop steps')
+    parser.add_argument('--optim', type=str, default='adadelta', help='sgd, adagrad, adam or adamax.')
+    parser.add_argument('--second_optim', type=str, default="adam", help='sgd, adagrad, adam or adamax.')
+    parser.add_argument('--no_second_optim', dest='second_optim', action='store_const', const=None, help="Don't use the second optimizer")
+    parser.add_argument('--lr', type=float, default=2.0, help='Learning rate')
+    parser.add_argument('--second_lr', type=float, default=0.0002, help='Secondary stage learning rate')
+    parser.add_argument('--weight_decay', type=float, default=0.00001, help='Weight decay for the first optimizer')
+    parser.add_argument('--beta2', type=float, default=0.999)
+    parser.add_argument('--second_optim_start_step', type=int, default=10000, help='If set, switch to the second optimizer when stalled or at this step regardless of performance.  Normally, the optimizer only switches when the dev scores have stalled for --max_steps_before_stop steps')
     parser.add_argument('--second_warmup_steps', type=int, default=200, help="If set, give the 2nd optimizer a linear warmup.  Idea being that the optimizer won't have a good grasp on the initial gradients and square gradients when it first starts")
 
     parser.add_argument('--max_steps', type=int, default=50000)
     parser.add_argument('--eval_interval', type=int, default=100)
     parser.add_argument('--checkpoint_interval', type=int, default=500)
-    parser.add_argument('--max_steps_before_stop', type=int, default=1000)
+    parser.add_argument('--max_steps_before_stop', type=int, default=2000)
     parser.add_argument('--batch_size', type=int, default=5000)
     parser.add_argument('--second_batch_size', type=int, default=None, help='Use a different batch size for the second optimizer.  Can be relevant for models with different transformer finetuning settings between optimizers, for example, where the larger batch size is impossible for FT the transformer"')
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
