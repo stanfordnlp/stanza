@@ -33,6 +33,7 @@ from stanza.models.common import pretrain
 from stanza.models.common.data import augment_punct
 from stanza.models.common.doc import *
 from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
+from stanza.models.common.utils import log_training_args
 from stanza.utils.conll import CoNLL
 from stanza.models import _training_logging
 
@@ -241,6 +242,8 @@ def train(args):
             args['charlm_forward_file'] = '{}/{}_forward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
         if not args['charlm_backward_file']:
             args['charlm_backward_file'] = '{}/{}_backward_charlm.pt'.format(args['charlm_save_dir'], args['charlm_shorthand'])
+
+    utils.log_training_args(args, logger)
 
     # load data
     logger.info("Loading data with batch size {}...".format(args['batch_size']))
