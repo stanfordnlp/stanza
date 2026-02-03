@@ -203,7 +203,7 @@ class DataLoader:
         for sentence in data:
             sentence = sentence[::-1]
             for word in sentence:
-                if word[5] != 0:
+                if word[5] != 0 and word[5] != '_':
                     word[5] = len(sentence) + 1 - word[5]
             new_data.append(sentence)
         return new_data
