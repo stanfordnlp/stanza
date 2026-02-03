@@ -274,28 +274,28 @@ def visualize_search_doc(
         # one html string for each sentence
         unedited_html_strings = get_sentences_html(doc, lang_code, visualize_xpos=visualize_xpos)
 
-        for i in range(len(unedited_html_strings)):
-
+        for semgrex_result in semgrex_results.result:
             if matches_count >= end_match:  # we've collected enough matches
                 break
 
-            # check if sentence has matches, if not then do not visualize
-            has_none = True
-            for query in semgrex_results.result[i].result:
-                for match in query.match:
-                    if match:
-                        has_none = False
-
-            # Process HTML if queries have matches
-            if not has_none:
-                if start_match <= matches_count < end_match:
-                    edited_string = semgrexify_html(
-                        unedited_html_strings[i], semgrex_results.result[i]
-                    )
-
-                    edited_string = adjust_dep_arrows(edited_string)
-                    edited_html_strings.append(edited_string)
-                matches_count += 1
+            # read the sentence_idx off the matches,
+            # in case they came back in an unexpected order
+            sentence_idx = None
+            for sentence_result in semgrex_result.result:
+                for match in sentence_result.match:
+                    sentence_idx = match.sentenceIndex
+                    break
+            # don't count empty match objects as having matched
+            if sentence_idx is None:
+                continue
+            if start_match <= matches_count < end_match:
+                unedited_html_string = unedited_html_strings[sentence_idx]
+                edited_string = semgrexify_html(
+                    unedited_html_string, semgrex_result
+                )
+                edited_string = adjust_dep_arrows(edited_string)
+                edited_html_strings.append(edited_string)
+            matches_count += 1
         if render:
             render_html_strings(edited_html_strings)
     return edited_html_strings
