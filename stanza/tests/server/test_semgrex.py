@@ -153,6 +153,10 @@ TWO_SENTENCE_DOC = Document(TEST_TWO_SENTENCES, "Unban Mox Opal! Unban Mox Opal!
 
 def check_response(response, response_len=1, semgrex_len=1, source_index=1, target_index=3, reln='obj'):
     assert len(response.result) == response_len
+    for sentence_idx, sentence_result in enumerate(response.result):
+        for semgrex_result in sentence_result.result:
+            for match in semgrex_result.match:
+                assert sentence_idx == match.sentenceIndex
     assert len(response.result[0].result) == semgrex_len
     for semgrex_result in response.result[0].result:
         assert len(semgrex_result.match) == 1

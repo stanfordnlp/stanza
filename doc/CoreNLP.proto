@@ -684,10 +684,10 @@ message SemgrexResponse {
     repeated NamedRelation   reln         = 3;
     repeated NamedEdge       edge         = 6;
 
-    // when processing multiple dependency graphs at once,
-    // which dependency graph this applies to
+    // when processing multiple sentences at once,
+    // which sentence this applies to
     // indexed from 0
-    optional int32           graphIndex   = 4;
+    optional int32           sentenceIndex  = 4;
     // index of the semgrex expression this match applies to
     // indexed from 0
     optional int32           semgrexIndex = 5;
