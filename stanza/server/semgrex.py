@@ -109,41 +109,62 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
     if isinstance(semgrex_patterns, str):
         semgrex_patterns = [semgrex_patterns]
     semgrex_patterns = [x if isinstance(x, SemgrexQuery) else SemgrexQuery(x, []) for x in semgrex_patterns]
+    matched_ids = set()
+    for sentence_result in semgrex_result.result:
+        for pattern_result in sentence_result.result:
+            for match in pattern_result.match:
+                matched_ids.add(match.sentenceIndex)
+
+    pattern_texts = [semgrex_pattern.pattern.replace("\n", " ") for semgrex_pattern in semgrex_patterns]
+
     matching_sentences = []
-    nonmatching_sentences = []
-    for sentence, graph_result in zip(doc.sentences, semgrex_result.result):
+    for sentence_result in semgrex_result.result:
         sentence_matched = False
-        for semgrex_pattern, pattern_result in zip(semgrex_patterns, graph_result.result):
-            pattern_text = semgrex_pattern.pattern.replace("\n", " ")
+        matched_semgrex_ids = set()
+        for pattern_result in sentence_result.result:
             if len(pattern_result.match) == 0:
-                if not matches_only:
-                    sentence.add_comment("# semgrex pattern |%s| did not match!" % pattern_text)
-            else:
+                continue
+
+            highlight_tokens = []
+            highlight_edges = []
+            for match in pattern_result.match:
                 sentence_matched = True
-                highlight_tokens = []
-                highlight_edges = []
-                for match in pattern_result.match:
-                    match_word = "%d:%s" % (match.matchIndex, sentence.words[match.matchIndex-1].text)
-                    if len(match.node) == 0:
-                        node_matches = ""
-                    else:
-                        node_matches = ["%s=%d:%s" % (node.name, node.matchIndex, sentence.words[node.matchIndex-1].text)
-                                        for node in match.node]
-                        node_matches = "  " + " ".join(node_matches)
-                    sentence.add_comment("# semgrex pattern |%s| matched at %s%s" % (pattern_text, match_word, node_matches))
-                    for comment in semgrex_pattern.comments:
-                        sentence.add_comment("# semgrex comment: %s" % comment)
-                    highlight_tokens.append(match.matchIndex)
-                    for edge in match.edge:
-                        highlight_edges.append(edge.target)
-                if len(highlight_tokens) > 0:
-                    sentence.add_comment("# highlight tokens = %s" % (" ".join("%d" % x for x in highlight_tokens)))
-                if len(highlight_edges) > 0:
-                    sentence.add_comment("# highlight deprels = %s" % (" ".join("%d" % x for x in highlight_edges)))
+                sentence = doc.sentences[match.sentenceIndex]
+                semgrex_pattern = semgrex_patterns[match.semgrexIndex]
+                pattern_text = pattern_texts[match.semgrexIndex]
+                matched_semgrex_ids.add(match.semgrexIndex)
+
+                match_word = "%d:%s" % (match.matchIndex, sentence.words[match.matchIndex-1].text)
+                if len(match.node) == 0:
+                    node_matches = ""
+                else:
+                    node_matches = ["%s=%d:%s" % (node.name, node.matchIndex, sentence.words[node.matchIndex-1].text)
+                                    for node in match.node]
+                    node_matches = "  " + " ".join(node_matches)
+                sentence.add_comment("# semgrex pattern |%s| matched at %s%s" % (pattern_text, match_word, node_matches))
+                for comment in semgrex_pattern.comments:
+                    sentence.add_comment("# semgrex comment: %s" % comment)
+                highlight_tokens.append(match.matchIndex)
+                for edge in match.edge:
+                    highlight_edges.append(edge.target)
+            if len(highlight_tokens) > 0:
+                sentence.add_comment("# highlight tokens = %s" % (" ".join("%d" % x for x in highlight_tokens)))
+            if len(highlight_edges) > 0:
+                sentence.add_comment("# highlight deprels = %s" % (" ".join("%d" % x for x in highlight_edges)))
+
+        if sentence_matched and not matches_only:
+            for semgrex_idx, pattern_text in enumerate(pattern_texts):
+                if semgrex_idx not in matched_semgrex_ids:
+                    sentence.add_comment("# semgrex pattern |%s| did not match!" % pattern_text)
+
         if sentence_matched:
             matching_sentences.append(sentence)
-        else:
-            nonmatching_sentences.append(sentence)
+
+    nonmatching_sentences = [sentence for sentence_idx, sentence in enumerate(doc.sentences) if sentence_idx not in matched_ids]
+    for sentence in nonmatching_sentences:
+        for semgrex_idx, pattern_text in enumerate(pattern_texts):
+            sentence.add_comment("# semgrex pattern |%s| did not match!" % pattern_text)
+
     if matches_only:
         doc.sentences = matching_sentences
     elif exclude_matches:
