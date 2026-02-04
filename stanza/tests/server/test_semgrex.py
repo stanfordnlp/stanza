@@ -284,3 +284,43 @@ def test_blank_dependency():
     assert response.result[0].result[0].match[0].edge[0].source == 1
     assert response.result[0].result[0].match[0].edge[0].target == 2
     assert response.result[0].result[0].match[0].edge[0].reln == "_"
+
+EXPECTED_ONE_SENTENCE_MATCH = """
+# text = Unban Mox Opal!
+# sent_id = 0
+# semgrex pattern |{cpos:PROPN}=source <=zzz {ner:GEM}=target| matched at 2:Mox  source=2:Mox target=3:Opal
+# highlight tokens = 2
+# highlight deprels = 2
+1	Unban	unban	VERB	VB	Mood=Imp|VerbForm=Fin	0	root	_	start_char=0|end_char=5
+2	Mox	Mox	PROPN	NNP	Number=Sing	3	compound	_	start_char=6|end_char=9
+3	Opal	Opal	PROPN	NNP	Number=Sing	1	obj	_	SpaceAfter=No|start_char=10|end_char=14|ner=GEM
+4	!	!	PUNCT	.	_	1	punct	_	SpaceAfter=No|start_char=14|end_char=15
+""".strip()
+
+def test_ner_annotated():
+    semgrex_pattern = "{cpos:PROPN}=source <=zzz {ner:GEM}=target"
+    # not using the existing ONE_SENTENCE_DOC as the Document may be mutated
+    doc = Document(TEST_ONE_SENTENCE, "Unban Mox Opal!")
+    response = semgrex.process_doc(doc, semgrex_pattern)
+    doc = semgrex.annotate_doc(doc, response, semgrex_pattern, True, False)
+    formatted = "{:C}".format(doc).strip()
+    assert formatted == EXPECTED_ONE_SENTENCE_MATCH
+
+EXPECTED_ONE_SENTENCE_NO_MATCH = """
+# text = Unban Mox Opal!
+# sent_id = 0
+# semgrex pattern |{cpos:ZZZZ}| did not match!
+1	Unban	unban	VERB	VB	Mood=Imp|VerbForm=Fin	0	root	_	start_char=0|end_char=5
+2	Mox	Mox	PROPN	NNP	Number=Sing	3	compound	_	start_char=6|end_char=9
+3	Opal	Opal	PROPN	NNP	Number=Sing	1	obj	_	SpaceAfter=No|start_char=10|end_char=14|ner=GEM
+4	!	!	PUNCT	.	_	1	punct	_	SpaceAfter=No|start_char=14|end_char=15
+""".strip()
+
+def test_not_annotated():
+    semgrex_pattern = "{cpos:ZZZZ}"
+    # not using the existing ONE_SENTENCE_DOC as the Document may be mutated
+    doc = Document(TEST_ONE_SENTENCE, "Unban Mox Opal!")
+    response = semgrex.process_doc(doc, semgrex_pattern)
+    doc = semgrex.annotate_doc(doc, response, semgrex_pattern, False, False)
+    formatted = "{:C}".format(doc).strip()
+    assert formatted == EXPECTED_ONE_SENTENCE_NO_MATCH
