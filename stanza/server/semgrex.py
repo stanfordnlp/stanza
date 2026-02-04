@@ -141,7 +141,12 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
                     node_matches = ["%s=%d:%s" % (node.name, node.matchIndex, sentence.words[node.matchIndex-1].text)
                                     for node in match.node]
                     node_matches = "  " + " ".join(node_matches)
-                sentence.add_comment("# semgrex pattern |%s| matched at %s%s" % (pattern_text, match_word, node_matches))
+                if len(match.varstring) == 0:
+                    var_values = ""
+                else:
+                    var_values = ["%s=%s" % (v.name, v.value) for v in match.varstring]
+                    var_values = "  " + " ".join(var_values)
+                sentence.add_comment("# semgrex pattern |%s| matched at %s%s%s" % (pattern_text, match_word, node_matches, var_values))
                 for comment in semgrex_pattern.comments:
                     sentence.add_comment("# semgrex comment: %s" % comment)
                 highlight_tokens.append(match.matchIndex)

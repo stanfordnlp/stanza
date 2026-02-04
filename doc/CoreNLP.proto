@@ -678,11 +678,17 @@ message SemgrexResponse {
     optional uint32          targetCopy  = 7;
   }
 
+  message VariableString {
+    required string          name        = 1;
+    required string          value       = 2;
+  }
+
   message Match {
     required int32           matchIndex   = 1;
     repeated NamedNode       node         = 2;
     repeated NamedRelation   reln         = 3;
     repeated NamedEdge       edge         = 6;
+    repeated VariableString  varstring    = 7;
 
     // when processing multiple sentences at once,
     // which sentence this applies to
