@@ -324,3 +324,26 @@ def test_not_annotated():
     doc = semgrex.annotate_doc(doc, response, semgrex_pattern, False, False)
     formatted = "{:C}".format(doc).strip()
     assert formatted == EXPECTED_ONE_SENTENCE_NO_MATCH
+
+
+def test_empty_not_annotated():
+    """
+    If there are no responses and match_only is set, the returned doc should be empty
+    """
+    semgrex_pattern = "{cpos:ZZZZ}"
+    # not using the existing ONE_SENTENCE_DOC as the Document may be mutated
+    doc = Document(TEST_ONE_SENTENCE, "Unban Mox Opal!")
+    response = semgrex.process_doc(doc, semgrex_pattern)
+    doc = semgrex.annotate_doc(doc, response, semgrex_pattern, True, False)
+    formatted = "{:C}".format(doc).strip()
+    assert formatted == ""
+
+def test_only_not_annotated():
+    semgrex_pattern = "{cpos:ZZZZ}"
+    # not using the existing ONE_SENTENCE_DOC as the Document may be mutated
+    doc = Document(TEST_ONE_SENTENCE, "Unban Mox Opal!")
+    response = semgrex.process_doc(doc, semgrex_pattern)
+    doc = semgrex.annotate_doc(doc, response, semgrex_pattern, False, True)
+    formatted = "{:C}".format(doc).strip()
+    assert formatted == EXPECTED_ONE_SENTENCE_NO_MATCH
+
