@@ -240,6 +240,9 @@ def dispatch_optimizer(name, parameters, opt_logger, lr=None, betas=None, eps=No
             raise ModuleNotFoundError("Could not create mirror_madgrad optimizer.  Perhaps the madgrad package is not installed") from e
         opt_logger.debug("Building MirrorMADGRAD with lr=%f, momentum=%f%s", lr, momentum, extra_logging)
         return madgrad.MirrorMADGRAD(parameters, lr=lr, momentum=momentum, **extra_args)
+    elif name == 'rmsprop':
+        opt_logger.debug("Building RMSprop with lr=%f%s", lr, extra_logging)
+        return torch.optim.RMSprop(parameters, lr=lr, **extra_args)
     else:
         raise ValueError("Unsupported optimizer: {}".format(name))
 
