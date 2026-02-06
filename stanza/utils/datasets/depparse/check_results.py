@@ -30,17 +30,23 @@ def main():
                 else:
                     raise AssertionError("Did the parser score layout change?  Got an unexpected score line in %s" % filename)
             if dev_score is None:
-                raise AssertionError("Missing dev score in %s" % filename)
+                dev_score = "N/A"
+            else:
+                dev_scores.append(dev_score)
+                dev_score = "%.2f" % dev_score
             if test_score is None:
-                raise AssertionError("Missing test score in %s" % filename)
-            print("%s     %.2f  %.2f" % (filename, dev_score, test_score))
-            dev_scores.append(dev_score)
-            test_scores.append(test_score)
+                test_score = "N/A"
+            else:
+                test_scores.append(test_score)
+                test_score = "%.2f" % test_score
+            print("%s     %s  %s" % (filename, dev_score, test_score))
 
-    dev_score = sum(dev_scores) / len(dev_scores)
-    print("Avg dev score: %.2f" % dev_score)
-    test_score = sum(test_scores) / len(test_scores)
-    print("Avg dev score: %.2f" % test_score)
+    if len(dev_scores) > 0:
+        dev_score = sum(dev_scores) / len(dev_scores)
+        print("Avg dev score: %.2f" % dev_score)
+    if len(test_scores) > 0:
+        test_score = sum(test_scores) / len(test_scores)
+        print("Avg dev score: %.2f" % test_score)
 
 if __name__ == '__main__':
     main()
