@@ -129,7 +129,7 @@ class Dataset:
 
         Retrieves a sample from the dataset. This function, for the
         most part, is spent performing ad-hoc data augmentation and
-        restoration. It recieves a DataSample object from the storage,
+        restoration. It receives a DataSample object from the storage,
         and returns an almost-identical DataSample object that may
         have been augmented with /possibly/ (depending on augment_punct
         settings) PUNCT chopped.
