@@ -52,7 +52,7 @@ class TokenizeProcessor(UDProcessor):
         elif not postprocessor:
             self._postprocessor = None
         else:
-            raise ValueError("Tokenizer recieved 'postprocessor' option of unrecognized type; postprocessor must be callable. Got %s" % postprocessor)
+            raise ValueError("Tokenizer received 'postprocessor' option of unrecognized type; postprocessor must be callable. Got %s" % postprocessor)
 
     def process_pre_tokenized_text(self, input_src):
         """

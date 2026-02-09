@@ -207,7 +207,7 @@ def load_training_data(args, pretrain):
         raise RuntimeError("Training data for the tagger is empty: %s" % args['train_file'])
     # we want to ensure that the model is able te output _ for empty columns,
     # but create batches whereby if a doc has upos/xpos tags we include them all.
-    # therefore, we create seperate datasets and loaders for each input training file,
+    # therefore, we create separate datasets and loaders for each input training file,
     # which will ensure the system be able to see batches with both upos available
     # and upos unavailable depending on what the availability in the file is.
     vocab = Dataset.init_vocab(train_docs, args)
