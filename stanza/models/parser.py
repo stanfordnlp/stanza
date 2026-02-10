@@ -143,6 +143,29 @@ def build_argparse():
     # it_vit                  90.51    90.74       90.75        90.88
     # ta_ttb                  68.22    68.27       68.42        69.06
     # zh-hans_gsdsimp         85.66    85.92       86.04        86.34
+    #
+    # In addition to these experiments, we ran multiple alternate optimizer combinations, none of which
+    # were a clear improvement over AdaDelta+Adam
+    #
+    # rmsprop  --weight_decay 1e-5 --lr 0.0001
+    # adamw    --second_lr 0.0001
+    # madgrad  --second_lr 0.00008
+    #   5 model dev avg LAS   ada+adam   rms+adam    ada+adamw  ada+madgrad
+    # de_gsd                 89.83      89.80       89.67      89.55
+    # en_ewt                 93.89      93.97       93.92      93.90
+    # fi_tdt                 93.15      92.95       93.03      93.08
+    # it_vit                 90.60      90.64       90.58      90.54
+    # ta_ttb                 72.19      71.86       72.18      72.24
+    # zh-hans_gsdsimp        85.89      85.60       85.97      85.92
+    #
+    #   5 model test avg LAS    ada+adam  rms+adam   ada+adamw  ada+madgrad
+    # de_gsd                   87.09     87.26      87.06      87.08
+    # en_ewt                   93.72     93.73      93.75      93.73
+    # fi_tdt                   93.47     93.30      93.43      93.44
+    # it_vit                   90.88     90.95      90.90      90.85
+    # ta_ttb                   69.06     68.45      69.05      69.26
+    # zh-hans_gsdsimp          86.34     85.86      86.27      86.23
+
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adadelta', help='sgd, adagrad, adam or adamax.')
     parser.add_argument('--second_optim', type=str, default="adam", help='sgd, adagrad, adam or adamax.')
