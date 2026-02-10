@@ -182,7 +182,7 @@ def extract_chains_from_conll(gold_coref_conll):
     """
     with open(gold_coref_conll, 'r') as df:
         gold_coref_conll = df.readlines()
-    # we want to first seperate the document into sentence-level
+    # we want to first separate the document into sentence-level
     # chunks; we assume that the ordering of the sentences are correct in the
     # gold document
     sections = []
@@ -237,7 +237,7 @@ def process_dataset(short_name, ontonotes_path, coref_output_path, use_singleton
     pipe = stanza.Pipeline("en", processors="tokenize,pos,lemma,depparse", package="default_accurate", tokenize_pretokenized=True)
 
     # if the cache directory doesn't yet exist, we make it
-    # we store the cache in a seperate subfolder to distinguish from the
+    # we store the cache in a separate subfolder to distinguish from the
     # possible Singleton conlls that maybe in the folder
     (Path(ontonotes_path) / "cache").mkdir(exist_ok=True)
 

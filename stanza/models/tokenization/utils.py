@@ -359,7 +359,7 @@ def postprocess_doc(doc, postprocessor, orig_text=None):
     # perform correction with the postprocessor
     postprocessor_return = postprocessor(words)
 
-    # collect the words and MWTs seperately
+    # collect the words and MWTs separately
     corrected_words = []
     corrected_mwts = []
     corrected_expansions = []
@@ -383,7 +383,7 @@ def postprocess_doc(doc, postprocessor, orig_text=None):
                 else:
                     sent_words.append(word[0])
                     sent_mwts.append(True)
-                    # expansions are marked in a space-seperated list, which
+                    # expansions are marked in a space-separated list, which
                     # `stanza.common.doc.set_mwt_expansions` reads and splits again
                     # by splitting by spaces. Therefore, to serialize the users' supplied MWT
                     # information, we join them by spaces to be split later by
