@@ -125,12 +125,35 @@ class TransitionParser(EmbeddingParser):
                                                 nn.Linear(self.word_hidden_dim, self.word_hidden_dim))
         self.transition_merge_hidden_dim = self.args['transition_merge_hidden_dim']
         self.merge_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] + self.transition_merge_hidden_dim
-        self.merge_output_layers = nn.Sequential(self.nonlinearity,
-                                                 self.drop,
-                                                 nn.Linear(self.merge_hidden_dim, self.merge_hidden_dim),
-                                                 self.nonlinearity,
-                                                 self.drop,
-                                                 nn.Linear(self.merge_hidden_dim, self.merge_hidden_dim))
+        # Splitting this into a left and right version is close,
+        # but seems to be somewhat more accurate than one layer
+        #  5 model dev avg LAS  baseline  merge-two-sides
+        # de_gsd                 88.75     88.93
+        # en_ewt                 93.40     93.41
+        # fi_tdt                 92.65     92.75
+        # it_vit                 89.99     90.03
+        # ta_ttb                 72.21     72.05
+        # zh-hans_gsdsimp        85.17     85.20
+        #
+        #  5 model test avg LAS baseline  merge-two-sides
+        # de_gsd                 86.31     86.60
+        # en_ewt                 93.30     93.29
+        # fi_tdt                 92.76     92.86
+        # it_vit                 90.15     90.29
+        # ta_ttb                 68.77     68.90
+        # zh-hans_gsdsimp        85.27     85.48
+        self.merge_output_left = nn.Sequential(self.nonlinearity,
+                                               self.drop,
+                                               nn.Linear(self.merge_hidden_dim, self.merge_hidden_dim),
+                                               self.nonlinearity,
+                                               self.drop,
+                                               nn.Linear(self.merge_hidden_dim, self.merge_hidden_dim))
+        self.merge_output_right = nn.Sequential(self.nonlinearity,
+                                                self.drop,
+                                                nn.Linear(self.merge_hidden_dim, self.merge_hidden_dim),
+                                                self.nonlinearity,
+                                                self.drop,
+                                                nn.Linear(self.merge_hidden_dim, self.merge_hidden_dim))
 
         self.output_basic = nn.Linear(self.word_hidden_dim, 2)
         self.output_left_transition = nn.Linear(self.merge_hidden_dim, 1)
@@ -276,7 +299,7 @@ class TransitionParser(EmbeddingParser):
                 attachment_input = torch.cat([transition_embeddings[state_idx, :], partial_tree_embeddings[state_idx, :]])
                 attachment_input_left = attachment_input.expand(state.word_position, attachment_input.shape[0])
                 left_arc_hx = torch.cat([attachment_input_left, attachment_embeddings_left], axis=1)
-                left_arc_hx = self.merge_output_layers(left_arc_hx)
+                left_arc_hx = self.merge_output_left(left_arc_hx)
                 left_output = self.output_left_transition(self.drop(self.nonlinearity(left_arc_hx)))
                 left_deprel = self.output_left_deprel(self.drop(self.nonlinearity(left_arc_hx)))
 
@@ -287,7 +310,7 @@ class TransitionParser(EmbeddingParser):
                 attachment_embeddings_right = self.merge_words_right(attachment_embeddings_right)
                 attachment_input_right = attachment_input.unsqueeze(0).expand(current_heads.shape[0], attachment_input.shape[0])
                 right_arc_hx = torch.cat([attachment_input_right, attachment_embeddings_right], axis=1)
-                right_arc_hx = self.merge_output_layers(right_arc_hx)
+                right_arc_hx = self.merge_output_right(right_arc_hx)
                 right_output = self.output_right_transition(self.drop(self.nonlinearity(right_arc_hx)))
                 right_deprel = self.output_right_deprel(self.drop(self.nonlinearity(right_arc_hx)))
                 final_output[state_idx] = [final_output[state_idx][0], left_output.squeeze(1), right_output.squeeze(1)]
