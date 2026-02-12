@@ -12,6 +12,7 @@ class UnknownLanguageError(ValueError):
 # tuples in a list so we can assert that the langcodes are all unique
 # When applicable, we favor the UD decision over any other possible
 # language code or language name
+# An example of this is sab -> Bokota, instead of bgd in ISO 693-3
 # ISO 639-1 is out of date, but many of the UD datasets are labeled
 # using the two letter abbreviations, so we add those for non-UD
 # languages in the hopes that we've guessed right if those languages
@@ -51,6 +52,7 @@ lcode2lang_raw = [
     ("bpy", "Bishnupriya_Manipuri"),
     ("bi",  "Bislama"),
     ("bor", "Bororo"),
+    ("sab", "Bokota"),
     ("bs",  "Bosnian"),
     ("br",  "Breton"),
     ("bg",  "Bulgarian"),
@@ -63,6 +65,7 @@ lcode2lang_raw = [
     ("ch",  "Chamorro"),
     ("ce",  "Chechen"),
     ("ny",  "Chichewa"),
+    ("ctn", "Chintang"),
     ("ckt", "Chukchi"),
     ("cv",  "Chuvash"),
     ("xcl", "Classical_Armenian"),
@@ -119,6 +122,7 @@ lcode2lang_raw = [
     ("is",  "Icelandic"),
     ("io",  "Ido"),
     ("ig",  "Igbo"),
+    ("arh", "Ika"),
     ("ilo", "Ilocano"),
     ("arc", "Imperial_Aramaic"),
     ("id",  "Indonesian"),
@@ -138,6 +142,7 @@ lcode2lang_raw = [
     ("arr", "Karo"),
     ("ks",  "Kashmiri"),
     ("kk",  "Kazakh"),
+    ("naq", "Khoekhoe"),
     ("kfm", "Khunsari"),
     ("quc", "Kiche"),
     ("cgg", "Kiga"),
@@ -150,7 +155,7 @@ lcode2lang_raw = [
     ("kg",  "Kongo"),
     ("ko",  "Korean"),
     ("ku",  "Kurdish"),
-    ("kmr", "Kurmanji"),
+    ("kmr", "Northern_Kurdish"),
     ("kj",  "Kwanyama"),
     ("lad", "Ladino"),
     ("lo",  "Lao"),
@@ -194,6 +199,7 @@ lcode2lang_raw = [
     ("myu", "Munduruku"),
     ("my",  "Myanmar"),
     ("nqo", "N'Ko"),
+    ("nmf", "Naga"),
     ("nah", "Nahuatl"),
     ("pcm", "Naija"),
     ("na",  "Nauru"),
@@ -201,6 +207,7 @@ lcode2lang_raw = [
     ("nyq", "Nayini"),
     ("ng",  "Ndonga"),
     ("nap", "Neapolitan"),
+    ("nrk", "Nenets"),
     ("ne",  "Nepali"),
     ("new", "Newar"),
     ("yrl", "Nheengatu"),
@@ -222,6 +229,7 @@ lcode2lang_raw = [
     ("fro", "Old_French"),
     ("sga", "Old_Irish"),
     ("ojp", "Old_Japanese"),
+    ("pro", "Old_Occitan"),
     ("otk", "Old_Turkish"),
     ("om",  "Oromo"),
     ("os",  "Ossetian"),
@@ -253,8 +261,10 @@ lcode2lang_raw = [
     ("sco", "Scots"),
     ("gd",  "Scottish_Gaelic"),
     ("sr",  "Serbian"),
+    ("wuu", "Shanghainese"),
     ("sn",  "Shona"),
     ("zh-hans", "Simplified_Chinese"),
+    ("scn", "Sicilian"),
     ("sd",  "Sindhi"),
     ("si",  "Sinhala"),
     ("sms", "Skolt_Sami"),
@@ -264,6 +274,7 @@ lcode2lang_raw = [
     ("so",  "Somali"),
     ("ckb", "Sorani"),
     ("ajp", "South_Levantine_Arabic"),
+    ("sdh", "Southern_Kurdish"),
     ("nr",  "South_Ndebele"),
     ("st",  "Southern_Sotho"),
     ("es",  "Spanish"),
@@ -292,6 +303,7 @@ lcode2lang_raw = [
     ("tn",  "Tswana"),
     ("tpn", "Tupinamba"),
     ("tr",  "Turkish"),
+    ("qti", "Turkish_English"),
     ("qtd", "Turkish_German"),
     ("tk",  "Turkmen"),
     ("tw",  "Twi"),
@@ -396,6 +408,7 @@ assert len(three_to_two_letters) == len(two_to_three_letters_raw)
 
 # additional useful code to language mapping
 # added after dict invert to avoid conflict
+lcode2lang['bgd'] = 'Bokota'   # ISO 693-3 code, although UD used sab
 lcode2lang['nb'] = 'Norwegian' # Norwegian Bokmall mapped to default norwegian
 lcode2lang['no'] = 'Norwegian'
 lcode2lang['zh'] = 'Simplified_Chinese'
@@ -430,6 +443,7 @@ extra_lang_to_lcodes = {
     "mjl": "Mandeali",
     "skr": "Multani",
     "nb":  "Norwegian",
+    "kmr": "Kurmanji",
     "ny":  "Nyanja",
     "sga": "Old_Gaelic",
     "or":  "Oriya",
