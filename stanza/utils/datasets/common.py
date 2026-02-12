@@ -242,11 +242,49 @@ def num_words_in_file(conllu_file):
     return count
 
 
-def get_ud_treebanks(udbase_dir, filtered=True):
+def get_test_only_ud_treebanks(udbase_dir, filtered=True):
     """
-    Looks in udbase_dir for all the treebanks which have both train, dev, and test
+    Looks in udbase_dir for all the treebanks which are *only* test sets, but might be big enough
+
+    Filters out:
+    - less than 10000 words
+    - the language already has a larger treebank we can use
+
+    The second filter takes quite some time, as there is a check that
+    goes through all the text in the treebank
     """
     treebanks = sorted(glob.glob(udbase_dir + "/UD_*"))
+    # skip UD_English-GUMReddit as it is usually incorporated into UD_English-GUM
+    treebanks = [os.path.split(t)[1] for t in treebanks]
+    treebanks = [t for t in treebanks if t != "UD_English-GUMReddit"]
+
+    # only take the ones which do have test, but don't have train
+    treebanks = [t for t in treebanks if not find_treebank_dataset_file(t, udbase_dir, "train", "conllu")]
+    treebanks = [t for t in treebanks if find_treebank_dataset_file(t, udbase_dir, "test", "conllu")]
+
+    treebanks = [t for t in treebanks if not mostly_underscores(find_treebank_dataset_file(t, udbase_dir, "test", "conllu"))]
+    if any(find_treebank_dataset_file(t, udbase_dir, "dev", "conllu") for t in treebanks):
+        raise AssertionError("Found a treebank with dev and test, but no train.  This violates our expectations")
+    treebanks = [t for t in treebanks if num_words_in_file(find_treebank_dataset_file(t, udbase_dir, "test", "conllu")) > 10000]
+
+    if filtered:
+        treebanks = [t for t in treebanks
+                     if len(get_ud_treebanks(udbase_dir, lang=t.split("-")[0])) == 0]
+    #for t in treebanks:
+    #    print(t,
+    #          num_words_in_file(find_treebank_dataset_file(t, udbase_dir, "test", "conllu")))
+    return treebanks
+
+def get_ud_treebanks(udbase_dir, lang=None, filtered=True):
+    """
+    Looks in udbase_dir for all the treebanks which have both train, dev, and test
+
+    If specified, lang should be exactly UD_English or however the treebanks appear in the UD release
+    """
+    if lang is None:
+        treebanks = sorted(glob.glob(udbase_dir + "/UD_*"))
+    else:
+        treebanks = sorted(glob.glob("%s/%s*" % (udbase_dir, lang)))
     # skip UD_English-GUMReddit as it is usually incorporated into UD_English-GUM
     treebanks = [os.path.split(t)[1] for t in treebanks]
     treebanks = [t for t in treebanks if t != "UD_English-GUMReddit"]
