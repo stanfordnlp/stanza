@@ -13,6 +13,7 @@ PACKAGES = "packages"
 
 # default treebank for languages
 default_treebanks = {
+    "ab":      "abnc",
     "af":      "afribooms",
     # currently not publicly released!  sent to us from the group developing this resource
     "ang":     "nerthus",
@@ -127,6 +128,7 @@ no_pretrain_languages = set([
 # name for the UD dataset
 # we will eventually do this for all of the pretrains
 specific_default_pretrains = {
+    "ab":      "fasttextwiki",
     "af":      "fasttextwiki",
     "ang":     "nerthus",
     "ar":      "conll17",
