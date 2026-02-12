@@ -49,8 +49,10 @@ def check_lemmas(train_file):
 def process_treebank(treebank, model_type, paths, args):
     if treebank.startswith("UD_"):
         udbase_dir = paths["UDBASE"]
-        train_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
-        augment = check_lemmas(train_conllu)
+        input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
+        if not input_conllu:
+            input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
+        augment = check_lemmas(input_conllu)
         if not augment:
             print("No lemma information found in %s.  Not augmenting the dataset" % train_conllu)
     else:

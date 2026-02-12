@@ -84,6 +84,34 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, postprocess=None
         postprocess(tokenizer_dir, "dev.gold", dest_dir, "dev.in", short_name)
         postprocess(tokenizer_dir, "test.gold", dest_dir, "test.in", short_name)
 
+def split_conllu_file(treebank, input_conllu, train_output_conllu, dev_output_conllu, test_output_conllu):
+    # set the seed for each data file so that the results are the same
+    # regardless of how many treebanks are processed at once
+    random.seed(1234)
+
+    # read and shuffle conllu data
+    sents = read_sentences_from_conllu(input_conllu)
+    random.shuffle(sents)
+    n_dev = int(len(sents) * XV_RATIO)
+    assert n_dev >= 1, "Dev sentence number less than one."
+    n_test = int(len(sents) * XV_RATIO)
+    assert n_test >= 1, "Test sentence number less than one."
+    n_train = len(sents) - n_dev - n_test
+
+    # split conllu data
+    dev_sents = sents[:n_dev]
+    test_sents = sents[n_dev:n_dev+n_test]
+    train_sents = sents[n_dev+n_test:]
+    print("Train/dev/test split not present.  Randomly splitting file from %s to %s, %s, %s" % (input_conllu, train_output_conllu, dev_output_conllu, test_output_conllu))
+    print(f"{len(sents)} total sentences found: {n_train} in train, {n_dev} in dev, {n_test} in test")
+
+    # write conllu
+    write_sentences_to_conllu(train_output_conllu, train_sents)
+    write_sentences_to_conllu(dev_output_conllu, dev_sents)
+    write_sentences_to_conllu(test_output_conllu, test_sents)
+
+    return True
+
 def split_train_file(treebank, train_input_conllu, train_output_conllu, dev_output_conllu):
     # set the seed for each data file so that the results are the same
     # regardless of how many treebanks are processed at once
@@ -1331,6 +1359,35 @@ def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_l
 
 XV_RATIO = 0.2
 
+def process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language):
+    """
+    Process a large UD treebank with only a test
+
+    Return False if the treebank is too small
+    """
+    train_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
+    dev_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
+    test_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu")
+    if train_input_conllu or dev_input_conllu:
+        return False
+
+    train_output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, "train")
+    dev_output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, "dev")
+    test_output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, "test")
+
+    if common.num_words_in_file(test_input_conllu) <= 10000:
+        return False
+
+    if not split_conllu_file(treebank=treebank,
+                             input_conllu=test_input_conllu,
+                             train_output_conllu=train_output_conllu,
+                             dev_output_conllu=dev_output_conllu,
+                             test_output_conllu=test_output_conllu):
+        return False
+
+    return True
+
+
 def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language):
     """
     Process a UD treebank with only train/test splits
@@ -1349,6 +1406,8 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
       UD_Slovenian-SST
       UD_Upper_Sorbian-UFAL
       UD_Welsh-CCG
+
+    Returns True if successful, False if not
     """
     train_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
     test_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu")
@@ -1365,11 +1424,12 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
                             train_input_conllu=train_input_conllu,
                             train_output_conllu=train_output_conllu,
                             dev_output_conllu=dev_output_conllu):
-        return
+        return False
 
     # the test set is already fine
     # currently we do not do any augmentation of these partial treebanks
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment=False, input_conllu=test_input_conllu, output_conllu=test_output_conllu)
+    return True
 
 def add_specific_args(parser):
     parser.add_argument('--no_augment', action='store_false', dest='augment', default=True,
@@ -1399,6 +1459,7 @@ def process_treebank(treebank, model_type, paths, args):
 
     os.makedirs(tokenizer_dir, exist_ok=True)
 
+    success = False
     if short_name == "my_alt":
         convert_my_alt.convert_my_alt(paths["CONSTITUENCY_BASE"], tokenizer_dir)
     elif short_name == "vi_vlsp":
@@ -1423,16 +1484,21 @@ def process_treebank(treebank, model_type, paths, args):
         build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, args.augment)
     else:
         # check that we can find the train file where we expect it
-        train_conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
-
-        print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
-
-        if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "conllu", fail=False):
-            process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
+        train_conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=False)
+        if not train_conllu_file:
+            # maybe this dataset has a huge test set we can split?
+            test_conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
+            print("Checking data for %s: %s, %s to see if the test dataset is large enough" % (treebank, short_name, short_language))
+            success = process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
         else:
-            process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment)
+            print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
 
-    if model_type is common.ModelType.TOKENIZER or model_type is common.ModelType.MWT:
+            if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "conllu", fail=False):
+                success = process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
+            else:
+                process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment)
+
+    if success and (model_type is common.ModelType.TOKENIZER or model_type is common.ModelType.MWT):
         if not short_name in ('th_orchid', 'th_lst20'):
             common.convert_conllu_to_txt(tokenizer_dir, short_name)
 
