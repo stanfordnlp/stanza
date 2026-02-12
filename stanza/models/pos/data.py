@@ -10,6 +10,7 @@ from torch.nn.utils.rnn import pad_sequence
 
 from stanza.models.common.bert_embedding import filter_data, needs_length_filter
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from stanza.models.common.utils import DEFAULT_WORD_CUTOFF
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX, CharVocab
 from stanza.models.pos.vocab import WordVocab, XPOSVocab, FeatureVocab, MultiVocab
 from stanza.models.pos.xpos_vocab_factory import xpos_vocab_factory
@@ -63,9 +64,10 @@ class Dataset:
 
     @staticmethod
     def init_vocab(docs, args):
+        cutoff = args['word_cutoff'] if args['word_cutoff'] is not None else DEFAULT_WORD_CUTOFF
         data = [x for doc in docs for x in Dataset.load_doc(doc)]
         charvocab = CharVocab(data, args['shorthand'])
-        wordvocab = WordVocab(data, args['shorthand'], cutoff=args['word_cutoff'], lower=True)
+        wordvocab = WordVocab(data, args['shorthand'], cutoff=cutoff, lower=True)
         uposvocab = WordVocab(data, args['shorthand'], idx=1)
         xposvocab = xpos_vocab_factory(data, args['shorthand'])
         try:
