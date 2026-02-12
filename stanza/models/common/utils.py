@@ -919,3 +919,75 @@ def build_nonlinearity(nonlinearity):
         return NONLINEARITY[nonlinearity]()
     raise ValueError('Chosen value of nonlinearity, "%s", not handled' % nonlinearity)
 
+DEFAULT_WORD_CUTOFF = 7
+
+def update_word_cutoff(pt, word_cutoff):
+    """
+    If a word cutoff option wasn't set, pick a word cutoff based on the size of the pretrain
+
+    Using a lower word cutoff for the smaller pretrains helps quite a bit on the Abkhaz tagger,
+    where all we have is a very small PT.
+
+    no WV:
+    ab_abnc dev
+      UPOS    XPOS  UFeats AllTags
+    89.06   62.53   75.21   61.53
+    ab_abnc test
+      UPOS    XPOS  UFeats AllTags
+    88.96   61.37   74.85   60.29
+
+    WV, cutoff 7
+    ab_abnc dev
+      UPOS    XPOS  UFeats AllTags
+    89.15   62.76   75.43   61.62
+    ab_abnc test
+      UPOS    XPOS  UFeats AllTags
+    89.64   61.56   75.31   60.88
+
+    WV, cutoff 0
+    ab_abnc
+      UPOS    XPOS  UFeats AllTags
+    90.02   64.81   76.75   64.13
+    ab_abnc
+      UPOS    XPOS  UFeats AllTags
+    90.19   63.95   76.62   63.59
+
+    The results are less compelling for depparse, though:
+
+    no WV
+    ab_abnc dev
+      UAS   LAS  CLAS  MLAS  BLEX
+    78.85 65.27 57.31 56.27 57.31
+    ab_abnc test
+      UAS   LAS  CLAS  MLAS  BLEX
+    78.11 64.22 57.45 56.90 57.45
+
+    WV with cutoff 7
+    ab_abnc dev
+      UAS   LAS  CLAS  MLAS  BLEX
+    79.49 65.41 57.15 56.38 57.15
+    ab_abnc test
+      UAS   LAS  CLAS  MLAS  BLEX
+    77.30 64.41 57.13 56.65 57.13
+
+    WV with cutoff 0
+    ab_abnc dev
+      UAS   LAS  CLAS  MLAS  BLEX
+    80.04 65.68 56.81 56.04 56.81
+    ab_abnc test
+      UAS   LAS  CLAS  MLAS  BLEX
+    77.66 64.86 57.28 57.00 57.28
+    """
+    if word_cutoff is not None:
+        return word_cutoff
+
+    if pt is None:
+        logger.info('Using 0 as the word cutoff (no pretrain available)')
+        return 0
+
+    if len(pt) < 5000:
+        word_cutoff = 0
+    else:
+        word_cutoff = DEFAULT_WORD_CUTOFF
+    logger.info('Using %d as the word cutoff based on the size of the pretrain (%d)', word_cutoff, len(pt))
+    return word_cutoff

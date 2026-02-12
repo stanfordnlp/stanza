@@ -76,6 +76,7 @@ def build_argparse():
     parser.add_argument('--use_arc_embedding', action='store_true', default=False, help='Use arc embeddings, as per Scaling Graph-Based Dependency Parsing')
     parser.add_argument('--no_use_arc_embedding', dest='use_arc_embedding', action='store_false', help="Don't use arc embeddings")
     parser.add_argument('--word_emb_dim', type=int, default=75)
+    parser.add_argument('--word_cutoff', type=int, default=None, help='How common a word must be to include it in the finetuned word embedding.  If not set, small word vector files will be 0, larger will be %d' % utils.DEFAULT_WORD_CUTOFF)
     parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--tag_emb_dim', type=int, default=50)
     parser.add_argument('--no_upos', dest='use_upos', action='store_false', default=True, help="Don't use upos tags as part of the tag embedding")
@@ -255,6 +256,7 @@ def train(args):
 
     # load pretrained vectors if needed
     pretrain = load_pretrain(args)
+    args['word_cutoff'] = utils.update_word_cutoff(pretrain, args['word_cutoff'])
 
     # TODO: refactor.  the exact same thing is done in the tagger
     if args['charlm']:

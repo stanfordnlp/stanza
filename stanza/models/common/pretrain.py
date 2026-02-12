@@ -41,6 +41,9 @@ class Pretrain:
         self._max_vocab = max_vocab
         self._save_to_file = save_to_file
 
+    def __len__(self):
+        return len(self.vocab)
+
     @property
     def vocab(self):
         if not hasattr(self, '_vocab'):
