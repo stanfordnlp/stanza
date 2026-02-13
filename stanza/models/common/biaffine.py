@@ -21,14 +21,9 @@ class PairwiseBilinear(nn.Module):
         input2_size = list(input2.size())
         output_size = [input1_size[0], input1_size[1], input2_size[1], self.output_size]
 
-        # ((N x L1) x D1) * (D1 x (D2 x O)) -> (N x L1) x (D2 x O)
-        intermediate = torch.mm(input1.view(-1, input1_size[-1]), self.weight.view(-1, self.input2_size * self.output_size))
-        # (N x L2 x D2) -> (N x D2 x L2)
-        input2 = input2.transpose(1, 2)
-        # (N x (L1 x O) x D2) * (N x D2 x L2) -> (N x (L1 x O) x L2)
-        output = intermediate.view(input1_size[0], input1_size[1] * self.output_size, input2_size[2]).bmm(input2)
-        # (N x (L1 x O) x L2) -> (N x L1 x L2 x O)
-        output = output.view(input1_size[0], input1_size[1], self.output_size, input2_size[1]).transpose(2, 3)
+        intermediate = torch.einsum("NLI,IJO->NLJO", input1, self.weight)
+        output = torch.einsum("NLJO,NMJ->NLMO", intermediate, input2)
+        output = output + self.bias.expand(output.shape)
 
         return output
 
