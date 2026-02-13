@@ -152,6 +152,12 @@ class TransitionParser(EmbeddingParser):
         #  it_vit  89.38         89.53         89.68
         # The first experiment with using a Bilinear layer instead of a Linear
         # greatly hurt scores and was much slower.  Perhaps it can be redone better
+        #
+        # Another experiment we tried was to greatly expand the width
+        # of the merge_words layers, then use an attention-like softmax
+        # to select which part of the wider output to use.
+        # The first experiment with this wound up also being slower
+        # and less effective.
         self.merge_words_right = nn.Linear(self.args['hidden_dim'] * 4, self.transition_merge_hidden_dim)
         self.merge_words_left = nn.Linear(self.args['hidden_dim'] * 4, self.transition_merge_hidden_dim)
 
