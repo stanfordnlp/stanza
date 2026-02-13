@@ -43,10 +43,10 @@ def main():
 
     if len(dev_scores) > 0:
         dev_score = sum(dev_scores) / len(dev_scores)
-        print("Avg dev score: %.2f" % dev_score)
+        print("Avg dev score:  %.2f" % dev_score)
     if len(test_scores) > 0:
         test_score = sum(test_scores) / len(test_scores)
-        print("Avg dev score: %.2f" % test_score)
+        print("Avg test score: %.2f" % test_score)
 
 if __name__ == '__main__':
     main()
