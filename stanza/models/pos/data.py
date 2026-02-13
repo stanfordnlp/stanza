@@ -64,7 +64,7 @@ class Dataset:
 
     @staticmethod
     def init_vocab(docs, args):
-        cutoff = args['word_cutoff'] if args['word_cutoff'] is not None else DEFAULT_WORD_CUTOFF
+        cutoff = args['word_cutoff'] if args.get('word_cutoff') is not None else DEFAULT_WORD_CUTOFF
         data = [x for doc in docs for x in Dataset.load_doc(doc)]
         charvocab = CharVocab(data, args['shorthand'])
         wordvocab = WordVocab(data, args['shorthand'], cutoff=cutoff, lower=True)

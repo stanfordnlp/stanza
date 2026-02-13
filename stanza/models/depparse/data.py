@@ -107,7 +107,7 @@ class DataLoader:
 
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
-        cutoff = self.args['word_cutoff'] if self.args['word_cutoff'] is not None else DEFAULT_WORD_CUTOFF
+        cutoff = self.args['word_cutoff'] if self.args.get('word_cutoff') is not None else DEFAULT_WORD_CUTOFF
         charvocab = CharVocab(data, self.args['shorthand'])
         wordvocab = WordVocab(data, self.args['shorthand'], cutoff=cutoff, lower=True)
         uposvocab = WordVocab(data, self.args['shorthand'], idx=1)
