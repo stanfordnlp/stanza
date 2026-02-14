@@ -3,8 +3,10 @@ from enum import Enum
 
 import torch
 from torch import nn
+import torch.nn.functional as F
 from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 
+from stanza.models.common.biaffine import DeepBiaffineScorer
 from stanza.models.common.utils import build_nonlinearity, unsort
 from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
 from stanza.models.depparse.model import BaseParser, EmbeddingParser
@@ -227,6 +229,10 @@ class TransitionParser(EmbeddingParser):
         self.transition_loss_function = nn.CrossEntropyLoss(reduction='sum')
         self.deprel_loss_function = nn.CrossEntropyLoss(reduction='sum')
 
+        # self.args['distance_output_dim']
+        self.distance = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
+        #self.distance_expansion = nn.Linear(self.args['distance_output_dim'], self.merge_hidden_dim)
+
     def empty_stats(self):
         return BatchStats.empty()
 
@@ -319,7 +325,8 @@ class TransitionParser(EmbeddingParser):
                 attachment_input_left = attachment_input.expand(state.word_position, attachment_input.shape[0])
                 left_arc_hx = torch.cat([attachment_input_left, attachment_embeddings_left], axis=1)
                 left_arc_hx = self.merge_output_left(left_arc_hx)
-                left_output = self.output_left_transition(self.drop(self.nonlinearity(left_arc_hx)))
+                distance_left = state.distance[0, 1:state.word_position+1, state.current_heads[-1]].unsqueeze(1).detach()
+                left_output = self.output_left_transition(self.drop(self.nonlinearity(left_arc_hx))) + distance_left * self.args['distance_factor']
                 left_deprel = self.output_left_deprel(self.drop(self.nonlinearity(left_arc_hx)))
 
                 # truncate the outputs to only be the current heads,
@@ -330,7 +337,8 @@ class TransitionParser(EmbeddingParser):
                 attachment_input_right = attachment_input.unsqueeze(0).expand(current_heads.shape[0], attachment_input.shape[0])
                 right_arc_hx = torch.cat([attachment_input_right, attachment_embeddings_right], axis=1)
                 right_arc_hx = self.merge_output_right(right_arc_hx)
-                right_output = self.output_right_transition(self.drop(self.nonlinearity(right_arc_hx)))
+                distance_right = state.distance[0, state.current_heads[-1], :][current_heads].unsqueeze(1).detach()
+                right_output = self.output_right_transition(self.drop(self.nonlinearity(right_arc_hx))) + distance_right * self.args['distance_factor']
                 right_deprel = self.output_right_deprel(self.drop(self.nonlinearity(right_arc_hx)))
                 final_output[state_idx] = [final_output[state_idx][0], left_output.squeeze(1), right_output.squeeze(1)]
             left_deprels.append(left_deprel)
@@ -620,6 +628,11 @@ class TransitionParser(EmbeddingParser):
         transitions_incorrect = 0
 
         total_loss = 0
+        for state, sentence_head in zip(states, head):
+            dist_kld = torch.gather(state.distance[0, 1:, :], 1, sentence_head[:state.num_words].unsqueeze(1))
+            # definitely not +=... that model is completely broken
+            total_loss -= dist_kld.sum()
+
         iteration = 0
         while len(states) > 0:
             iteration += 1
@@ -739,12 +752,24 @@ class TransitionParser(EmbeddingParser):
         else:
             states = [state_from_text(sentence) for sentence in text]
         updated_states = []
+
         # TODO: list comprehension?
         for state, lstm_output, sentlen in zip(states, lstm_outputs, sentlens):
             # the sentences are all prepended with root
             # which is fine, since we need an embedding for word 0
+            # for distance, the graph parser uses the extra space with the root
+            # TODO: stack the distance operation
+            head_offset = (torch.arange(sentlen, device=lstm_output.device).view(1, 1, -1) -
+                           torch.arange(sentlen, device=lstm_output.device).view(1, -1, 1))
+            distance_scores = self.distance(self.drop(lstm_output[:sentlen].unsqueeze(0)),
+                                            self.drop(lstm_output[:sentlen].unsqueeze(0))).squeeze(3).squeeze(0)
+            distance_pred = 1 + F.softplus(distance_scores)
+            distance_target = torch.abs(head_offset)
+            distance_kld = -torch.log((distance_target.float() - distance_pred)**2/2 + 1)
+
             state = state._replace(word_embeddings=lstm_output,
-                                   subtree_embeddings={})
+                                   subtree_embeddings={},
+                                   distance=distance_kld)
             updated_states.append(state)
         return updated_states
 

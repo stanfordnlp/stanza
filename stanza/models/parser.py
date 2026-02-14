@@ -89,6 +89,8 @@ def build_argparse():
     parser.add_argument('--char_hidden_dim', type=int, default=400)
     parser.add_argument('--deep_biaff_hidden_dim', type=int, default=400)
     parser.add_argument('--deep_biaff_output_dim', type=int, default=160)
+    parser.add_argument('--distance_output_dim', type=int, default=1)
+    parser.add_argument('--distance_factor', type=float, default=0.1, help="How much weight to put on the distance")
     # As an additional option, we implement arc embeddings
     #  described in https://arxiv.org/pdf/2501.09451
     #  Scaling Graph-Based Dependency Parsing with Arc Vectorization and Attention-Based Refinement
