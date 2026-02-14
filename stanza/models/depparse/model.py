@@ -272,6 +272,7 @@ class Parser(nn.Module):
 
             if self.args['distance']:
                 #dist_kld = dist_kld[:, 1:].masked_select(goldmask)
+                # dist_kld[:, 1:] so that the root isn't included in the distance calculation
                 dist_kld = torch.gather(dist_kld[:, 1:], 2, head.unsqueeze(2))
                 loss -= dist_kld.sum()
 
