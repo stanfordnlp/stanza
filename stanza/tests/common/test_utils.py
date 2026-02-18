@@ -192,3 +192,19 @@ def test_checkpoint_name():
     checkpoint = utils.checkpoint_name("saved_models", "kk_oscar_forward_charlm", "othername.pt")
     assert os.path.split(checkpoint) == ("saved_models", "othername.pt")
 
+def test_punct_simplification():
+    """
+    Test a punctuation simplification that should make it so unexpected
+    question/exclamation marks types are processed into ? and !
+    """
+    test = [[["!!!!"],
+             ["‼‼‼‼"],
+             ["????"],
+             ["?!?!"],
+             ["?？︖"],
+             ["?foo"],
+             ["bar!"]]]
+    test = utils.simplify_punct(test)
+    expected = [[['!'], ['!'], ['?'], ['?'], ['?'], ['?foo'], ['bar!']]]
+    assert test == expected
+

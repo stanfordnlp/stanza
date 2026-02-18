@@ -10,7 +10,7 @@ from torch.nn.utils.rnn import pad_sequence
 
 from stanza.models.common.bert_embedding import filter_data, needs_length_filter
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from stanza.models.common.utils import DEFAULT_WORD_CUTOFF
+from stanza.models.common.utils import DEFAULT_WORD_CUTOFF, simplify_punct
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX, CharVocab
 from stanza.models.pos.vocab import WordVocab, XPOSVocab, FeatureVocab, MultiVocab
 from stanza.models.pos.xpos_vocab_factory import xpos_vocab_factory
@@ -280,6 +280,7 @@ class Dataset:
     def load_doc(doc):
         data = doc.get([TEXT, UPOS, XPOS, FEATS], as_sentences=True)
         data = Dataset.resolve_none(data)
+        data = simplify_punct(data)
         return data
 
     @staticmethod

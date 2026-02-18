@@ -288,3 +288,54 @@ def test_length_limited_dataloader():
     dl = data.to_length_limited_loader(5, 25)
     batches = [batch.idx for batch in dl]
     assert batches == [(0, 1), (2,), (3, 4)]
+
+
+EWT_PUNCT_SAMPLE = """
+# sent_id = weblog-blogspot.com_alaindewitt_20040929103700_ENG_20040929_103700-0048
+# text = Bush asked for permission to go to Alabama to work on a Senate campaign.
+1	Bush	Bush	PROPN	NNP	Number=Sing	2	nsubj	2:nsubj	_
+2	asked	ask	VERB	VBD	Mood=Ind|Number=Sing|Person=3|Tense=Past|VerbForm=Fin	0	root	0:root	_
+3	for	for	ADP	IN	_	4	case	4:case	_
+4	permission	permission	NOUN	NN	Number=Sing	2	obl	2:obl:for	_
+5	to	to	PART	TO	_	6	mark	6:mark	_
+6	go	go	VERB	VB	VerbForm=Inf	4	acl	4:acl:to	_
+7	to	to	ADP	IN	_	8	case	8:case	_
+8	Alabama	Alabama	PROPN	NNP	Number=Sing	6	obl	6:obl:to	_
+9	to	to	PART	TO	_	10	mark	10:mark	_
+10	work	work	VERB	VB	VerbForm=Inf	6	advcl	6:advcl:to	_
+11	on	on	ADP	IN	_	14	case	14:case	_
+12	a	a	DET	DT	Definite=Ind|PronType=Art	14	det	14:det	_
+13	Senate	Senate	PROPN	NNP	Number=Sing	14	compound	14:compound	_
+14	campaign	campaign	NOUN	NN	Number=Sing	10	obl	10:obl:on	SpaceAfter=No
+15	!!!!!	!	PUNCT	.	_	2	punct	2:punct	_
+
+# sent_id = weblog-blogspot.com_alaindewitt_20040929103700_ENG_20040929_103700-0049
+# text = His superior officers said OK.
+1	His	his	PRON	PRP$	Case=Gen|Gender=Masc|Number=Sing|Person=3|Poss=Yes|PronType=Prs	3	nmod:poss	3:nmod:poss	_
+2	superior	superior	ADJ	JJ	Degree=Pos	3	amod	3:amod	_
+3	officers	officer	NOUN	NNS	Number=Plur	4	nsubj	4:nsubj	_
+4	said	say	VERB	VBD	Mood=Ind|Number=Plur|Person=3|Tense=Past|VerbForm=Fin	0	root	0:root	_
+5	OK	ok	INTJ	UH	_	4	obj	4:obj	SpaceAfter=No
+6	?????	?	PUNCT	.	_	4	punct	4:punct	_
+"""
+
+
+def test_punct_simplification():
+    """
+    Test a punctuation simplification that should make it so unexpected
+    question/exclamation marks types are processed into ? and !
+    """
+    sample = CoNLL.conll2doc(input_str=EWT_PUNCT_SAMPLE)
+
+    args = tagger.parse_args(args=["--batch_size", "10", "--shorthand", "en_test", "--augment_nopunct", "0.0"])
+    data = Dataset(sample, args, None)
+
+    dl = data.to_length_limited_loader(2, 1000)
+    batches = [batch for batch in dl]
+    batch_idx = [batch.idx for batch in batches]
+    assert batch_idx == [(0, 1)]
+
+    assert batches[0].text[0][-1] == '!'
+    assert batches[0].text[1][-1] == '?'
+    assert batches[0].text[0] == ['Bush', 'asked', 'for', 'permission', 'to', 'go', 'to', 'Alabama', 'to', 'work', 'on', 'a', 'Senate', 'campaign', '!']
+    assert batches[0].text[1] == ['His', 'superior', 'officers', 'said', 'OK', '?']
