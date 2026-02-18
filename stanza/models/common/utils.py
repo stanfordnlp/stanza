@@ -991,3 +991,22 @@ def update_word_cutoff(pt, word_cutoff):
         word_cutoff = DEFAULT_WORD_CUTOFF
     logger.info('Using %d as the word cutoff based on the size of the pretrain (%d)', word_cutoff, len(pt))
     return word_cutoff
+
+
+QUESTION_RE = re.compile("^[?？︖﹖⁇][?？︖﹖⁇!！︕﹗‼]+$")
+EXCLAM_RE = re.compile("^[!！︕﹗‼][?？︖﹖⁇!！︕﹗‼]+$")
+
+def simplify_punct(data):
+    """
+    For the data formats used in the POS and depparse, replace long punct words with simpler forms
+
+    replace ?[?!]+ -> ?
+    replace ![?!]+ -> !
+    also, include other non-ascii ?!
+    """
+    for sent_idx in range(len(data)):
+        for tok_idx in range(len(data[sent_idx])):
+            data[sent_idx][tok_idx][0] = QUESTION_RE.sub("?", data[sent_idx][tok_idx][0])
+            data[sent_idx][tok_idx][0] = EXCLAM_RE.sub("!", data[sent_idx][tok_idx][0])
+    return data
+

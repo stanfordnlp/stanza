@@ -4,7 +4,7 @@ import torch
 
 from stanza.models.common.bert_embedding import filter_data, needs_length_filter
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
-from stanza.models.common.utils import DEFAULT_WORD_CUTOFF
+from stanza.models.common.utils import DEFAULT_WORD_CUTOFF, simplify_punct
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab, CharVocab
 from stanza.models.pos.vocab import WordVocab, XPOSVocab, FeatureVocab, MultiVocab
 from stanza.models.pos.xpos_vocab_factory import xpos_vocab_factory
@@ -192,6 +192,7 @@ class DataLoader:
     def load_doc(self, doc):
         data = doc.get([TEXT, UPOS, XPOS, FEATS, LEMMA, HEAD, DEPREL], as_sentences=True)
         data = self.resolve_none(data)
+        data = simplify_punct(data)
         return data
 
     def resolve_none(self, data):
