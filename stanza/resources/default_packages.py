@@ -55,7 +55,7 @@ default_treebanks = {
     "id":      "gsd",
     "is":      "icepahc",
     "it":      "combined",
-    "ja":      "gsd",
+    "ja":      "combined",
     "ka":      "glc",
     "kk":      "ktb",
     "kmr":     "mg",
