@@ -236,7 +236,7 @@ def build_argparse():
     parser.add_argument('--model_type', default='graph', choices=['graph', 'transition'], help='Which model to use')
     parser.add_argument('--transition_embedding_dim', type=int, default=20, help="Embedding size for a transition")
     parser.add_argument('--transition_hidden_dim', type=int, default=20, help="Embedding size for transition stack")
-    parser.add_argument('--transition_merge_hidden_dim', type=int, default=200, help="Dimension for merging words when scoring transitions")
+    parser.add_argument('--transition_merge_words_output_dim', type=int, default=200, help="Dimension for merging words when scoring transitions")
     parser.add_argument('--transition_subtree_combination', type=lambda x: SubtreeCombination[x.upper()], default=SubtreeCombination.NONE,
                         help="Which subtree combination method to use.  {}".format(", ".join(x.name for x in SubtreeCombination)))
     parser.add_argument('--transition_subtree_nonlinearity', type=str, default='none',
