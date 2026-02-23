@@ -123,8 +123,8 @@ class TransitionParser(EmbeddingParser):
                                                 self.nonlinearity,
                                                 self.drop,
                                                 nn.Linear(self.word_hidden_dim, self.word_hidden_dim))
-        self.transition_merge_hidden_dim = self.args['transition_merge_hidden_dim']
-        self.merge_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] + self.transition_merge_hidden_dim
+        self.merge_words_output_dim = self.args['transition_merge_words_output_dim']
+        self.merge_hidden_dim = self.transition_hidden_dim + self.args['hidden_dim'] + self.merge_words_output_dim
         # Splitting this into a left and right version is close,
         # but seems to be somewhat more accurate than one layer
         #  5 model dev avg LAS  baseline  merge-two-sides
@@ -181,8 +181,8 @@ class TransitionParser(EmbeddingParser):
         # to select which part of the wider output to use.
         # The first experiment with this wound up also being slower
         # and less effective.
-        self.merge_words_right = nn.Linear(self.args['hidden_dim'] * 4, self.transition_merge_hidden_dim)
-        self.merge_words_left = nn.Linear(self.args['hidden_dim'] * 4, self.transition_merge_hidden_dim)
+        self.merge_words_right = nn.Linear(self.args['hidden_dim'] * 4, self.merge_words_output_dim)
+        self.merge_words_left = nn.Linear(self.args['hidden_dim'] * 4, self.merge_words_output_dim)
 
         # TODO: again, left/right or include a relation embedding
         if self.args['transition_subtree_combination'] in (SubtreeCombination.LINEAR, SubtreeCombination.HEAD_LINEAR):
