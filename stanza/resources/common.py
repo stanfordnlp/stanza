@@ -14,6 +14,7 @@ import shutil
 import tempfile
 import zipfile
 
+from platformdirs import user_cache_dir
 from tqdm.auto import tqdm
 
 from stanza.utils.helper_func import make_table
@@ -25,7 +26,7 @@ from stanza._version import __resources_version__
 logger = logging.getLogger('stanza')
 
 # set home dir for default
-HOME_DIR = str(Path.home())
+USER_CACHE_DIR = user_cache_dir('stanza', 'StanfordNLP', __resources_version__)
 STANFORDNLP_RESOURCES_URL = 'https://nlp.stanford.edu/software/stanza/stanza-resources/'
 STANZA_RESOURCES_GITHUB = 'https://raw.githubusercontent.com/stanfordnlp/stanza-resources/'
 DEFAULT_RESOURCES_URL = os.getenv('STANZA_RESOURCES_URL', STANZA_RESOURCES_GITHUB + 'main')
@@ -36,7 +37,7 @@ DEFAULT_RESOURCES_VERSION = os.getenv(
 DEFAULT_MODEL_URL = os.getenv('STANZA_MODEL_URL', 'default')
 DEFAULT_MODEL_DIR = os.getenv(
     'STANZA_RESOURCES_DIR',
-    os.path.join(HOME_DIR, 'stanza_resources')
+    os.path.join(USER_CACHE_DIR, 'resources')
 )
 
 PRETRAIN_NAMES = ("pretrain", "forward_charlm", "backward_charlm")

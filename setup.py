@@ -81,6 +81,7 @@ setup(
     install_requires=[
         'emoji', 
         'numpy', 
+        'platformdirs',
         'protobuf>=3.15.0',
         'requests', 
         'networkx',
