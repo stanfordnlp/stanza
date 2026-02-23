@@ -7,7 +7,7 @@ import logging
 import zipfile
 import shutil
 
-from stanza.resources.common import HOME_DIR, request_file, unzip, \
+from stanza.resources.common import USER_CACHE_DIR, request_file, unzip, \
     get_root_from_zipfile, set_logging_level
 
 logger = logging.getLogger('stanza')
@@ -25,7 +25,7 @@ DEFAULT_CORENLP_URL = os.getenv(
 
 DEFAULT_CORENLP_DIR = os.getenv(
     'CORENLP_HOME',
-    os.path.join(HOME_DIR, 'stanza_corenlp')
+    os.path.join(USER_CACHE_DIR, 'corenlp')
 )
 
 AVAILABLE_MODELS = set(['arabic', 'chinese', 'english-extra', 'english-kbp', 'french', 'german', 'hungarian', 'italian', 'spanish'])
