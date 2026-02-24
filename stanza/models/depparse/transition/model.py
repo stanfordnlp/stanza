@@ -520,13 +520,74 @@ class TransitionParser(EmbeddingParser):
             states = new_states
             state_idxs = new_state_idxs
 
+    def calculate_iteration_loss(self, states, gold_transitions, output_hx, left_deprels, right_deprels):
+        device = next(self.parameters()).device
+        total_loss = 0.0
+        for state_idx, (state, gold_transition) in enumerate(zip(states, gold_transitions)):
+            # one hot vectors will be made in the following order:
+            # Shift - Finalize - word_position left attachments - num_heads-1 right attachments
+            if len(state.current_heads) <= 1:
+                one_hot = torch.zeros(2)
+            else:
+                # 2 for shift & finalize
+                # state.num_heads - 1 for right attachments
+                # state.word_position for the left attachments
+                num_hots = len(state.current_heads) + state.word_position + 1
+                one_hot = torch.zeros(num_hots)
+            #print(state_idx, gold_transition, len(state.current_heads), state.word_position)
+            if isinstance(gold_transition, Shift):
+                one_hot[0] = 1
+            elif isinstance(gold_transition, Finalize):
+                one_hot[1] = 1
+            elif isinstance(gold_transition, ProjectiveLeft) or isinstance(gold_transition, NonprojectiveLeft):
+                if isinstance(gold_transition, ProjectiveLeft):
+                    head = state.current_heads[-2]
+                else:
+                    head = gold_transition.word_idx
+                #print("  Left", head, num_hots)
+                # words are indexed at 1
+                # so there should never be a head for word 0
+                # hence the first word needs to be at one_hot[2]
+                one_hot[head+1] = 1
+
+                # also, include a loss for the deprel
+                deprel = gold_transition.deprel
+                deprel_idx = self.relation_to_id[deprel]
+                deprel_one_hot = torch.zeros(len(self.relations))
+                deprel_one_hot[deprel_idx] = 1
+                deprel_one_hot = deprel_one_hot.to(device)
+                # the word_embeddings list has an entry for root at 0,
+                # whereas the words are indexed from 1
+                # here, though, we only want to attach words to previous heads
+                # so we do head-1
+                deprel_output = left_deprels[state_idx][head-1]
+                total_loss += self.deprel_loss_function(deprel_output, deprel_one_hot)
+            elif isinstance(gold_transition, ProjectiveRight) or isinstance(gold_transition, NonprojectiveRight):
+                if isinstance(gold_transition, ProjectiveRight):
+                    head = len(state.current_heads) - 2
+                else:
+                    head = state.current_heads.index(gold_transition.word_idx)
+                hot_idx = 2+state.word_position+head
+                #print("  Right", hot_idx, num_hots)
+                one_hot[hot_idx] = 1
+
+                # also, include a loss for the deprel
+                deprel = gold_transition.deprel
+                deprel_idx = self.relation_to_id[deprel]
+                deprel_one_hot = torch.zeros(len(self.relations))
+                deprel_one_hot[deprel_idx] = 1
+                deprel_one_hot = deprel_one_hot.to(device)
+                deprel_output = right_deprels[state_idx][head]
+                total_loss += self.deprel_loss_function(deprel_output, deprel_one_hot)
+            one_hot = one_hot.to(device)
+            total_loss += self.transition_loss_function(output_hx[state_idx], one_hot)
+        return total_loss
 
     def loss(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         # lstm_outputs will be a list of tensors for each sentence
         #   max(len) x args['hidden_dim']*2
         lstm_outputs = self.embed(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         states = self.build_initial_states(head, deprel, text, lstm_outputs, sentlens)
-        device = next(self.parameters()).device
 
         total_loss = 0
 
@@ -536,65 +597,10 @@ class TransitionParser(EmbeddingParser):
             #print("ITERATION %d" % iteration)
             output_hx, left_deprels, right_deprels, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0 = self.forward(states)
             gold_transitions = [state.gold_sequence[len(state.transitions)] for state in states]
-            new_states = []
-            for state_idx, (state, gold_transition) in enumerate(zip(states, gold_transitions)):
-                # one hot vectors will be made in the following order:
-                # Shift - Finalize - word_position left attachments - num_heads-1 right attachments
-                if len(state.current_heads) <= 1:
-                    one_hot = torch.zeros(2)
-                else:
-                    # 2 for shift & finalize
-                    # state.num_heads - 1 for right attachments
-                    # state.word_position for the left attachments
-                    num_hots = len(state.current_heads) + state.word_position + 1
-                    one_hot = torch.zeros(num_hots)
-                #print(state_idx, gold_transition, len(state.current_heads), state.word_position)
-                if isinstance(gold_transition, Shift):
-                    one_hot[0] = 1
-                elif isinstance(gold_transition, Finalize):
-                    one_hot[1] = 1
-                elif isinstance(gold_transition, ProjectiveLeft) or isinstance(gold_transition, NonprojectiveLeft):
-                    if isinstance(gold_transition, ProjectiveLeft):
-                        head = state.current_heads[-2]
-                    else:
-                        head = gold_transition.word_idx
-                    #print("  Left", head, num_hots)
-                    # words are indexed at 1
-                    # so there should never be a head for word 0
-                    # hence the first word needs to be at one_hot[2]
-                    one_hot[head+1] = 1
 
-                    # also, include a loss for the deprel
-                    deprel = gold_transition.deprel
-                    deprel_idx = self.relation_to_id[deprel]
-                    deprel_one_hot = torch.zeros(len(self.relations))
-                    deprel_one_hot[deprel_idx] = 1
-                    deprel_one_hot = deprel_one_hot.to(device)
-                    # the word_embeddings list has an entry for root at 0,
-                    # whereas the words are indexed from 1
-                    # here, though, we only want to attach words to previous heads
-                    # so we do head-1
-                    deprel_output = left_deprels[state_idx][head-1]
-                    total_loss += self.deprel_loss_function(deprel_output, deprel_one_hot)
-                elif isinstance(gold_transition, ProjectiveRight) or isinstance(gold_transition, NonprojectiveRight):
-                    if isinstance(gold_transition, ProjectiveRight):
-                        head = len(state.current_heads) - 2
-                    else:
-                        head = state.current_heads.index(gold_transition.word_idx)
-                    hot_idx = 2+state.word_position+head
-                    #print("  Right", hot_idx, num_hots)
-                    one_hot[hot_idx] = 1
+            iteration_loss = self.calculate_iteration_loss(states, gold_transitions, output_hx, left_deprels, right_deprels)
+            total_loss += iteration_loss
 
-                    # also, include a loss for the deprel
-                    deprel = gold_transition.deprel
-                    deprel_idx = self.relation_to_id[deprel]
-                    deprel_one_hot = torch.zeros(len(self.relations))
-                    deprel_one_hot[deprel_idx] = 1
-                    deprel_one_hot = deprel_one_hot.to(device)
-                    deprel_output = right_deprels[state_idx][head]
-                    total_loss += self.deprel_loss_function(deprel_output, deprel_one_hot)
-                one_hot = one_hot.to(device)
-                total_loss += self.transition_loss_function(output_hx[state_idx], one_hot)
             states = self.update_subtree_embeddings(states, gold_transitions)
             states = [gold_transition.apply(state) for state, gold_transition in zip(states, gold_transitions)]
             for state_idx, state in enumerate(states):
