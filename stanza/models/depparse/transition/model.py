@@ -523,6 +523,8 @@ class TransitionParser(EmbeddingParser):
     def calculate_iteration_loss(self, states, gold_transitions, output_hx, left_deprels, right_deprels):
         device = next(self.parameters()).device
         total_loss = 0.0
+        deprel_one_hots = []
+        deprel_hx = []
         for state_idx, (state, gold_transition) in enumerate(zip(states, gold_transitions)):
             # one hot vectors will be made in the following order:
             # Shift - Finalize - word_position left attachments - num_heads-1 right attachments
@@ -561,7 +563,8 @@ class TransitionParser(EmbeddingParser):
                 # here, though, we only want to attach words to previous heads
                 # so we do head-1
                 deprel_output = left_deprels[state_idx][head-1]
-                total_loss += self.deprel_loss_function(deprel_output, deprel_one_hot)
+                deprel_hx.append(deprel_output)
+                deprel_one_hots.append(deprel_one_hot)
             elif isinstance(gold_transition, ProjectiveRight) or isinstance(gold_transition, NonprojectiveRight):
                 if isinstance(gold_transition, ProjectiveRight):
                     head = len(state.current_heads) - 2
@@ -578,9 +581,14 @@ class TransitionParser(EmbeddingParser):
                 deprel_one_hot[deprel_idx] = 1
                 deprel_one_hot = deprel_one_hot.to(device)
                 deprel_output = right_deprels[state_idx][head]
-                total_loss += self.deprel_loss_function(deprel_output, deprel_one_hot)
+                deprel_hx.append(deprel_output)
+                deprel_one_hots.append(deprel_one_hot)
             one_hot = one_hot.to(device)
             total_loss += self.transition_loss_function(output_hx[state_idx], one_hot)
+        if len(deprel_one_hots) > 0:
+            deprel_one_hots = torch.stack(deprel_one_hots, dim=0)
+            deprel_hx = torch.stack(deprel_hx, dim=0)
+            total_loss += self.deprel_loss_function(deprel_hx, deprel_one_hots)
         return total_loss
 
     def loss(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
