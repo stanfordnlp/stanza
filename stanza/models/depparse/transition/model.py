@@ -535,8 +535,9 @@ class TransitionParser(EmbeddingParser):
             iteration += 1
             #print("ITERATION %d" % iteration)
             output_hx, left_deprels, right_deprels, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0 = self.forward(states)
+            gold_transitions = [state.gold_sequence[len(state.transitions)] for state in states]
             new_states = []
-            for state_idx, state in enumerate(states):
+            for state_idx, (state, gold_transition) in enumerate(zip(states, gold_transitions)):
                 # one hot vectors will be made in the following order:
                 # Shift - Finalize - word_position left attachments - num_heads-1 right attachments
                 if len(state.current_heads) <= 1:
@@ -547,8 +548,6 @@ class TransitionParser(EmbeddingParser):
                     # state.word_position for the left attachments
                     num_hots = len(state.current_heads) + state.word_position + 1
                     one_hot = torch.zeros(num_hots)
-                num_transitions = len(state.transitions)
-                gold_transition = state.gold_sequence[num_transitions]
                 #print(state_idx, gold_transition, len(state.current_heads), state.word_position)
                 if isinstance(gold_transition, Shift):
                     one_hot[0] = 1
@@ -596,7 +595,6 @@ class TransitionParser(EmbeddingParser):
                     total_loss += self.deprel_loss_function(deprel_output, deprel_one_hot)
                 one_hot = one_hot.to(device)
                 total_loss += self.transition_loss_function(output_hx[state_idx], one_hot)
-            gold_transitions = [state.gold_sequence[len(state.transitions)] for state in states]
             states = self.update_subtree_embeddings(states, gold_transitions)
             states = [gold_transition.apply(state) for state, gold_transition in zip(states, gold_transitions)]
             for state_idx, state in enumerate(states):
