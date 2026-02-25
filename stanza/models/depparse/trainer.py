@@ -18,6 +18,7 @@ from stanza.models.common import utils, loss
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, NoTransformerFoundationCache
 from stanza.models.common.chuliu_edmonds import chuliu_edmonds_one_root
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
+from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
 from stanza.models.depparse.model import Parser
 from stanza.models.pos.vocab import MultiVocab
 
@@ -72,6 +73,8 @@ class Trainer(BaseTrainer):
             self.model = Parser(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=self.args['bert_finetune'], peft_name=peft_name)
             self.model = self.model.to(device)
             self.__init_optim()
+
+        self.fallback = self.vocab['deprel'].unit2id('dep') if 'dep' in self.vocab['deprel'] else None
 
         if ignore_model_config:
             self.args = orig_args
@@ -147,6 +150,9 @@ class Trainer(BaseTrainer):
         self.model.eval()
         batch_size = word.size(0)
         _, preds = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+        # TODO: would be cleaner for the model to not have the capability to produce predictions < VOCAB_PREFIX_SIZE
+        if self.fallback is not None:
+            preds[1][preds[1] < VOCAB_PREFIX_SIZE] = self.fallback
         head_seqs = [chuliu_edmonds_one_root(adj[:l, :l])[1:] for adj, l in zip(preds[0], sentlens)] # remove attachment for the root
         deprel_seqs = [self.vocab['deprel'].unmap([preds[1][i][j+1][h] for j, h in enumerate(hs)]) for i, hs in enumerate(head_seqs)]
 
