@@ -1298,7 +1298,9 @@ def build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_na
         else:
             sents = []
         bio_file = os.path.join(paths["BIO_UD_DIR"], "UD_English-%s" % bio_dataset.upper(), "en_%s-ud-%s.conllu" % (bio_dataset.lower(), dataset))
-        sents.extend(read_sentences_from_conllu(bio_file))
+        new_sents = read_sentences_from_conllu(bio_file)
+        print("Read %d sentences from %s" % (len(new_sents), bio_file))
+        sents.extend(new_sents)
         write_sentences_to_conllu(output_conllu, sents)
 
 def build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset, augment):
