@@ -211,7 +211,7 @@ def test_empty_unknown_language(unknown_language_name):
     Check that there is an error for trying to load an unknown language
     """
     with pytest.raises(ValueError):
-        pipe = stanza.Pipeline(unknown_language_name, download_method=None)
+        pipe = stanza.Pipeline(unknown_language_name, model_dir=TEST_MODELS_DIR, download_method=None)
 
 def test_unknown_language_tokenizer(unknown_language_name):
     """
@@ -241,6 +241,7 @@ def test_unknown_language_mwt(unknown_language_name):
     mwt_processor = base_pipe.processors["mwt"]
 
     pipe=stanza.Pipeline(unknown_language_name,
+                         model_dir=TEST_MODELS_DIR,
                          processors="tokenize,mwt",
                          allow_unknown_language=True,
                          tokenize_model_path=tokenize_processor.config['model_path'],
