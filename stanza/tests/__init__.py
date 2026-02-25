@@ -5,6 +5,10 @@ Utilities for testing
 import os
 import re
 
+from platformdirs import user_cache_dir
+
+from stanza import __resources_version__
+
 # Environment Variables
 # set this to specify working directory of tests
 TEST_HOME_VAR = 'STANZA_TEST_HOME'
@@ -14,7 +18,7 @@ TEST_DIR_BASE_NAME = 'stanza_test'
 
 TEST_WORKING_DIR = os.getenv(TEST_HOME_VAR, None)
 if not TEST_WORKING_DIR:
-    TEST_WORKING_DIR = os.path.join(os.getcwd(), TEST_DIR_BASE_NAME)
+    TEST_WORKING_DIR = user_cache_dir(TEST_DIR_BASE_NAME, 'StanfordNLP', __resources_version__)
 
 TEST_MODELS_DIR = f'{TEST_WORKING_DIR}/models'
 TEST_CORENLP_DIR = f'{TEST_WORKING_DIR}/corenlp_dir'

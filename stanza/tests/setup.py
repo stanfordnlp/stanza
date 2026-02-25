@@ -4,14 +4,14 @@ import os
 import shutil
 import stanza
 from stanza.resources import installation
-from stanza.tests import TEST_HOME_VAR, TEST_DIR_BASE_NAME
+from stanza.tests import TEST_HOME_VAR, TEST_WORKING_DIR
 
 logger = logging.getLogger('stanza')
 
 test_dir = os.getenv(TEST_HOME_VAR, None)
 if not test_dir:
-    test_dir = os.path.join(os.getcwd(), TEST_DIR_BASE_NAME)
-    logger.info("STANZA_TEST_HOME not set.  Will assume $PWD/stanza_test = %s", test_dir)
+    test_dir = TEST_WORKING_DIR
+    logger.info("STANZA_TEST_HOME not set.  Will assume %s", test_dir)
     logger.info("To use a different directory, export or set STANZA_TEST_HOME=...")
 
 in_dir = os.path.join(test_dir, "in")
