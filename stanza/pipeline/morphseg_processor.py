@@ -1,3 +1,4 @@
+from stanza.pipeline.core import UnsupportedProcessorError
 from stanza.pipeline.processor import UDProcessor, register_processor
 from stanza.pipeline._constants import MORPHSEG, TOKENIZE
 
@@ -38,6 +39,8 @@ class MorphSegProcessor(UDProcessor):
                 lang=lang,
                 load_pretrained=True
             )
+        if self._segmenter.sequence_labeller is None:
+            raise UnsupportedProcessorError("morphseg", lang)
 
     def process(self, document):
         # Collect all words from all sentences
