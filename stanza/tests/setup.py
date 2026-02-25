@@ -52,12 +52,8 @@ logger.info("DOWNLOADING STANZA TOKENIZERS FOR MORPHSEG TESTS")
 
 morphseg_langs = ['en', 'es', 'ru', 'fr', 'it', 'cs', 'hu', 'la']
 for lang in morphseg_langs:
-    try:
-        stanza.download(lang=lang, model_dir=models_dir, processors='tokenize', logging_level='info')
-        logger.info(f"Downloaded {lang} tokenizer for morphseg tests")
-    except Exception as e:
-        logger.warning(f"Failed to download {lang} models: {e}")
-        logger.warning(f"Morphseg tests for {lang} may be skipped")
+    stanza.download(lang=lang, model_dir=models_dir, processors='tokenize', logging_level='info')
+    logger.info(f"Downloaded {lang} tokenizer for morphseg tests")
 
 logger.info("DOWNLOADING CORENLP")
 
