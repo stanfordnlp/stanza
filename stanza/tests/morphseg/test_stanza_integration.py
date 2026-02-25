@@ -6,6 +6,7 @@ Tests the morpheme segmentation processor within the Stanza pipeline
 import pytest
 import stanza
 from stanza.models.common.doc import Document
+from stanza.tests import TEST_MODELS_DIR
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
@@ -18,6 +19,7 @@ class TestMorphSegProcessor:
         return stanza.Pipeline(
             lang='en',
             processors='tokenize,morphseg',
+            model_dir=TEST_MODELS_DIR,
             download_method=None
         )
 
