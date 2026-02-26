@@ -248,6 +248,13 @@ def chuliu_edmonds_one_root(scores):
     Return the results of the dependency tree search, but with exactly one link to root (0)
 
     scores is a numpy array, with scores[x][y] should be the cost for assigning y to be the head of x
+
+    Here we reweight the root arcs so as to ensure that the picker only ever chooses one root.
+    See for example
+
+    https://aclanthology.org/2021.emnlp-main.823/
+    A Root of a Problem: Optimizing Single-Root Dependency Parsing
+    Miloš Stanojević, Shay B. Cohen
     """
     # we fiddle the scores to prevent double root arcs
     # we therefore copy the array so it doesn't get messed up at the source
