@@ -87,7 +87,7 @@ def prepare_tokenizer_treebank_labels(tokenizer_dir, short_name):
             prepare_tokenizer_dataset_labels(output_txt, output_conllu, tokenizer_dir, short_name, dataset)
         except (KeyboardInterrupt, SystemExit):
             raise
-        except:
+        except Exception:
             print("Failed to convert %s to %s" % (output_txt, output_conllu))
             raise
 

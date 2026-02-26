@@ -84,7 +84,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
         logger.warning(f"The data for {short_name} is missing or incomplete.  Attempting to rebuild...")
         try:
             prepare_con_dataset.main(short_name)
-        except:
+        except Exception:
             logger.error(f"Unable to build the data.  Please correctly build the files in {train_file}, {dev_file}, {test_file} and then try again.")
             raise
 

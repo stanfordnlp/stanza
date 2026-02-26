@@ -398,7 +398,7 @@ def load_conllu(file, path, treebank_type):
         if "-" in columns[ID]:
             try:
                 start, end = map(int, columns[ID].split("-"))
-            except:
+            except Exception:
                 raise UDError("Cannot parse multi-word token ID '{}' at line {}".format(_encode(columns[ID]), line_idx))
 
             words_expected = end - start + 1
@@ -421,7 +421,7 @@ def load_conllu(file, path, treebank_type):
         else:
             try:
                 word_id = int(columns[ID])
-            except:
+            except Exception:
                 raise UDError("Cannot parse word ID '{}' at line {}".format(_encode(columns[ID]), line_idx))
             if word_id != len(ud.words) - sentence_start + 1:
                 raise UDError("Incorrect word ID '{}' for word '{}', expected '{}' at line {}".format(

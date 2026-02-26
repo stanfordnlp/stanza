@@ -194,7 +194,7 @@ class Trainer(BaseTrainer):
             logger.info("Model saved to {}".format(filename))
         except (KeyboardInterrupt, SystemExit):
             raise
-        except:
+        except Exception:
             logger.warning("Saving failed... continuing anyway.")
 
     def load(self, filename, pretrain=None, args=None, foundation_cache=None):
