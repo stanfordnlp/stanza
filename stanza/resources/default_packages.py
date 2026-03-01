@@ -741,6 +741,13 @@ TRANSFORMERS = {
     #  l3cube-pune/marathi-roberta 76.48 66.21 61.20 57.60 61.20
     "mr": "l3cube-pune/marathi-roberta",
 
+    # experimented with the NL alpino dataset
+    #
+    # nl_alpino depparse LAS                   dev        test
+    # DTAI-KULeuven/robbert-2023-dutch-large   94.57      93.80
+    # GroNLP/bert-base-dutch-cased             94.30      93.26
+    "nl": "DTAI-KULeuven/robbert-2023-dutch-large",
+
     "or": "google/muril-large-cased",
 
     # https://huggingface.co/allegro/herbert-base-cased
@@ -762,6 +769,13 @@ TRANSFORMERS = {
     # neuralmind/bert-base-portuguese-cased: 0.9307
     # neuralmind/bert-large-portuguese-cased: 0.9343
     "pt": "neuralmind/bert-large-portuguese-cased",
+
+    # experimenting on just the RU syntagrus depparse so far
+    # ru_sytagrus depparse LAS                  dev     test
+    # DeepPavlov/bert-base-bg-cs-pl-ru-cased   92.86   93.59
+    # DeepPavlov/rubert-base-case              93.23   93.79
+    # ai-forever/ruElectra-large               92.04   92.75
+    "ru": "DeepPavlov/rubert-base-cased",
 
     # hope is actually to build our own using a large text collection
     "sd": "google/muril-large-cased",
@@ -907,11 +921,22 @@ TRANSFORMER_NICKNAMES = {
     # mr
     "l3cube-pune/marathi-roberta": "l3cube-marathi-roberta",
 
+    # nl
+    "GroNLP/bert-base-dutch-cased": "gronlp-bertje",
+    "DTAI-KULeuven/robbert-2023-dutch-large": "robbert-large",
+
     # pl
     "allegro/herbert-base-cased": "herbert",
 
     # pt
     "neuralmind/bert-large-portuguese-cased": "bertimbau",
+
+    # ru
+    "ai-forever/ruElectra-large": "ruelectra-large",
+    "DeepPavlov/rubert-base-cased": "pavlov-rubert",
+
+    # mixed slavic
+    "DeepPavlov/bert-base-bg-cs-pl-ru-cased": "pavlov-slavic-bert",
 
     # ta: tamil
     "monsoon-nlp/tamillion":         "tamillion",
