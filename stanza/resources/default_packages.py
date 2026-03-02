@@ -741,6 +741,12 @@ TRANSFORMERS = {
     #  l3cube-pune/marathi-roberta 76.48 66.21 61.20 57.60 61.20
     "mr": "l3cube-pune/marathi-roberta",
 
+    # tested the default depparse w and w/o a transformer
+    #   mudt LAS         dev    test
+    # no transformer    80.39   78.38
+    # MaCoCu/MaltBERTa  86.46   84.41
+    "mt": "MaCoCu/MaltBERTa",
+
     # experimented with the NL alpino dataset
     #
     # nl_alpino depparse LAS                   dev        test
@@ -920,6 +926,9 @@ TRANSFORMER_NICKNAMES = {
 
     # mr
     "l3cube-pune/marathi-roberta": "l3cube-marathi-roberta",
+
+    # mt
+    "MaCoCu/MaltBERTa": "maltberta",
 
     # nl
     "GroNLP/bert-base-dutch-cased": "gronlp-bertje",
