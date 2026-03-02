@@ -864,6 +864,12 @@ TRANSFORMER_NICKNAMES = {
     "aubmindlab/araelectra-base-discriminator": "aubmind-electra",
     "aubmindlab/bert-base-arabertv2": "aubmind-bert",
 
+    # bg
+    "rmihaylov/bert-base-bg": "bert-base-bg",
+    "rmihaylov/bert-base-theseus-bg": "bert-base-theseus-bg",
+    # may also work on Macedonian?  the Macedonian UD is not large enough for building models, though
+    "MaCoCu/BERTovski": "bertovski",
+
     # da
     "vesteinn/ScandiBERT": "scandibert",
 
