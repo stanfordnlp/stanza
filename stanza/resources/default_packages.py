@@ -749,7 +749,8 @@ TRANSFORMERS = {
 
     # experimented with the NL alpino dataset
     #
-    # nl_alpino depparse LAS                   dev        test
+    # nl_alpino depparse LAS                    dev        test
+    # no transformer                           91.30      89.32
     # DTAI-KULeuven/robbert-2023-dutch-large   94.57      93.80
     # GroNLP/bert-base-dutch-cased             94.30      93.26
     "nl": "DTAI-KULeuven/robbert-2023-dutch-large",
@@ -778,6 +779,7 @@ TRANSFORMERS = {
 
     # experimenting on just the RU syntagrus depparse so far
     # ru_sytagrus depparse LAS                  dev     test
+    # no transformer                           91.64   92.39
     # DeepPavlov/bert-base-bg-cs-pl-ru-cased   92.86   93.59
     # DeepPavlov/rubert-base-case              93.23   93.79
     # ai-forever/ruElectra-large               92.04   92.75
