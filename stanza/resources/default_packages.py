@@ -473,6 +473,15 @@ TRANSFORMERS = {
     # aubmindlab/araelectra-base-discriminator   95.66    85.83  86.10
     "ar": "aubmindlab/araelectra-base-discriminator",
 
+    # Tried a few different BG models on BTB depparse
+    #  bg_btb LAS                              dev    test
+    # no transformer                          90.19  91.26
+    # MaCoCu/BERTovski                        90.88  91.74
+    # rmihaylov/bert-base-theseus-bg          91.81  93.21
+    # DeepPavlov/bert-base-bg-cs-pl-ru-cased  92.17  93.47
+    # rmihaylov/bert-base-bg                  92.78  94.09
+    "bg": "rmihaylov/bert-base-bg",
+
     # https://huggingface.co/Maltehb/danish-bert-botxo
     # contrary to normal expectations, this hurts F1
     # on a dev split by about 1 F1
@@ -865,6 +874,7 @@ TRANSFORMER_NICKNAMES = {
     "aubmindlab/bert-base-arabertv2": "aubmind-bert",
 
     # bg
+    # these two required hacks to get the model to function (see bert_model.py)
     "rmihaylov/bert-base-bg": "bert-base-bg",
     "rmihaylov/bert-base-theseus-bg": "bert-base-theseus-bg",
     # may also work on Macedonian?  the Macedonian UD is not large enough for building models, though
