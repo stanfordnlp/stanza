@@ -609,12 +609,7 @@ class TransitionParser(EmbeddingParser):
             iteration_loss = self.calculate_iteration_loss(states, gold_transitions, output_hx, left_deprels, right_deprels)
             total_loss += iteration_loss
 
-            states = self.update_subtree_embeddings(states, gold_transitions)
-            states = [gold_transition.apply(state) for state, gold_transition in zip(states, gold_transitions)]
-            for state_idx, state in enumerate(states):
-                # TODO: can this be moved into .apply()
-                state.transition_lstm_embeddings.append(TransitionLSTMEmbedding(transition_h0[:, state_idx, :], transition_c0[:, state_idx, :]))
-            self.update_partial_tree_lstm(states, range(len(states)), partial_tree_h0, partial_tree_c0)
+            states = self.update_states(states, gold_transitions, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0)
             states = [state for state in states if not isinstance(state.transitions[-1], Finalize)]
 
         return total_loss
@@ -660,6 +655,15 @@ class TransitionParser(EmbeddingParser):
                 raise AssertionError("Found a state with no legal actions!")
         return transitions
 
+    def update_states(self, states, transitions, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0):
+        states = self.update_subtree_embeddings(states, transitions)
+        states = [transition.apply(state) for state, transition in zip(states, transitions)]
+        for state_idx, state in enumerate(states):
+            # TODO: can this be moved into .apply()
+            state.transition_lstm_embeddings.append(TransitionLSTMEmbedding(transition_h0[:, state_idx, :], transition_c0[:, state_idx, :]))
+        self.update_partial_tree_lstm(states, range(len(states)), partial_tree_h0, partial_tree_c0)
+        return states
+
     def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         lstm_outputs = self.embed(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         states = self.build_initial_states(head, deprel, text, lstm_outputs, sentlens)
@@ -674,25 +678,9 @@ class TransitionParser(EmbeddingParser):
             #print("ITERATION %d" % iteration)
             output_hx, left_deprels, right_deprels, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0 = self.forward(states)
             transitions = self.choose_transitions(self.relations, states, output_hx, left_deprels, right_deprels)
-            #print(transitions[0])
-            #print(len(states[0].subtree_lstm_embeddings),
-            #      len(states[0].current_heads), states[0].current_heads)
-            #if len(states[0].subtree_lstm_embeddings) > 0:
-            #    print(torch.linalg.norm(states[0].subtree_lstm_embeddings[-1].h0), torch.linalg.norm(states[0].subtree_lstm_embeddings[-1].c0))
-            states = self.update_subtree_embeddings(states, transitions)
-            states = [transition.apply(state) for state, transition in zip(states, transitions)]
-            #print(len(states[0].subtree_lstm_embeddings),
-            #      len(states[0].current_heads), states[0].current_heads)
-            #if len(states[0].subtree_lstm_embeddings) > 0:
-            #    print(torch.linalg.norm(states[0].subtree_lstm_embeddings[-1].h0), torch.linalg.norm(states[0].subtree_lstm_embeddings[-1].c0))
-            for state_idx, state in enumerate(states):
-                # TODO: can this be moved into .apply()
-                state.transition_lstm_embeddings.append(TransitionLSTMEmbedding(transition_h0[:, state_idx, :], transition_c0[:, state_idx, :]))
-            self.update_partial_tree_lstm(states, range(len(states)), partial_tree_h0, partial_tree_c0)
-            #print(len(states[0].subtree_lstm_embeddings),
-            #      len(states[0].current_heads), states[0].current_heads)
-            #if len(states[0].subtree_lstm_embeddings) > 0:
-            #    print(torch.linalg.norm(states[0].subtree_lstm_embeddings[-1].h0), torch.linalg.norm(states[0].subtree_lstm_embeddings[-1].c0))
+
+            states = self.update_states(states, transitions, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0)
+
             new_states = []
             new_state_idx = []
             for state_idx, (state, transition, orig_idx) in enumerate(zip(states, transitions, orig_state_idx)):
