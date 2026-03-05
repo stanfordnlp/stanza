@@ -797,6 +797,23 @@ TRANSFORMERS = {
     # hope is actually to build our own using a large text collection
     "sd": "google/muril-large-cased",
 
+    # Swedish: quite a few exist for Swedish, including some
+    # cross-Scandinavian models
+    # We ran some tests on the sv_talbanken depparse dataset
+    # Certainly it looks like the original bert-base is best,
+    # but we can also run more datasets to compare
+    #   sv_talbanken                               dev       test
+    # no transformer                              87.32      88.85
+    # KBLab/albert-base-swedish-cased-alpha       87.11      88.81
+    # KBLab/bert-base-swedish-cased-new           90.02      91.56
+    # KBLab/bert-base-swedish-cased               91.45      92.45
+    # AI-Nordics/bert-large-swedish-cased         91.07      92.24
+    # KBLab/megatron-bert-base-swedish-cased-600k 91.07      92.42
+    # flax-community/nordic-roberta-wiki          89.05      90.54
+    # KBLab/roberta-base-swedish-cased            90.51      92.03
+    # vesteinn/ScandiBERT                         91.04      92.31
+    "sv": "KBLab/bert-base-swedish-cased",
+
     # Tamil options: quite a few, need to run a bunch of experiments
     #                               dev pos    dev depparse las
     # no transformer                 82.82        69.12
@@ -880,9 +897,6 @@ TRANSFORMER_NICKNAMES = {
     # may also work on Macedonian?  the Macedonian UD is not large enough for building models, though
     "MaCoCu/BERTovski": "bertovski",
 
-    # da
-    "vesteinn/ScandiBERT": "scandibert",
-
     # de
     "bert-base-german-cased": "bert-base-german-cased",
     "dbmdz/bert-base-german-cased": "dbmdz-bert-german-cased",
@@ -962,8 +976,13 @@ TRANSFORMER_NICKNAMES = {
     "ai-forever/ruElectra-large": "ruelectra-large",
     "DeepPavlov/rubert-base-cased": "pavlov-rubert",
 
-    # mixed slavic
-    "DeepPavlov/bert-base-bg-cs-pl-ru-cased": "pavlov-slavic-bert",
+    # swedish
+    "KBLab/bert-base-swedish-cased":               "kb-swedish-bert",
+    "KBLab/bert-base-swedish-cased-new":           "kb-swedish-bert-new",
+    "KBLab/albert-base-swedish-cased-alpha":       "kb-swedish-albert",
+    "KBLab/roberta-base-swedish-cased":            "kb-swedish-roberta",
+    "KBLab/megatron-bert-base-swedish-cased-600k": "kb-swedish-megatron",
+    "AI-Nordics/bert-large-swedish-cased":         "ai-nordics-bert-large",
 
     # ta: tamil
     "monsoon-nlp/tamillion":         "tamillion",
@@ -989,6 +1008,14 @@ TRANSFORMER_NICKNAMES = {
     "hfl/chinese-roberta-wwm-ext": "hfl-roberta-chinese",
     "hfl/chinese-electra-180g-large-discriminator": "electra-large",
     "ShannonAI/ChineseBERT-base": "shannonai-chinese-bert",
+
+    # mixed slavic
+    "DeepPavlov/bert-base-bg-cs-pl-ru-cased": "pavlov-slavic-bert",
+
+    # mixed scandinavian (da, sv, is, no, fo)
+    "vesteinn/ScandiBERT": "scandibert",
+    # mixed scandinavian (da, sv, no)
+    "flax-community/nordic-roberta-wiki": "nordic-roberta",
 
     # multi-lingual Indic
     "ai4bharat/indic-bert": "indic-bert",
