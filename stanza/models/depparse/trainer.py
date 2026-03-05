@@ -133,7 +133,7 @@ class Trainer(BaseTrainer, ABC):
             self.model.train()
             for opt in self.optimizer.values():
                 opt.zero_grad()
-        loss = self.model.loss(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+        loss, batch_stats = self.model.loss(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         loss_val = loss.data.item()
         if eval:
             return loss_val
@@ -144,7 +144,7 @@ class Trainer(BaseTrainer, ABC):
             opt.step()
         for scheduler in self.scheduler.values():
             scheduler.step()
-        return loss_val
+        return loss_val, batch_stats
 
     def predict(self, batch, unsort=True):
         device = self.model.get_device()

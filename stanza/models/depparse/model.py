@@ -63,6 +63,12 @@ class BaseParser(nn.Module, ABC):
     def get_device(self):
         return next(self.parameters()).device
 
+    def empty_stats(self):
+        """
+        by default, don't track any stats per batch.  the transition parser has some more interesting stats
+        """
+        return None
+
 class EmbeddingParser(BaseParser):
     def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
         super().__init__(args, vocab)
@@ -346,8 +352,13 @@ class GraphParser(EmbeddingParser):
         return loss, preds
 
     def loss(self, *args, **kwargs):
+        """
+        returns the loss of applying forward() to this batch
+
+        currently returns no stats - could return something other than None to track batch stats
+        """
         loss, _ = self.forward(*args, **kwargs)
-        return loss
+        return loss, None
 
     def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         batch_size = word.size(0)
