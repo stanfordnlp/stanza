@@ -588,7 +588,7 @@ class TransitionParser(EmbeddingParser):
         if len(deprel_one_hots) > 0:
             deprel_one_hots = torch.stack(deprel_one_hots, dim=0)
             deprel_hx = torch.stack(deprel_hx, dim=0)
-            total_loss += self.deprel_loss_function(deprel_hx, deprel_one_hots)
+            total_loss += self.deprel_loss_function(deprel_hx, deprel_one_hots) * self.args['transition_relation_learning_factor']
         return total_loss
 
     def loss(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):

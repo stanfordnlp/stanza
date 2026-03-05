@@ -241,6 +241,8 @@ def build_argparse():
                         help="Which subtree combination method to use.  {}".format(", ".join(x.name for x in SubtreeCombination)))
     parser.add_argument('--transition_subtree_nonlinearity', type=str, default='none',
                         help="Which non-linearity to use when combining subtrees")
+    parser.add_argument('--transition_relation_learning_factor', type=float, default=1.0,
+                        help="How much to scale the learning rate of the relations, relative to the transitions")
     parser.add_argument('--reversed', default=False, action='store_true', help='Reverse the sentence before parsing')
     return parser
 
