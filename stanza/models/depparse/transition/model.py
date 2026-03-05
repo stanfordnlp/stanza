@@ -1,3 +1,4 @@
+from collections import Counter, namedtuple
 from enum import Enum
 
 import torch
@@ -83,6 +84,21 @@ class SubtreeCombination(Enum):
     MAX              = 6
     LSTM             = 7
     BILSTM           = 8
+
+class BatchStats(namedtuple("BatchStats", ['batch_loss', 'transitions_correct', 'transitions_incorrect', 'repairs_used'])):
+    @staticmethod
+    def empty():
+        return BatchStats(0.0, 0, 0, Counter())
+
+    def __add__(self, other):
+        transitions_correct = self.transitions_correct + other.transitions_correct
+        transitions_incorrect = self.transitions_incorrect + other.transitions_incorrect
+        repairs_used = self.repairs_used + other.repairs_used
+        batch_loss = self.batch_loss + other.batch_loss
+        return BatchStats(batch_loss, transitions_correct, transitions_incorrect, repairs_used)
+
+    def __str__(self):
+        return "Loss: %f\nT Correct: %d\nT Incorrect: %d" % (self.batch_loss, self.transitions_correct, self.transitions_incorrect)
 
 class TransitionParser(EmbeddingParser):
     def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
@@ -210,6 +226,9 @@ class TransitionParser(EmbeddingParser):
 
         self.transition_loss_function = nn.CrossEntropyLoss(reduction='sum')
         self.deprel_loss_function = nn.CrossEntropyLoss(reduction='sum')
+
+    def empty_stats(self):
+        return BatchStats.empty()
 
     def forward(self, states):
         """
@@ -597,8 +616,10 @@ class TransitionParser(EmbeddingParser):
         lstm_outputs = self.embed(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         states = self.build_initial_states(head, deprel, text, lstm_outputs, sentlens)
 
-        total_loss = 0
+        transitions_correct = 0
+        transitions_incorrect = 0
 
+        total_loss = 0
         iteration = 0
         while len(states) > 0:
             iteration += 1
@@ -606,13 +627,21 @@ class TransitionParser(EmbeddingParser):
             output_hx, left_deprels, right_deprels, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0 = self.forward(states)
             gold_transitions = [state.gold_sequence[len(state.transitions)] for state in states]
 
+            chosen_transitions = self.choose_transitions(self.relations, states, output_hx, left_deprels, right_deprels)
+            transitions_correct += sum(x == y for x, y in zip(gold_transitions, chosen_transitions))
+            transitions_incorrect += sum(x != y for x, y in zip(gold_transitions, chosen_transitions))
+
             iteration_loss = self.calculate_iteration_loss(states, gold_transitions, output_hx, left_deprels, right_deprels)
             total_loss += iteration_loss
 
             states = self.update_states(states, gold_transitions, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0)
             states = [state for state in states if not isinstance(state.transitions[-1], Finalize)]
 
-        return total_loss
+        return total_loss, BatchStats(batch_loss=total_loss.item(),
+                                      transitions_correct=transitions_correct,
+                                      transitions_incorrect=transitions_incorrect,
+                                      # placeholder for when we add an Oracle
+                                      repairs_used=Counter())
 
     @staticmethod
     def idx_to_action(relations, state, idx, left_deprel, right_deprel):

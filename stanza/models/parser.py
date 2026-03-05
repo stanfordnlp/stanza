@@ -405,12 +405,17 @@ def train(args):
         trainer.model.log_norms()
     do_break = False
 
+    epoch_stats = trainer.model.empty_stats()
+    total_stats = trainer.model.empty_stats()
     while not do_break:
         batch = infinite_batch.next_batch()
 
         start_time = time.time()
         trainer.global_step += 1
-        loss = trainer.update(batch, eval=False) # update step
+        loss, batch_stats = trainer.update(batch, eval=False) # update step
+        if batch_stats is not None:
+            epoch_stats = epoch_stats + batch_stats
+            total_stats = total_stats + batch_stats
         train_loss += loss
 
         # will checkpoint if we switch optimizers or score a new best score
@@ -432,6 +437,10 @@ def train(args):
 
             train_loss = train_loss / args['eval_interval'] # avg loss per batch
             logger.info("step {}: train_loss = {:.6f}, dev_score = {:.4f}".format(trainer.global_step, train_loss, dev_score))
+            if epoch_stats is not None:
+                logger.info("Additional stats:\n%s", epoch_stats)
+                epoch_stats = trainer.model.empty_stats()
+
             if len(infinite_batch.batches) > 1:
                 logger.debug("  training batch usage: %s", infinite_batch.counts)
 
