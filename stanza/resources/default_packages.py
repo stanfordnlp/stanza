@@ -799,19 +799,19 @@ TRANSFORMERS = {
 
     # Swedish: quite a few exist for Swedish, including some
     # cross-Scandinavian models
-    # We ran some tests on the sv_talbanken depparse dataset
-    # Certainly it looks like the original bert-base is best,
-    # but we can also run more datasets to compare
-    #   sv_talbanken                               dev       test
-    # no transformer                              87.32      88.85
-    # KBLab/albert-base-swedish-cased-alpha       87.11      88.81
-    # KBLab/bert-base-swedish-cased-new           90.02      91.56
-    # KBLab/bert-base-swedish-cased               91.45      92.45
-    # AI-Nordics/bert-large-swedish-cased         91.07      92.24
-    # KBLab/megatron-bert-base-swedish-cased-600k 91.07      92.42
-    # flax-community/nordic-roberta-wiki          89.05      90.54
-    # KBLab/roberta-base-swedish-cased            90.51      92.03
-    # vesteinn/ScandiBERT                         91.04      92.31
+    # We ran some tests on the sv_talbanken POS and depparse dataset
+    # Certainly it looks like the original bert-base is best, but we
+    # can also run more datasets to compare
+    #   sv_talbanken                               dev AT  test AT    dev LAS   test LAS
+    # no transformer                                96.10   96.07      87.32      88.85
+    # KBLab/albert-base-swedish-cased-alpha         96.03   96.04      87.11      88.81
+    # KBLab/bert-base-swedish-cased-new             96.76   96.72      90.02      91.56
+    # KBLab/bert-base-swedish-cased                 97.03   97.04      91.45      92.45
+    # AI-Nordics/bert-large-swedish-cased           96.02   95.96      91.07      92.24
+    # KBLab/megatron-bert-base-swedish-cased-600k   95.98   95.90      91.07      92.42
+    # flax-community/nordic-roberta-wiki            96.09   96.32      89.05      90.54
+    # KBLab/roberta-base-swedish-cased              96.64   96.66      90.51      92.03
+    # vesteinn/ScandiBERT                           97.03   96.96      91.04      92.31
     "sv": "KBLab/bert-base-swedish-cased",
 
     # Tamil options: quite a few, need to run a bunch of experiments
