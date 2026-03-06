@@ -8,6 +8,7 @@ from torch.nn.utils.rnn import pack_padded_sequence, pad_packed_sequence
 from stanza.models.common.utils import build_nonlinearity, unsort
 from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
 from stanza.models.depparse.model import BaseParser, EmbeddingParser
+from stanza.models.depparse.transition import dynamic_oracle
 from stanza.models.depparse.transition.state import state_from_text, states_from_data_batch, TransitionLSTMEmbedding, SubtreeLSTMEmbedding
 from stanza.models.depparse.transition.transitions import Shift, Finalize, ProjectiveLeft, ProjectiveRight, NonprojectiveLeft, NonprojectiveRight
 
@@ -98,7 +99,11 @@ class BatchStats(namedtuple("BatchStats", ['batch_loss', 'transitions_correct', 
         return BatchStats(batch_loss, transitions_correct, transitions_incorrect, repairs_used)
 
     def __str__(self):
-        return "Loss: %f\nT Correct: %d\nT Incorrect: %d" % (self.batch_loss, self.transitions_correct, self.transitions_incorrect)
+        stats = "Loss: %f\nT Correct: %d\nT Incorrect: %d" % (self.batch_loss, self.transitions_correct, self.transitions_incorrect)
+        if len(self.repairs_used) > 0:
+            repairs = "Oracle repairs:\n  %s" % "\n  ".join("%s (%s): %d" % (x.name, x.value, y) for x, y in self.repairs_used.most_common())
+            stats = "%s\n%s" % (stats, repairs)
+        return stats
 
 class TransitionParser(EmbeddingParser):
     def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
@@ -618,6 +623,7 @@ class TransitionParser(EmbeddingParser):
 
         transitions_correct = 0
         transitions_incorrect = 0
+        repairs_used = Counter()
 
         total_loss = 0
         iteration = 0
@@ -634,14 +640,30 @@ class TransitionParser(EmbeddingParser):
             iteration_loss = self.calculate_iteration_loss(states, gold_transitions, output_hx, left_deprels, right_deprels)
             total_loss += iteration_loss
 
-            states = self.update_states(states, gold_transitions, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0)
+            transitions = []
+            new_states = []
+            for state, gold_transition, chosen_transition in zip(states, gold_transitions, chosen_transitions):
+                # the learning uses the output states for training
+                # the chosen transition should always be legal, though
+                assert chosen_transition.is_legal(state)
+
+                repair, new_sequence = dynamic_oracle.repair(state, gold_transition, chosen_transition)
+                repairs_used[repair] += 1
+                if new_sequence is not None:
+                    state = state._replace(gold_sequence=new_sequence)
+                    transitions.append(chosen_transition)
+                else:
+                    transitions.append(gold_transition)
+                new_states.append(state)
+
+            states = new_states
+            states = self.update_states(states, transitions, transition_h0, transition_c0, partial_tree_h0, partial_tree_c0)
             states = [state for state in states if not isinstance(state.transitions[-1], Finalize)]
 
         return total_loss, BatchStats(batch_loss=total_loss.item(),
                                       transitions_correct=transitions_correct,
                                       transitions_incorrect=transitions_incorrect,
-                                      # placeholder for when we add an Oracle
-                                      repairs_used=Counter())
+                                      repairs_used=repairs_used)
 
     @staticmethod
     def idx_to_action(relations, state, idx, left_deprel, right_deprel):
