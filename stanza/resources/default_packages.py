@@ -976,7 +976,14 @@ TRANSFORMER_NICKNAMES = {
     "ai-forever/ruElectra-large": "ruelectra-large",
     "DeepPavlov/rubert-base-cased": "pavlov-rubert",
 
-    # swedish
+    # sl - slovenian
+    "EMBEDDIA/sloberta":          "sloberta",
+    # this one is Croatian, Slovenian, and English
+    "EMBEDDIA/crosloengual-bert": "crosloengual-bert",
+    "cjvt/sloberta-sleng":        "sloberta-sleng",
+    "cjvt/sleng-bert":            "sleng-bert",
+
+    # sv - swedish
     "KBLab/bert-base-swedish-cased":               "kb-swedish-bert",
     "KBLab/bert-base-swedish-cased-new":           "kb-swedish-bert-new",
     "KBLab/albert-base-swedish-cased-alpha":       "kb-swedish-albert",
