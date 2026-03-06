@@ -797,6 +797,21 @@ TRANSFORMERS = {
     # hope is actually to build our own using a large text collection
     "sd": "google/muril-large-cased",
 
+    # Slovenian
+    # tested on the UD SSJ depparse task
+    #  model                         dev LAS     test LAS
+    # no transformer                  90.37       90.70
+    # EMBEDDIA/sloberta               94.07       94.88
+    # EMBEDDIA/crosloengual-bert      94.16       94.83
+    # cjvt/sloberta-sleng             93.73       94.46
+    # cjvt/sleng-bert                 93.85       94.56
+    # crosloengual-bert has good numbers and also has the benefit
+    # of working correctly on transformers v5...
+    # the others have a bug in their tokenizer config
+    # which needs a bugfix before they are usable
+    # (although they worked with transformers v4)
+    "sl": "EMBEDDIA/crosloengual-bert",
+
     # Swedish: quite a few exist for Swedish, including some
     # cross-Scandinavian models
     # We ran some tests on the sv_talbanken POS and depparse dataset
