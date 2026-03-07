@@ -826,6 +826,18 @@ TRANSFORMERS = {
     # (although they worked with transformers v4)
     "sl": "EMBEDDIA/crosloengual-bert",
 
+    # Serbian
+    # The best for this language (on sr_set depparse, at least)
+    # is the bertic multilingual model
+    #   model                      dev LAS     test LAS
+    # no transformer                87.91       88.63
+    # nemanjaPetrovic/SrBERTa       88.24       88.96
+    # macedonizer/sr-roberta-base   89.09       89.87
+    # kalusev/NER4Legal_SRB         91.06       91.59
+    # jerteh/Jerteh-355             90.89       91.98
+    # classla/bcms-bertic           92.81       93.45
+    "sr": "classla/bcms-bertic",
+
     # Swedish: quite a few exist for Swedish, including some
     # cross-Scandinavian models
     # We ran some tests on the sv_talbanken POS and depparse dataset
@@ -1014,6 +1026,13 @@ TRANSFORMER_NICKNAMES = {
     "EMBEDDIA/crosloengual-bert": "crosloengual-bert",
     "cjvt/sloberta-sleng":        "sloberta-sleng",
     "cjvt/sleng-bert":            "sleng-bert",
+
+    # sr - serbian
+    # also, see bertic, mixed croatian/serbian transformer
+    "nemanjaPetrovic/SrBERTa":       "srberta",
+    "jerteh/Jerteh-355":             "jerteh",
+    "macedonizer/sr-roberta-base":   "sr-roberta-base",
+    "kalusev/NER4Legal_SRB":         "ner4legal-srb",
 
     # sv - swedish
     "KBLab/bert-base-swedish-cased":               "kb-swedish-bert",
