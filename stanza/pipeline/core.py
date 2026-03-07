@@ -442,6 +442,29 @@ class Pipeline:
         doc = CoNLL.conll2doc(input_str=doc, ignore_gapping=ignore_gapping)
         return self.process(doc, processors=processors)
 
+    def process_many(self, docs, *args, **kwargs):
+        """
+        Process a collection of documents or texts and return a list of Documents.
+
+        This is a convenience wrapper around the existing bulk processing logic which:
+          - Accepts any iterable of strings or Document objects
+          - Preserves the input order
+          - Always returns a list of Documents
+        """
+        if docs is None:
+            raise ValueError("docs must be an iterable of strings or Documents")
+        # Support any iterable, not just lists
+        if not isinstance(docs, collections.abc.Iterable) or isinstance(docs, (str, bytes)):
+            raise ValueError("docs must be an iterable of strings or Documents, not a single string")
+        docs = list(docs)
+        if len(docs) == 0:
+            return []
+        result = self.bulk_process(docs, *args, **kwargs)
+        # bulk_process already preserves Documents; ensure we always return a list
+        if isinstance(result, list):
+            return result
+        return list(result)
+
     def bulk_process(self, docs, *args, **kwargs):
         """
         Run the pipeline in bulk processing mode
