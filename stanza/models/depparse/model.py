@@ -150,6 +150,8 @@ class EmbeddingParser(BaseParser):
         self.drop = nn.Dropout(self.args['dropout'])
         self.worddrop = WordDropout(self.args['word_dropout'])
 
+        self.num_relations = len(vocab['deprel']) - VOCAB_PREFIX_SIZE
+
     def embed(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
@@ -241,8 +243,6 @@ class GraphParser(EmbeddingParser):
     def __init__(self, args, vocab, emb_matrix=None, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
         super().__init__(args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)
 
-        self.fallback = self.vocab['deprel'].unit2id('dep') if 'dep' in self.vocab['deprel'] else None
-
         # classifiers
         # args.get to preserve old models, including models other people might have created
         if self.args.get('use_arc_embedding'):
@@ -254,11 +254,11 @@ class GraphParser(EmbeddingParser):
                                                nn.Linear(self.args['deep_biaff_output_dim'], 2 * self.args['deep_biaff_output_dim']),
                                                nn.ReLU(),
                                                self.drop,
-                                               nn.Linear(self.args['deep_biaff_output_dim'] * 2, len(vocab['deprel'])))
+                                               nn.Linear(self.args['deep_biaff_output_dim'] * 2, self.num_relations))
         else:
             logger.debug("Not using arc embedding enhancement")
             self.unlabeled = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
-            self.deprel = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], len(vocab['deprel']), pairwise=True, dropout=self.args['dropout'])
+            self.deprel = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], self.num_relations, pairwise=True, dropout=self.args['dropout'])
         if self.args['linearization']:
             self.linearization = DeepBiaffineScorer(2 * self.args['hidden_dim'], 2 * self.args['hidden_dim'], self.args['deep_biaff_hidden_dim'], 1, pairwise=True, dropout=self.args['dropout'])
         if self.args['distance']:
@@ -268,10 +268,7 @@ class GraphParser(EmbeddingParser):
         self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
 
     @staticmethod
-    def decode_graph_predictions(vocab, fallback, batch_size, preds, sentlens):
-        # TODO: would be cleaner for the model to not have the capability to produce predictions < VOCAB_PREFIX_SIZE
-        if fallback is not None:
-            preds[1][preds[1] < VOCAB_PREFIX_SIZE] = fallback
+    def decode_graph_predictions(vocab, batch_size, preds, sentlens):
         head_seqs = [chuliu_edmonds_one_root(adj[:l, :l])[1:] for adj, l in zip(preds[0], sentlens)] # remove attachment for the root
         deprel_seqs = [vocab.unmap([preds[1][i][j+1][h] for j, h in enumerate(hs)]) for i, hs in enumerate(head_seqs)]
         pred_tokens = [[[head_seqs[i][j], deprel_seqs[i][j]] for j in range(sentlens[i]-1)] for i in range(batch_size)]
@@ -325,8 +322,9 @@ class GraphParser(EmbeddingParser):
 
             deprel_scores = deprel_scores[:, 1:] # exclude attachment for the root symbol
             #deprel_scores = deprel_scores.masked_select(goldmask.unsqueeze(3)).view(-1, len(self.vocab['deprel']))
-            deprel_scores = torch.gather(deprel_scores, 2, head.unsqueeze(2).unsqueeze(3).expand(-1, -1, -1, len(self.vocab['deprel']))).view(-1, len(self.vocab['deprel']))
-            deprel_target = deprel.masked_fill(word_mask[:, 1:], -1)
+            deprel_scores = torch.gather(deprel_scores, 2, head.unsqueeze(2).unsqueeze(3).expand(-1, -1, -1, self.num_relations)).view(-1, self.num_relations)
+            deprel_target = deprel - VOCAB_PREFIX_SIZE
+            deprel_target = deprel_target.masked_fill(word_mask[:, 1:], -1)
             loss += self.crit(deprel_scores.contiguous(), deprel_target.view(-1))
 
             if self.args['linearization']:
@@ -347,7 +345,7 @@ class GraphParser(EmbeddingParser):
         else:
             loss = 0
             preds.append(F.log_softmax(unlabeled_scores, 2).detach().cpu().numpy())
-            preds.append(deprel_scores.max(3)[1].detach().cpu().numpy())
+            preds.append(deprel_scores.max(3)[1].detach().cpu().numpy() + VOCAB_PREFIX_SIZE)
 
         return loss, preds
 
@@ -363,14 +361,13 @@ class GraphParser(EmbeddingParser):
     def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         batch_size = word.size(0)
         _, preds = self(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
-        pred_tokens = self.decode_graph_predictions(self.vocab['deprel'], self.fallback, batch_size, preds, sentlens)
+        pred_tokens = self.decode_graph_predictions(self.vocab['deprel'], batch_size, preds, sentlens)
         return pred_tokens
 
 class EnsembleGraphParser(BaseParser):
     def __init__(self, args, vocab, models):
         super().__init__(args, vocab)
         self.models = nn.ModuleList(models)
-        self.fallback = self.models[0].fallback
 
     def get_params(self, skip_modules):
         params = []
@@ -418,7 +415,7 @@ class EnsembleGraphParser(BaseParser):
     def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
         batch_size = word.size(0)
         _, preds = self(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
-        pred_tokens = GraphParser.decode_graph_predictions(self.vocab['deprel'], self.fallback, batch_size, preds, sentlens)
+        pred_tokens = GraphParser.decode_graph_predictions(self.vocab['deprel'], batch_size, preds, sentlens)
         return pred_tokens
 
     def get_device(self):
