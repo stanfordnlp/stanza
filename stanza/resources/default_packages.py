@@ -677,6 +677,20 @@ TRANSFORMERS = {
     #  muril-large         0.65369   0.68290
     "hi": "google/muril-large-cased",
 
+    # hr - Croatian
+    # for HR there are two main choices
+    # one is the mixed Croatian/Slovenian/English model
+    # the other is a mixed Croatian/Serbian model named BERTić
+    # testing on the hr_set dataset:
+    #   model                 dev AllTags   test AllTags   dev LAS   test LAS
+    # no transformer           94.44         94.43          86.66     87.02
+    # crosloeng                96.64         96.48          91.31     91.51
+    # bertic                   96.86         96.65          91.32     91.77
+    #
+    # so although the difference doesn't look big,
+    # it seems bertic wins by a little bit
+    "hr": "classla/bcms-bertic",
+
     # https://huggingface.co/xlm-roberta-base
     # Scores by entity for armtdp NER on 18 labels:
     # no bert : 86.68
@@ -950,6 +964,9 @@ TRANSFORMER_NICKNAMES = {
     "HeNLP/HeRo": "hero-roberta",
     "imvladikon/alephbertgimmel-base-512": "alephbertgimmel",
     "onlplab/alephbert-base": "alephbert",
+
+    # hr - Croatian - mixed Bosnian, Croatian, Montenegrin and Serbian
+    "classla/bcms-bertic": "bcms-bertic",
 
     # hy
     "xlm-roberta-base": "xlm-roberta-base",
