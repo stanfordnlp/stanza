@@ -546,6 +546,16 @@ TRANSFORMERS = {
     #   german/electra    89.21   86.06
     "de": "german-nlp-group/electra-base-german-uncased",
 
+    # EL - Greek
+    # We actually only found one greek specific transformer
+    # to experiment with.
+    # All the other transformer work covers Ancient Greek instead!
+    # el_gdt depparse scores, LAS
+    #    model                             dev     test
+    # no transformer                      88.21   89.51
+    # nlpaueb/bert-base-greek-uncased-v1  92.46   92.68
+    "el": "nlpaueb/bert-base-greek-uncased-v1",
+
     # experiments on various forms of roberta & electra
     #  https://huggingface.co/roberta-base
     #  https://huggingface.co/roberta-large
@@ -942,6 +952,9 @@ TRANSFORMER_NICKNAMES = {
     "bert-base-german-cased": "bert-base-german-cased",
     "dbmdz/bert-base-german-cased": "dbmdz-bert-german-cased",
     "german-nlp-group/electra-base-german-uncased": "german-nlp-electra",
+
+    # el (Greek)
+    "nlpaueb/bert-base-greek-uncased-v1": "greek-bert",
 
     # en
     "bert-base-multilingual-cased": "mbert",
