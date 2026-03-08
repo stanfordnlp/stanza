@@ -39,7 +39,7 @@ class MorphSegProcessor(UDProcessor):
                 lang=lang,
                 load_pretrained=True
             )
-        if self._segmenter.sequence_labeller is None:
+        if not self._segmenter.is_ready():
             raise UnsupportedProcessorError("morphseg", lang)
 
     def process(self, document):
