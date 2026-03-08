@@ -1094,6 +1094,9 @@ def dict_to_conll_text(token_dict, id_connector="-"):
                 misc_chains.append("%s%sid%d" % (coref_position, is_representative, chain.chain.index))
             misc.append("{}={}".format(key, ",".join(misc_chains)))
 
+    if MORPHEMES in token_dict and token_dict[MORPHEMES]:
+        misc.append("Morphemes={}".format(",".join(token_dict[MORPHEMES])))
+
     for key in token_dict.keys():
         if key == ID:
             token_conll[FIELD_TO_IDX[key]] = id_connector.join([str(x) for x in token_dict[key]]) if isinstance(token_dict[key], tuple) else str(token_dict[key])
