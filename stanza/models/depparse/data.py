@@ -273,3 +273,11 @@ class InfiniteBatch:
             batch = next(self.iterators[batch_idx])
         return batch
 
+    def set_batch_size(self, batch_size):
+        for batch in self.batches:
+            batch.set_batch_size(batch_size)
+
+    def reshuffle(self):
+        for batch in self.batches:
+            batch.reshuffle()
+

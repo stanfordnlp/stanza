@@ -483,7 +483,8 @@ def train(args):
                 trainer.global_step = global_step
                 trainer.last_best_step = global_step
                 if args['second_batch_size'] is not None:
-                    train_batch.set_batch_size(args['second_batch_size'])
+                    infinite_batch.set_batch_size(args['second_batch_size'])
+                    infinite_batch.reshuffle()
                 force_checkpoint = True
         else:
             if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop']:
