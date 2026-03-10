@@ -970,7 +970,7 @@ TRANSFORMER_NICKNAMES = {
     "HooshvareLab/bert-base-parsbert-uncased": "parsbert",
 
     # fi
-    "TurkuNLP/bert-base-finnish-cased-v1": "bert",
+    "TurkuNLP/bert-base-finnish-cased-v1": "finnish-bert",
 
     # fr
     "benjamin/roberta-base-wechsel-french": "wechsel-roberta",
@@ -1066,7 +1066,7 @@ TRANSFORMER_NICKNAMES = {
     "airesearch/wangchanberta-base-att-spm-uncased":   "wangchanberta",
 
     # tr
-    "dbmdz/bert-base-turkish-128k-cased": "bert",
+    "dbmdz/bert-base-turkish-128k-cased": "turkish-bert",
 
     # vi
     "vinai/phobert-base": "phobert-base",
