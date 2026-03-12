@@ -545,6 +545,9 @@ def treebank_to_short_name(treebank):
     # special case starting with zh in case the input is an already-converted ZH treebank
     if treebank.startswith("zh-hans") or treebank.startswith("zh-hant"):
         splits = (treebank[:len("zh-hans")], treebank[len("zh-hans")+1:])
+    elif treebank.endswith("-diacritics"):
+        splits = treebank[:-11].split('-')
+        splits[-1] = splits[-1] + "-diacritics"
     else:
         splits = treebank.split('-')
         if len(splits) == 1:
