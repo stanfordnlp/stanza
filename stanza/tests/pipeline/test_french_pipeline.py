@@ -27,7 +27,7 @@ EXPECTED_RESULT = """
       "lemma": "alors",
       "upos": "ADV",
       "head": 3,
-      "deprel": "advmod",
+      "deprel": "mark",
       "start_char": 0,
       "end_char": 5
     },
