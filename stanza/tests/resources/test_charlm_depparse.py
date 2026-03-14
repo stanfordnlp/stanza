@@ -26,7 +26,9 @@ def test_list_depparse():
     assert "en_ewt_charlm" in models
     assert "en_ewt_nocharlm" in models
     assert "en_mimic_charlm" in models
-    # haven't yet trained w/ and w/o for the bio models
-    assert "en_mimic_nocharlm" not in models
+    assert "en_mimic_nocharlm" in models
+    # haven't yet trained w/ and w/o for these bio models
     assert "en_craft_charlm" not in models
     assert "en_craft_nocharlm" in models
+    assert "en_genia_charlm" not in models
+    assert "en_genia_nocharlm" in models
