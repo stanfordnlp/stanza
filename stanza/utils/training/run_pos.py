@@ -115,7 +115,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
         if eval_file is None:
             test_args += ['--eval_file', test_in_file]
         if command_args.save_output:
-            dev_args.extend(["--output_file", test_pred_file])
+            test_args.extend(["--output_file", test_pred_file])
         test_args = test_args + build_pos_wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
         test_args = test_args + extra_args
         logger.info("Running test POS for {} with args {}".format(treebank, test_args))
