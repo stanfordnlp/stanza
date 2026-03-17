@@ -117,6 +117,7 @@ def build_peft_wrapper(bert_model, args, logger, adapter_name="default"):
 
 def load_peft_wrapper(bert_model, lora_params, args, logger, adapter_name):
     peft_config = build_peft_config(bert_model, args, logger)
+    lora_params = {x.replace("base_model.model.", ""): y for x, y in lora_params.items()}
 
     try:
         bert_model.load_adapter(adapter_name=adapter_name, peft_config=peft_config, adapter_state_dict=lora_params)
