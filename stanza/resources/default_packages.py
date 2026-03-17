@@ -763,6 +763,16 @@ TRANSFORMERS = {
     # rinna:   91.54 dev, 91.89 test
     "ja": "rinna/japanese-roberta-base",
 
+    # ka / Georgian
+    # there is a ka-specific Electra model
+    # however, it does not help results on the pos or depparse tasks
+    # as much as xlm-roberta does
+    #  model                dev AllTags    test AllTags   dev LAS   test LAS
+    # none                   94.69          91.54          83.03     77.98
+    # jnz/electra-ka         94.61          91.97          83.31     77.77
+    # xlm-roberta-large      95.20          92.73          85.50     80.75
+    "ka": "xlm-roberta-large",
+
     # could also try:
     # l3cube-pune/marathi-bert-v2
     #  or
@@ -1012,6 +1022,9 @@ TRANSFORMER_NICKNAMES = {
 
     # ja
     "rinna/japanese-roberta-base": "rinna-roberta",
+
+    # ka - Georgian
+    "jnz/electra-ka": "electra-ka",
 
     # mr
     "l3cube-pune/marathi-roberta": "l3cube-marathi-roberta",
