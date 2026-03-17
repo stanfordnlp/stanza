@@ -263,6 +263,7 @@ def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, wei
         bert_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
 
         # bert_finetune_layers limits the bert finetuning to the *last* N layers of the model
+        # TODO: not sure the previous layers are properly detached, so this might not save memory
         if len(bert_parameters) > 0 and bert_finetune_layers is not None:
             num_layers = model.bert_model.config.num_hidden_layers
             start_layer = num_layers - bert_finetune_layers
@@ -279,6 +280,8 @@ def get_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=0, wei
     else:
         # some optimizers seem to train some even with a learning rate of 0...
         if bert_learning_rate > 0:
+            # the peft config already incorporates this argument in the peft_config (see peft_config.py)
+            # and therefore doesn't need to account for bert_finetune_layers
             # because PEFT handles what to hand to an optimizer, we don't want to touch that
             parameters.append({'param_group_name': 'bert', 'params': model.bert_model.parameters(), 'lr': lr * bert_learning_rate})
             if bert_weight_decay is not None:
@@ -319,6 +322,8 @@ def get_split_optimizer(name, model, lr, betas=(0.9, 0.999), eps=1e-8, momentum=
             bert_parameters = [{'param_group_name': 'bert', 'params': trainable_parameters, 'lr': lr * bert_learning_rate}]
     else:
         # because PEFT handles what to hand to an optimizer, we don't want to touch that
+        # the peft config already incorporates this argument in the peft_config (see peft_config.py)
+        # and therefore doesn't need to account for bert_finetune_layers
         bert_parameters = [{'param_group_name': 'bert', 'params': model.bert_model.parameters(), 'lr': lr * bert_learning_rate}]
 
     extra_args = {}
