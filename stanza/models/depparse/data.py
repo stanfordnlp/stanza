@@ -280,4 +280,5 @@ class InfiniteBatch:
     def reshuffle(self):
         for batch in self.batches:
             batch.reshuffle()
+        self.iterators = [iter(batch) for batch in self.batches]
 
