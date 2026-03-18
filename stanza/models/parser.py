@@ -138,8 +138,8 @@ def build_argparse():
     parser.add_argument('--bert_finetune', default=False, action='store_true', help='Finetune the bert (or other transformer)')
     parser.add_argument('--no_bert_finetune', dest='bert_finetune', action='store_false', help="Don't finetune the bert (or other transformer)")
     parser.add_argument('--bert_finetune_layers', default=None, type=int, help='Only finetune this many layers from the transformer')
-    parser.add_argument('--bert_learning_rate', default=1.0, type=float, help='Scale the learning rate for transformer finetuning by this much')
-    parser.add_argument('--second_bert_learning_rate', default=1e-3, type=float, help='Secondary stage transformer finetuning learning rate scale')
+    parser.add_argument('--bert_learning_rate', default=0.0, type=float, help='Scale the learning rate for transformer finetuning by this much')
+    parser.add_argument('--second_bert_learning_rate', default=0.0, type=float, help='Secondary stage transformer finetuning learning rate scale')
     parser.add_argument('--bert_start_finetuning', default=200, type=int, help='When to start finetuning the transformer')
     parser.add_argument('--bert_warmup_steps', default=200, type=int, help='How many steps for a linear warmup when finetuning the transformer')
     parser.add_argument('--bert_weight_decay', default=0.0, type=float, help='Weight decay bert parameters by this much')
@@ -213,6 +213,10 @@ def build_argparse():
     parser.add_argument('--eval_interval', type=int, default=100)
     parser.add_argument('--checkpoint_interval', type=int, default=500)
     parser.add_argument('--max_steps_before_stop', type=int, default=2000)
+    parser.add_argument('--preliminary_stage', action='store_true', default=False, help='Start with a smaller batch preliminary stage for training peft in situations that might OOM otherwise')
+    parser.add_argument('--preliminary_batch_size', type=int, default=500)
+    parser.add_argument('--preliminary_bert_learning_rate', type=float, default=0.01)
+    parser.add_argument('--preliminary_steps', type=int, default=2000)
     parser.add_argument('--batch_size', type=int, default=5000)
     parser.add_argument('--second_batch_size', type=int, default=None, help='Use a different batch size for the second optimizer.  Can be relevant for models with different transformer finetuning settings between optimizers, for example, where the larger batch size is impossible for FT the transformer"')
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
@@ -306,7 +310,8 @@ def train(args):
     utils.log_training_args(args, logger)
 
     # load data
-    logger.info("Loading data with batch size {}...".format(args['batch_size']))
+    initial_batch_size = args['preliminary_batch_size'] if args['preliminary_stage'] else args['batch_size']
+    logger.info("Loading data with batch size %d", initial_batch_size)
     train_file = args['train_file']
     if zipfile.is_zipfile(train_file):
         logger.info("Decompressing %s" % train_file)
@@ -341,15 +346,15 @@ def train(args):
     # TODO: put the augmentation into the dataloader,
     # such as is done with the POS or the tokenizer
     train_doc = Document(train_data)
-    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
+    train_batch = DataLoader(train_doc, initial_batch_size, args, pretrain, evaluation=False)
     vocab = train_batch.vocab
     train_data.extend(augment_punct(train_data, args['augment_nopunct'],
                                     keep_original_sentences=False))
     logger.info("Augmented data size: {}".format(len(train_data)))
     train_doc = Document(train_data)
-    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
+    train_batch = DataLoader(train_doc, initial_batch_size, args, pretrain, vocab=vocab, evaluation=False)
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
-    dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
+    dev_batch = DataLoader(dev_doc, initial_batch_size, args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
     # skip training if the language does not have training or dev data
     if len(train_batch) == 0 or len(dev_batch) == 0:
@@ -360,7 +365,7 @@ def train(args):
         infinite_batch = InfiniteBatch(train_batch)
     else:
         silver_doc = CoNLL.conll2doc(input_file=args['silver_file'])
-        silver_batch = DataLoader(silver_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
+        silver_batch = DataLoader(silver_doc, initial_batch_size, args, pretrain, vocab=vocab, evaluation=False)
         infinite_batch = InfiniteBatch(train_batch, silver_batch, weights=[1.0, args['silver_weight']])
 
     if args['wandb']:
@@ -465,28 +470,33 @@ def train(args):
         if args['current_stage'] + 1 < len(trainer.training_stages):
             # not the last training stage
             current_stage = trainer.training_stages[args['current_stage']]
-            if (trainer.global_step - trainer.last_best_step >= current_stage.early_termination or
+            if ((current_stage.early_termination is not None and trainer.global_step - trainer.last_best_step >= current_stage.early_termination) or
                 (current_stage.max_iteration is not None and trainer.global_step >= current_stage.max_iteration)):
                 next_stage = trainer.training_stages[args['current_stage'] + 1]
                 logger.info("Switching to second optimizer: {}".format(next_stage.optim))
                 global_step = trainer.global_step
                 args["current_stage"] = args["current_stage"] + 1
-                # if the loader gets a model file, it uses secondary optimizer
-                # (because of the second_stage = True argument)
-                trainer = Trainer.load(filename=model_file, args=args, pretrain=pretrain, device=args['device'])
-                logger.info('Reloading best model to continue from current local optimum')
+                if next_stage.reload_best:
+                    # if the loader gets a model file, it uses secondary optimizer
+                    # (because of the current_stage argument)
+                    trainer = Trainer.load(filename=model_file, args=args, pretrain=pretrain, device=args['device'])
+                    logger.info('Reloading best model to continue from current local optimum')
 
-                dev_preds = predict_dataset(trainer, dev_batch)
-                dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
-                system_pred_file = "{:C}\n\n".format(dev_batch.doc)
-                system_pred_file = io.StringIO(system_pred_file)
-                _, _, dev_score = scorer.score(system_pred_file, args['eval_file'])
-                logger.info("Reloaded model with dev score %.4f", dev_score)
+                    dev_preds = predict_dataset(trainer, dev_batch)
+                    dev_batch.doc.set([HEAD, DEPREL], [y for x in dev_preds for y in x])
+                    system_pred_file = "{:C}\n\n".format(dev_batch.doc)
+                    system_pred_file = io.StringIO(system_pred_file)
+                    _, _, dev_score = scorer.score(system_pred_file, args['eval_file'])
+                    logger.info("Reloaded model with dev score %.4f", dev_score)
+                else:
+                    trainer.init_optim()
 
                 is_second_stage = True
                 trainer.global_step = global_step
                 trainer.last_best_step = global_step
                 if next_stage.batch_size is not None:
+                    # TODO: don't update if the batch size didn't change
+                    logger.info("Updating batch size to %d", next_stage.batch_size)
                     infinite_batch.set_batch_size(next_stage.batch_size)
                     infinite_batch.reshuffle()
                 force_checkpoint = True

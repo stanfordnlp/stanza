@@ -105,7 +105,7 @@ class TestParser:
         run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_hidden_layers', '2'])
 
     def test_with_bert_finetuning(self, tmp_path, wordvec_pretrain_file):
-        trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2'])
+        trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2', '--bert_learning_rate', '0.1'])
         assert 'bert_optimizer' in trainer.optimizer.keys()
         assert 'bert_scheduler' in trainer.scheduler.keys()
 
@@ -113,7 +113,7 @@ class TestParser:
         """
         Check that if we save, then load, then save a model with a finetuned bert, that bert isn't lost
         """
-        trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2'])
+        trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2', '--bert_learning_rate', '0.1'])
         assert 'bert_optimizer' in trainer.optimizer.keys()
         assert 'bert_scheduler' in trainer.scheduler.keys()
 
@@ -136,7 +136,7 @@ class TestParser:
         assert any(x.startswith("bert_model") for x in checkpoint['model'].keys())
 
     def test_with_peft(self, tmp_path, wordvec_pretrain_file):
-        trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2', '--use_peft'])
+        trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2', '--use_peft', '--bert_learning_rate', '0.1'])
         assert 'bert_optimizer' in trainer.optimizer.keys()
         assert 'bert_scheduler' in trainer.scheduler.keys()
 

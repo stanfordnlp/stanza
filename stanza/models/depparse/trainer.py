@@ -83,7 +83,7 @@ class Trainer(BaseTrainer, ABC):
         self.optimizer = None
         self.scheduler = None
         if build_optimizer:
-            self.__init_optim()
+            self.init_optim()
 
         if self.args.get('wandb'):
             import wandb
@@ -97,16 +97,30 @@ class Trainer(BaseTrainer, ABC):
 
     def __define_training_stages(self):
         args = self.args
-        training_stages = [TrainingStage(optim=args['optim'],
-                                         lr=args['lr'],
-                                         bert_lr=args['bert_learning_rate'],
-                                         weight_decay=args.get('weight_decay', None),
-                                         bert_weight_decay=args.get('bert_weight_decay', 0.0),
-                                         warmup=None,
-                                         batch_size=args['batch_size'],
-                                         max_iteration=args['second_optim_start_step'] if args['second_optim'] else args['max_steps'],
-                                         early_termination=args['max_steps_before_stop'],
-                                         reload_best=False)]
+        training_stages = []
+        # .get() to preserve old models...  possibly could resave them all
+        if args.get('preliminary_stage', False):
+            training_stages.append(TrainingStage(optim=args['optim'],
+                                                 lr=args['lr'],
+                                                 bert_lr=args['preliminary_bert_learning_rate'],
+                                                 weight_decay=args.get('weight_decay', None),
+                                                 bert_weight_decay=args.get('bert_weight_decay', 0.0),
+                                                 warmup=None,
+                                                 batch_size=args['preliminary_batch_size'],
+                                                 max_iteration=args['preliminary_steps'],
+                                                 early_termination=None,
+                                                 reload_best=False))
+
+        training_stages.append(TrainingStage(optim=args['optim'],
+                                             lr=args['lr'],
+                                             bert_lr=args['bert_learning_rate'],
+                                             weight_decay=args.get('weight_decay', None),
+                                             bert_weight_decay=args.get('bert_weight_decay', 0.0),
+                                             warmup=None,
+                                             batch_size=args['batch_size'],
+                                             max_iteration=args['second_optim_start_step'] if args['second_optim'] else args['max_steps'],
+                                             early_termination=args['max_steps_before_stop'],
+                                             reload_best=False))
         if args['second_optim']:
             training_stages.append(TrainingStage(optim=args['second_optim'],
                                                  lr=args['second_lr'],
@@ -120,7 +134,7 @@ class Trainer(BaseTrainer, ABC):
                                                  reload_best=True))
         self.training_stages = training_stages
 
-    def __init_optim(self):
+    def init_optim(self):
         args = self.args
         current_stage = args.get("current_stage", 0)
 
