@@ -3,6 +3,7 @@ A trainer class to handle training and testing of models.
 """
 
 from abc import ABC, abstractmethod
+from collections import namedtuple
 import copy
 import sys
 import logging
@@ -34,6 +35,8 @@ def unpack_batch(batch, device):
     text = batch[15]
     return inputs, orig_idx, word_orig_idx, sentlens, wordlens, text
 
+TrainingStage = namedtuple("TrainingStage", "optim lr bert_lr weight_decay bert_weight_decay warmup batch_size max_iteration early_termination reload_best")
+
 # TODO: there was an ignore_model_config option which is mostly
 # replaced by having the load() method use the passed-in args.
 # double check that all of that works
@@ -60,6 +63,8 @@ class Trainer(BaseTrainer, ABC):
         else:
             # build model from scratch
             self.args = args
+            # TODO: maybe don't put this in the args?
+            self.args['current_stage'] = 0
             self.vocab = vocab
 
             bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
@@ -72,6 +77,8 @@ class Trainer(BaseTrainer, ABC):
 
             self.model = self.build_model(args, vocab, emb_matrix=pretrain.emb if pretrain is not None else None, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=self.args['bert_finetune'], peft_name=peft_name)
             self.model = self.model.to(device)
+
+        self.__define_training_stages()
 
         self.optimizer = None
         self.scheduler = None
@@ -88,39 +95,64 @@ class Trainer(BaseTrainer, ABC):
         """ Create a model for this particular type of parser """
         raise NotImplementedError()
 
+    def __define_training_stages(self):
+        args = self.args
+        training_stages = [TrainingStage(optim=args['optim'],
+                                         lr=args['lr'],
+                                         bert_lr=args['bert_learning_rate'],
+                                         weight_decay=args.get('weight_decay', None),
+                                         bert_weight_decay=args.get('bert_weight_decay', 0.0),
+                                         warmup=None,
+                                         batch_size=args['batch_size'],
+                                         max_iteration=args['second_optim_start_step'] if args['second_optim'] else args['max_steps'],
+                                         early_termination=args['max_steps_before_stop'],
+                                         reload_best=False)]
+        if args['second_optim']:
+            training_stages.append(TrainingStage(optim=args['second_optim'],
+                                                 lr=args['second_lr'],
+                                                 bert_lr=args.get('second_bert_learning_rate', 0.0),
+                                                 weight_decay=None,    # TODO: add WD for the second optimizer?
+                                                 bert_weight_decay=None,
+                                                 warmup=args['second_warmup_steps'],
+                                                 batch_size=args['second_batch_size'],
+                                                 max_iteration=args['max_steps'],
+                                                 early_termination=args['max_steps_before_stop'],
+                                                 reload_best=True))
+        self.training_stages = training_stages
+
     def __init_optim(self):
-        # TODO: can get rid of args.get when models are rebuilt
-        if (self.args.get("second_stage", False) and self.args.get('second_optim')):
-            self.optimizer = utils.get_split_optimizer(self.args['second_optim'], self.model,
-                                                       self.args['second_lr'], betas=(0.9, self.args['beta2']), eps=1e-6,
-                                                       bert_learning_rate=self.args.get('second_bert_learning_rate', 0.0),
-                                                       is_peft=self.args.get('use_peft', False),
-                                                       bert_finetune_layers=self.args.get('bert_finetune_layers', None))
-        else:
-            self.optimizer = utils.get_split_optimizer(self.args['optim'], self.model,
-                                                       self.args['lr'], betas=(0.9, self.args['beta2']),
-                                                       eps=1e-6, bert_learning_rate=self.args.get('bert_learning_rate', 0.0),
-                                                       weight_decay=self.args.get('weight_decay', None),
-                                                       bert_weight_decay=self.args.get('bert_weight_decay', 0.0),
-                                                       is_peft=self.args.get('use_peft', False),
-                                                       bert_finetune_layers=self.args.get('bert_finetune_layers', None))
+        args = self.args
+        current_stage = args.get("current_stage", 0)
+
+        training_stage = self.training_stages[current_stage]
+        self.optimizer = utils.get_split_optimizer(training_stage.optim,
+                                                   self.model,
+                                                   training_stage.lr,
+                                                   betas=(0.9, args['beta2']),
+                                                   eps=1e-6,
+                                                   bert_learning_rate=training_stage.bert_lr,
+                                                   weight_decay=training_stage.weight_decay,
+                                                   bert_weight_decay=training_stage.bert_weight_decay,
+                                                   is_peft=args.get('use_peft', False),
+                                                   bert_finetune_layers=args.get('bert_finetune_layers', None))
         self.scheduler = {}
-        if self.args.get("second_stage", False) and self.args.get('second_optim'):
-            if self.args.get('second_warmup_steps', None):
-                for name, optimizer in self.optimizer.items():
-                    name = name + "_scheduler"
-                    warmup_scheduler = transformers.get_constant_schedule_with_warmup(optimizer, self.args['second_warmup_steps'])
-                    self.scheduler[name] = warmup_scheduler
+        # TODO: combine the warmup and bert-specific optimizer options
+        # then include those in the TrainingStage
+        if training_stage.warmup is not None:
+            for name, optimizer in self.optimizer.items():
+                name = name + "_scheduler"
+                warmup_scheduler = transformers.get_constant_schedule_with_warmup(optimizer, training_stage.warmup)
+                self.scheduler[name] = warmup_scheduler
         else:
             if "bert_optimizer" in self.optimizer:
-                zero_scheduler = torch.optim.lr_scheduler.ConstantLR(self.optimizer["bert_optimizer"], factor=0, total_iters=self.args['bert_start_finetuning'])
+                zero_scheduler = torch.optim.lr_scheduler.ConstantLR(self.optimizer["bert_optimizer"], factor=0, total_iters=args['bert_start_finetuning'])
                 warmup_scheduler = transformers.get_constant_schedule_with_warmup(
                     self.optimizer["bert_optimizer"],
-                    self.args['bert_warmup_steps'])
+                    args['bert_warmup_steps'])
                 self.scheduler["bert_scheduler"] = torch.optim.lr_scheduler.SequentialLR(
                     self.optimizer["bert_optimizer"],
                     schedulers=[zero_scheduler, warmup_scheduler],
-                    milestones=[self.args['bert_start_finetuning']])
+                    milestones=[args['bert_start_finetuning']])
 
     def update(self, batch, eval=False):
         device = self.model.get_device()
@@ -232,6 +264,10 @@ class Trainer(BaseTrainer, ABC):
         transition_subtree_combination = SubtreeCombination[transition_subtree_combination] if transition_subtree_combination is not None else SubtreeCombination.NONE
         loaded_args['transition_subtree_combination'] = transition_subtree_combination
         if args is not None: loaded_args.update(args)
+
+        if 'second_stage' in loaded_args:
+            loaded_args['current_stage'] = 1 if loaded_args['second_stage'] else 0
+            del loaded_args['second_stage']
 
         model_type = checkpoint.get("model_type")
         if not model_type:

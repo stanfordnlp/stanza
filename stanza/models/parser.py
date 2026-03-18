@@ -399,7 +399,6 @@ def train(args):
     global_start_time = time.time()
     format_str = 'Finished STEP {}/{}, loss = {:.6f} ({:.3f} sec/batch), lr: {:.6f}'
 
-    is_second_stage = False
     # start training
     train_loss = 0
     if args['log_norms']:
@@ -463,11 +462,15 @@ def train(args):
             if args['log_norms']:
                 trainer.model.log_norms()
 
-        if not is_second_stage and args.get('second_optim', None) is not None:
-            if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop'] or (args['second_optim_start_step'] is not None and trainer.global_step >= args['second_optim_start_step']):
-                logger.info("Switching to second optimizer: {}".format(args.get('second_optim', None)))
+        if args['current_stage'] + 1 < len(trainer.training_stages):
+            # not the last training stage
+            current_stage = trainer.training_stages[args['current_stage']]
+            if (trainer.global_step - trainer.last_best_step >= current_stage.early_termination or
+                (current_stage.max_iteration is not None and trainer.global_step >= current_stage.max_iteration)):
+                next_stage = trainer.training_stages[args['current_stage'] + 1]
+                logger.info("Switching to second optimizer: {}".format(next_stage.optim))
                 global_step = trainer.global_step
-                args["second_stage"] = True
+                args["current_stage"] = args["current_stage"] + 1
                 # if the loader gets a model file, it uses secondary optimizer
                 # (because of the second_stage = True argument)
                 trainer = Trainer.load(filename=model_file, args=args, pretrain=pretrain, device=args['device'])
@@ -483,12 +486,13 @@ def train(args):
                 is_second_stage = True
                 trainer.global_step = global_step
                 trainer.last_best_step = global_step
-                if args['second_batch_size'] is not None:
-                    infinite_batch.set_batch_size(args['second_batch_size'])
+                if next_stage.batch_size is not None:
+                    infinite_batch.set_batch_size(next_stage.batch_size)
                     infinite_batch.reshuffle()
                 force_checkpoint = True
         else:
-            if trainer.global_step - trainer.last_best_step >= args['max_steps_before_stop']:
+            # last training stage.  all we look for is: early termination?
+            if trainer.global_step - trainer.last_best_step >= trainer.training_stages[-1].early_termination:
                 do_break = True
                 break
 
