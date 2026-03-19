@@ -223,6 +223,7 @@ def build_argparse():
     parser.add_argument('--continue_from', type=str, default=None, help="File name to preload the model to continue training from")
 
     parser.add_argument('--seed', type=int, default=1234)
+    parser.add_argument('--no_seed', action='store_const', const=None, dest='seed', help='Remove the random seed, resulting in a randomly chosen random seed')
     add_peft_args(parser)
     utils.add_device_args(parser)
 
