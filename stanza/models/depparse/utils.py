@@ -7,7 +7,7 @@ import torch
 from stanza.models.common import utils
 
 def predict_dataset(trainer, dev_batch):
-    with torch.no_grad():
+    with torch.no_grad(), utils.evaluating(trainer.model):
         dev_preds = []
         if len(dev_batch) > 0:
             for batch in dev_batch:

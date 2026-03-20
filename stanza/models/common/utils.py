@@ -1015,3 +1015,17 @@ def simplify_punct(data):
             data[sent_idx][tok_idx][0] = EXCLAM_RE.sub("!", data[sent_idx][tok_idx][0])
     return data
 
+from contextlib import contextmanager
+
+# Following snippet is licensed under MIT license
+# https://discuss.pytorch.org/t/opinion-eval-should-be-a-context-manager/18998/3
+@contextmanager
+def evaluating(net):
+    """Temporarily switch to evaluation mode."""
+    istrain = net.training
+    try:
+        net.eval()
+        yield net
+    finally:
+        if istrain:
+            net.train()
