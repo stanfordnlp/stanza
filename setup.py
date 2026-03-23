@@ -127,7 +127,7 @@ setup(
             'ipython',
         ],
         'morphseg': [
-            'morphseg>=0.2.0',
+            'morphseg>=0.2.5.1',
         ]
     },
 
