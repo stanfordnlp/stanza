@@ -160,6 +160,7 @@ class TestMultilingualMorphSeg:
             nlp = stanza.Pipeline(
                 lang=lang,
                 processors='tokenize,morphseg',
+                model_dir=TEST_MODELS_DIR,
                 download_method=None
             )
             doc = nlp(text)
@@ -183,6 +184,7 @@ class TestMorphSegWithOtherProcessors:
         nlp = stanza.Pipeline(
             lang='en',
             processors='tokenize,mwt,morphseg',
+            model_dir=TEST_MODELS_DIR,
             download_method=None
         )
 
@@ -198,6 +200,7 @@ class TestMorphSegWithOtherProcessors:
             nlp = stanza.Pipeline(
                 lang='en',
                 processors='tokenize,pos,morphseg',
+                model_dir=TEST_MODELS_DIR,
                 download_method=None
             )
 
@@ -218,6 +221,7 @@ class TestMorphSegWithOtherProcessors:
             nlp = stanza.Pipeline(
                 lang='en',
                 processors='tokenize,pos,lemma,morphseg',
+                model_dir=TEST_MODELS_DIR,
                 download_method=None
             )
 
@@ -241,6 +245,7 @@ class TestMorphSegDeterminism:
         nlp = stanza.Pipeline(
             lang='en',
             processors='tokenize,morphseg',
+            model_dir=TEST_MODELS_DIR,
             download_method=None
         )
 
@@ -262,6 +267,7 @@ class TestMorphSegDeterminism:
         nlp = stanza.Pipeline(
             lang='en',
             processors='tokenize,morphseg',
+            model_dir=TEST_MODELS_DIR,
             download_method=None
         )
 
@@ -294,6 +300,7 @@ class TestMorphSegEdgeCases:
         return stanza.Pipeline(
             lang='en',
             processors='tokenize,morphseg',
+            model_dir=TEST_MODELS_DIR,
             download_method=None
         )
 
@@ -375,6 +382,7 @@ class TestMorphSegConfiguration:
         nlp = stanza.Pipeline(
             lang='en',
             processors='tokenize,morphseg',
+            model_dir=TEST_MODELS_DIR,
             download_method=None
         )
         doc = nlp("testing")
@@ -393,6 +401,7 @@ class TestMorphSegConfiguration:
         nlp = stanza.Pipeline(
             lang='en',
             processors='tokenize,morphseg',
+            model_dir=TEST_MODELS_DIR,
             download_method=None
         )
 
@@ -409,6 +418,7 @@ class TestMorphSegOutputFormat:
         return stanza.Pipeline(
             lang='en',
             processors='tokenize,morphseg',
+            model_dir=TEST_MODELS_DIR,
             download_method=None
         )
 
@@ -458,6 +468,7 @@ class TestMorphSegRepeatedly:
         nlp = stanza.Pipeline(
             lang='en',
             processors='tokenize,morphseg',
+            model_dir=TEST_MODELS_DIR,
             download_method=None
         )
 
@@ -479,6 +490,7 @@ class TestMorphSegRepeatedly:
         nlp = stanza.Pipeline(
             lang='en',
             processors='tokenize,morphseg',
+            model_dir=TEST_MODELS_DIR,
             download_method=None
         )
 
