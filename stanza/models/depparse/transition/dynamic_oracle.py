@@ -7,7 +7,7 @@ the simplest repair is to allow that transition and make no further changes to t
 
 from enum import Enum
 
-from stanza.models.depparse.transition.transitions import ProjectiveLeft, NonprojectiveLeft, ProjectiveRight, NonprojectiveRight
+from stanza.models.depparse.transition.transitions import Shift, ProjectiveLeft, NonprojectiveLeft, ProjectiveRight, NonprojectiveRight
 
 def fix_right_wrong_relation(gold_sequence, transition_idx, gold_transition, chosen_transition):
     """
@@ -90,6 +90,55 @@ def fix_left_wrong_relation_wrong_head(gold_sequence, transition_idx, gold_trans
     #print(new_sequence)
     return new_sequence
 
+def find_subtree_end(gold_sequence, current_index):
+    """
+    Build onto the current subtree on the stack until we would connect it somewhere else,
+    such as a PL or PR that affects the location before the current subtree
+    """
+    subtree_count = 1
+    while current_index < len(gold_sequence) and (subtree_count > 1 or (subtree_count == 1 and isinstance(gold_sequence[current_index], Shift))):
+        if isinstance(gold_sequence[current_index], Shift):
+            subtree_count += 1
+        elif isinstance(gold_sequence[current_index], (ProjectiveLeft, ProjectiveRight)):
+            subtree_count -= 1
+        else:
+            # TODO: could theoretically save some trees where
+            # there is a Nonprojective that stays inside the
+            # current list of subtrees
+            return None
+        current_index += 1
+    if current_index == len(gold_sequence):
+        return None
+    return current_index
+
+def fix_left_instead_of_shift_right_head(gold_sequence, transition_idx, gold_transition, chosen_transition):
+    if not isinstance(gold_transition, Shift):
+        return None
+    if not isinstance(chosen_transition, (ProjectiveLeft, NonprojectiveLeft)):
+        return None
+
+    # TODO: a ProjectiveLeft can technically be fixed with a NonprojectiveLeft...
+    if isinstance(gold_sequence[transition_idx+1], (NonprojectiveRight, NonprojectiveLeft, ProjectiveLeft)):
+        return None
+    # in this case, the word to the left would have immediately attached to the newly added word
+    # this is clearly fixable by just ignoring that attachment
+    if isinstance(gold_sequence[transition_idx+1], ProjectiveRight):
+        new_sequence = gold_sequence[:transition_idx] + [chosen_transition, gold_sequence[transition_idx]] + gold_sequence[transition_idx+2:]
+        return new_sequence
+
+    if isinstance(gold_sequence[transition_idx+1], Shift):
+        current_index = find_subtree_end(gold_sequence, transition_idx+1)
+        if current_index is None:
+            return None
+        # now we should have a single subtree and gold_sequence[current_index] is not a Shift
+        if isinstance(gold_sequence[current_index], ProjectiveRight):
+            # the case of a ProjectiveRight is the fixable case, as now the edge has been replaced with chosen_transition
+            # and there are no further errors being made when we build the rest of the tree
+            new_sequence = gold_sequence[:transition_idx] + [chosen_transition] + gold_sequence[transition_idx:current_index] + gold_sequence[current_index+1:]
+            return new_sequence
+    return None
+
+
 class RepairType(Enum):
     def __new__(cls, fn, correct=False, debug=False):
         """
@@ -106,6 +155,8 @@ class RepairType(Enum):
     LEFT_WRONG_RELATION                          = (fix_left_wrong_relation,)
 
     LEFT_WRONG_RELATION_WRONG_HEAD               = (fix_left_wrong_relation_wrong_head,)
+
+    LEFT_INSTEAD_OF_SHIFT_RIGHT_HEAD             = (fix_left_instead_of_shift_right_head,)
 
     CORRECT                                      = (None, )
 
