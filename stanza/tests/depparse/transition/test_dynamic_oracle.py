@@ -23,3 +23,11 @@ def test_fix_left_shift():
     expected = [Shift(), Shift(), ProjectiveLeft("csubj"), Shift(), Shift(), ProjectiveLeft("dobj"), ProjectiveRight("iobj"), Finalize()]
     assert result == expected
 
+def test_fix_right_shift():
+    gold_sequence = [Shift(), Shift(), Shift(), ProjectiveRight("nsubj"), ProjectiveRight("dobj"), Finalize()]
+    result = dynamic_oracle.fix_right_instead_of_shift_right_head(gold_sequence, 2, Shift(), ProjectiveRight("csubj"))
+    # if we attach the first node to the wrong head, we can still finish the parse
+    # without making any further errors
+    # the PR(nsubj) is attaching node 2 to node 3
+    expected = [Shift(), Shift(), ProjectiveRight("csubj"), Shift(), ProjectiveRight("nsubj"), Finalize()]
+    assert result == expected

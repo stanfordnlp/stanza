@@ -138,6 +138,41 @@ def fix_left_instead_of_shift_right_head(gold_sequence, transition_idx, gold_tra
             return new_sequence
     return None
 
+def fix_right_instead_of_shift_right_head(gold_sequence, transition_idx, gold_transition, chosen_transition):
+    """
+    This pattern occurs when a subtree was supposed to be  attached at a later point, but was instead attached now.
+
+    so the sequence was
+
+    A B C
+
+    attached
+    B -> C
+
+    when instead we should have done
+
+    A B C D
+    somehow connect C D
+    *then* attach B to the result of connecting C and D
+    """
+    if not isinstance(gold_transition, Shift):
+        return None
+    if not isinstance(chosen_transition, ProjectiveRight):
+        return None
+
+    current_index = find_subtree_end(gold_sequence, transition_idx)
+    if current_index is not None and isinstance(gold_sequence[current_index], ProjectiveRight):
+        # This is the case where we had
+        #  A B C
+        # connected B -> C immediately
+        # but instead should have shifted D
+        # then connected C to D immediately (either head)
+        # and then connected B -> C/D
+        # or there can also be stuff built onto C/D first
+        new_sequence = gold_sequence[:transition_idx] + [chosen_transition] + gold_sequence[transition_idx:current_index] + gold_sequence[current_index+1:]
+        return new_sequence
+
+    return None
 
 class RepairType(Enum):
     def __new__(cls, fn, correct=False, debug=False):
@@ -157,6 +192,8 @@ class RepairType(Enum):
     LEFT_WRONG_RELATION_WRONG_HEAD               = (fix_left_wrong_relation_wrong_head,)
 
     LEFT_INSTEAD_OF_SHIFT_RIGHT_HEAD             = (fix_left_instead_of_shift_right_head,)
+
+    RIGHT_INSTEAD_OF_SHIFT_RIGHT_HEAD            = (fix_right_instead_of_shift_right_head,)
 
     CORRECT                                      = (None, )
 
