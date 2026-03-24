@@ -98,7 +98,8 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
         logging_level: logging level to use during installation
     """
     dir = os.path.expanduser(dir)
-    set_logging_level(logging_level=logging_level, verbose=None)
+    if logging_level is not None:
+        set_logging_level(logging_level=logging_level, verbose=None)
     if os.path.exists(dir) and len(os.listdir(dir)) > 0:
         logger.warn(
             f"Directory {dir} already exists. "

@@ -567,8 +567,12 @@ def download(
         proxies=None,
         download_json=True
     ):
-    # set global logging level
-    set_logging_level(logging_level, verbose)
+    # Only set global logging level if the caller explicitly requested it.
+    # Previously this was called unconditionally, which meant a simple
+    # stanza.download('en') would reset the user's logging configuration
+    # as a side effect.  See https://github.com/stanfordnlp/stanza/issues/1418
+    if logging_level is not None or verbose is not None:
+        set_logging_level(logging_level, verbose)
     # process different pipeline parameters
     lang, model_dir, package, processors = process_pipeline_parameters(
         lang, model_dir, package, processors
