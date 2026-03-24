@@ -198,8 +198,9 @@ class Pipeline:
         if model_dir is not None and dir == DEFAULT_MODEL_DIR:
             self.dir = model_dir
 
-        # set global logging level
-        set_logging_level(logging_level, verbose)
+        # Only adjust logging if the caller explicitly requested it
+        if logging_level is not None or verbose is not None:
+            set_logging_level(logging_level, verbose)
 
         self.download_method = normalize_download_method(download_method)
         if (self.download_method is DownloadMethod.DOWNLOAD_RESOURCES or
