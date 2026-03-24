@@ -50,7 +50,19 @@ def load_tokenizer(model_name, tokenizer_kwargs=None, local_files_only=False):
         if tokenizer_kwargs:
             bert_args.update(tokenizer_kwargs)
         bert_args['local_files_only'] = local_files_only
-        bert_tokenizer = AutoTokenizer.from_pretrained(model_name, **bert_args)
+        try:
+            bert_tokenizer = AutoTokenizer.from_pretrained(model_name, **bert_args)
+        except ValueError as e:
+            # some models on the hub are a BPE / PreTrainedTokenizerFast
+            # but are marked as CamembertTokenizer
+            # see https://github.com/huggingface/transformers/issues/44488
+            if model_name in ("cjvt/sloberta-sleng",
+                              "cjvt/sleng-bert",
+                              "EMBEDDIA/sloberta"):
+                from transformers import TokenizersBackend
+                bert_tokenizer = TokenizersBackend.from_pretrained(model_name)
+            else:
+                raise
         update_max_length(model_name, bert_tokenizer)
         if model_name == 'princeton-nlp/Sheared-LLaMA-1.3B':
             bert_tokenizer.pad_token = bert_tokenizer.eos_token
