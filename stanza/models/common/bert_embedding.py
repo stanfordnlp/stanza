@@ -24,6 +24,7 @@ class TextTooLongError(ValueError):
 
 
 def update_max_length(model_name, tokenizer):
+    # see https://github.com/huggingface/transformers/issues/14561
     if model_name in ('hf-internal-testing/tiny-bert',
                       'google/muril-base-cased',
                       'google/muril-large-cased',
