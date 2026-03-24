@@ -842,8 +842,8 @@ TRANSFORMERS = {
     # crosloengual-bert has good numbers and also has the benefit
     # of working correctly on transformers v5...
     # the others have a bug in their tokenizer config
-    # which needs a bugfix before they are usable
-    # (although they worked with transformers v4)
+    # where we need to catch an exception and reload the tokenizer
+    # see https://github.com/huggingface/transformers/issues/44488
     "sl": "EMBEDDIA/crosloengual-bert",
 
     # Serbian
