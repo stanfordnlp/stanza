@@ -1148,6 +1148,13 @@ def build_combined_spanish_dataset(paths, model_type, dataset):
                 new_sents = strip_xpos(new_sents)
             documents[treebank] = new_sents
 
+        extra_spanish = os.path.join(handparsed_dir, "spanish-silver", "es.future.conllu")
+        if not os.path.exists(extra_spanish):
+            raise FileNotFoundError("Cannot find the extra dataset 'spanish-silver/es.future.conllu' which includes various additional Spanish tenses, expected {}".format(extra_spanish))
+        extra_sents = read_sentences_from_conllu(extra_spanish)
+        print("Read %d sentences from %s" % (len(extra_sents), extra_spanish))
+        extra_sents = strip_xpos(extra_sents)
+        documents['es.future.conllu'] = extra_sents
         return documents
 
     if dataset == 'train':
