@@ -174,6 +174,35 @@ def fix_right_instead_of_shift_right_head(gold_sequence, transition_idx, gold_tr
 
     return None
 
+def fix_shift_instead_of_right(gold_sequence, transition_idx, gold_transition, chosen_transition):
+    """A fixable scenario here is when the 2nd-from-top subtree could
+    be merged right, but instead the top subtree is built on further.
+
+    In such a situation, the right transition is still possible
+
+    A B C
+    should merge B -> C
+    instead build C' (same root)
+    can still merge B -> C
+    """
+    if not isinstance(gold_transition, ProjectiveRight):
+        return None
+    if not isinstance(chosen_transition, Shift):
+        return None
+    if not isinstance(gold_sequence[transition_idx+1], Shift):
+        return None
+
+    current_index = find_subtree_end(gold_sequence, transition_idx+2)
+    if not current_index:
+        return None
+
+    # ProjectiveLeft is the fixable case, as it means the subtree still has the same root.
+    # Thus attaching the 2nd from top subtree actually creates zero errors
+    if not isinstance(gold_sequence[current_index], ProjectiveLeft):
+        return None
+    new_sequence = gold_sequence[:transition_idx] + gold_sequence[transition_idx+1:current_index+1] + [gold_transition] + gold_sequence[current_index+1:]
+    return new_sequence
+
 class RepairType(Enum):
     def __new__(cls, fn, correct=False, debug=False):
         """
@@ -194,6 +223,8 @@ class RepairType(Enum):
     LEFT_INSTEAD_OF_SHIFT_RIGHT_HEAD             = (fix_left_instead_of_shift_right_head,)
 
     RIGHT_INSTEAD_OF_SHIFT_RIGHT_HEAD            = (fix_right_instead_of_shift_right_head,)
+
+    SHIFT_INSTEAD_OF_RIGHT                       = (fix_shift_instead_of_right,)
 
     CORRECT                                      = (None, )
 
