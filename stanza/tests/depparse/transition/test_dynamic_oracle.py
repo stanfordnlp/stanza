@@ -31,3 +31,11 @@ def test_fix_right_shift():
     # the PR(nsubj) is attaching node 2 to node 3
     expected = [Shift(), Shift(), ProjectiveRight("csubj"), Shift(), ProjectiveRight("nsubj"), Finalize()]
     assert result == expected
+
+def test_fix_shift_right():
+    gold_sequence = [Shift(), Shift(), ProjectiveRight("nsubj"), Shift(), ProjectiveLeft("dobj"), Finalize()]
+    result = dynamic_oracle.fix_shift_instead_of_right(gold_sequence, 2, ProjectiveRight("nsubj"), Shift())
+    expected = [Shift(), Shift(), Shift(), ProjectiveLeft("dobj"), ProjectiveRight("nsubj"), Finalize()]
+    assert result == expected
+
+
