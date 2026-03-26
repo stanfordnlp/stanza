@@ -411,6 +411,9 @@ class DataLoader(TokenizationDataset):
         split_units = w0_units + [(' ', 0)] + w1_units
         new_units = all_units[:mwt_start] + split_units + all_units[mwt_end+1:]
         encoded = self.para_to_sentences(new_units)
+        if len(encoded) == 0:
+            # this can happen if the MWT split to be too long for max_seqlen
+            return None
         return encoded
 
     def move_punct_back(self, sentence):
