@@ -961,7 +961,13 @@ def build_extra_combined_italian_dataset(paths, model_type, dataset):
             raise AssertionError("Unexpected format of the italian.mwt file.  Has it already be modified to have SpaceAfter=No everywhere?")
         sentence[2] = sentence[2][:-1] + "SpaceAfter=No"
     print("Loaded %d sentences from %s" % (len(extra_sents), extra_italian))
-    return extra_sents
+
+    silver_italian = os.path.join(handparsed_dir, "italian-silver", "it.nulla.conllu")
+    if not os.path.exists(silver_italian):
+        raise FileNotFoundError("Cannot find the extra dataset 'italian.nulla.conllu' which includes various sentences with nulla (to fix the tokenizer), expected {}".format(silver_italian))
+    silver_sents = read_sentences_from_conllu(silver_italian)
+    print("Loaded %d sentences from %s" % (len(silver_sents), silver_italian))
+    return extra_sents + silver_sents
 
 def replace_semicolons(sentences):
     """
