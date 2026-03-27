@@ -116,7 +116,7 @@ def test_download_none():
         it_dir = os.path.join(test_dir, 'it')
         it_dir_listing = sorted(os.listdir(it_dir))
         assert sorted(it_dir_listing) == ['mwt', 'tokenize']
-        combined_path = os.path.join(it_dir, "tokenize", "combined.pt")
+        combined_path = os.path.join(it_dir, "tokenize", "combined_nocharlm.pt")
         vit_path = os.path.join(it_dir, "tokenize", "vit.pt")
 
         assert os.path.exists(combined_path)
