@@ -943,6 +943,18 @@ def build_extra_combined_english_dataset(paths, model_type, dataset):
             sents.extend(handparsed_sentences)
     return sents
 
+def build_extra_combined_spanish_dataset(paths, model_type, dataset):
+    handparsed_dir = paths["HANDPARSED_DIR"]
+    if dataset != 'train':
+        return []
+
+    extra_spanish = os.path.join(handparsed_dir, "spanish-silver", "es.future.conllu")
+    if not os.path.exists(extra_spanish):
+        raise FileNotFoundError("Cannot find the extra dataset 'spanish-silver/es.future.conllu' which includes various additional Spanish tenses, expected {}".format(extra_spanish))
+    extra_sents = read_sentences_from_conllu(extra_spanish)
+    print("Read %d sentences from %s" % (len(extra_sents), extra_spanish))
+    return extra_sents
+
 def build_extra_combined_italian_dataset(paths, model_type, dataset):
     """
     Extra data - the MWT data for Italian
@@ -1154,13 +1166,6 @@ def build_combined_spanish_dataset(paths, model_type, dataset):
                 new_sents = strip_xpos(new_sents)
             documents[treebank] = new_sents
 
-        extra_spanish = os.path.join(handparsed_dir, "spanish-silver", "es.future.conllu")
-        if not os.path.exists(extra_spanish):
-            raise FileNotFoundError("Cannot find the extra dataset 'spanish-silver/es.future.conllu' which includes various additional Spanish tenses, expected {}".format(extra_spanish))
-        extra_sents = read_sentences_from_conllu(extra_spanish)
-        print("Read %d sentences from %s" % (len(extra_sents), extra_spanish))
-        extra_sents = strip_xpos(extra_sents)
-        documents['es.future.conllu'] = extra_sents
         return documents
 
     if dataset == 'train':
@@ -1264,6 +1269,7 @@ COMBINED_EXTRA_FNS = {
     "en_combined": build_extra_combined_english_dataset,
     "fr_combined": build_extra_combined_french_dataset,
     "it_combined": build_extra_combined_italian_dataset,
+    "es_combined": build_extra_combined_spanish_dataset,
 }
 
 def build_combined_dataset(paths, short_name, model_type, augment):
@@ -1278,6 +1284,8 @@ def build_combined_dataset(paths, short_name, model_type, augment):
             if dataset == 'train' and augment:
                 for filename in list(sents.keys()):
                     sents[filename] = augment_punct(sents[filename])
+            if extra_fn is not None:
+                sents['extra'] = extra_fn(paths, model_type, dataset)
             output_zip = os.path.splitext(output_conllu)[0] + ".zip"
             with zipfile.ZipFile(output_zip, "w") as zout:
                 for filename in list(sents.keys()):
