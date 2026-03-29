@@ -1349,6 +1349,7 @@ def build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, da
 def build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, augment):
     for dataset in ("train", "dev", "test"):
         build_combined_english_gum_dataset(udbase_dir, tokenizer_dir, short_name, dataset, augment)
+    return True
 
 def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, dataset, augment=True, input_conllu=None, output_conllu=None):
     if input_conllu is None:
@@ -1378,6 +1379,7 @@ def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_l
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment)
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment)
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment)
+    return True
 
 
 XV_RATIO = 0.2
@@ -1482,7 +1484,7 @@ def process_treebank(treebank, model_type, paths, args):
 
     os.makedirs(tokenizer_dir, exist_ok=True)
 
-    success = False
+    success = True
     if short_name == "my_alt":
         convert_my_alt.convert_my_alt(paths["CONSTITUENCY_BASE"], tokenizer_dir)
     elif short_name == "vi_vlsp":
@@ -1504,7 +1506,7 @@ def process_treebank(treebank, model_type, paths, args):
     elif short_name.startswith("en_gum"):
         # we special case GUM because it should include a filled-out GUMReddit
         print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
-        build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, args.augment)
+        success = build_combined_english_gum(udbase_dir, tokenizer_dir, short_name, args.augment)
     else:
         # check that we can find the train file where we expect it
         train_conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=False)
@@ -1519,7 +1521,7 @@ def process_treebank(treebank, model_type, paths, args):
             if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "conllu", fail=False):
                 success = process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
             else:
-                process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment)
+                success = process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment)
 
     if success and (model_type is common.ModelType.TOKENIZER or model_type is common.ModelType.MWT):
         if not short_name in ('th_orchid', 'th_lst20'):
