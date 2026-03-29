@@ -3,6 +3,38 @@ A series of repairs for possible errors in a transition sequence chosen at train
 
 For example, if the parser chooses a left reduce transition with the wrong label,
 the simplest repair is to allow that transition and make no further changes to the sequence.
+
+Example of the proportion of errors covered by the end of a Chinese training run:
+
+Oracle repairs:
+  CORRECT (7): 177818
+  UNKNOWN (8): 4335
+  RIGHT_WRONG_RELATION (1): 3184
+  RIGHT_INSTEAD_OF_SHIFT_RIGHT_HEAD (5): 1394
+  SHIFT_INSTEAD_OF_RIGHT (6): 921
+  LEFT_WRONG_RELATION (2): 829
+  LEFT_INSTEAD_OF_SHIFT_RIGHT_HEAD (4): 462
+  LEFT_WRONG_RELATION_WRONG_HEAD (3): 179
+
+Scores of using this oracle on a few different treebanks:
+
+5 model dev avg LAS     without          oracle
+de_gsd                   88.93            89.00
+en_ewt                   93.45            93.53
+fi_tdt                   92.82            92.81
+it_vit                   90.02            90.05
+ta_ttb                   72.05            72.13
+zh-hans_gsdsimp          85.14            85.33
+
+5 model test avg LAS    without          oracle
+de_gsd                   86.49            86.66
+en_ewt                   93.23            93.40
+fi_tdt                   92.91            93.01
+it_vit                   90.35            90.32
+ta_ttb                   68.90            68.62
+zh-hans_gsdsimp          85.26            85.45
+
+Interestingly, it seems to help more with larger treebanks than smaller.
 """
 
 from enum import Enum
