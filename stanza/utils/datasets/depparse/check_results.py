@@ -25,6 +25,7 @@ def main():
     test_scores = []
 
     best_step = None
+    final_step = None
     for filename in filenames:
         with open(filename, encoding="utf-8") as fin:
             lines = fin.readlines()
@@ -49,6 +50,7 @@ def main():
                     if dev_score is None or score > dev_score:
                         dev_score = score
                         best_step = step
+                    final_step = step
             if dev_score is None:
                 dev_score = "N/A"
             else:
@@ -60,7 +62,7 @@ def main():
                 test_scores.append(test_score)
                 test_score = "%.2f" % test_score
             if best_step is not None:
-                print("%s     %s  (%d)" % (filename, dev_score, best_step))
+                print("%s     %s  (%d / %d)" % (filename, dev_score, best_step, final_step))
             else:
                 print("%s     %s  %s" % (filename, dev_score, test_score))
 
