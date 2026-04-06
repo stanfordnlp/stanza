@@ -69,6 +69,8 @@ class TokenizeProcessor(UDProcessor):
             sentences = [sent.strip().split() for sent in input_src.strip().split('\n') if len(sent.strip()) > 0]
         elif isinstance(input_src, list):
             sentences = input_src
+        else:
+            sentences = []
         idx = 0
         for sentence in sentences:
             sent = []
