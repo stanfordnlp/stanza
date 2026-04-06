@@ -150,9 +150,14 @@ class Trainer(BaseTrainer):
         self.model.eval()
         batch_size = word.size(0)
         _, preds = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
-        # TODO: would be cleaner for the model to not have the capability to produce predictions < VOCAB_PREFIX_SIZE
-        if self.fallback is not None:
-            preds[1][preds[1] < VOCAB_PREFIX_SIZE] = self.fallback
+        # Clamp predicted deprel indices so that special-token prefix
+        # entries (PAD, UNK, EMPTY, ROOT) are never emitted.
+        # If the vocabulary contains 'dep' we remap to that; otherwise we
+        # clamp to the first real relation (index == VOCAB_PREFIX_SIZE).
+        prefix_mask = preds[1] < VOCAB_PREFIX_SIZE
+        if prefix_mask.any():
+            fallback = self.fallback if self.fallback is not None else VOCAB_PREFIX_SIZE
+            preds[1][prefix_mask] = fallback
         head_seqs = [chuliu_edmonds_one_root(adj[:l, :l])[1:] for adj, l in zip(preds[0], sentlens)] # remove attachment for the root
         deprel_seqs = [self.vocab['deprel'].unmap([preds[1][i][j+1][h] for j, h in enumerate(hs)]) for i, hs in enumerate(head_seqs)]
 
