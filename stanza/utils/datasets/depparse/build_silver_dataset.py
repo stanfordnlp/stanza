@@ -147,9 +147,9 @@ def main():
             tokenized_sentences = [[x.replace("_", " ") for x in sentence] for sentence in tokenized_sentences]
     logger.info("Read %d tokenized sentences", len(tokenized_sentences))
 
-    e1_pipelines = [stanza.Pipeline("en", processors="tokenize,depparse", tokenize_pretokenized=True, depparse_trainer=tr, depparse_batch_size=1000, foundation_cache=foundation_cache, download_method=None, depparse_pretagged=True, device=args['device'])
+    e1_pipelines = [stanza.Pipeline(short_language, processors="tokenize,depparse", tokenize_pretokenized=True, depparse_trainer=tr, depparse_batch_size=1000, foundation_cache=foundation_cache, download_method=None, depparse_pretagged=True, device=args['device'])
                     for tr in e1_trainers]
-    e2_pipelines = [stanza.Pipeline("en", processors="tokenize,depparse", tokenize_pretokenized=True, depparse_trainer=tr, depparse_batch_size=1000, foundation_cache=foundation_cache, download_method=None, depparse_pretagged=True, device=args['device'])
+    e2_pipelines = [stanza.Pipeline(short_language, processors="tokenize,depparse", tokenize_pretokenized=True, depparse_trainer=tr, depparse_batch_size=1000, foundation_cache=foundation_cache, download_method=None, depparse_pretagged=True, device=args['device'])
                     for tr in e2_trainers]
 
     chunk_size = args['chunk_size']
