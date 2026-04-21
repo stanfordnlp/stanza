@@ -1285,7 +1285,9 @@ def build_combined_dataset(paths, short_name, model_type, augment):
                 for filename in list(sents.keys()):
                     sents[filename] = augment_punct(sents[filename])
             if extra_fn is not None:
-                sents['extra'] = extra_fn(paths, model_type, dataset)
+                extra_sents = extra_fn(paths, model_type, dataset)
+                if extra_sents is not None:
+                    sents['extra'] = extra_sents
             output_zip = os.path.splitext(output_conllu)[0] + ".zip"
             with zipfile.ZipFile(output_zip, "w") as zout:
                 for filename in list(sents.keys()):
@@ -1296,7 +1298,9 @@ def build_combined_dataset(paths, short_name, model_type, augment):
             if dataset == 'train' and augment:
                 sents = augment_punct(sents)
             if extra_fn is not None:
-                sents.extend(extra_fn(paths, model_type, dataset))
+                extra_sents = extra_fn(paths, model_type, dataset)
+                if extra_sents is not None:
+                    sents.extend(extra_sents)
             write_sentences_to_conllu(output_conllu, sents)
 
 BIO_DATASETS = ("en_craft", "en_genia", "en_mimic")
