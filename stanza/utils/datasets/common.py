@@ -308,6 +308,8 @@ def build_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('treebanks', type=str, nargs='+', help='Which treebanks to run on.  Use all_ud or ud_all for all UD treebanks')
 
+    parser.add_argument('--no_spanish_future', action='store_false', default=True, dest='use_spanish_future', help="Don't use the file of future tense Spanish data")
+
     return parser
 
 

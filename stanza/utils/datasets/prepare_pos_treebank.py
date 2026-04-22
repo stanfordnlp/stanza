@@ -27,7 +27,7 @@ def copy_conllu_file_or_zip(tokenizer_dir, tokenizer_file, dest_dir, dest_file, 
 
 
 def process_treebank(treebank, model_type, paths, args):
-    prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["POS_DATA_DIR"], postprocess=copy_conllu_file_or_zip)
+    prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["POS_DATA_DIR"], args, postprocess=copy_conllu_file_or_zip)
 
 def main():
     common.main(process_treebank, common.ModelType.POS)

@@ -22,6 +22,7 @@ There are a few special case handlings of treebanks in this file:
 """
 
 import argparse
+import copy
 import glob
 import io
 import os
@@ -53,7 +54,7 @@ def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_n
     sents = read_sentences_from_conllu(original)
     write_sentences_to_conllu(copied, sents)
 
-def copy_conllu_treebank(treebank, model_type, paths, dest_dir, postprocess=None, augment=True):
+def copy_conllu_treebank(treebank, model_type, paths, dest_dir, args, postprocess=None, augment=True):
     """
     This utility method copies only the conllu files to the given destination directory.
 
@@ -69,7 +70,7 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, postprocess=None
         paths["TOKENIZE_DATA_DIR"] = tokenizer_dir
 
         # first we process the tokenization data
-        args = argparse.Namespace()
+        args = copy.deepcopy(args)
         args.augment = augment
         args.prepare_labels = False
         process_treebank(treebank, model_type, paths, args)
@@ -877,7 +878,7 @@ def add_english_sentence_final_punctuation(handparsed_sentences):
             new_sents.append(sent)
     return new_sents
 
-def build_extra_combined_french_dataset(paths, model_type, dataset):
+def build_extra_combined_french_dataset(paths, model_type, dataset, args):
     """
     Extra sentences we don't want augmented for French - currently, handparsed lemmas
     """
@@ -896,7 +897,7 @@ def build_extra_combined_french_dataset(paths, model_type, dataset):
             sents.extend(handparsed_sentences)
     return sents
 
-def build_extra_combined_german_dataset(paths, model_type, dataset):
+def build_extra_combined_german_dataset(paths, model_type, dataset, args):
     """
     Extra sentences we don't want augmented for German
 
@@ -913,7 +914,7 @@ def build_extra_combined_german_dataset(paths, model_type, dataset):
     return sents
 
 
-def build_extra_combined_english_dataset(paths, model_type, dataset):
+def build_extra_combined_english_dataset(paths, model_type, dataset, args):
     """
     Extra sentences we don't want augmented
     """
@@ -943,9 +944,12 @@ def build_extra_combined_english_dataset(paths, model_type, dataset):
             sents.extend(handparsed_sentences)
     return sents
 
-def build_extra_combined_spanish_dataset(paths, model_type, dataset):
+def build_extra_combined_spanish_dataset(paths, model_type, dataset, args):
     handparsed_dir = paths["HANDPARSED_DIR"]
     if dataset != 'train':
+        return []
+
+    if not args.use_spanish_future:
         return []
 
     extra_spanish = os.path.join(handparsed_dir, "spanish-silver", "es.future.conllu")
@@ -955,7 +959,7 @@ def build_extra_combined_spanish_dataset(paths, model_type, dataset):
     print("Read %d sentences from %s" % (len(extra_sents), extra_spanish))
     return extra_sents
 
-def build_extra_combined_italian_dataset(paths, model_type, dataset):
+def build_extra_combined_italian_dataset(paths, model_type, dataset, args):
     """
     Extra data - the MWT data for Italian
     """
@@ -1272,7 +1276,7 @@ COMBINED_EXTRA_FNS = {
     "es_combined": build_extra_combined_spanish_dataset,
 }
 
-def build_combined_dataset(paths, short_name, model_type, augment):
+def build_combined_dataset(paths, short_name, model_type, args):
     random.seed(1234)
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
     build_fn = COMBINED_FNS[short_name]
@@ -1281,12 +1285,12 @@ def build_combined_dataset(paths, short_name, model_type, augment):
         output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
         sents = build_fn(paths, model_type, dataset)
         if isinstance(sents, dict):
-            if dataset == 'train' and augment:
+            if dataset == 'train' and args.augment:
                 for filename in list(sents.keys()):
                     sents[filename] = augment_punct(sents[filename])
             if extra_fn is not None:
-                extra_sents = extra_fn(paths, model_type, dataset)
-                if extra_sents is not None:
+                extra_sents = extra_fn(paths, model_type, dataset, args)
+                if extra_sents:
                     sents['extra'] = extra_sents
             output_zip = os.path.splitext(output_conllu)[0] + ".zip"
             with zipfile.ZipFile(output_zip, "w") as zout:
@@ -1295,11 +1299,11 @@ def build_combined_dataset(paths, short_name, model_type, augment):
                         with io.TextIOWrapper(zfout, encoding='utf-8', newline='') as fout:
                             write_sentences_to_file(fout, sents[filename])
         else:
-            if dataset == 'train' and augment:
+            if dataset == 'train' and args.augment:
                 sents = augment_punct(sents)
             if extra_fn is not None:
-                extra_sents = extra_fn(paths, model_type, dataset)
-                if extra_sents is not None:
+                extra_sents = extra_fn(paths, model_type, dataset, args)
+                if extra_sents:
                     sents.extend(extra_sents)
             write_sentences_to_conllu(output_conllu, sents)
 
@@ -1504,7 +1508,7 @@ def process_treebank(treebank, model_type, paths, args):
     elif short_name.startswith("ko_combined"):
         build_combined_korean(udbase_dir, tokenizer_dir, short_name)
     elif short_name in COMBINED_FNS: # eg "it_combined", "en_combined", etc
-        build_combined_dataset(paths, short_name, model_type, args.augment)
+        build_combined_dataset(paths, short_name, model_type, args)
     elif short_name in BIO_DATASETS:
         build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, model_type, args.augment)
     elif short_name.startswith("en_gum"):

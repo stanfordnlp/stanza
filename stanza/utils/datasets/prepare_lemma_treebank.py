@@ -58,7 +58,7 @@ def process_treebank(treebank, model_type, paths, args):
     else:
         # TODO: check the data to see if there are lemmas or not
         augment = True
-    prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], augment=augment)
+    prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], args=args, augment=augment)
 
     short_name = treebank_to_short_name(treebank)
     if args.lemma_classifier and short_name in prepare_lemma_classifier.DATASET_MAPPING:
