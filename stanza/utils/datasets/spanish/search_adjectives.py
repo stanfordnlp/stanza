@@ -1,3 +1,4 @@
+import argparse
 from collections import defaultdict
 import os
 import re
@@ -203,7 +204,7 @@ def search_a_ending_adjectives(adjectives):
         else:
             print("%s ... %s" % (adj, candidate))
         
-filenames = [
+FILENAMES = [
     "extern_data/ud2/git/UD_Spanish-AnCora/es_ancora-ud-train.conllu",
     "extern_data/ud2/git/UD_Spanish-AnCora/es_ancora-ud-dev.conllu",
     "extern_data/ud2/git/UD_Spanish-AnCora/es_ancora-ud-test.conllu",
@@ -215,7 +216,7 @@ filenames = [
 
 adj_ending = re.compile("^.*[aAoO]([sS])?$")
 
-def load_adjectives_list():
+def load_adjectives_list(filenames):
     adjectives = defaultdict(set)
 
     for filename in filenames:
@@ -237,10 +238,19 @@ def load_adjectives_list():
     return adjectives
 
 def main():
-    for filename in filenames:
+    for filename in FILENAMES:
         assert os.path.exists(filename)
 
-    adjectives = load_adjectives_list()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset', type=str, default=None, choices=['pud', 'gsd', 'ancora'], help='Only use this dataset')
+    args = parser.parse_args()
+
+    if args.dataset:
+        filenames = [x for x in FILENAMES if args.dataset in x]
+    else:
+        filenames = FILENAMES
+
+    adjectives = load_adjectives_list(filenames)
     print_inconsistent_lemmas(adjectives)
     #update_adjectives(adjectives, known_only=False)
     #search_a_ending_adjectives(adjectives)
