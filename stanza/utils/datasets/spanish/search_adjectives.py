@@ -135,19 +135,30 @@ known_non_participles = set([
     "pedunculado",
     "pinnado",  # pinnate
 
-    "salmonado", # as in, salmon colored
-
-    "híbrido",  # https://github.com/UniversalDependencies/UD_Spanish-GSD/issues/87
-
-    "númido",   # Numidian
-
-    "retrógrado",
-    "semisólido",
-    "sólido",
-    "suicido",
-
     "ácido",
     "álgido",
+    "delgado",
+    "delicado",
+    "desafortunado",
+    "frígido",
+    "gélido",
+    "híbrido",  # https://github.com/UniversalDependencies/UD_Spanish-GSD/issues/87
+    "inadecuado",
+    "intrépido",
+    "líquido",
+    "morado",
+    "númido",   # Numidian
+    "rápido"
+    "retrógrado",
+    "salmonado", # as in, salmon colored
+    "semisólido",
+    "sólido",
+    "válido",
+
+    "colimorada", # a type of hummingbird
+
+    "genocida", # -cida endings don't inflect
+    "suicida",
 ])
 
 known_participles = set([
