@@ -135,27 +135,41 @@ known_non_participles = set([
     "pedunculado",
     "pinnado",  # pinnate
 
+    "aqueménido",  # Achaemenid
+    "númido",   # Numidian
+    "timúrido",  # from timúr
+
     "ácido",
     "álgido",
+    "árido",
+    "bienvenido",
+    "cálido",
+    "centígrado",
     "delgado",
     "delicado",
+    "demasiado",
     "desafortunado",
+    "estúpido",
     "frígido",
     "gélido",
     "híbrido",  # https://github.com/UniversalDependencies/UD_Spanish-GSD/issues/87
     "inadecuado",
     "intrépido",
     "líquido",
+    "malvado",
     "morado",
-    "númido",   # Numidian
-    "rápido"
+    "rápido",
     "retrógrado",
+    "rígido",
     "salmonado", # as in, salmon colored
     "semisólido",
     "sólido",
+    "sórdido",
+    "tímido",
     "válido",
 
     "colimorada", # a type of hummingbird
+    "nómada",
 
     "genocida", # -cida endings don't inflect
     "suicida",
@@ -250,6 +264,7 @@ known_participles = set([
     "formado",
     "guardado",
     "inclinado",
+    "secado",
     "sembrado",
     "separado",
     "sobreasado",
@@ -944,6 +959,27 @@ known_participles = set([
     "votado",
     "zambullido",
     "zombificado",
+
+    # starting here are words *not* tagged Part from GSD which probably should have been
+    "abnegado",
+    "ajardinado",
+    "apilastrado",
+    "apoderado",
+    "atolondrado",
+    "callado",
+    "cancelado",
+    "debido",
+    "delegado",
+    "deliberado",
+    "demasiado",
+    "desmesurado",
+    "desprotegido",
+    "entregado",
+    "exaltado",
+    "inflado",
+    "mediado",
+    "necesitado",
+    "reformado",
 ])
 
 # cida ending for something that kills other things: usually invariable
@@ -1121,7 +1157,34 @@ def show_missing_features(filenames):
                   unknown_words.add(word.text)
                   print(word.text)
 
+def update_missing_verbform(filenames):
+    for filename in filenames:
+        changed = False
+        print(filename)
+        unknown_words = set()
+        doc = CoNLL.conll2doc(filename, ignore_gapping=False)
+        for sentence in doc.sentences:
+          for word in sentence.words:
+              if word.pos != 'ADJ':
+                  continue
+              if normalize_participle(word.text) in known_participles:
+                  gender = "Fem" if word.text.lower().endswith("a") or word.text.lower().endswith("as") else "Masc"
+                  number = "Plur" if word.text.lower().endswith("s") else "Sing"
+                  feats = "Gender=%s|Number=%s|VerbForm=Part" % (gender, number)
+                  if not word.feats:
+                      changed = True
+                      word.feats = feats
+
+        if changed:
+            CoNLL.write_doc2conll(doc, filename)
+
 def show_spurious_features(filenames, execute=True):
+    """
+    Looks at the individual words looking for ADJ which have features we know shouldn't exist
+
+    for example: if the word is not expected to have features but does
+    or if it doesn't inflect for Gender but has a Gender feature
+    """
     unwanted_features = set()
     for filename in filenames:
         print(filename)
@@ -1150,6 +1213,9 @@ def show_spurious_features(filenames, execute=True):
         print(lemma)
 
 def check_special_cases(adjectives):
+    """
+    Look through the words invariable for Gender and report any which had a -o lemma anyway
+    """
     potential_problems = set()
     for adj, candidates in adjectives.items():
         if is_special_case_gender(adj):
@@ -1170,6 +1236,9 @@ def normalize_participle(adj):
     return adj.lower()
 
 def check_verbform_features(features, filenames):
+    """
+    Report any words with VerbForm=Inf or unknown VerbForm=Part
+    """
     infinitives = set()
     participles = set()
     other = set()
@@ -1199,6 +1268,22 @@ def check_verbform_features(features, filenames):
         for x in sorted(participles):
             print(x)
 
+def check_unlabeled_do_verbforms(features):
+    print("Checking for potential uncaught participles...")
+    unknown_adj = set()
+    for adj, feat in features.items():
+        adj = normalize_participle(adj)
+        if not adj.endswith("ado") and not adj.endswith("ido"):
+            continue
+        if adj in known_participles or adj in known_non_participles:
+            continue
+        if adj[:-1] + "a" in known_non_participles:
+            continue
+        unknown_adj.add(adj)
+    for adj in sorted(unknown_adj):
+        print(adj)
+
+
 def main():
     for filename in FILENAMES:
         assert os.path.exists(filename)
@@ -1217,15 +1302,17 @@ def main():
         filenames = FILENAMES
 
     lemmas, features = load_adjectives(filenames)
-    #print_inconsistent_lemmas(lemmas)
-    #update_adjectives(lemmas, filenames, known_only=False)
-    #search_a_ending_adjectives(lemmas)
-    #check_special_cases(lemmas)
-    #show_spurious_features(filenames)
+    print_inconsistent_lemmas(lemmas)
+    update_adjectives(lemmas, filenames, known_only=False)
+    search_a_ending_adjectives(lemmas)
+    check_special_cases(lemmas)
+    show_spurious_features(filenames)
 
     #show_missing_features(filenames)
 
-    check_verbform_features(features, filenames)
+    #check_verbform_features(features, filenames)
+    update_missing_verbform(filenames)
+    #check_unlabeled_do_verbforms(lemmas)
 
 if __name__ == '__main__':
     main()
