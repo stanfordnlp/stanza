@@ -155,6 +155,7 @@ known_non_participles = set([
     "híbrido",  # https://github.com/UniversalDependencies/UD_Spanish-GSD/issues/87
     "inadecuado",
     "intrépido",
+    "inválido",
     "líquido",
     "malvado",
     "morado",
@@ -167,6 +168,7 @@ known_non_participles = set([
     "sórdido",
     "tímido",
     "válido",
+    "vívido",
 
     "colimorada", # a type of hummingbird
     "nómada",
@@ -307,6 +309,22 @@ known_participles = set([
     "reverdecido",
     "unido",
     "vencido",
+
+    # these participles are from PUD but not GSD, mostly reviewed
+    "acentuado",
+    "afortunado",
+    "agavillado",
+    "apasionado",
+    "carbonatado",
+    "desenfocado",
+    "despejado",
+    "desplazado",
+    "desvencijado",
+    "discutido",
+    "idealizado",
+    "ilimitado",
+    "premiado",
+    "representado",
 
     # starting here are only partially reviewed Part from GSD
     "abanderado",
@@ -1171,7 +1189,7 @@ def update_missing_verbform(filenames):
                   gender = "Fem" if word.text.lower().endswith("a") or word.text.lower().endswith("as") else "Masc"
                   number = "Plur" if word.text.lower().endswith("s") else "Sing"
                   feats = "Gender=%s|Number=%s|VerbForm=Part" % (gender, number)
-                  if not word.feats:
+                  if not word.feats or ('ExtPos' not in word.feats and 'Typo' not in word.feats):
                       changed = True
                       word.feats = feats
 
@@ -1306,13 +1324,13 @@ def main():
     update_adjectives(lemmas, filenames, known_only=False)
     search_a_ending_adjectives(lemmas)
     check_special_cases(lemmas)
-    show_spurious_features(filenames)
+    #show_spurious_features(filenames)
 
     #show_missing_features(filenames)
 
     #check_verbform_features(features, filenames)
     update_missing_verbform(filenames)
-    #check_unlabeled_do_verbforms(lemmas)
+    check_unlabeled_do_verbforms(lemmas)
 
 if __name__ == '__main__':
     main()
