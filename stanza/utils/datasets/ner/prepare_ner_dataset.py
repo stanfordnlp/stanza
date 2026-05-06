@@ -598,7 +598,7 @@ def process_il_ner(paths, short_name):
     assert lang in lang_paths, "IL-NER only supports %s" % (", ".join(lang_paths.keys()))
     ilner_path = os.path.join(paths["NERBASE"], "indic", "IL-NER")
     if not os.path.exists(ilner_path):
-        raise FileNotFounderror("Cannot find the IL-NER dataset in its expected location: {}".format(ilner_path))
+        raise FileNotFoundError("Cannot find the IL-NER dataset in its expected location: {}".format(ilner_path))
     ilner_path = os.path.join(ilner_path, "Datasets", lang_paths[lang])
     if not os.path.exists(ilner_path):
         raise FileNotFoundError("IL-NER not in the layout expected: directory not found {}".format(ilner_path))
