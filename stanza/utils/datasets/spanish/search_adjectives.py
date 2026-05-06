@@ -142,13 +142,19 @@ known_non_participles = set([
     "ácido",
     "álgido",
     "árido",
+    "ávido",
     "bienvenido",
     "cálido",
+    "cándido",
     "centígrado",
+    "consabido",  # no word consaber?
     "delgado",
     "delicado",
     "demasiado",
     "desafortunado",
+    "desarrapado",
+    "desmazalado",
+    "espléndido",
     "estúpido",
     "frígido",
     "gélido",
@@ -158,8 +164,12 @@ known_non_participles = set([
     "inválido",
     "líquido",
     "lúcido",
+    "malintencionado",
     "malvado",
     "morado",
+    "nítido",
+    "pálido",
+    "pútrido",
     "rápido",
     "retrógrado",
     "rígido",
@@ -174,7 +184,11 @@ known_non_participles = set([
     "colimorada", # a type of hummingbird
     "nómada",
 
+    "apelusada",
+
     "genocida", # -cida endings don't inflect
+    "herbicida",
+    "homicida",
     "suicida",
 ])
 
@@ -1754,6 +1768,24 @@ known_participles = set([
     "visitado",
     "vivido",
     "zanjado",
+
+    # These are words in AnCora that were not previously tagged VerbForm=Part
+    # however, it looks like this collection could have that feature
+    "agregado",
+    "azufrado",
+    "cariado",
+    "desapasionado",
+    "desempleado",
+    "enfervorecido",
+    "estrellado",
+    "fidelizado",
+    "granulado",
+    "laminado",
+    "malpensado",
+    "pregrabado",
+    "presumido",
+    "refrigerado",
+    "siniestrado",
 ])
 
 # cida ending for something that kills other things: usually invariable
@@ -2090,8 +2122,8 @@ def main():
     #show_missing_features(filenames)
 
     #check_verbform_features(features, filenames)
-    #update_missing_verbform(filenames)
-    check_unlabeled_do_verbforms(features)
+    update_missing_verbform(filenames)
+    #check_unlabeled_do_verbforms(features)
 
 if __name__ == '__main__':
     main()
