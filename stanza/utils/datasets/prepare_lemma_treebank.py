@@ -16,9 +16,12 @@ import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_tre
 
 import stanza.utils.datasets.prepare_lemma_classifier as prepare_lemma_classifier
 
+from stanza.utils.datasets.dataset_retagging import Tags, add_retagging_args, build_retagger
+
 def add_specific_args(parser) -> None:
     parser.add_argument('--no_lemma_classifier', dest='lemma_classifier', action='store_false', default=True,
                         help="Don't use the lemma classifier datasets.  Default is to build lemma classifier as part of the original lemmatizer")
+    add_retagging_args(parser)
 
 def check_lemmas(train_file):
     """
@@ -58,7 +61,14 @@ def process_treebank(treebank, model_type, paths, args):
     else:
         # TODO: check the data to see if there are lemmas or not
         augment = True
-    prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], args=args, augment=augment)
+
+    if args.tag_method is Tags.GOLD:
+        prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], args, augment=augment)
+    elif args.tag_method is Tags.PREDICTED:
+        retag_dataset = build_retagger(treebank, paths, args)
+        prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], args=args, augment=augment, postprocess=retag_dataset)
+    else:
+        raise ValueError("Unknown tags method: {}".format(args.tag_method))
 
     short_name = treebank_to_short_name(treebank)
     if args.lemma_classifier and short_name in prepare_lemma_classifier.DATASET_MAPPING:
