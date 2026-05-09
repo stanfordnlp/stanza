@@ -23,6 +23,8 @@ import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_tre
 from stanza.utils.training.common import build_pos_wordvec_args
 from stanza.utils.training.common import add_charlm_args, build_charlm_args, choose_charlm
 
+from stanza.resources.default_packages import TRANSFORMERS, TRANSFORMER_NICKNAMES
+
 logger = logging.getLogger('stanza')
 
 
@@ -63,7 +65,12 @@ def choose_tagger_model(short_language, dataset, tagger_model, args):
     if len(candidates) == 1:
         return candidates[0]
     if len(candidates) > 1:
-        for ending in ("_trans_tagger.pt", "_charlm_tagger.pt", "_nocharlm_tagger.pt"):
+        ending = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(short_language))
+        if ending is not None:
+            endings = ("_%s_tagger.pt" % ending, "_charlm_tagger.pt", "_nocharlm_tagger.pt")
+        else:
+            endings = ("_charlm_tagger.pt", "_nocharlm_tagger.pt")
+        for ending in endings:
             best_candidates = [x for x in candidates if x.endswith(ending)]
             if len(best_candidates) == 1:
                 return best_candidates[0]
