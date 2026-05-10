@@ -32,6 +32,16 @@ class DataLoader:
         self.batch_size = batch_size
         self.args = args
         self.augment_apos = args.get('augment_apos', 0.0)
+        # the purpose of this is two-fold:
+        # 1) give the model a chance to predict that a new word it hasn't seen
+        #  (or a word it was erroneously given to split)
+        #  is not actually an MWT
+        # 2) some datasets like FI-TDT have very specific distributions on the letters,
+        #  such as "t" only occurring at the end of MWT in FI-TDT
+        #  in such cases, if given a candidate MWT that *starts* with "t", the model goes haywire
+        # thus at training time, we replace 5% (or whatever) of the MWT
+        # in a training batch with non-mwt instead
+        self.non_mwt_replacement = args.get('non_mwt_replacement', 0.0)
         self.evaluation = evaluation
         self.doc = doc
 
@@ -61,6 +71,13 @@ class DataLoader:
             random.shuffle(indices)
             data = [data[i] for i in indices]
 
+        # get non-MWT words from the doc and use those as negative examples for the seq2seq
+        if not self.evaluation:
+            self.non_mwt = self.find_non_mwt(doc)
+            if len(self.non_mwt) == 0:
+                logger.warning("Wanted to replace MWT with non-MWT, but no non-MWT are known.  Setting to 0.0")
+                self.non_mwt_replacement = 0.0
+
         self.data = data
         self.num_examples = len(data)
 
@@ -68,6 +85,21 @@ class DataLoader:
         assert self.evaluation == False # for eval vocab must exist
         vocab = Vocab(data, self.args['shorthand'])
         return vocab
+
+    def find_non_mwt(self, doc):
+        """
+        Finds all non-MWT in the doc which are entirely composed of known letters and are not otherwise known MWT
+        """
+        known_mwt = set()
+        non_mwt = set()
+        for sentence in doc.sentences:
+            for token in sentence.tokens:
+                if token.is_mwt():
+                    known_mwt.add(token.text)
+                    continue
+                if all(x in self.vocab for x in token.text):
+                    non_mwt.add(token.text)
+        return sorted([x for x in non_mwt if x not in known_mwt])
 
     def maybe_augment_apos(self, datum):
         for original in APOS:
@@ -107,6 +139,12 @@ class DataLoader:
         if key < 0 or key >= len(self.data):
             raise IndexError
         sample = self.data[key]
+
+        # if training, occasionally fill in words we know are *not* MWT
+        if not self.evaluation and random.uniform(0, 1) < self.non_mwt_replacement:
+            sample = random.choice(self.non_mwt)
+            sample = (sample, sample)
+
         sample = self.process(sample)
         assert len(sample) == 4
 
