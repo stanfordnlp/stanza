@@ -222,8 +222,11 @@ def train(args):
             # eval on dev
             logger.info("Evaluating on dev set...")
             dev_preds = []
+            dev_loss = 0.0
             for i, batch in enumerate(dev_batch.to_loader()):
                 preds = trainer.predict(batch)
+                # eval=True doesn't backprop the loss
+                dev_loss += trainer.update(batch, eval=True)
                 dev_preds += preds
             if args.get('ensemble_dict', False) and args.get('ensemble_early_stop', False):
                 logger.info("[Ensembling dict with seq2seq model...]")
@@ -234,7 +237,7 @@ def train(args):
             system_preds = io.StringIO(system_preds)
             _, _, dev_score = scorer.score(system_preds, gold_file)
             train_loss = train_loss / train_batch.num_examples * args['batch_size'] # avg loss per batch
-            logger.info("epoch {}: train_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_score))
+            logger.info("epoch {}: train_loss = {:.6f}, dev_loss = {:.6f}, dev_score = {:.4f}".format(epoch, train_loss, dev_loss, dev_score))
 
             if args['wandb']:
                 wandb.log({'train_loss': train_loss, 'dev_score': dev_score})
