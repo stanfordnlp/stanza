@@ -220,7 +220,7 @@ def train(args):
                 logger.info("Saved epoch %d model to %s" % (epoch, save_each_name % epoch))
 
             # eval on dev
-            logger.info("Evaluating on dev set...")
+            logger.info("Evaluating epoch {} on dev set...".format(epoch))
             dev_preds = []
             dev_loss = 0.0
             for i, batch in enumerate(dev_batch.to_loader()):
@@ -243,13 +243,17 @@ def train(args):
                 wandb.log({'train_loss': train_loss, 'dev_score': dev_score})
 
             # save best model
-            if epoch == 1 or dev_score > max(dev_score_history):
+            if epoch == 1 or dev_score > max(dev_score_history) or (dev_score >= max(dev_score_history) and dev_loss < best_dev_loss):
+                best_dev_loss = dev_loss
+                best_epoch = epoch
+                best_f = dev_score
                 trainer.save(model_file)
                 logger.info("new best model saved.")
                 best_dev_preds = dev_preds
 
             # lr schedule
             if epoch > args['decay_epoch'] and dev_score <= dev_score_history[-1]:
+                # TODO: this doesn't give any grace period for a new LR
                 current_lr *= args['lr_decay']
                 trainer.change_lr(current_lr)
 
@@ -260,7 +264,6 @@ def train(args):
         if args['wandb']:
             wandb.finish()
 
-        best_f, best_epoch = max(dev_score_history)*100, np.argmax(dev_score_history)+1
         logger.info("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
 
         # try ensembling with dict if necessary
