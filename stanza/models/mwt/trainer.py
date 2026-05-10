@@ -88,7 +88,7 @@ class Trainer(BaseTrainer):
 
         device = next(self.model.parameters()).device
         inputs, orig_text, orig_idx = unpack_batch(batch, device)
-        src, src_mask, tgt, tgt_mask = inputs
+        src, src_mask, _, _ = inputs
 
         self.model.eval()
         batch_size = src.size(0)
