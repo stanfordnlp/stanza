@@ -64,6 +64,7 @@ def build_argparse():
     parser.add_argument('--no_copy', dest='copy', action='store_false', help='Do not use copy mechanism in MWT expansion. By default copy mechanism is used to improve generalization.')
 
     parser.add_argument('--augment_apos', default=0.01, type=float, help='At training time, how much to augment |\'| to |"| |’| |ʼ|')
+    parser.add_argument('--non_mwt_replacement', default=0.05, type=float, help='At training time, use this fraction of non-MWT to train the model to recognize non-MWTs')
     parser.add_argument('--force_exact_pieces', default=None, action='store_true', help='If possible, make the text of the pieces of the MWT add up to the token itself.  (By default, this is determined from the dataset.)')
     parser.add_argument('--no_force_exact_pieces', dest='force_exact_pieces', action='store_false', help="Don't make the text of the pieces of the MWT add up to the token itself.  (By default, this is determined from the dataset.)")
 
