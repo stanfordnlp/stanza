@@ -1209,7 +1209,7 @@ def build_combined_french_dataset(paths, model_type, dataset):
 
         extra_french = os.path.join(handparsed_dir, "french-handparsed", "handparsed_deps.conllu")
         if not os.path.exists(extra_french):
-            raise FileNotFoundError("Cannot find the extra dataset 'handparsed_deps.conllu' which includes various dependency fixes, expected {}".format(extra_italian))
+            raise FileNotFoundError("Cannot find the extra dataset 'handparsed_deps.conllu' which includes various dependency fixes, expected {}".format(extra_french))
         extra_sents = read_sentences_from_conllu(extra_french)
         print("Read %d sentences from %s" % (len(extra_sents), extra_french))
         sents.extend(extra_sents)
