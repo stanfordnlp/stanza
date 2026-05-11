@@ -1219,6 +1219,56 @@ def build_combined_french_dataset(paths, model_type, dataset):
 
     return sents
 
+def build_combined_finnish_dataset(paths, model_type, dataset):
+    """
+    Combine the TDT dataset with a small file of tokenization fixes
+
+    TODO: could add FTB, if we fix the tokenization of punctuation.
+
+    MWTs are the same.  (One instance of Ellen as a PROPN aside.)
+
+    Lemmas might be mostly compatible.
+      According to ChatGPT, pron, aux, and even verbs are mostly the same
+      The main difference is more capitalized lemmas in TDT, possibly
+      a difference in the treatment of PROPN
+
+    UPOS is close, would need to check the results of mixing
+    same with depparse
+    XPOS and features are completely different schemes, so we would need
+      to drop those columns
+    """
+    udbase_dir = paths["UDBASE"]
+    if dataset == 'train':
+        train_treebanks = ["UD_Finnish-TDT"]
+        sents = []
+        for treebank in train_treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
+            new_sents = read_sentences_from_conllu(conllu_file)
+            print("Read %d sentences from %s" % (len(new_sents), conllu_file))
+            sents.extend(new_sents)
+    else:
+        tdt_conllu = common.find_treebank_dataset_file("UD_Finnish-TDT", udbase_dir, dataset, "conllu")
+        sents = read_sentences_from_conllu(tdt_conllu)
+
+    return sents
+
+def build_extra_combined_finnish_dataset(paths, model_type, dataset, args):
+    """
+    Load the extra MWT training data for Finnish
+
+    dev/test and other models get nothing
+    """
+    if dataset == 'train':
+        handparsed_dir = paths["HANDPARSED_DIR"]
+        if model_type in (common.ModelType.TOKENIZER, common.ModelType.MWT):
+            extra_finnish = os.path.join(handparsed_dir, "finnish-tokenization", "mwt_fixes.conllu")
+            if not os.path.exists(extra_finnish):
+                raise FileNotFoundError("Cannot find the extra dataset 'mwt_fixes.conllu' which includes various mwt fixes, expected {}".format(extra_finnish))
+            extra_sents = read_sentences_from_conllu(extra_finnish)
+            print("Read %d sentences from %s" % (len(extra_sents), extra_finnish))
+            return extra_sents
+    return []
+
 def build_combined_hebrew_dataset(paths, model_type, dataset):
     """
     Combines the IAHLT treebank with an updated form of HTB where the annotation style more closes matches IAHLT
@@ -1260,6 +1310,7 @@ COMBINED_FNS = {
     "de_combined": build_combined_german_dataset,
     "en_combined": build_combined_english_dataset,
     "es_combined": build_combined_spanish_dataset,
+    "fi_combined": build_combined_finnish_dataset,
     "fr_combined": build_combined_french_dataset,
     "he_combined": build_combined_hebrew_dataset,
     "it_combined": build_combined_italian_dataset,
@@ -1271,6 +1322,7 @@ COMBINED_FNS = {
 COMBINED_EXTRA_FNS = {
     "de_combined": build_extra_combined_german_dataset,
     "en_combined": build_extra_combined_english_dataset,
+    "fi_combined": build_extra_combined_finnish_dataset,
     "fr_combined": build_extra_combined_french_dataset,
     "it_combined": build_extra_combined_italian_dataset,
     "es_combined": build_extra_combined_spanish_dataset,
