@@ -425,9 +425,13 @@ def get_default_processors(resources, lang):
     else:
         tokenize_package = default_package
         if tokenize_package not in resources[lang]['tokenize']:
-            tokenize_package = tokenize_package + "_nocharlm"
+            tokenize_package = default_package + "_nocharlm"
         if tokenize_package not in resources[lang]['tokenize']:
-            raise AssertionError("Can't find a tokenizer package for %s!  Tried %s and %s" % (lang, default_package, tokenize_package))
+            tokenize_package = default_package + "_charlm"
+            if tokenize_package in resources[lang]['tokenize']:
+                print("WARNING: nocharlm tokenizer for %s model does not exist, but %s does" % (default_package, tokenize_package))
+        if tokenize_package not in resources[lang]['tokenize']:
+            raise AssertionError("Can't find a tokenizer package for %s!  Tried %s, %s, %s" % (lang, default_package, (default_package + "_nocharlm"), tokenize_package))
         default_processors['tokenize'] = tokenize_package
 
     if 'mwt' in resources[lang] and default_package in resources[lang]['mwt']:
@@ -631,6 +635,8 @@ def process_packages(args):
                     processors["tokenize"] = package
                 elif package + "_nocharlm" in resources[lang]['tokenize']:
                     processors["tokenize"] = package + "_nocharlm"
+                elif package + "_charlm" in resources[lang]['tokenize']:
+                    processors["tokenize"] = package + "_charlm"
                 else:
                     raise AssertionError("Should have found a tokenizer for lang %s package %s" % (lang, package))
 

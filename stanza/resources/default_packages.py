@@ -34,7 +34,7 @@ default_treebanks = {
     "et":      "edt",
     "eu":      "bdt",
     "fa":      "perdt",
-    "fi":      "tdt",
+    "fi":      "combined",
     "fo":      "farpahc",
     "fr":      "combined",
     "fro":     "profiterole",
