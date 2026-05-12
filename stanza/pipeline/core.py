@@ -29,7 +29,7 @@ from stanza.pipeline.coref_processor import CorefProcessor
 from stanza.pipeline.depparse_processor import DepparseProcessor
 from stanza.pipeline.sentiment_processor import SentimentProcessor
 from stanza.pipeline.ner_processor import NERProcessor
-from stanza.resources.common import DEFAULT_MODEL_DIR, DEFAULT_RESOURCES_URL, DEFAULT_RESOURCES_VERSION, ModelSpecification, add_dependencies, add_mwt, download_models, download_resources_json, flatten_processor_list, load_resources_json, maintain_processor_list, process_pipeline_parameters, set_logging_level, sort_processors
+from stanza.resources.common import DEFAULT_MODEL_DIR, DEFAULT_RESOURCES_URL, DEFAULT_RESOURCES_VERSION, ModelSpecification, add_dependencies, add_mwt, download_models, download_resources_json, flatten_processor_list, load_resources_json, logging_level_context, maintain_processor_list, process_pipeline_parameters, sort_processors
 from stanza.resources.default_packages import PACKAGES
 from stanza.utils.conll import CoNLL, CoNLLError
 from stanza.utils.helper_func import make_table
@@ -199,154 +199,152 @@ class Pipeline:
             self.dir = model_dir
 
         # Only adjust logging if the caller explicitly requested it
-        if logging_level is not None or verbose is not None:
-            set_logging_level(logging_level, verbose)
+        with logging_level_context(logging_level, verbose):
+            self.download_method = normalize_download_method(download_method)
+            if (self.download_method is DownloadMethod.DOWNLOAD_RESOURCES or
+                (self.download_method is DownloadMethod.REUSE_RESOURCES and not os.path.exists(os.path.join(self.dir, "resources.json")))):
+                logger.info("Checking for updates to resources.json in case models have been updated.  Note: this behavior can be turned off with download_method=None or download_method=DownloadMethod.REUSE_RESOURCES")
+                download_resources_json(self.dir,
+                                        resources_url=resources_url,
+                                        resources_branch=resources_branch,
+                                        resources_version=resources_version,
+                                        resources_filepath=resources_filepath,
+                                        proxies=proxies)
 
-        self.download_method = normalize_download_method(download_method)
-        if (self.download_method is DownloadMethod.DOWNLOAD_RESOURCES or
-            (self.download_method is DownloadMethod.REUSE_RESOURCES and not os.path.exists(os.path.join(self.dir, "resources.json")))):
-            logger.info("Checking for updates to resources.json in case models have been updated.  Note: this behavior can be turned off with download_method=None or download_method=DownloadMethod.REUSE_RESOURCES")
-            download_resources_json(self.dir,
-                                    resources_url=resources_url,
-                                    resources_branch=resources_branch,
+            # processors can use this to save on the effort of loading
+            # large sub-models, such as pretrained embeddings, bert, etc
+            if foundation_cache is None:
+                self.foundation_cache = FoundationCache(local_files_only=(self.download_method is DownloadMethod.NONE))
+            else:
+                self.foundation_cache = FoundationCache(foundation_cache, local_files_only=(self.download_method is DownloadMethod.NONE))
+
+            # process different pipeline parameters
+            lang, self.dir, package, processors = process_pipeline_parameters(lang, self.dir, package, processors)
+
+            # Load resources.json to obtain latest packages.
+            logger.debug('Loading resource file...')
+            resources = load_resources_json(self.dir, resources_filepath)
+            if lang in resources:
+                if 'alias' in resources[lang]:
+                    logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
+                    lang = resources[lang]['alias']
+                lang_name = resources[lang]['lang_name'] if 'lang_name' in resources[lang] else ''
+            elif allow_unknown_language:
+                logger.warning("Trying to create pipeline for unsupported language: %s", lang)
+                lang_name = langcode_to_lang(lang)
+            else:
+                logger.warning("Unsupported language: %s  If trying to add a new language, consider using allow_unknown_language=True", lang)
+                lang_name = langcode_to_lang(lang)
+
+            # Maintain load list
+            if lang in resources:
+                self.load_list = maintain_processor_list(resources, lang, package, processors, maybe_add_mwt=(not kwargs.get("tokenize_pretokenized")))
+                self.load_list = add_dependencies(resources, lang, self.load_list)
+                if self.download_method is not DownloadMethod.NONE:
+                    # skip processors which aren't downloaded from our collection
+                    download_list = [x for x in self.load_list if x[0] in resources.get(lang, {})]
+                    # skip variants
+                    download_list = filter_variants(download_list)
+                    # gather up the model list...
+                    download_list = flatten_processor_list(download_list)
+                    # download_models will skip models we already have
+                    download_models(download_list,
+                                    resources=resources,
+                                    lang=lang,
+                                    model_dir=self.dir,
                                     resources_version=resources_version,
-                                    resources_filepath=resources_filepath,
-                                    proxies=proxies)
-
-        # processors can use this to save on the effort of loading
-        # large sub-models, such as pretrained embeddings, bert, etc
-        if foundation_cache is None:
-            self.foundation_cache = FoundationCache(local_files_only=(self.download_method is DownloadMethod.NONE))
-        else:
-            self.foundation_cache = FoundationCache(foundation_cache, local_files_only=(self.download_method is DownloadMethod.NONE))
-
-        # process different pipeline parameters
-        lang, self.dir, package, processors = process_pipeline_parameters(lang, self.dir, package, processors)
-
-        # Load resources.json to obtain latest packages.
-        logger.debug('Loading resource file...')
-        resources = load_resources_json(self.dir, resources_filepath)
-        if lang in resources:
-            if 'alias' in resources[lang]:
-                logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
-                lang = resources[lang]['alias']
-            lang_name = resources[lang]['lang_name'] if 'lang_name' in resources[lang] else ''
-        elif allow_unknown_language:
-            logger.warning("Trying to create pipeline for unsupported language: %s", lang)
-            lang_name = langcode_to_lang(lang)
-        else:
-            logger.warning("Unsupported language: %s  If trying to add a new language, consider using allow_unknown_language=True", lang)
-            lang_name = langcode_to_lang(lang)
-
-        # Maintain load list
-        if lang in resources:
-            self.load_list = maintain_processor_list(resources, lang, package, processors, maybe_add_mwt=(not kwargs.get("tokenize_pretokenized")))
-            self.load_list = add_dependencies(resources, lang, self.load_list)
-            if self.download_method is not DownloadMethod.NONE:
-                # skip processors which aren't downloaded from our collection
-                download_list = [x for x in self.load_list if x[0] in resources.get(lang, {})]
-                # skip variants
-                download_list = filter_variants(download_list)
-                # gather up the model list...
-                download_list = flatten_processor_list(download_list)
-                # download_models will skip models we already have
-                download_models(download_list,
-                                resources=resources,
-                                lang=lang,
-                                model_dir=self.dir,
-                                resources_version=resources_version,
-                                proxies=proxies,
-                                log_info=False)
-        elif allow_unknown_language:
-            self.load_list = [(proc, [ModelSpecification(processor=proc, package='default', dependencies=None)])
-                              for proc in list(processors.keys())]
-        else:
-            self.load_list = []
-        self.load_list = self.update_kwargs(kwargs, self.load_list)
-        if len(self.load_list) == 0:
-            if lang not in resources or PACKAGES not in resources[lang]:
-                raise ValueError(f'No processors to load for language {lang}.  Language {lang} is currently unsupported')
+                                    proxies=proxies,
+                                    log_info=False)
+            elif allow_unknown_language:
+                self.load_list = [(proc, [ModelSpecification(processor=proc, package='default', dependencies=None)])
+                                  for proc in list(processors.keys())]
             else:
-                raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))
-        load_table = make_table(['Processor', 'Package'], [(row[0], ";".join(model_spec.package for model_spec in row[1])) for row in self.load_list])
-        logger.info(f'Loading these models for language: {lang} ({lang_name}):\n{load_table}')
+                self.load_list = []
+            self.load_list = self.update_kwargs(kwargs, self.load_list)
+            if len(self.load_list) == 0:
+                if lang not in resources or PACKAGES not in resources[lang]:
+                    raise ValueError(f'No processors to load for language {lang}.  Language {lang} is currently unsupported')
+                else:
+                    raise ValueError('No processors to load for language {}.  Please check if your language or package is correctly set.'.format(lang))
+            load_table = make_table(['Processor', 'Package'], [(row[0], ";".join(model_spec.package for model_spec in row[1])) for row in self.load_list])
+            logger.info(f'Loading these models for language: {lang} ({lang_name}):\n{load_table}')
 
-        self.config = build_default_config(resources, lang, self.dir, self.load_list)
-        self.config.update(kwargs)
+            self.config = build_default_config(resources, lang, self.dir, self.load_list)
+            self.config.update(kwargs)
 
-        # Load processors
-        self.processors = {}
+            # Load processors
+            self.processors = {}
 
-        # configs that are the same for all processors
-        pipeline_level_configs = {'lang': lang, 'mode': 'predict'}
+            # configs that are the same for all processors
+            pipeline_level_configs = {'lang': lang, 'mode': 'predict'}
 
-        if device is None:
-            if use_gpu is None or use_gpu == True:
-                device = default_device()
-            else:
-                device = 'cpu'
-            if use_gpu == True and device == 'cpu':
-                logger.warning("GPU requested, but is not available!")
-        self.device = device
-        logger.info("Using device: {}".format(self.device))
+            if device is None:
+                if use_gpu is None or use_gpu == True:
+                    device = default_device()
+                else:
+                    device = 'cpu'
+                if use_gpu == True and device == 'cpu':
+                    logger.warning("GPU requested, but is not available!")
+            self.device = device
+            logger.info("Using device: {}".format(self.device))
 
-        # set up processors
-        pipeline_reqs_exceptions = []
-        for item in self.load_list:
-            processor_name, _ = item
-            logger.info('Loading: ' + processor_name)
-            curr_processor_config = self.filter_config(processor_name, self.config)
-            curr_processor_config.update(pipeline_level_configs)
-            # TODO: this is obviously a hack
-            # a better solution overall would be to make a pretagged version of the pos annotator
-            # and then subsequent modules can use those tags without knowing where those tags came from
-            if "pretagged" in self.config and "pretagged" not in curr_processor_config:
-                curr_processor_config["pretagged"] = self.config["pretagged"]
-            logger.debug('With settings: ')
-            logger.debug(curr_processor_config)
-            try:
-                # try to build processor, throw an exception if there is a requirements issue
-                self.processors[processor_name] = NAME_TO_PROCESSOR_CLASS[processor_name](config=curr_processor_config,
-                                                                                          pipeline=self,
-                                                                                          device=self.device)
-            except ProcessorRequirementsException as e:
-                # if there was a requirements issue, add it to list which will be printed at end
-                pipeline_reqs_exceptions.append(e)
-                # add the broken processor to the loaded processors for the sake of analyzing the validity of the
-                # entire proposed pipeline, but at this point the pipeline will not be built successfully
-                self.processors[processor_name] = e.err_processor
-            except FileNotFoundError as e:
-                # For a FileNotFoundError, we try to guess if there's
-                # a missing model directory or file.  If so, we
-                # suggest the user try to download the models
-                if 'model_path' in curr_processor_config:
-                    model_path = curr_processor_config['model_path']
-                    if e.filename == model_path or (isinstance(model_path, (tuple, list)) and e.filename in model_path):
-                        model_path = e.filename
-                    model_dir, model_name = os.path.split(model_path)
-                    lang_dir = os.path.dirname(model_dir)
-                    if lang_dir and not os.path.exists(lang_dir):
-                        # model files for this language can't be found in the expected directory
-                        raise LanguageNotDownloadedError(lang, lang_dir, model_path) from e
-                    if processor_name not in resources[lang]:
-                        # user asked for a model which doesn't exist for this language?
-                        raise UnsupportedProcessorError(processor_name, lang) from e
-                    if not os.path.exists(model_path):
-                        model_name, _ = os.path.splitext(model_name)
-                        # TODO: before recommending this, check that such a thing exists in resources.json.
-                        # currently that case is handled by ignoring the model, anyway
-                        raise FileNotFoundError('Could not find model file %s, although there are other models downloaded for language %s.  Perhaps you need to download a specific model.  Try: stanza.download(lang="%s",package=None,processors={"%s":"%s"})' % (model_path, lang, lang, processor_name, model_name)) from e
+            # set up processors
+            pipeline_reqs_exceptions = []
+            for item in self.load_list:
+                processor_name, _ = item
+                logger.info('Loading: ' + processor_name)
+                curr_processor_config = self.filter_config(processor_name, self.config)
+                curr_processor_config.update(pipeline_level_configs)
+                # TODO: this is obviously a hack
+                # a better solution overall would be to make a pretagged version of the pos annotator
+                # and then subsequent modules can use those tags without knowing where those tags came from
+                if "pretagged" in self.config and "pretagged" not in curr_processor_config:
+                    curr_processor_config["pretagged"] = self.config["pretagged"]
+                logger.debug('With settings: ')
+                logger.debug(curr_processor_config)
+                try:
+                    # try to build processor, throw an exception if there is a requirements issue
+                    self.processors[processor_name] = NAME_TO_PROCESSOR_CLASS[processor_name](config=curr_processor_config,
+                                                                                              pipeline=self,
+                                                                                              device=self.device)
+                except ProcessorRequirementsException as e:
+                    # if there was a requirements issue, add it to list which will be printed at end
+                    pipeline_reqs_exceptions.append(e)
+                    # add the broken processor to the loaded processors for the sake of analyzing the validity of the
+                    # entire proposed pipeline, but at this point the pipeline will not be built successfully
+                    self.processors[processor_name] = e.err_processor
+                except FileNotFoundError as e:
+                    # For a FileNotFoundError, we try to guess if there's
+                    # a missing model directory or file.  If so, we
+                    # suggest the user try to download the models
+                    if 'model_path' in curr_processor_config:
+                        model_path = curr_processor_config['model_path']
+                        if e.filename == model_path or (isinstance(model_path, (tuple, list)) and e.filename in model_path):
+                            model_path = e.filename
+                        model_dir, model_name = os.path.split(model_path)
+                        lang_dir = os.path.dirname(model_dir)
+                        if lang_dir and not os.path.exists(lang_dir):
+                            # model files for this language can't be found in the expected directory
+                            raise LanguageNotDownloadedError(lang, lang_dir, model_path) from e
+                        if processor_name not in resources[lang]:
+                            # user asked for a model which doesn't exist for this language?
+                            raise UnsupportedProcessorError(processor_name, lang) from e
+                        if not os.path.exists(model_path):
+                            model_name, _ = os.path.splitext(model_name)
+                            # TODO: before recommending this, check that such a thing exists in resources.json.
+                            # currently that case is handled by ignoring the model, anyway
+                            raise FileNotFoundError('Could not find model file %s, although there are other models downloaded for language %s.  Perhaps you need to download a specific model.  Try: stanza.download(lang="%s",package=None,processors={"%s":"%s"})' % (model_path, lang, lang, processor_name, model_name)) from e
 
-                # if we couldn't find a more suitable description of the
-                # FileNotFoundError, just raise the old error
-                raise
+                    # if we couldn't find a more suitable description of the
+                    # FileNotFoundError, just raise the old error
+                    raise
 
-        # if there are any processor exceptions, throw an exception to indicate pipeline build failure
-        if pipeline_reqs_exceptions:
-            logger.info('\n')
-            raise PipelineRequirementsException(pipeline_reqs_exceptions)
+            # if there are any processor exceptions, throw an exception to indicate pipeline build failure
+            if pipeline_reqs_exceptions:
+                logger.info('\n')
+                raise PipelineRequirementsException(pipeline_reqs_exceptions)
 
-        logger.info("Done loading processors!")
+            logger.info("Done loading processors!")
 
     @staticmethod
     def update_kwargs(kwargs, processor_list):

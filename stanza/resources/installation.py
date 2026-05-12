@@ -7,8 +7,7 @@ import logging
 import zipfile
 import shutil
 
-from stanza.resources.common import USER_CACHE_DIR, request_file, unzip, \
-    get_root_from_zipfile, set_logging_level
+from stanza.resources.common import USER_CACHE_DIR, request_file, unzip, get_root_from_zipfile, logging_level_context
 
 logger = logging.getLogger('stanza')
 
@@ -98,52 +97,51 @@ def install_corenlp(dir=DEFAULT_CORENLP_DIR, url=DEFAULT_CORENLP_URL, logging_le
         logging_level: logging level to use during installation
     """
     dir = os.path.expanduser(dir)
-    if logging_level is not None:
-        set_logging_level(logging_level=logging_level, verbose=None)
-    if os.path.exists(dir) and len(os.listdir(dir)) > 0:
-        logger.warn(
-            f"Directory {dir} already exists. "
-            f"Please install CoreNLP to a new directory.")
-        return
+    with logging_level_context(logging_level, verbose=None):
+        if os.path.exists(dir) and len(os.listdir(dir)) > 0:
+            logger.warn(
+                f"Directory {dir} already exists. "
+                f"Please install CoreNLP to a new directory.")
+            return
 
-    logger.info(f"Installing CoreNLP package into {dir}")
-    # First download the URL package
-    logger.debug(f"Download to destination file: {os.path.join(dir, 'corenlp.zip')}")
-    tag = version if version == 'main' else 'v' + version
-    url = url.format(version=version, tag=tag)
-    try:
-        request_file(url, os.path.join(dir, 'corenlp.zip'), proxies)
+        logger.info(f"Installing CoreNLP package into {dir}")
+        # First download the URL package
+        logger.debug(f"Download to destination file: {os.path.join(dir, 'corenlp.zip')}")
+        tag = version if version == 'main' else 'v' + version
+        url = url.format(version=version, tag=tag)
+        try:
+            request_file(url, os.path.join(dir, 'corenlp.zip'), proxies)
 
-    except (KeyboardInterrupt, SystemExit):
-        raise
-    except Exception as e:
-        raise RuntimeError(
-            "Downloading CoreNLP zip file failed. "
-            "Please try manual installation: https://stanfordnlp.github.io/CoreNLP/."
-        ) from e
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except Exception as e:
+            raise RuntimeError(
+                "Downloading CoreNLP zip file failed. "
+                "Please try manual installation: https://stanfordnlp.github.io/CoreNLP/."
+            ) from e
 
-    # Unzip corenlp into dir
-    logger.debug("Unzipping downloaded zip file...")
-    unzip(dir, 'corenlp.zip')
+        # Unzip corenlp into dir
+        logger.debug("Unzipping downloaded zip file...")
+        unzip(dir, 'corenlp.zip')
 
-    # By default CoreNLP will be unzipped into a version-dependent folder, 
-    # e.g., stanford-corenlp-4.0.0. We need some hack around that and move
-    # files back into our designated folder
-    logger.debug(f"Moving files into the designated folder at: {dir}")
-    corenlp_dirname = get_root_from_zipfile(os.path.join(dir, 'corenlp.zip'))
-    corenlp_dirname = os.path.join(dir, corenlp_dirname)
-    for f in os.listdir(corenlp_dirname):
-        shutil.move(os.path.join(corenlp_dirname, f), dir)
+        # By default CoreNLP will be unzipped into a version-dependent folder, 
+        # e.g., stanford-corenlp-4.0.0. We need some hack around that and move
+        # files back into our designated folder
+        logger.debug(f"Moving files into the designated folder at: {dir}")
+        corenlp_dirname = get_root_from_zipfile(os.path.join(dir, 'corenlp.zip'))
+        corenlp_dirname = os.path.join(dir, corenlp_dirname)
+        for f in os.listdir(corenlp_dirname):
+            shutil.move(os.path.join(corenlp_dirname, f), dir)
 
-    # Remove original zip and folder
-    logger.debug("Removing downloaded zip file...")
-    os.remove(os.path.join(dir, 'corenlp.zip'))
-    shutil.rmtree(corenlp_dirname)
+        # Remove original zip and folder
+        logger.debug("Removing downloaded zip file...")
+        os.remove(os.path.join(dir, 'corenlp.zip'))
+        shutil.rmtree(corenlp_dirname)
 
-    # Warn user to set up env
-    if dir != DEFAULT_CORENLP_DIR:
-        logger.warning(
-            f"For customized installation location, please set the `CORENLP_HOME` "
-            f"environment variable to the location of the installation. "
-            f"In Unix, this is done with `export CORENLP_HOME={dir}`.")
+        # Warn user to set up env
+        if dir != DEFAULT_CORENLP_DIR:
+            logger.warning(
+                f"For customized installation location, please set the `CORENLP_HOME` "
+                f"environment variable to the location of the installation. "
+                f"In Unix, this is done with `export CORENLP_HOME={dir}`.")
 

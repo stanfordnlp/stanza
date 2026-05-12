@@ -2,6 +2,7 @@
 Test various resource downloading functions from resources/common.py
 """
 
+import logging
 import os
 import pytest
 import tempfile
@@ -130,3 +131,20 @@ def test_language_resources():
 
     zh_hans_resources = common.get_language_resources(resources, "zh-hans")
     assert zh_resources == zh_hans_resources
+
+
+def test_download_restores_logging_level(tmp_path, monkeypatch):
+    """download() must not permanently change the logger level."""
+    stanza.logger.setLevel('WARNING')
+    # Patch the actual network calls away
+    monkeypatch.setattr('stanza.resources.common.download_resources_json', lambda *a, **kw: None)
+    monkeypatch.setattr('stanza.resources.common.load_resources_json',
+                        lambda *a, **kw: {'en': {'default_md5': 'x', 'lang_name': 'English',
+                                                 'alias': None}})
+    try:
+        common.download('en', model_dir=str(tmp_path), logging_level='DEBUG')
+    except Exception:
+        pass  # network / resource errors are expected in unit tests
+    assert stanza.logger.level == logging.WARNING, (
+        "download() must restore the logger level after returning"
+    )

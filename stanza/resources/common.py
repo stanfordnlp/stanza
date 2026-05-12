@@ -2,6 +2,7 @@
 Common utilities for Stanza resources.
 """
 
+from contextlib import contextmanager
 from collections import defaultdict, namedtuple
 import errno
 import hashlib
@@ -373,6 +374,32 @@ def set_logging_level(logging_level, verbose):
     logger.setLevel(logging_level)
     return logger.level
 
+@contextmanager
+def logging_level_context(logging_level, verbose):
+    """
+    Context manager that temporarily sets the stanza logger level for the
+    duration of a managed block, then restores the original level on exit
+    (including when the block raises an exception).
+
+    If both arguments are None the logger is left completely untouched and
+    no save/restore overhead is incurred.
+
+    Example:
+        with logging_level_context(logging_level, verbose):
+            do_work()
+        # logger level is back to whatever it was before do_work()
+    """
+    if logging_level is None and verbose is None:
+        yield
+        return
+
+    original_level = logger.level
+    try:
+        set_logging_level(logging_level, verbose)
+        yield
+    finally:
+        logger.setLevel(original_level)
+
 def process_pipeline_parameters(lang, model_dir, package, processors):
     # Check parameter types and convert values to lower case
     if isinstance(lang, str):
@@ -567,60 +594,60 @@ def download(
         proxies=None,
         download_json=True
     ):
-    # Only set global logging level if the caller explicitly requested it.
-    # Previously this was called unconditionally, which meant a simple
-    # stanza.download('en') would reset the user's logging configuration
-    # as a side effect.  See https://github.com/stanfordnlp/stanza/issues/1418
-    if logging_level is not None or verbose is not None:
-        set_logging_level(logging_level, verbose)
-    # process different pipeline parameters
-    lang, model_dir, package, processors = process_pipeline_parameters(
-        lang, model_dir, package, processors
-    )
 
-    if download_json or not os.path.exists(os.path.join(model_dir, 'resources.json')):
-        if not download_json:
-            logger.warning("Asked to skip downloading resources.json, but the file does not exist.  Downloading anyway")
-        download_resources_json(model_dir, resources_url, resources_branch, resources_version, resources_filepath=None, proxies=proxies)
-
-    resources = load_resources_json(model_dir)
-    if lang not in resources:
-        raise UnknownLanguageError(lang)
-    if 'alias' in resources[lang]:
-        logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
-        lang = resources[lang]['alias']
-    lang_name = resources.get(lang, {}).get('lang_name', lang)
-    url = expand_model_url(resources, model_url)
-
-    # Default: download zipfile and unzip
-    if package == 'default' and (processors is None or len(processors) == 0):
-        logger.info(
-            f'Downloading default packages for language: {lang} ({lang_name}) ...'
+    # Temporarily adjust the log level for the duration of the download,
+    # then restore it automatically.  If the caller passed neither argument
+    # the logger is left completely untouched.
+    # See https://github.com/stanfordnlp/stanza/issues/1418
+    with logging_level_context(logging_level, verbose):
+        # process different pipeline parameters
+        lang, model_dir, package, processors = process_pipeline_parameters(
+            lang, model_dir, package, processors
         )
-        # want the URL to become, for example:
-        # https://huggingface.co/stanfordnlp/stanza-af/resolve/v1.3.0/models/default.zip
-        # so we hopefully start from
-        # https://huggingface.co/stanfordnlp/stanza-{lang}/resolve/v{resources_version}/models/{filename}
-        request_file(
-            url.format(resources_version=resources_version, lang=lang, filename="default.zip"),
-            os.path.join(model_dir, lang, f'default.zip'),
-            proxies,
-            md5=resources[lang]['default_md5'],
-        )
-        unzip(os.path.join(model_dir, lang), 'default.zip')
-        download_list = [['zip', 'default.zip']]
-    # Customize: maintain download list
-    else:
-        download_list = maintain_processor_list(resources, lang, package, processors, allow_pretrain=True)
-        download_list = add_dependencies(resources, lang, download_list)
-        download_list = flatten_processor_list(download_list)
-        download_models(download_list=download_list,
-                        resources=resources,
-                        lang=lang,
-                        model_dir=model_dir,
-                        resources_version=resources_version,
-                        model_url=model_url,
-                        proxies=proxies,
-                        log_info=True)
-    logger.info(f'Finished downloading models and saved to {model_dir}')
-    return download_list
+ 
+        if download_json or not os.path.exists(os.path.join(model_dir, 'resources.json')):
+            if not download_json:
+                logger.warning("Asked to skip downloading resources.json, but the file does not exist.  Downloading anyway")
+            download_resources_json(model_dir, resources_url, resources_branch, resources_version, resources_filepath=None, proxies=proxies)
+
+        resources = load_resources_json(model_dir)
+        if lang not in resources:
+            raise UnknownLanguageError(lang)
+        if 'alias' in resources[lang]:
+            logger.info(f'"{lang}" is an alias for "{resources[lang]["alias"]}"')
+            lang = resources[lang]['alias']
+        lang_name = resources.get(lang, {}).get('lang_name', lang)
+        url = expand_model_url(resources, model_url)
+
+        # Default: download zipfile and unzip
+        if package == 'default' and (processors is None or len(processors) == 0):
+            logger.info(
+                f'Downloading default packages for language: {lang} ({lang_name}) ...'
+            )
+            # want the URL to become, for example:
+            # https://huggingface.co/stanfordnlp/stanza-af/resolve/v1.3.0/models/default.zip
+            # so we hopefully start from
+            # https://huggingface.co/stanfordnlp/stanza-{lang}/resolve/v{resources_version}/models/{filename}
+            request_file(
+                url.format(resources_version=resources_version, lang=lang, filename="default.zip"),
+                os.path.join(model_dir, lang, f'default.zip'),
+                proxies,
+                md5=resources[lang]['default_md5'],
+            )
+            unzip(os.path.join(model_dir, lang), 'default.zip')
+            download_list = [['zip', 'default.zip']]
+        # Customize: maintain download list
+        else:
+            download_list = maintain_processor_list(resources, lang, package, processors, allow_pretrain=True)
+            download_list = add_dependencies(resources, lang, download_list)
+            download_list = flatten_processor_list(download_list)
+            download_models(download_list=download_list,
+                            resources=resources,
+                            lang=lang,
+                            model_dir=model_dir,
+                            resources_version=resources_version,
+                            model_url=model_url,
+                            proxies=proxies,
+                            log_info=True)
+        logger.info(f'Finished downloading models and saved to {model_dir}')
+        return download_list
