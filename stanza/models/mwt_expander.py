@@ -264,7 +264,7 @@ def train(args):
         if args['wandb']:
             wandb.finish()
 
-        logger.info("Best dev F1 = {:.2f}, at epoch = {}".format(best_f, best_epoch))
+        logger.info("Best dev on {}: F1 = {:.2f}, at epoch = {}".format(args['shorthand'], best_f, best_epoch))
 
         # try ensembling with dict if necessary
         if args.get('ensemble_dict', False):
