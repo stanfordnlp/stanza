@@ -338,6 +338,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             # TODO: this is to keep old models working.
             # Can get rid of it if those models are rebuilt
             config['max_train_len'] = 5000
+        if 'plateau_epochs' not in config:
+            config['plateau_epochs'] = 0
         if isinstance(config, dict):
             config = Config(**config)
         if config_update:
