@@ -134,17 +134,24 @@ def test_language_resources():
 
 
 def test_download_restores_logging_level(tmp_path, monkeypatch):
-    """download() must not permanently change the logger level."""
-    stanza.logger.setLevel('WARNING')
-    # Patch the actual network calls away
-    monkeypatch.setattr('stanza.resources.common.download_resources_json', lambda *a, **kw: None)
-    monkeypatch.setattr('stanza.resources.common.load_resources_json',
-                        lambda *a, **kw: {'en': {'default_md5': 'x', 'lang_name': 'English',
-                                                 'alias': None}})
-    try:
-        common.download('en', model_dir=str(tmp_path), logging_level='DEBUG')
-    except Exception:
-        pass  # network / resource errors are expected in unit tests
+    """download() must temporarily change the logger level, then restore it."""
+    stanza.logger.setLevel(logging.WARNING)
+    observed_level_during = []
+
+    original_load = common.load_resources_json
+    def capturing_load(model_dir):
+        observed_level_during.append(stanza.logger.level)
+        return original_load(model_dir)
+
+    monkeypatch.setattr(common, 'load_resources_json', capturing_load)
+
+    common.download('en', model_dir=TEST_MODELS_DIR, logging_level='DEBUG', processors=['tokenize'], download_json=False)
+
+    # Level was actually changed to DEBUG during the call
+    assert observed_level_during == [logging.DEBUG], (
+        f"Expected DEBUG ({logging.DEBUG}) during download, got {observed_level_during}"
+    )
+    # And restored to WARNING afterwards
     assert stanza.logger.level == logging.WARNING, (
-        "download() must restore the logger level after returning"
+        f"Expected WARNING ({logging.WARNING}) after download, got {stanza.logger.level}"
     )
