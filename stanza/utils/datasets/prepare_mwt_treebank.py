@@ -55,6 +55,7 @@ def process_treebank(treebank, model_type, paths, args):
         tokenizer_args = argparse.Namespace()
         tokenizer_args.augment = False
         tokenizer_args.prepare_labels = True
+        tokenizer_args.use_spanish_future = args.use_spanish_future
         prepare_tokenizer_treebank.process_treebank(treebank, model_type, paths, tokenizer_args)
 
         copy_conllu(tokenizer_dir, mwt_dir, short_name, "train", "in")
