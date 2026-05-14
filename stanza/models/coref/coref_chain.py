@@ -135,3 +135,22 @@ class CorefAttachment:
         if self.is_representative:
             j['is_representative'] = True
         return j
+
+    def __repr__(self):
+        # not eval-usable
+        flags = []
+        if self.is_start:
+            flags.append("start")
+        if self.is_end:
+            flags.append("end")
+        if self.is_representative:
+            flags.append("representative")
+        flag_str = ", ".join(flags)
+        return (
+            f"CorefAttachment(chain={self.chain.index}"
+            f", representative={self.chain.representative_text!r}"
+            f"{', ' + flag_str if flag_str else ''})"
+        )
+
+    def __str__(self):
+        return repr(self)
