@@ -529,7 +529,7 @@ class DataLoader(TokenizationDataset):
 
             if augment_final_punct_prob > 0.0:
                 for sentence_idx, sentence in enumerate(sentences):
-                    if random.random() < split_mwt_prob:
+                    if random.random() < augment_final_punct_prob:
                         new_sentence = self.augment_final_punct(sentence)
                         if new_sentence is not None:
                             sentences[sentence_idx] = new_sentence[0]
