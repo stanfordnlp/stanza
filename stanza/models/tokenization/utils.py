@@ -13,7 +13,7 @@ from stanza.models.common.utils import ud_scores, harmonic_mean
 from stanza.models.common.doc import Document
 from stanza.utils.conll import CoNLL
 from stanza.models.common.doc import *
-from stanza.models.tokenization.data import SortedDataset
+from stanza.models.tokenization.data import SortedDataset, WHITESPACE_RE
 
 logger = logging.getLogger('stanza')
 paths = default_paths.get_default_paths()
@@ -247,10 +247,6 @@ def update_pred_regex(raw, pred):
 
     return pred
 
-# control characters not covered by \s, but still not part of normal text
-# for example, U+0097 was reported as being stuck on a token in this issue:
-# https://github.com/stanfordnlp/stanza/issues/1257
-SPACE_RE = re.compile(r'[\s\u0080-\u009f]')
 SPACE_SPLIT_RE = re.compile(r'( *[^ ]+)')
 
 def predict(trainer, data_generator, batch_size, max_seqlen, use_regex_tokens, num_workers):
@@ -480,7 +476,7 @@ def decode_predictions(vocab, mwt_dict, orig_text, all_raw, all_preds, no_ssplit
     oov_count = 0
     doc = []
 
-    text = SPACE_RE.sub(' ', orig_text) if orig_text is not None else None
+    text = WHITESPACE_RE.sub(' ', orig_text) if orig_text is not None else None
     char_offset = 0
 
     if vocab is not None:

@@ -24,6 +24,9 @@ def filter_consecutive_whitespaces(para):
 
     return filtered
 
+# control characters not covered by \s, but still not part of normal text
+# for example, U+0097 was reported as being stuck on a token in this issue:
+# https://github.com/stanfordnlp/stanza/issues/1257
 NEWLINE_WHITESPACE_RE = re.compile(r'\n[\s\u0080-\u009f]*\n')
 # this was (r'^([\d]+[,\.]*)+$')
 # but the runtime on that can explode exponentially
