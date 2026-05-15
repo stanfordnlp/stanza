@@ -91,6 +91,22 @@ CASES = [
             ["Y", "felices", "no", "estaban", "…"],
         ],
     ),
+    SpanishTokenizeCase(
+        # Em and en dashes attached to words (no surrounding spaces) should be
+        # tokenized as their own tokens.  The model learns this via the
+        # comma->dash augmentation in data.py since neither GSD nor AnCora
+        # contains examples of these dashes.
+        text="[Daniel Alarcón]: Esto es Radio Ambulante—desde NPR.",
+        sentences=[
+            ["[", "Daniel", "Alarcón", "]", ":", "Esto", "es", "Radio", "Ambulante", "—", "desde", "NPR", "."],
+        ],
+    ),
+    SpanishTokenizeCase(
+        text="[Daniel Alarcón]: Esto es Radio Ambulante–desde NPR.",
+        sentences=[
+            ["[", "Daniel", "Alarcón", "]", ":", "Esto", "es", "Radio", "Ambulante", "–", "desde", "NPR", "."],
+        ],
+    ),
 ]
 
 
