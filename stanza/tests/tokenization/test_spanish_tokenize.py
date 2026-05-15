@@ -84,6 +84,13 @@ CASES = [
             ["Ronald", "ya", "no", "pudo", "seguir", "."],
         ],
     ),
+    # test spaces_before
+    SpanishTokenizeCase(
+        text="     Y felices no estaban…",
+        sentences=[
+            ["Y", "felices", "no", "estaban", "…"],
+        ],
+    ),
 ]
 
 
