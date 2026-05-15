@@ -13,6 +13,10 @@ Each test case is a SpanishTokenizeCase namedtuple:
 
 If `words` is None, it is assumed to equal `sentences` (no MWTs present).
 If `mwts` is None, it is assumed to be empty.
+
+Also tested is the reconstruction of the original text, assuring that
+unusual whitespace characters (see the GUARDED test) are kept
+as part of the final document.
 """
 
 import pytest
@@ -110,6 +114,20 @@ def _run(pipeline, case):
     return doc, resolved_words, resolved_mwts
 
 
+def _reconstruct(sentence):
+    """
+    Reconstruct the original text for one sentence by concatenating each
+    token's text with its trailing spaces_after string.  The first token's
+    spaces_before is prepended so that any leading whitespace or control
+    characters are accounted for as well.
+    """
+    parts = [sentence.tokens[0].spaces_before or ""]
+    for token in sentence.tokens:
+        parts.append(token.text)
+        parts.append(token.spaces_after or "")
+    return "".join(parts)
+
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
@@ -134,6 +152,25 @@ class TestSpanishTokenize:
             assert actual == expected_tokens, (
                 f"Sentence {sent_idx}: token mismatch"
             )
+
+    def test_text_reconstruction(self, es_tokenize_pipeline, case):
+        """
+        Concatenating token texts and spaces_after (with spaces_before on the
+        first token) must reproduce the original text exactly, sentence by
+        sentence.  This ensures that whitespace and control characters such as
+        U+0097 are preserved in the document structure even when they are not
+        part of any token.
+        """
+        doc, _, _ = _run(es_tokenize_pipeline, case)
+        # Reconstruct the full document text from all sentences and compare
+        # against the original.  We join sentences with whatever whitespace
+        # separated them (spaces_after of the last token of each sentence
+        # already captures the inter-sentence gap, so simple concatenation
+        # suffices).
+        reconstructed = "".join(_reconstruct(s) for s in doc.sentences)
+        assert reconstructed == case.text, (
+            f"Reconstruction mismatch:\n  original:      {case.text!r}\n  reconstructed: {reconstructed!r}"
+        )
 
     def test_word_texts(self, es_tokenize_pipeline, case):
         """Word texts (after MWT expansion) match for every sentence."""
