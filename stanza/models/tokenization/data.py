@@ -24,12 +24,12 @@ def filter_consecutive_whitespaces(para):
 
     return filtered
 
-NEWLINE_WHITESPACE_RE = re.compile(r'\n\s*\n')
+NEWLINE_WHITESPACE_RE = re.compile(r'\n[\s\u0080-\u009f]*\n')
 # this was (r'^([\d]+[,\.]*)+$')
 # but the runtime on that can explode exponentially
 # for example, on 111111111111111111111111a
 NUMERIC_RE = re.compile(r'^[\d]+([,\.]+[\d]+)*[,\.]*$')
-WHITESPACE_RE = re.compile(r'\s')
+WHITESPACE_RE = re.compile(r'[\s\u0080-\u009f]')
 
 class TokenizationDataset:
     def __init__(self, tokenizer_args, input_files={'txt': None, 'label': None}, input_text=None, vocab=None, evaluation=False, dictionary=None, *args, **kwargs):

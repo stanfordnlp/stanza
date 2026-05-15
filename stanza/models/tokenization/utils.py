@@ -247,7 +247,10 @@ def update_pred_regex(raw, pred):
 
     return pred
 
-SPACE_RE = re.compile(r'\s')
+# control characters not covered by \s, but still not part of normal text
+# for example, U+0097 was reported as being stuck on a token in this issue:
+# https://github.com/stanfordnlp/stanza/issues/1257
+SPACE_RE = re.compile(r'[\s\u0080-\u009f]')
 SPACE_SPLIT_RE = re.compile(r'( *[^ ]+)')
 
 def predict(trainer, data_generator, batch_size, max_seqlen, use_regex_tokens, num_workers):
