@@ -66,6 +66,20 @@ CASES = [
             ["Y", "felices", "no", "estaban", "…"],
         ],
     ),
+    SpanishTokenizeCase(
+        # Tab character should be split
+        text="Ronald\tya no pudo seguir.",
+        sentences=[
+            ["Ronald", "ya", "no", "pudo", "seguir", "."],
+        ],
+    ),
+    SpanishTokenizeCase(
+        # U+0097 (END OF GUARDED AREA) between words should not attach to a token
+        text="Ronald\u0097ya no pudo seguir.",
+        sentences=[
+            ["Ronald", "ya", "no", "pudo", "seguir", "."],
+        ],
+    ),
 ]
 
 
