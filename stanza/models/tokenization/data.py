@@ -264,6 +264,16 @@ def build_known_mwt(data, mwt_expansions):
             known_mwts.add(mwt)
     return known_mwts
 
+
+# Pairs of (existing, replacement) for mid-sentence punctuation augmentation.
+# The existing character must appear in the training data and the replacement
+# must not, otherwise the pair is skipped (checked in augment_vocab).
+MID_SENT_AUGMENT_PAIRS = [
+    (",", "\u2013"),   # comma -> en dash
+    (",", "\u2014"),   # comma -> em dash
+]
+
+
 class DataLoader(TokenizationDataset):
     """
     This is the training version of the dataset.
@@ -312,11 +322,15 @@ class DataLoader(TokenizationDataset):
                              ("!", "‼"),]
             for orig, target in AUGMENT_PAIRS:
                 if self.augment_vocab(self.vocab, self.data, orig, target):
-                    logger.debug('Based on the training data, augmenting |%s| to |%s|' % (orig, target))
+                    logger.debug('Based on the training data, augmenting final |%s| to |%s|' % (orig, target))
                     self.augmentations[orig].append(target)
                 if self.augment_vocab(self.vocab, self.data, target, orig):
-                    logger.debug('Based on the training data, augmenting |%s| to |%s|' % (target, orig))
+                    logger.debug('Based on the training data, augmenting final |%s| to |%s|' % (target, orig))
                     self.augmentations[target].append(orig)
+
+        augment_mid_punct_prob = 0.0 if evaluation else args.get('augment_mid_punct_prob', 0.0)
+        if augment_mid_punct_prob > 0.0:
+            self.mid_sent_augmentations = self.build_mid_sent_augmentations(self.vocab, self.data, MID_SENT_AUGMENT_PAIRS)
 
     def __len__(self):
         return len(self.sentence_ids)
@@ -326,17 +340,21 @@ class DataLoader(TokenizationDataset):
         return vocab
 
     @staticmethod
-    def augment_vocab(vocab, data, existing_unit, new_unit):
+    def augment_vocab(vocab, data, existing_unit, new_unit, final=True):
         if existing_unit not in vocab:
             return False
         new_unit_count = 0
         existing_unit_count = 0
         for sentence in data:
-            unit = sentence[-1][0]
-            if unit == new_unit:
-                new_unit_count += 1
-            elif unit == existing_unit:
-                existing_unit_count += 1
+            if final:
+                units = [sentence[-1][0]]
+            else:
+                units = [x[0] for x in sentence]
+            for unit in units:
+                if unit == new_unit:
+                    new_unit_count += 1
+                elif unit == existing_unit:
+                    existing_unit_count += 1
         if existing_unit_count == 0:
             return False
         if new_unit_count > 0:
@@ -345,6 +363,22 @@ class DataLoader(TokenizationDataset):
             vocab.append(new_unit)
         logger.debug("Found %d |%s| and %d |%s|", new_unit_count, new_unit, existing_unit_count, existing_unit)
         return True
+
+    @staticmethod
+    def build_mid_sent_augmentations(vocab, data, pairs):
+        """
+        For each (existing, replacement) pair, check whether the substitution
+        is appropriate for this dataset (existing present, replacement absent)
+        using the same augment_vocab logic as augment_final_punct.  Returns a
+        dict mapping each source character to a list of valid replacement
+        characters.
+        """
+        augmentations = defaultdict(list)
+        for orig, target in pairs:
+            if DataLoader.augment_vocab(vocab, data, orig, target, final=False):
+                logger.debug('Mid-sentence augmentation: will substitute |%s| with |%s|', orig, target)
+                augmentations[orig].append(target)
+        return augmentations
 
     def init_sent_ids(self):
         self.sentence_ids = []
@@ -446,6 +480,86 @@ class DataLoader(TokenizationDataset):
         encoded = self.para_to_sentences(new_units)
         return encoded
 
+    def augment_mid_sent_punct(self, sentence):
+        """
+        With some probability (controlled externally by the caller), replace
+        one mid-sentence punctuation character with an augmented alternative
+        drawn from self.mid_sent_augmentations.
+
+        Because en/em dashes appear in text with varying spacing conventions,
+        the substitution also randomly adjusts the spaces immediately
+        surrounding the replacement character:
+
+          original (comma style):  "A, B"   -> chars: A , ' ' B
+          possible outputs:
+            spaced both sides:     "A – B"  -> A ' ' – ' ' B
+            attached left:         "A– B"   -> A     – ' ' B
+            attached right:        "A –B"   -> A ' ' –     B
+            attached both sides:   "A–B"    -> A     –     B
+
+        Returns a re-encoded sentence list, or None if no eligible position
+        was found.
+        """
+        if not hasattr(self, 'mid_sent_augmentations') or not self.mid_sent_augmentations:
+            return None
+
+        if len(sentence[3]) <= 2 or len(sentence[3]) >= self.args['max_seqlen'] - 2:
+            return None
+
+        eligible = [
+            idx for idx, (char, label) in enumerate(zip(sentence[3], sentence[1]))
+            if char in self.mid_sent_augmentations
+            and 0 < idx < len(sentence[3]) - 1
+            and label != 0
+            and sentence[1][idx - 1] != 0
+        ]
+
+        if not eligible:
+            return None
+
+        idx = random.choice(eligible)
+        orig_char = sentence[3][idx]
+        new_char = random.choice(self.mid_sent_augmentations[orig_char])
+
+        all_units = [(x, int(y)) for x, y in zip(sentence[3], sentence[1])]
+
+        # Replace the character itself.
+        new_units = list(all_units)
+        new_units[idx] = (new_char, all_units[idx][1])
+
+        # Determine current spacing around the punctuation character.
+        has_space_before = idx > 0 and all_units[idx - 1][0] == ' '
+        has_space_after  = idx < len(all_units) - 1 and all_units[idx + 1][0] == ' '
+
+        # Four spacing styles, chosen uniformly at random:
+        #   0: spaced both sides  "A – B"
+        #   1: attached left      "A– B"   (drop space before)
+        #   2: attached right     "A –B"   (drop space after)
+        #   3: attached both      "A–B"
+        spacing_style = random.randint(0, 3)
+
+        want_space_before = spacing_style in (0, 2)
+        want_space_after  = spacing_style in (0, 1)
+
+        # Adjust space before the dash.
+        if has_space_before and not want_space_before:
+            del new_units[idx - 1]
+            idx -= 1   # keep idx pointing at the dash after deletion
+        elif not has_space_before and want_space_before:
+            new_units.insert(idx, (' ', 0))
+            idx += 1
+
+        # Adjust space after the dash (idx still points at the dash).
+        if has_space_after and not want_space_after:
+            del new_units[idx + 1]
+        elif not has_space_after and want_space_after:
+            new_units.insert(idx + 1, (' ', 0))
+
+        encoded = self.para_to_sentences(new_units)
+        if not encoded:
+            return None
+        return encoded
+
     def augment_final_punct(self, sentence):
         if len(sentence[3]) > 1 and len(sentence[3]) < self.args['max_seqlen']:
             if sentence[3][-1] in self.augmentations:
@@ -474,6 +588,7 @@ class DataLoader(TokenizationDataset):
             move_last_char_prob = 0.0 if self.eval else self.args.get('last_char_move_prob', 0.0)
             move_punct_back_prob = 0.0 if self.eval else self.args.get('punct_move_back_prob', 0.0)
             split_mwt_prob = 0.0 if self.eval else self.args.get('split_mwt_prob', 0.0)
+            augment_mid_punct_prob = 0.0 if self.eval else self.args.get('augment_mid_punct_prob', 0.0)
             augment_final_punct_prob = 0.0 if self.eval else self.args.get('augment_final_punct_prob', 0.0)
 
             pid, sid = id_pair if self.eval else random.choice(self.sentence_ids)
@@ -531,6 +646,13 @@ class DataLoader(TokenizationDataset):
                 for sentence_idx, sentence in enumerate(sentences):
                     if random.random() < augment_final_punct_prob:
                         new_sentence = self.augment_final_punct(sentence)
+                        if new_sentence is not None:
+                            sentences[sentence_idx] = new_sentence[0]
+
+            if augment_mid_punct_prob > 0.0:
+                for sentence_idx, sentence in enumerate(sentences):
+                    if random.random() < augment_mid_punct_prob:
+                        new_sentence = self.augment_mid_sent_punct(sentence)
                         if new_sentence is not None:
                             sentences[sentence_idx] = new_sentence[0]
 
