@@ -1,3 +1,97 @@
+"""
+Data loading and training augmentation for the Stanza neural tokenizer.
+
+The tokenizer treats tokenization and sentence segmentation as a character-level
+tagging problem.  Each character in the input is assigned one of the following
+labels:
+
+  0  continuation  – character is inside a token (not its last character)
+  1  word end      – last character of a token / word
+  2  sentence end  – last character of the final token in a sentence
+  3  MWT end       – last character of a multi-word token (e.g. "ocultándolo")
+  4  MWT+sent end  – last character of an MWT that also ends a sentence
+
+Note that languages with no MWT layer only use 0,1,2.
+
+The central classes are:
+
+TokenizationDataset
+    Base class.  Reads raw text (and optionally a parallel label file) from
+    disk or a string, normalises whitespace (including C1 control characters
+    such as U+0097 which are invisible but would otherwise attach to tokens),
+    splits on blank lines into paragraphs, and stores the result as a list of
+    (character, label) pairs per paragraph.  Also provides character-level
+    feature extraction (space_before, capitalized, numeric, dictionary look-up)
+    used as auxiliary input to the neural model.
+
+DataLoader(TokenizationDataset)
+    Training-time subclass.  Builds a vocabulary, wraps the data into fixed-
+    length windows suitable for batched GPU training, and applies a suite of
+    data augmentation techniques (described below) to improve generalisation.
+
+SortedDataset(Dataset)
+    Thin wrapper around TokenizationDataset that sorts paragraphs by length and
+    exposes a collate() method so that a torch DataLoader can efficiently batch
+    them with minimal padding during evaluation.
+
+--------------------------------------------------------------------------------
+Training augmentations
+--------------------------------------------------------------------------------
+
+All augmentations are applied stochastically at batch-construction time inside
+DataLoader.next() / strings_starting(), so the model sees a different
+perturbation of each sentence on each training pass.  Each is gated by a
+probability argument (default 0.0, i.e. off unless explicitly enabled).
+
+move_last_char  (last_char_move_prob)
+    Moves the sentence-final punctuation character one position to the right,
+    inserting a space before it.  Teaches the tokenizer that a space-separated
+    sentence-final punct still ends the sentence, which is useful for languages
+    where the training data always has the punct attached.
+
+move_punct_back  (punct_move_back_prob)
+    The inverse of move_last_char: removes the space before a punctuation character
+    that appears space-separated from the preceding word anywhere in the sentence.
+    Teaches the tokenizer that punctuation can appear attached to the preceding
+    word, which is important for languages such as Vietnamese where the dataset
+    may always space-separate them.  The eligible punctuation set is determined
+    automatically from the training data via build_move_punct_set().
+
+split_mwt  (split_mwt_prob)
+    Randomly selects an MWT in a sentence and replaces it with the two
+    space-separated words it expands to (both labelled as ordinary word ends).
+    Teaches the tokenizer not to over-generate MWT labels when the constituent
+    words appear separately.  The eligible MWT set is determined from the
+    training data and the MWT expansion dictionary via build_known_mwt().
+
+augment_final_punct  (augment_final_punct_prob)
+    Replaces the sentence-final punctuation character with a typographic
+    variant (e.g. ASCII '?' <-> fullwidth '？').  Useful for datasets that use
+    only one form, so that the model generalises to the other.  Eligible pairs
+    are checked against the vocabulary via augment_vocab() to ensure the source
+    exists and the target is absent before activating the substitution.
+
+augment_mid_sent_punct  (augment_mid_punct_prob)
+    Replaces a mid-sentence punctuation character (currently comma) with a
+    typographic alternative (en dash U+2013 or em dash U+2014).  Intended for
+    languages whose training data contains no dashes, so that the model learns
+    to tokenize them correctly without retraining from scratch.  Unlike
+    augment_final_punct, the substitution also randomly varies the surrounding
+    whitespace, producing all four spacing styles (spaced both sides, attached
+    left, attached right, attached both sides) with equal probability, since
+    dashes appear in real text with all of these conventions.  Eligible pairs
+    are checked via augment_vocab(..., final=False).
+
+drop_last_char  (last_char_drop_prob)
+    Drops the final character of a training window with some probability,
+    relabelling the new final character as a sentence end.  Teaches the model
+    to handle documents that end without sentence-final punctuation.
+
+sent_drop  (sent_drop_prob)
+    Drops a suffix of the concatenated sentences in a training window.  Also
+    teaches the model to handle incomplete input.
+"""
+
 from bisect import bisect_right
 from collections import defaultdict
 from copy import copy
