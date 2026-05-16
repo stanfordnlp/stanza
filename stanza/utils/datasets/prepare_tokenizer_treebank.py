@@ -952,11 +952,16 @@ def build_extra_combined_spanish_dataset(paths, model_type, dataset, args):
     if not args.use_spanish_future:
         return []
 
-    extra_spanish = os.path.join(handparsed_dir, "spanish-silver", "es.future.conllu")
-    if not os.path.exists(extra_spanish):
-        raise FileNotFoundError("Cannot find the extra dataset 'spanish-silver/es.future.conllu' which includes various additional Spanish tenses, expected {}".format(extra_spanish))
-    extra_sents = read_sentences_from_conllu(extra_spanish)
-    print("Read %d sentences from %s" % (len(extra_sents), extra_spanish))
+    extra_sents = []
+    extras_spanish = [(handparsed_dir, "spanish-silver", "es.future.conllu"),
+                      (handparsed_dir, "spanish-silver", "spanish_como_train.conllu")]
+    for extra_spanish in extras_spanish:
+        extra_spanish_filename = os.path.join(*extra_spanish)
+        if not os.path.exists(extra_spanish_filename):
+            raise FileNotFoundError("Cannot find the extra dataset '{}' which includes various additional Spanish augmentations, expected {}".format(extra_spanish[-1], extra_spanish_filename))
+        sents = read_sentences_from_conllu(extra_spanish_filename)
+        extra_sents.extend(sents)
+        print("Read %d sentences from %s" % (len(sents), extra_spanish_filename))
     return extra_sents
 
 def build_extra_combined_italian_dataset(paths, model_type, dataset, args):
