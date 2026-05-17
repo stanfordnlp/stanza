@@ -4,6 +4,7 @@ from stanza.models.common.doc import Document
 from stanza.models.coref.coref_chain import CorefChain, CorefMention
 from stanza.utils.coref import coref_utils
 
+pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
 def build_doc_with_coref():
     """
