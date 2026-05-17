@@ -12,14 +12,14 @@ from stanza.models.common.bert_embedding import filter_data, needs_length_filter
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
 from stanza.models.common.utils import DEFAULT_WORD_CUTOFF, simplify_punct
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX, CharVocab
-from stanza.models.pos.vocab import WordVocab, XPOSVocab, FeatureVocab, MultiVocab
+from stanza.models.pos.vocab import WordVocab, XPOSVocab, FeatureVocab, FixedExpressionVocab, MultiVocab, FIXED_NO_ID
 from stanza.models.pos.xpos_vocab_factory import xpos_vocab_factory
 from stanza.models.common.doc import *
 
 logger = logging.getLogger('stanza')
 
-DataSample = namedtuple("DataSample", "word char upos xpos feats pretrain text")
-DataBatch = namedtuple("DataBatch", "words words_mask wordchars wordchars_mask upos xpos ufeats pretrained orig_idx word_orig_idx lens word_lens text idx")
+DataSample = namedtuple("DataSample", "word char upos xpos feats pretrain text fixed")
+DataBatch = namedtuple("DataBatch", "words words_mask wordchars wordchars_mask upos xpos ufeats pretrained fixed_flags orig_idx word_orig_idx lens word_lens text idx")
 
 class Dataset:
     def __init__(self, doc, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False, bert_tokenizer=None, **kwargs):
@@ -79,13 +79,24 @@ class Dataset:
                             'upos': uposvocab,
                             'xpos': xposvocab,
                             'feats': featsvocab})
+        if args.get('use_fixed_expressions', False):
+            fixedvocab = Dataset.build_fixed_expressions(
+                docs,
+                min_count=args.get('fixed_expression_min_count', 1),
+                extra_file=args.get('fixed_expression_file', None),
+            )
+            logger.info("Built fixed expression vocab with %d unique expressions (max_len=%d)",
+                        len(fixedvocab), fixedvocab.max_len)
+            vocab['fixed'] = fixedvocab
         return vocab
 
     def preprocess(self, data, vocab, pretrain_vocab, args):
+        has_fixed = 'fixed' in vocab
         processed = []
         for sent in data:
+            words = [w[0] for w in sent]
             processed_sent = DataSample(
-                word = [vocab['word'].map([w[0] for w in sent])],
+                word = [vocab['word'].map(words)],
                 char = [[vocab['char'].map([x for x in w[0]]) for w in sent]],
                 upos = [vocab['upos'].map([w[1] for w in sent])],
                 xpos = [vocab['xpos'].map([w[2] for w in sent])],
@@ -93,7 +104,8 @@ class Dataset:
                 pretrain = ([pretrain_vocab.map([w[0].lower() for w in sent])]
                             if pretrain_vocab is not None
                            else [[PAD_ID] * len(sent)]),
-                text = [w[0] for w in sent]
+                text = words,
+                fixed = [vocab['fixed'].map(words)] if has_fixed else None,
             )
             processed.append(processed_sent)
 
@@ -176,6 +188,7 @@ class Dataset:
         xpos = torch.tensor(sample.xpos[0]) if self.has_xpos else None
         ufeats = torch.tensor(sample.feats[0]) if self.has_feats else None
         pretrained = torch.tensor(sample.pretrain[0])
+        fixed_flags = torch.tensor(sample.fixed[0]) if sample.fixed is not None else None
 
         # and deal with char & raw_text
         char = sample.char[0]
@@ -205,13 +218,15 @@ class Dataset:
                 if ufeats is not None:
                     ufeats[mask, ...] = PAD_ID
                 pretrained[mask] = PAD_ID
+                if fixed_flags is not None:
+                    fixed_flags[mask] = PAD_ID
                 char = char[:mask] + char[mask+1:]
                 raw_text = raw_text[:mask] + raw_text[mask+1:]
 
         # get each character from the input sentnece
         # chars = [w for sent in char for w in sent]
 
-        return DataSample(words, char, upos, xpos, ufeats, pretrained, raw_text), key
+        return DataSample(words, char, upos, xpos, ufeats, pretrained, raw_text, fixed_flags), key
 
     def __iter__(self):
         for i in range(self.__len__()):
@@ -234,7 +249,7 @@ class Dataset:
     def __collate_fn(data):
         """Function used by DataLoader to pack data"""
         (data, idx) = zip(*data)
-        (words, wordchars, upos, xpos, ufeats, pretrained, text) = zip(*data)
+        (words, wordchars, upos, xpos, ufeats, pretrained, text, fixed_flags) = zip(*data)
 
         # collate_fn is given a list of length batch size
         batch_size = len(data)
@@ -242,8 +257,8 @@ class Dataset:
         # sort sentences by lens for easy RNN operations
         lens = [torch.sum(x != PAD_ID) for x in words]
         (words, wordchars, upos, xpos,
-         ufeats, pretrained, text), orig_idx = sort_all((words, wordchars, upos, xpos,
-                                                         ufeats, pretrained, text), lens)
+         ufeats, pretrained, text, fixed_flags), orig_idx = sort_all((words, wordchars, upos, xpos,
+                                                                       ufeats, pretrained, text, fixed_flags), lens)
         lens = [torch.sum(x != PAD_ID) for x in words] # we need to reinterpret lengths for the RNN
 
         # combine all words into one large list, and sort for easy charRNN ops
@@ -267,6 +282,10 @@ class Dataset:
         else:
             ufeats = None
         pretrained = pad_sequence(pretrained, True, PAD_ID)
+        if None not in fixed_flags:
+            fixed_flags = pad_sequence(fixed_flags, True, PAD_ID)
+        else:
+            fixed_flags = None
         wordchars = get_long_tensor(wordchars, len(word_lens))
 
         # and finally create masks for the padding indices
@@ -274,7 +293,7 @@ class Dataset:
         wordchars_mask = torch.eq(wordchars, PAD_ID)
 
         return DataBatch(words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats,
-                         pretrained, orig_idx, word_orig_idx, lens, word_lens, text, idx)
+                         pretrained, fixed_flags, orig_idx, word_orig_idx, lens, word_lens, text, idx)
 
     @staticmethod
     def load_doc(doc):
@@ -282,6 +301,90 @@ class Dataset:
         data = Dataset.resolve_none(data)
         data = simplify_punct(data)
         return data
+
+    @staticmethod
+    def load_doc_with_deprel(doc):
+        """Like :meth:`load_doc`, but also returns each word's ID, head, and deprel.
+
+        Used to extract the fixed-expression dictionary; does not affect the
+        regular forward / training data path which still goes through
+        :meth:`load_doc`.
+        """
+        data = doc.get([TEXT, UPOS, XPOS, FEATS, ID, HEAD, DEPREL], as_sentences=True)
+        return data
+
+    @staticmethod
+    def build_fixed_expressions(docs, lowercase=True, min_count=1, extra_file=None):
+        """Scan training documents for fixed multi-word expressions.
+
+        For each token with ``deprel='fixed'``, collect the n-gram formed by
+        its head plus all fixed children (in surface order). The result is
+        deduplicated, filtered by ``min_count``, and optionally unioned with
+        an external newline-separated file of whitespace-tokenized expressions.
+        """
+        from collections import Counter
+
+        counter = Counter()
+        for doc in docs:
+            sentences = Dataset.load_doc_with_deprel(doc)
+            for sent in sentences:
+                # Build an id -> (text, position) index, skipping MWT range rows
+                # (whose ID is a tuple) and empty nodes (whose ID is a tuple).
+                id_to_pos = {}
+                texts = []
+                for pos, w in enumerate(sent):
+                    wid = w[4]
+                    if not isinstance(wid, int):
+                        continue
+                    id_to_pos[wid] = pos
+                    texts.append((pos, w[0]))
+                # Group fixed children by head id.
+                groups = {}
+                for w in sent:
+                    text, _, _, _, wid, head, deprel = w
+                    if not isinstance(wid, int):
+                        continue
+                    if deprel != 'fixed':
+                        continue
+                    if not isinstance(head, int) or head <= 0:
+                        continue
+                    groups.setdefault(head, []).append(wid)
+                for head_id, child_ids in groups.items():
+                    if head_id not in id_to_pos:
+                        continue
+                    ordered_ids = [head_id] + sorted(child_ids)
+                    try:
+                        words = [sent[id_to_pos[i]][0] for i in ordered_ids]
+                    except KeyError:
+                        continue
+                    if any(w is None for w in words):
+                        continue
+                    if lowercase:
+                        ngram = tuple(w.lower() for w in words)
+                    else:
+                        ngram = tuple(words)
+                    counter[ngram] += 1
+
+        expressions = [ng for ng, c in counter.items() if c >= min_count]
+        fixedvocab = FixedExpressionVocab(expressions, lowercase=lowercase)
+
+        if extra_file:
+            extra_added = 0
+            with open(extra_file, 'r', encoding='utf-8') as fin:
+                for line in fin:
+                    line = line.strip()
+                    if not line or line.startswith('#'):
+                        continue
+                    tokens = line.split()
+                    if len(tokens) < 2:
+                        continue
+                    before = len(fixedvocab)
+                    fixedvocab.add(tokens)
+                    if len(fixedvocab) > before:
+                        extra_added += 1
+            logger.info("Added %d new fixed expressions from %s", extra_added, extra_file)
+
+        return fixedvocab
 
     @staticmethod
     def resolve_none(data):

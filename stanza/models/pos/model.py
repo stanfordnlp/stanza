@@ -13,9 +13,10 @@ from stanza.models.common.foundation_cache import load_bert, load_charlm
 from stanza.models.common.hlstm import HighwayLSTM
 from stanza.models.common.dropout import WordDropout
 from stanza.models.common.utils import attach_bert_model
-from stanza.models.common.vocab import CompositeVocab
+from stanza.models.common.vocab import CompositeVocab, PAD_ID
 from stanza.models.common.char_model import CharacterModel
 from stanza.models.common import utils
+from stanza.models.pos.vocab import FIXED_NUM_IDS
 
 logger = logging.getLogger('stanza')
 
@@ -86,7 +87,15 @@ class Tagger(nn.Module):
             self.add_unsaved_module('pretrained_emb', nn.Embedding.from_pretrained(emb_matrix, freeze=True))
             self.trans_pretrained = nn.Linear(emb_matrix.shape[1], self.args['transformed_dim'], bias=False)
             input_size += self.args['transformed_dim']
-        
+
+        # Optional embedding for the "begins a known fixed multi-word expression"
+        # binary input feature.  Only attached when both the trained-with vocab
+        # carries a 'fixed' entry and the configured embedding dim is positive.
+        self.fixed_emb = None
+        if 'fixed' in vocab and self.args.get('fixed_expression_emb_dim', 0) > 0:
+            self.fixed_emb = nn.Embedding(FIXED_NUM_IDS, self.args['fixed_expression_emb_dim'], padding_idx=PAD_ID)
+            input_size += self.args['fixed_expression_emb_dim']
+
         # recurrent layers
         self.taggerlstm = HighwayLSTM(input_size, self.args['hidden_dim'], self.args['num_layers'], batch_first=True, bidirectional=True, dropout=self.args['dropout'], rec_dropout=self.args['rec_dropout'], highway_func=torch.tanh)
         self.drop_replacement = nn.Parameter(torch.randn(input_size) / np.sqrt(input_size))
@@ -138,8 +147,8 @@ class Tagger(nn.Module):
     def log_norms(self):
         utils.log_norms(self)
 
-    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text):
-        
+    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text, fixed_flags=None):
+
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
 
@@ -154,6 +163,11 @@ class Tagger(nn.Module):
             pretrained_emb = self.trans_pretrained(pretrained_emb)
             pretrained_emb = pack(pretrained_emb)
             inputs += [pretrained_emb]
+
+        if self.fixed_emb is not None and fixed_flags is not None:
+            fixed_emb = self.fixed_emb(fixed_flags)
+            fixed_emb = pack(fixed_emb)
+            inputs += [fixed_emb]
 
         def pad(x):
             return pad_packed_sequence(PackedSequence(x, inputs[0].batch_sizes), batch_first=True)[0]

@@ -18,12 +18,12 @@ logger = logging.getLogger('stanza')
 
 def unpack_batch(batch, device):
     """ Unpack a batch from the data loader. """
-    inputs = [b.to(device) if b is not None else None for b in batch[:8]]
-    orig_idx = batch[8]
-    word_orig_idx = batch[9]
-    sentlens = batch[10]
-    wordlens = batch[11]
-    text = batch[12]
+    inputs = [b.to(device) if b is not None else None for b in batch[:9]]
+    orig_idx = batch[9]
+    word_orig_idx = batch[10]
+    sentlens = batch[11]
+    wordlens = batch[12]
+    text = batch[13]
     return inputs, orig_idx, word_orig_idx, sentlens, wordlens, text
 
 class Trainer(BaseTrainer):
@@ -63,7 +63,7 @@ class Trainer(BaseTrainer):
     def update(self, batch, eval=False):
         device = next(self.model.parameters()).device
         inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
-        word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained = inputs
+        word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, fixed_flags = inputs
 
         if eval:
             self.model.eval()
@@ -71,7 +71,7 @@ class Trainer(BaseTrainer):
             self.model.train()
             for optimizer in self.optimizers.values():
                 optimizer.zero_grad()
-        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text)
+        loss, _ = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text, fixed_flags=fixed_flags)
         if loss == 0.0:
             return loss
 
@@ -91,11 +91,11 @@ class Trainer(BaseTrainer):
     def predict(self, batch, unsort=True):
         device = next(self.model.parameters()).device
         inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
-        word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained = inputs
+        word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, fixed_flags = inputs
 
         self.model.eval()
         batch_size = word.size(0)
-        _, preds = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text)
+        _, preds = self.model(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text, fixed_flags=fixed_flags)
         upos_seqs = [self.vocab['upos'].unmap(sent) for sent in preds[0].tolist()]
         xpos_seqs = [self.vocab['xpos'].unmap(sent) for sent in preds[1].tolist()]
         feats_seqs = [self.vocab['feats'].unmap(sent) for sent in preds[2].tolist()]

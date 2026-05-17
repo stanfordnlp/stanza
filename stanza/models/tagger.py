@@ -84,6 +84,16 @@ def build_argparse():
     parser.add_argument('--share_hid', action='store_true', help="Share hidden representations for UPOS, XPOS and UFeats.")
     parser.set_defaults(share_hid=False)
 
+    parser.add_argument('--use_fixed_expressions', action='store_true', default=False,
+                        help='Use a binary "starts a known fixed multi-word expression" feature in the tagger input. '
+                             'Helps the morphological predictor learn ExtPos when training data is highly imbalanced (issue #1575).')
+    parser.add_argument('--fixed_expression_emb_dim', type=int, default=5,
+                        help='Embedding dimension for the fixed-expression binary input feature. Ignored if --use_fixed_expressions is not set.')
+    parser.add_argument('--fixed_expression_min_count', type=int, default=1,
+                        help='Minimum number of training occurrences for a fixed expression to be added to the dictionary.')
+    parser.add_argument('--fixed_expression_file', type=str, default=None,
+                        help='Optional path to a newline-separated file of whitespace-tokenized fixed expressions to extend the training-derived dictionary.')
+
     parser.add_argument('--sample_train', type=float, default=1.0, help='Subsample training data.')
     parser.add_argument('--optim', type=str, default='adam', help='sgd, adagrad, adam, adamw, adamax, or adadelta.  madgrad as an optional dependency')
     parser.add_argument('--second_optim', type=str, default='amsgrad', help='Optimizer for the second half of training.  Default is Adam with AMSGrad')

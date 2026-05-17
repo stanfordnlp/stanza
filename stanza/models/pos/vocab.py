@@ -1,7 +1,7 @@
 from collections import Counter, OrderedDict
 
 from stanza.models.common.vocab import BaseVocab, BaseMultiVocab, CharVocab
-from stanza.models.common.vocab import CompositeVocab, VOCAB_PREFIX, EMPTY, EMPTY_ID
+from stanza.models.common.vocab import CompositeVocab, VOCAB_PREFIX, EMPTY, EMPTY_ID, PAD_ID
 
 class WordVocab(BaseVocab):
     def __init__(self, data=None, lang="", idx=0, cutoff=0, lower=False, ignore=None):
@@ -51,6 +51,83 @@ class FeatureVocab(CompositeVocab):
     def __init__(self, data=None, lang="", idx=0, sep="|", keyed=True):
         super().__init__(data, lang, idx=idx, sep=sep, keyed=keyed)
 
+# Reserved ids for the binary "starts a known fixed multi-word expression" flag.
+# PAD_ID (0) is reserved for padding so that the embedding's padding_idx behaves like the rest of the model.
+FIXED_NO_ID = 1
+FIXED_YES_ID = 2
+FIXED_NUM_IDS = 3
+
+class FixedExpressionVocab:
+    """A lexicon of multi-word fixed expressions.
+
+    Each entry is a tuple of lowercased word forms (e.g., ``('de', 'hecho')``).
+    Used by the POS tagger as a per-token binary input feature signalling
+    whether a token is the start of a known fixed multi-word expression.
+    Useful for predicting the ExtPos UFeat when the data is highly imbalanced.
+    """
+
+    def __init__(self, expressions=None, lowercase=True):
+        self.lowercase = lowercase
+        if expressions is None:
+            self.expressions = set()
+        else:
+            self.expressions = set(tuple(e) for e in expressions)
+        self.max_len = max((len(e) for e in self.expressions), default=0)
+
+    def __len__(self):
+        return len(self.expressions)
+
+    def __contains__(self, ngram):
+        return tuple(ngram) in self.expressions
+
+    def add(self, ngram):
+        ngram = tuple(w.lower() if self.lowercase else w for w in ngram)
+        if len(ngram) < 2:
+            return
+        self.expressions.add(ngram)
+        if len(ngram) > self.max_len:
+            self.max_len = len(ngram)
+
+    def update(self, ngrams):
+        for ng in ngrams:
+            self.add(ng)
+
+    def _norm(self, word):
+        return word.lower() if self.lowercase else word
+
+    def map(self, words):
+        """Return a list of ids (one per token): PAD_ID for empty inputs is not
+        produced here; instead each position gets FIXED_NO_ID (1) or FIXED_YES_ID (2)
+        depending on whether it begins any known fixed expression."""
+        n = len(words)
+        if n == 0 or not self.expressions or self.max_len < 2:
+            return [FIXED_NO_ID] * n
+        norm = [self._norm(w) for w in words]
+        out = [FIXED_NO_ID] * n
+        for i in range(n):
+            limit = min(self.max_len, n - i)
+            for j in range(2, limit + 1):
+                if tuple(norm[i:i + j]) in self.expressions:
+                    out[i] = FIXED_YES_ID
+                    break
+        return out
+
+    def state_dict(self):
+        # Serialise the expressions as a sorted list of tuples for stable IO.
+        return OrderedDict([
+            ('lowercase', self.lowercase),
+            ('expressions', sorted(self.expressions)),
+            ('max_len', self.max_len),
+        ])
+
+    @classmethod
+    def load_state_dict(cls, state_dict):
+        new = cls(expressions=state_dict.get('expressions', []),
+                  lowercase=state_dict.get('lowercase', True))
+        # max_len is derived but trust the saved one if present (e.g. for empty vocabs)
+        new.max_len = state_dict.get('max_len', new.max_len)
+        return new
+
 class MultiVocab(BaseMultiVocab):
     def state_dict(self):
         """ Also save a vocab name to class name mapping in state dict. """
@@ -67,7 +144,8 @@ class MultiVocab(BaseMultiVocab):
         class_dict = {'CharVocab': CharVocab,
                       'WordVocab': WordVocab,
                       'XPOSVocab': XPOSVocab,
-                      'FeatureVocab': FeatureVocab}
+                      'FeatureVocab': FeatureVocab,
+                      'FixedExpressionVocab': FixedExpressionVocab}
         new = cls()
         assert '_key2class' in state_dict, "Cannot find class name mapping in state dict!"
         key2class = state_dict['_key2class']
