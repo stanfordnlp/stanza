@@ -7,8 +7,10 @@ For details please refer to paper: https://nlp.stanford.edu/pubs/qi2018universal
 """
 
 import argparse
+from collections import defaultdict
 import logging
 import io
+import re
 import os
 import time
 import zipfile
@@ -40,6 +42,7 @@ def build_argparse():
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for scoring.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
     parser.add_argument('--no_gold_labels', dest='gold_labels', action='store_false', help="Don't score the eval file - perhaps it has no gold labels, for example.  Cannot be used at training time")
+    parser.add_argument('--upos_word_regex', type=str, default=None, help='Regex to use to build a confusion matrix specifically for those words.  Example use case, to test whether adding "como" as a VERB to the Spanish dataset caused errors on ADV or SCONJ usages.  Uses "search", so an example regex for that test would be "^(?i:como)$"')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
@@ -442,7 +445,9 @@ def evaluate_trainer(args, trainer, pretrain):
     doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_data = Dataset(doc, loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
     dev_batch = dev_data.to_loader(batch_size=args['batch_size'])
+
     eval_type = get_eval_type(dev_data)
+
     if len(dev_batch) > 0:
         logger.info("Start evaluation...")
         preds = []
@@ -454,19 +459,40 @@ def evaluate_trainer(args, trainer, pretrain):
     else:
         # skip eval if dev data does not exist
         preds = []
+
     preds = utils.unsort(preds, indices)
 
     # write to file and score
+    # If a upos_word_regex was supplied, collect gold UPOS tags before the .set()
+    # call overwrites them, so we can build a confusion matrix afterwards.
+    if args.get('upos_word_regex'):
+        compiled_regex = re.compile(args['upos_word_regex'])
+        gold_upos = doc.get([UPOS], as_sentences=True)
+        word_texts = doc.get([TEXT], as_sentences=True)
+
     dev_data.doc.set([UPOS, XPOS, FEATS], [y for x in preds for y in x])
+
+    if args.get('upos_word_regex'):
+        pred_upos = dev_data.doc.get([UPOS], as_sentences=True)
+        confusion = defaultdict(lambda: defaultdict(int))
+        for sent_gold, sent_pred, sent_text in zip(gold_upos, pred_upos, word_texts):
+            for gold_tag, pred_tag, text in zip(sent_gold, sent_pred, sent_text):
+                if compiled_regex.search(text):
+                    confusion[gold_tag][pred_tag] += 1
+        if any(confusion.values()):
+            from stanza.utils.confusion import format_confusion
+            logger.info("Confusion matrix for words matching /%s/:\n%s",
+                        args['upos_word_regex'], format_confusion(confusion, hide_zeroes=True))
+        else:
+            logger.info("No words matched the regex /%s/", args['upos_word_regex'])
+
     if system_pred_file:
         CoNLL.write_doc2conll(dev_data.doc, system_pred_file)
 
     if args['gold_labels']:
         system_pred_file = "{:C}\n\n".format(dev_data.doc)
         system_pred_file = io.StringIO(system_pred_file)
-
         _, _, score = scorer.score(system_pred_file, args['eval_file'], eval_type=eval_type)
-
         logger.info("POS Tagger score: %s %.2f", args['shorthand'], score*100)
 
     return dev_data.doc
