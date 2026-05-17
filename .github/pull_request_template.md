@@ -2,6 +2,10 @@
 We cannot accept pull requests against the `main` branch. 
 See our [contributing guide](https://github.com/stanfordnlp/stanza/blob/main/CONTRIBUTING.md) for details.
 
+If your PR is LLM generated and you have not done the work of testing
+on new models or analyzing the design decisions behind the PR, you
+will be banned with no further warnings.
+
 ## Description
 A brief and concise description of what your pull request is trying to accomplish.
 

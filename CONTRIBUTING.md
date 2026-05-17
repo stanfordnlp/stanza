@@ -2,6 +2,10 @@
 
 We would love to see contributions to Stanza from the community! Contributions that we welcome include bugfixes and enhancements. If you want to report a bug or suggest a feature but don't intend to fix or implement it by yourself, please create a corresponding issue on [our issues page](https://github.com/stanfordnlp/stanza/issues). If you plan to contribute a bugfix or enhancement, please read the following.
 
+## LLMs
+
+If you have used an LLM to generate this PR, please also do the work understanding the problem, considering alternatives, and rebuilding new models (if relevant) to verify that there is an improvement.  It is important to realize that if you have not done this, you are creating more work for us, not helping.
+
 ## 🛠️ Bugfixes
 
 For bugfixes, please follow these steps:
