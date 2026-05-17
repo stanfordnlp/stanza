@@ -321,6 +321,7 @@ known_participles = set([
     "fallecido",
     "inmunizado",
     "introducido",
+    "lucido",
     "merecido",
     "nacido",
     "ofrecido",
