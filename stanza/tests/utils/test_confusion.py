@@ -182,7 +182,23 @@ class TestFormatConfusion:
         # After condensing the BIES prefix is gone
         assert 'B-A' not in result
 
+    def test_2x2_output_exact(self):
+        result = format_confusion(pos_confusion())
+        expected = (
+            "     t\\p   NOUN  VERB\n"
+            "     NOUN    50     3\n"
+            "     VERB     1    40"
+        )
+        assert result == expected
 
+    def test_2x2_output_exact_transposed(self):
+        result = format_confusion(pos_confusion(), transpose=True)
+        expected = (
+            "     p\\t   NOUN  VERB\n"
+            "     NOUN    50     1\n"
+            "     VERB     3    40"
+        )
+        assert result == expected
 # ---------------------------------------------------------------------------
 # confusion_to_accuracy
 # ---------------------------------------------------------------------------
