@@ -388,6 +388,75 @@ function render(data, reverse) {
     });
   }
 
+  /**
+   * Create our own function for building a Features table
+   */
+  function renderFeats(annotation) {
+    var sentences = annotation.sentences;
+    var hasAny = sentences.some(function(s) {
+      return s.tokens.some(function(t) { return t.feats && t.feats !== '_'; });
+    });
+
+    var container = $('#feats');
+    if (container.length === 0) return;
+
+    if (!hasAny) {
+      container.text('Morphological features are not available for this language at this time.');
+      return;
+    }
+
+    // Collect all feature keys across all sentences, sorted
+    var allKeys = {};
+    sentences.forEach(function(s) {
+      s.tokens.forEach(function(t) {
+        if (!t.feats || t.feats === '_') return;
+        t.feats.split('|').forEach(function(pair) {
+          var key = pair.split('=')[0];
+          allKeys[key] = true;
+        });
+      });
+    });
+    var keys = Object.keys(allKeys).sort();
+
+    sentences.forEach(function(sentence, sentI) {
+      var tokens = sentence.tokens;
+      var table = $('<table class="feats-table"></table>');
+
+      // Header row: one cell per feature key, plus a "Word" column on the left
+      var headerRow = $('<tr></tr>');
+      headerRow.append('<th class="feats-feature">Word</th>');
+      keys.forEach(function(key) {
+        headerRow.append('<th class="feats-feature">' + key + '</th>');
+      });
+      table.append(headerRow);
+
+      // One row per token
+      tokens.forEach(function(t) {
+        // Parse this token's features into a lookup
+        var tokenFeats = {};
+        if (t.feats && t.feats !== '_') {
+          t.feats.split('|').forEach(function(pair) {
+            var parts = pair.split('=');
+            tokenFeats[parts[0]] = parts[1];
+          });
+        }
+
+        var row = $('<tr></tr>');
+        row.append('<td class="feats-word">' + t.word + '</td>');
+        keys.forEach(function(key) {
+          var val = tokenFeats[key] || '';
+          row.append('<td class="feats-value">' + val + '</td>');
+        });
+        table.append(row);
+      });
+
+      container.append(table);
+      if (sentI < sentences.length - 1) {
+        container.append('<hr/>');
+      }
+    });
+  }
+
   //
   // Construct text of annotation
   //
@@ -816,6 +885,8 @@ function render(data, reverse) {
     embed('kbp',    kbpEntities, kbpRelations);
     embed('sentiment', sentimentEntities);
 
+    renderFeats(data);
+
     // Constituency parse
     // Uses d3 and dagre-d3 (not brat)
     if ($('#parse').length > 0 && useDagre) {
@@ -1120,6 +1191,7 @@ $(document).ready(function() {
           //                  div id      annotator     field_in_data                          label
           createAnnotationDiv('pos',      'pos',        'pos',                                 'Part-of-Speech (XPOS)'          );
           createAnnotationDiv('upos',     'upos',       'upos',                                'Universal Part-of-Speech');
+          createAnnotationDiv('feats',    'feats',      'feats',                               'Morphological Features');
           createAnnotationDiv('lemma',    'lemma',      'lemma',                               'Lemmas'                  );
           createAnnotationDiv('ner',      'ner',        'ner',                                 'Named Entity Recognition');
           createAnnotationDiv('deps',     'depparse',   'basicDependencies',                   'Universal Dependencies'      );

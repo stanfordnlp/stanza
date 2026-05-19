@@ -72,3 +72,28 @@
     font-family: "Lato", "Gill Sans MT", "Gill Sans", "Helvetica", "Arial", sans-serif;
     font-style: italic;
 }
+
+.feats-table {
+  border-collapse: collapse;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-family: monospace;
+}
+.feats-table th, .feats-table td {
+  border: 1px solid #ddd;
+  padding: 4px 8px;
+  text-align: center;
+}
+.feats-feature {
+  text-align: left !important;
+  font-weight: bold;
+  background: #f5f5f5;
+  white-space: nowrap;
+}
+.feats-word {
+  background: #e8f0fe;
+  font-weight: bold;
+}
+.feats-value {
+  min-width: 40px;
+}
