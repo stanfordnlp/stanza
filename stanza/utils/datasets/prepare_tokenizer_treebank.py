@@ -953,8 +953,11 @@ def build_extra_combined_spanish_dataset(paths, model_type, dataset, args):
         return []
 
     extra_sents = []
-    extras_spanish = [(handparsed_dir, "spanish-silver", "es.future.conllu"),
-                      (handparsed_dir, "spanish-silver", "spanish_como_train.conllu")]
+    extras_spanish = [
+        (handparsed_dir, "spanish-silver", "es.future.conllu"),
+        (handparsed_dir, "spanish-silver", "spanish_como_train.conllu"),
+        (handparsed_dir, "spanish-silver", "spanish_lemmas.conllu"),
+    ]
     for extra_spanish in extras_spanish:
         extra_spanish_filename = os.path.join(*extra_spanish)
         if not os.path.exists(extra_spanish_filename):
