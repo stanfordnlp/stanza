@@ -2,6 +2,7 @@
 // and uses brat to render everything.
 
 //var serverAddress = 'http://localhost:5000';
+var serverAddress = 'http://localhost:8080';
 
 // Load Brat libraries
 var bratLocation = 'https://nlp.stanford.edu/js/brat/';
