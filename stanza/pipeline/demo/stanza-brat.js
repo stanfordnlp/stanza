@@ -1,9 +1,6 @@
 // Takes Stanford CoreNLP JSON output (var data = ... in data.js)
 // and uses brat to render everything.
 
-//var serverAddress = 'http://localhost:5000';
-var serverAddress = 'http://localhost:8080';
-
 // Load Brat libraries
 var bratLocation = 'https://nlp.stanford.edu/js/brat/';
 head.js(
@@ -1144,7 +1141,7 @@ $(document).ready(function() {
     // Run query
     $.ajax({
       type: 'POST',
-      url: serverAddress + '?properties=' + encodeURIComponent(
+      url: '?properties=' + encodeURIComponent(
         '{"annotators": "' + annotators() + '", "date": "' + date() + '"}') +
         '&pipelineLanguage=' + encodeURIComponent($('#language').val()),
       data: encodeURIComponent(currentQuery), //jQuery doesn't automatically URI encode strings
@@ -1283,7 +1280,7 @@ $(document).ready(function() {
     // Make ajax call
     $.ajax({
       type: 'POST',
-      url: serverAddress + '/tokensregex?pattern=' + encodeURIComponent(
+      url: '/tokensregex?pattern=' + encodeURIComponent(
         pattern.replace("&", "\\&").replace('+', '\\+')) +
         '&properties=' + encodeURIComponent(
         '{"annotators": "' + annotators() + '", "date": "' + date() + '"}') +
@@ -1324,7 +1321,7 @@ $(document).ready(function() {
     // Make ajax call
     $.ajax({
       type: 'POST',
-      url: serverAddress + '/semgrex?pattern=' + encodeURIComponent(
+      url: '/semgrex?pattern=' + encodeURIComponent(
         pattern.replace("&", "\\&").replace('+', '\\+')) +
         '&properties=' + encodeURIComponent(
         '{"annotators": "' + requiredAnnotators.join(',') + '", "date": "' + date() + '"}') +
@@ -1364,7 +1361,7 @@ $(document).ready(function() {
     // Make ajax call
     $.ajax({
       type: 'POST',
-      url: serverAddress + '/tregex?pattern=' + encodeURIComponent(
+      url: '/tregex?pattern=' + encodeURIComponent(
         pattern.replace("&", "\\&").replace('+', '\\+')) +
         '&properties=' + encodeURIComponent(
         '{"annotators": "' + requiredAnnotators.join(',') + '", "date": "' + date() + '"}') +
