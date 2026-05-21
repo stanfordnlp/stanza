@@ -38,7 +38,10 @@ def annotate():
 
     properties = request.args.get('properties', '')
     lang = request.args.get('pipelineLanguage', '')
-    text = list(request.form.keys())[0]
+    keys = list(request.form.keys())
+    if not keys:
+        return ('No text provided', 400)
+    text = keys[0]
 
     if lang not in pipelineCache:
         pipelineCache[lang] = stanza.Pipeline(lang=lang, use_gpu=False)
