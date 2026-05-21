@@ -73,6 +73,7 @@ def process_treebank(treebank, model_type, paths, args):
     short_name = treebank_to_short_name(treebank)
     if args.lemma_classifier and short_name in prepare_lemma_classifier.DATASET_MAPPING:
         prepare_lemma_classifier.main(short_name)
+    return True
 
 def main():
     common.main(process_treebank, common.ModelType.LEMMA, add_specific_args)

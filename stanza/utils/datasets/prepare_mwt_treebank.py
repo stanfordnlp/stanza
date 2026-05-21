@@ -79,6 +79,7 @@ def process_treebank(treebank, model_type, paths, args):
                      f"{mwt_dir}/{short_name}.dev.in.conllu")
         contract_mwt(f"{mwt_dir}/{short_name}.test.gold.conllu",
                      f"{mwt_dir}/{short_name}.test.in.conllu")
+    return True
 
 def main():
     common.main(process_treebank, common.ModelType.MWT)

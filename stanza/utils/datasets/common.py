@@ -334,4 +334,5 @@ def main(process_treebank, model_type, add_specific_args=None):
             treebanks.append(treebank)
 
     for treebank in treebanks:
-        process_treebank(treebank, model_type, paths, args)
+        if not process_treebank(treebank, model_type, paths, args):
+            logger.error("Processing %s failed!", treebank)

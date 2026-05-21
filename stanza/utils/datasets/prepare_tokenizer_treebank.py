@@ -1471,7 +1471,10 @@ def process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_nam
     dev_output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, "dev")
     test_output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, "test")
 
-    if common.num_words_in_file(test_input_conllu) <= 10000:
+    num_words = common.num_words_in_file(test_input_conllu)
+    threshold = 10000
+    if num_words < threshold:
+        print("Only had %d words, threshold was %d" % (num_words, threshold))
         return False
 
     if not split_conllu_file(treebank=treebank,
@@ -1601,6 +1604,7 @@ def process_treebank(treebank, model_type, paths, args):
         if args.prepare_labels:
             common.prepare_tokenizer_treebank_labels(tokenizer_dir, short_name)
 
+    return success
 
 def main():
     common.main(process_treebank, common.ModelType.TOKENIZER, add_specific_args)
