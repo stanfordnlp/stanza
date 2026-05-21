@@ -309,6 +309,8 @@ def build_argparse():
     parser.add_argument('treebanks', type=str, nargs='+', help='Which treebanks to run on.  Use all_ud or ud_all for all UD treebanks')
 
     parser.add_argument('--no_spanish_future', action='store_false', default=True, dest='use_spanish_future', help="Don't use the file of future tense Spanish data")
+    parser.add_argument('--small_dataset_threshold', type=int, default=10_000, help="How many words we need in a test set before declaring it too small")
+    parser.add_argument('--split_ratio', type=float, default=0.2, help="How large to split the dev/test chunks when splitting a single file into train/dev/test")
 
     return parser
 

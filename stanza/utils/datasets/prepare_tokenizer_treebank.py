@@ -85,7 +85,7 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, args, postproces
         postprocess(tokenizer_dir, "dev.gold", dest_dir, "dev.in", short_name)
         postprocess(tokenizer_dir, "test.gold", dest_dir, "test.in", short_name)
 
-def split_conllu_file(treebank, input_conllu, train_output_conllu, dev_output_conllu, test_output_conllu):
+def split_conllu_file(treebank, input_conllu, train_output_conllu, dev_output_conllu, test_output_conllu, xv_ratio):
     # set the seed for each data file so that the results are the same
     # regardless of how many treebanks are processed at once
     random.seed(1234)
@@ -93,9 +93,9 @@ def split_conllu_file(treebank, input_conllu, train_output_conllu, dev_output_co
     # read and shuffle conllu data
     sents = read_sentences_from_conllu(input_conllu)
     random.shuffle(sents)
-    n_dev = int(len(sents) * XV_RATIO)
+    n_dev = int(len(sents) * xv_ratio)
     assert n_dev >= 1, "Dev sentence number less than one."
-    n_test = int(len(sents) * XV_RATIO)
+    n_test = int(len(sents) * xv_ratio)
     assert n_test >= 1, "Test sentence number less than one."
     n_train = len(sents) - n_dev - n_test
 
@@ -113,7 +113,7 @@ def split_conllu_file(treebank, input_conllu, train_output_conllu, dev_output_co
 
     return True
 
-def split_train_file(treebank, train_input_conllu, train_output_conllu, dev_output_conllu):
+def split_train_file(treebank, train_input_conllu, train_output_conllu, dev_output_conllu, xv_ratio):
     # set the seed for each data file so that the results are the same
     # regardless of how many treebanks are processed at once
     random.seed(1234)
@@ -121,7 +121,7 @@ def split_train_file(treebank, train_input_conllu, train_output_conllu, dev_outp
     # read and shuffle conllu data
     sents = read_sentences_from_conllu(train_input_conllu)
     random.shuffle(sents)
-    n_dev = int(len(sents) * XV_RATIO)
+    n_dev = int(len(sents) * xv_ratio)
     assert n_dev >= 1, "Dev sentence number less than one."
     n_train = len(sents) - n_dev
 
@@ -1453,9 +1453,8 @@ def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_l
     return True
 
 
-XV_RATIO = 0.2
 
-def process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language):
+def process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args):
     """
     Process a large UD treebank with only a test
 
@@ -1472,22 +1471,22 @@ def process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_nam
     test_output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, "test")
 
     num_words = common.num_words_in_file(test_input_conllu)
-    threshold = 10000
-    if num_words < threshold:
-        print("Only had %d words, threshold was %d" % (num_words, threshold))
+    if num_words < args.small_dataset_threshold:
+        print("Only had %d words, threshold was %d" % (num_words, args.small_dataset_threshold))
         return False
 
     if not split_conllu_file(treebank=treebank,
                              input_conllu=test_input_conllu,
                              train_output_conllu=train_output_conllu,
                              dev_output_conllu=dev_output_conllu,
-                             test_output_conllu=test_output_conllu):
+                             test_output_conllu=test_output_conllu,
+                             xv_ratio=args.split_ratio):
         return False
 
     return True
 
 
-def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language):
+def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args):
     """
     Process a UD treebank with only train/test splits
 
@@ -1522,7 +1521,8 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
     if not split_train_file(treebank=treebank,
                             train_input_conllu=train_input_conllu,
                             train_output_conllu=train_output_conllu,
-                            dev_output_conllu=dev_output_conllu):
+                            dev_output_conllu=dev_output_conllu,
+                            split_ratio=args.split_ratio):
         return False
 
     # the test set is already fine
@@ -1588,12 +1588,12 @@ def process_treebank(treebank, model_type, paths, args):
             # maybe this dataset has a huge test set we can split?
             test_conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
             print("Checking data for %s: %s, %s to see if the test dataset is large enough" % (treebank, short_name, short_language))
-            success = process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
+            success = process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args)
         else:
             print("Preparing data for %s: %s, %s" % (treebank, short_name, short_language))
 
             if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "conllu", fail=False):
-                success = process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language)
+                success = process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args)
             else:
                 success = process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment)
 
