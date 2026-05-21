@@ -20,7 +20,7 @@ def static_file(path):
                 'Astloch-Bold.ttf', 'Liberation_Sans-Regular.ttf', 'PT_Sans-Caption-Web-Regular.ttf']:
         return app.send_static_file(path)
     elif path in 'index.html':
-        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stanza-brat.html')) as f:
+        with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'stanza-brat.html.j2')) as f:
             template = f.read()
             return render_template_string(template,
                                           version=stanza.__version__,
