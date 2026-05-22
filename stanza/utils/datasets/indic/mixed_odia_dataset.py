@@ -25,10 +25,19 @@ for Sindhi when building that dataset, should help here as well.
 
 https://aclanthology.org/2025.udw-1.11/
 
-Usage example:
-  python build_odia_stanza_training_set.py \\
+Usage examples:
+
+  # POS tagging dataset (default)
+  python mixed_odia_dataset.py \\
       --use_hindi --use_urdu --use_sindhi --use_marathi \\
       --hindi_size 1000 --urdu_size 1000 --sindhi_size 1000
+
+  # Dependency parsing dataset
+  python mixed_odia_dataset.py --mode depparse --use_all_languages
+
+  # All languages, both modes
+  python mixed_odia_dataset.py --mode pos      --use_all_languages
+  python mixed_odia_dataset.py --mode depparse --use_all_languages
 
 Adapted from the Sindhi build script in UD_Sindhi-Isra by the original authors.
 
@@ -151,7 +160,13 @@ def main():
     udbase = paths["UDBASE"]
 
     parser = argparse.ArgumentParser(
-        description="Build a combined POS training set for an Odia Stanza tagger"
+        description="Build a combined POS or dependency parsing training set for an Odia Stanza tagger"
+    )
+
+    # --- Mode ---
+    parser.add_argument(
+        "--mode", default="pos", choices=["pos", "depparse"],
+        help="Build a POS tagging dataset or a dependency parsing dataset (default: pos)",
     )
 
     # --- Odia source ---
@@ -199,8 +214,9 @@ def main():
 
     # --- Output ---
     parser.add_argument(
-        "--output_dir", default="data/pos",
-        help="Directory to write output files (default: data/pos)",
+        "--output_dir", default=None,
+        help="Directory to write output files. "
+             "Defaults to data/pos or data/depparse depending on --mode.",
     )
     parser.add_argument(
         "--dataset_name", default="or_odtb",
@@ -209,10 +225,15 @@ def main():
 
     args = parser.parse_args()
 
+    if args.output_dir is None:
+        args.output_dir = "data/pos" if args.mode == "pos" else "data/depparse"
+
     os.makedirs(args.output_dir, exist_ok=True)
 
     # ------------------------------------------------------------------
-    # 1. Load and split the Odia data (keep full annotation)
+    # 1. Load and split the Odia data.
+    #    Always keep full annotation (xpos, feats, head, deprel) so the
+    #    same split is usable for both pos and depparse modes.
     # ------------------------------------------------------------------
     print("Reading Odia data from: %s" % args.odia_file)
     odia_doc = read_conllu(args.odia_file, strip_xpos=False)
@@ -223,7 +244,12 @@ def main():
     train, dev, test = split_by_sent_id(odia_doc, weights=weights)
 
     # ------------------------------------------------------------------
-    # 2. Load extra-language training data (xpos/feats stripped)
+    # 2. Load extra-language training data.
+    #
+    #    Always strip xpos/feats from extra languages regardless of mode.
+    #    For depparse, we want the parser to generalize on UPOS and tree
+    #    structure rather than language-specific xpos tagsets.
+    #    Odia always retains full annotation since it is the target language.
     # ------------------------------------------------------------------
     extra_datasets = {}  # name -> Document
 
@@ -261,7 +287,9 @@ def main():
     shortname = args.dataset_name
     out = args.output_dir
 
-    # dev and test are written as plain conllu
+    print("Mode: %s  ->  writing to %s" % (args.mode, out))
+
+    # dev and test are always plain conllu
     dev_path  = os.path.join(out, "%s.dev.in.conllu"  % shortname)
     test_path = os.path.join(out, "%s.test.in.conllu" % shortname)
     CoNLL.write_doc2conll(dev,  dev_path)
@@ -269,7 +297,7 @@ def main():
     print("Wrote dev  -> %s (%d sentences)" % (dev_path,  len(dev.sentences)))
     print("Wrote test -> %s (%d sentences)" % (test_path, len(test.sentences)))
 
-    # train is written as a zip containing one conllu per source
+    # train is a zip containing one conllu per source
     train_zip_path = os.path.join(out, "%s.train.in.zip" % shortname)
     train_datasets = {"%s_train.in.conllu" % shortname: train}
     for lang_name, lang_doc in extra_datasets.items():
