@@ -386,6 +386,7 @@ default_ners = {
     "nb": "norne",
     "nl": "conll02",
     "nn": "norne",
+    "or": "ilner_nocharlm",
     "pl": "nkjp",
     "ru": "wikiner",
     "sd": "siner",
