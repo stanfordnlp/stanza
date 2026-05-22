@@ -76,6 +76,7 @@ default_treebanks = {
     "nl":      "alpino",
     "nn":      "nynorsk",
     "olo":     "kkpp",
+    "or":      "odtb",
     "orv":     "torot",
     "ota":     "boun",
     "pcm":     "nsc",

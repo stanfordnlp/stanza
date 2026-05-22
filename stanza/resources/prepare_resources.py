@@ -44,8 +44,6 @@ def parse_args():
 allowed_empty_languages = [
     # only tokenize and NER for Myanmar right now (soon...)
     "my",
-    # currently only an NER, not even a tokenizer, for Oriya
-    "or",
 ]
 
 # map processor name to file ending
@@ -338,20 +336,38 @@ def process_dirs(args):
     print("Processed initial model directories.  Writing preliminary resources.json")
     json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
 
-def get_default_pos_package(lang, ud_package):
+def get_default_pos_package(lang, ud_package, known_resources):
     charlm_package = get_pos_charlm_package(lang, ud_package)
     if charlm_package is not None:
         return ud_package + "_charlm"
     if lang in no_pretrain_languages:
         return ud_package + "_nopretrain"
+    transformer = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(lang, None), None)
+    transformer_package = "%s_%s" % (ud_package, transformer)
+    nocharlm_package = "%s_nocharlm" % ud_package
+    # TODO: use a defaultdict here instead
+    if nocharlm_package in known_resources.get("pos", {}):
+        return nocharlm_package
+    if transformer_package in known_resources.get("pos", {}):
+        return transformer_package
+    # this will probably cause a problem when there is no model of this name
     return ud_package + "_nocharlm"
 
-def get_default_depparse_package(lang, ud_package):
+def get_default_depparse_package(lang, ud_package, known_resources):
     charlm_package = get_depparse_charlm_package(lang, ud_package)
     if charlm_package is not None:
         return ud_package + "_charlm"
     if lang in no_pretrain_languages:
         return ud_package + "_nopretrain"
+    transformer = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(lang, None), None)
+    transformer_package = "%s_%s" % (ud_package, transformer)
+    nocharlm_package = "%s_nocharlm" % ud_package
+    # TODO: use a defaultdict here instead
+    if nocharlm_package in known_resources.get("pos", {}):
+        return nocharlm_package
+    if transformer_package in known_resources.get("pos", {}):
+        return transformer_package
+    # this will probably cause a problem when there is no model of this name
     return ud_package + "_nocharlm"
 
 def process_default_zips(args):
@@ -451,14 +467,14 @@ def get_default_processors(resources, lang):
         default_processors['lemma'] = 'identity'
 
     if 'pos' in resources[lang]:
-        default_processors['pos'] = get_default_pos_package(lang, default_package)
+        default_processors['pos'] = get_default_pos_package(lang, default_package, resources[lang])
         if default_processors['pos'] not in resources[lang]['pos']:
             raise AssertionError("Expected POS model not in resources: %s" % default_processors['pos'])
     elif lang not in allowed_empty_languages:
         raise AssertionError("Expected to find POS models for language %s" % lang)
 
     if 'depparse' in resources[lang]:
-        default_processors['depparse'] = get_default_depparse_package(lang, default_package)
+        default_processors['depparse'] = get_default_depparse_package(lang, default_package, resources[lang])
         if default_processors['depparse'] not in resources[lang]['depparse']:
             raise AssertionError("Expected depparse model not in resources: %s" % default_processors['depparse'])
     elif lang not in allowed_empty_languages:
