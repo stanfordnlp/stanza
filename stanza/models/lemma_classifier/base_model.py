@@ -124,7 +124,7 @@ class LemmaClassifier(ABC, nn.Module):
     @staticmethod
     def load(filename, args=None):
         try:
-            checkpoint = torch.load(filename, lambda storage, loc: storage)
+            checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
         except BaseException:
             logger.exception("Cannot load model from %s", filename)
             raise
