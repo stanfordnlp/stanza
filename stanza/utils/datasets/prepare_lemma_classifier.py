@@ -1,3 +1,4 @@
+from collections import namedtuple
 import os
 import sys
 
@@ -8,6 +9,8 @@ from stanza.models.common.short_name_to_treebank import short_name_to_treebank
 from stanza.utils.conll import CoNLL
 
 SECTIONS = ("train", "dev", "test")
+
+Target = namedtuple("Target", "word upos filename")
 
 def process_treebank(paths, short_name, word, upos, allowed_lemmas, sections=SECTIONS, dataset_to_use=None):
     if dataset_to_use is None:
@@ -42,7 +45,7 @@ def convert_en_combined_docs(docs, target_word, target_upos):
         for filename, doc in section_docs:
             processor = prepare_dataset.DataProcessor(target_word=target_word, target_upos=target_upos, allowed_lemmas=".*")
             new_sentences = processor.process_document(doc, save_name=None)
-            print("Read %d sentences from %s" % (len(new_sentences), filename))
+            print("Extracted %d sentences from %s" % (len(new_sentences), filename))
             section_sentences.extend(new_sentences)
 
     return sentences
@@ -70,14 +73,14 @@ def process_en_combined(paths, short_name):
         docs[2].append((filename, doc))
         print("Loaded %s" % filename)
 
-    target_word = "'s"
-    target_upos = ["AUX"]
-    sentences = convert_en_combined_docs(docs, target_word, target_upos)
+    for target_word, target_upos, target_filename in DATASET_TARGETS["en_combined"]:
+        print("Processing %s_%s" % (target_word, target_upos))
+        sentences = convert_en_combined_docs(docs, target_word, target_upos)
 
-    for section, section_sentences in zip(SECTIONS, sentences):
-        output_filename = os.path.join(output_dir, "%s.%s.lemma" % (short_name, section))
-        prepare_dataset.DataProcessor.write_output_file(output_filename, target_upos, section_sentences)
-        print("Wrote %s sentences to %s" % (len(section_sentences), output_filename))
+        for section, section_sentences in zip(SECTIONS, sentences):
+            output_filename = os.path.join(output_dir, "%s.%s.%s.lemma" % (short_name, target_filename, section))
+            prepare_dataset.DataProcessor.write_output_file(output_filename, target_upos, section_sentences)
+            print("Wrote %s sentences to %s" % (len(section_sentences), output_filename))
 
 def process_ja_gsd(paths, short_name):
     # this one looked promising, but only has 10 total dev & test cases
@@ -143,6 +146,12 @@ DATASET_MAPPING = {
     "ja_gsd":            process_ja_gsd,
 }
 
+DATASET_TARGETS = {
+    "en_combined":       [
+        Target("'s",  "AUX",  "s"),   # since we don't want filenames with 's
+        Target("her", "PRON", "her"),
+    ]
+}
 
 def main(dataset_name):
     paths = get_default_paths()

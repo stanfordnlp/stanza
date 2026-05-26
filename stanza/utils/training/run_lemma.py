@@ -156,17 +156,23 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
             from stanza.models.lemma import attach_lemma_classifier
             from stanza.utils.training import run_lemma_classifier
 
-            lc_charlm_args = ['--no_charlm'] if command_args.charlm is None else ['--charlm', command_args.charlm]
-            lemma_classifier_args = [treebank] + lc_charlm_args
-            if command_args.force:
-                lemma_classifier_args.append('--force')
-            run_lemma_classifier.main(lemma_classifier_args)
+            if short_name in prepare_lemma_classifier.DATASET_TARGETS:
+                lc_treebanks = ["%s.%s" % (short_name, lc.filename) for lc in prepare_lemma_classifier.DATASET_TARGETS[short_name]]
+            else:
+                lc_treebanks = [short_name]
+            for lc_treebank in lc_treebanks:
+                lc_charlm_args = ['--no_charlm'] if command_args.charlm is None else ['--charlm', command_args.charlm]
+                lemma_classifier_args = [lc_treebank] + lc_charlm_args
+                if command_args.force:
+                    lemma_classifier_args.append('--force')
+                run_lemma_classifier.main(lemma_classifier_args)
 
             save_name = build_model_filename(paths, short_name, command_args, extra_args)
-            # TODO: use a temp path for the lemma_classifier or keep it somewhere
+            # TODO: use a temp path for the lemma_classifier or keep it somewhere?
+            lc_filenames = ['saved_models/lemma_classifier/%s_lemma_classifier.pt' % lc_treebank for lc_treebank in lc_treebanks]
             attach_args = ['--input', save_name,
                            '--output', save_name,
-                           '--classifier', 'saved_models/lemma_classifier/%s_lemma_classifier.pt' % short_name]
+                           '--classifier', *lc_filenames]
             attach_lemma_classifier.main(attach_args)
 
             # now we rerun the dev set - the HI in particular demonstrates some good improvement
