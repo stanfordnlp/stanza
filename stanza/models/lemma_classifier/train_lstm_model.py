@@ -87,7 +87,8 @@ def build_argparse():
     parser.add_argument("--upos_emb_dim", type=int, default=20, help="Dimension size for UPOS tag embeddings.")
     parser.add_argument("--use_attn", action='store_true', dest='attn', default=False, help='Whether to use multihead attention instead of LSTM.')
     parser.add_argument("--num_heads", type=int, default=0, help="Number of heads to use for multihead attention.")
-    parser.add_argument("--save_name", type=str, default=os.path.join(os.path.dirname(__file__), "saved_models", "lemma_classifier_model_weighted_loss_charlm_new.pt"), help="Path to model save file")
+    parser.add_argument("--save_dir", type=str, default="saved_models/lemma_classifier", help="Which directory for saving lemma classifiers")
+    parser.add_argument("--save_name", type=str, default="lemma_classifier_model_weighted_loss_charlm_new.pt", help="Path to model save file")
     parser.add_argument("--lr", type=float, default=0.001, help="learning rate")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
     parser.add_argument("--batch_size", type=int, default=DEFAULT_BATCH_SIZE, help="Number of examples to include in each batch")
@@ -109,6 +110,8 @@ def main(args=None, predefined_args=None):
     use_attention = args.attn
     num_heads = args.num_heads
     save_name = args.save_name
+    if args.save_dir and not save_name.startswith(args.save_dir):
+        save_name = os.path.join(args.save_dir, save_name)
     lr = args.lr
     num_epochs = args.num_epochs
     train_file = args.train_file

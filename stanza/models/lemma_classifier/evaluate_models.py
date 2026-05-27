@@ -195,21 +195,26 @@ def main(args=None, predefined_args=None):
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
     parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
     parser.add_argument("--charlm_backward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
-    parser.add_argument("--save_name", type=str, default=os.path.join(os.path.dirname(__file__), "saved_models", "lemma_classifier_model.pt"), help="Path to model save file")
+    parser.add_argument("--save_dir", type=str, default="saved_models/lemma_classifier", help="Which directory for saving lemma classifiers")
+    parser.add_argument("--save_name", type=str, default="lemma_classifier_model.pt", help="Path to model save file")
     parser.add_argument("--model_type", type=str, default="roberta", help="Which transformer to use ('bert' or 'roberta' or 'lstm')")
     parser.add_argument("--bert_model", type=str, default=None, help="Use a specific transformer instead of the default bert/roberta")
     parser.add_argument("--eval_file", type=str, help="path to evaluation file")
 
     args = parser.parse_args(args) if not predefined_args else predefined_args
 
-    logger.info("Running training script with the following args:")
+    save_name = args.save_name
+    if args.save_dir and not save_name.startswith(args.save_dir):
+        save_name = os.path.join(args.save_dir, save_name)
+
+    logger.info("Running evaluation script with the following args:")
     args = vars(args)
     for arg in args:
         logger.info(f"{arg}: {args[arg]}")
     logger.info("------------------------------------------------------------")
 
-    logger.info(f"Attempting evaluation of model from {args['save_name']} on file {args['eval_file']}")
-    model = LemmaClassifier.load(args['save_name'], args)
+    logger.info(f"Attempting evaluation of model from {save_name} on file {args['eval_file']}")
+    model = LemmaClassifier.load(save_name, args)
 
     mcc_results, confusion, acc, weighted_f1 = evaluate_model(model, args['eval_file'])
 
