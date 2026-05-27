@@ -134,7 +134,7 @@ def main():
     # Multi-model train args
     parser.add_argument("--multi_train_type", type=str, default="lstm", help="Whether you are attempting to multi-train an LSTM or transformer")
     parser.add_argument("--multi_train_count", type=int, default=5, help="Number of each model to build")
-    parser.add_argument("--base_path", type=str, default=None, help="Path to start generating model type for.")
+    parser.add_argument("--save_dir", type=str, default=None, help="Path to start generating model type for.")
     parser.add_argument("--change_param", type=str, default=None, help="Which hyperparameter to change when training")
 
 
@@ -142,11 +142,11 @@ def main():
 
     if args.multi_train_type == "lstm":
         train_n_models(num_models=args.multi_train_count,
-                       base_path=args.base_path,
+                       base_path=args.save_dir,
                        args=args)
     elif args.multi_train_type == "tfmr":
         train_n_tfmrs(num_models=args.multi_train_count,
-                      base_path=args.base_path,
+                      base_path=args.save_dir,
                       args=args)
     else:
         raise ValueError(f"Improper input {args.multi_train_type}")

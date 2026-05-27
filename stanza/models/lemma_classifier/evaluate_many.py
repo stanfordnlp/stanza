@@ -58,10 +58,10 @@ def main():
     parser.add_argument("--eval_file", type=str, help="path to evaluation file")
 
     # Args specific to several model eval
-    parser.add_argument("--base_path", type=str, default=None, help="path to dir for eval")
+    parser.add_argument("--save_dir", type=str, default=None, help="path to dir for eval")
 
     args = parser.parse_args()
-    evaluate_n_models(args.base_path, args)
+    evaluate_n_models(args.save_dir, args)
 
 
 if __name__ == "__main__":

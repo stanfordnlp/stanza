@@ -79,7 +79,8 @@ class TransformerBaselineTrainer(BaseLemmaClassifierTrainer):
 def main(args=None, predefined_args=None):
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--save_name", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "saved_models", "big_model_roberta_weighted_loss.pt"), help="Path to model save file")
+    parser.add_argument("--save_dir", type=str, default="saved_models/lemma_classifier", help="Which directory for saving lemma classifiers")
+    parser.add_argument("--save_name", type=str, default="big_model_roberta_weighted_loss.pt", help="Path to model save file")
     parser.add_argument("--num_epochs", type=float, default=10, help="Number of training epochs")
     parser.add_argument("--train_file", type=str, default=os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_sets", "combined_train.txt"), help="Full path to training file")
     parser.add_argument("--model_type", type=str, default="roberta", help="Which transformer to use ('bert' or 'roberta')")
@@ -93,6 +94,8 @@ def main(args=None, predefined_args=None):
     args = parser.parse_args(args) if predefined_args is None else predefined_args
 
     save_name = args.save_name
+    if args.save_dir and not save_name.startswith(args.save_dir):
+        save_name = os.path.join(args.save_dir, save_name)
     num_epochs = args.num_epochs
     train_file = args.train_file
     loss_fn = args.loss_fn
