@@ -67,7 +67,7 @@ def build_model_filename(paths, short_name, command_args, extra_args):
                   "--mode", "train"]
     train_args = train_args + charlm_args + extra_args
     args = lemmatizer.parse_args(train_args)
-    save_name = lemmatizer.build_model_filename(args)
+    save_name = lemmatizer.model_file_name(args)
     return save_name
 
 def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
