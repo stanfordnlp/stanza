@@ -254,3 +254,55 @@ def test_convert_dataset(tmp_path):
     for text_batches, _, _, _ in dataset:
         assert len(text_batches) == 2
 
+
+def test_data_processor_upos_as_string(tmp_path):
+    """
+    DataProcessor must accept a bare string for target_upos and normalise it
+    to a one-element list internally, matching the behaviour of the isinstance
+    guard added to __init__.
+
+    Regression test: before the fix, "AUX" was stored as the string "AUX" and
+    serialised that way by write_output_file.  Downstream code that called
+    set() on it then produced {'A', 'U', 'X'} instead of {'AUX'}.
+    """
+    import json
+    from stanza.models.lemma_classifier.prepare_dataset import DataProcessor
+
+    # Construct the same way prepare_dataset.main used to do it (bare string)
+    processor = DataProcessor(target_word="'s", target_upos="AUX", allowed_lemmas=".*")
+
+    assert processor.target_upos == ["AUX"], (
+        f"Expected target_upos normalised to ['AUX'], got {processor.target_upos}"
+    )
+
+    # Confirm write_output_file serialises it as a JSON array, not a string.
+    # utils.Dataset and train_lstm_model both expect the array form.
+    output_file = str(tmp_path / "out.lemma")
+    DataProcessor.write_output_file(output_file, processor.target_upos, [])
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+    assert isinstance(data["upos"], list), (
+        f"Expected 'upos' in .lemma file to be a JSON list, "
+        f"got {type(data['upos'])}: {data['upos']}"
+    )
+    assert data["upos"] == ["AUX"], (
+        f"Expected [\"AUX\"], got {data['upos']}"
+    )
+
+
+def test_data_processor_upos_as_list(tmp_path):
+    """
+    DataProcessor must also accept a list for target_upos (the correct call
+    style) and leave it unchanged.
+    """
+    import json
+    from stanza.models.lemma_classifier.prepare_dataset import DataProcessor
+
+    processor = DataProcessor(target_word="'s", target_upos=["AUX"], allowed_lemmas=".*")
+    assert processor.target_upos == ["AUX"]
+
+    output_file = str(tmp_path / "out.lemma")
+    DataProcessor.write_output_file(output_file, processor.target_upos, [])
+    with open(output_file, encoding="utf-8") as f:
+        data = json.load(f)
+    assert data["upos"] == ["AUX"]
