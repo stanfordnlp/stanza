@@ -61,8 +61,14 @@ class BaseLemmaClassifierTrainer(ABC):
         logger.info(f"Loaded dataset successfully from {train_file}")
         logger.info(f"Using label decoder: {label_decoder}  Output dimension: {self.output_dim}")
         logger.info(f"Target words: {dataset.target_words}")
+        logger.info(f"Target upos: {dataset.target_upos}")
 
-        self.model = self.build_model(label_decoder, upos_to_id, dataset.known_words, dataset.target_words, set(dataset.target_upos))
+        # protect against data files with a single word as the UPOS
+        target_upos = dataset.target_upos
+        if isinstance(target_upos, str):
+            target_upos = [target_upos]
+
+        self.model = self.build_model(label_decoder, upos_to_id, dataset.known_words, dataset.target_words, set(target_upos))
         self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
         self.model.to(device)
