@@ -46,14 +46,15 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
     extra_train_args = []
     if command_args.force:
         extra_train_args.append('--force')
+    lemma_classifier_dir = paths["LEMMA_CLASSIFIER_DATA_DIR"]
 
     if mode == Mode.TRAIN:
         train_args = []
         if "--train_file" not in extra_args:
-            train_file = os.path.join("data", "lemma_classifier", "%s.train.lemma" % short_name)
+            train_file = os.path.join(lemma_classifier_dir, "%s.train.lemma" % short_name)
             train_args += ['--train_file', train_file]
         if "--eval_file" not in extra_args:
-            eval_file = os.path.join("data", "lemma_classifier", "%s.dev.lemma" % short_name)
+            eval_file = os.path.join(lemma_classifier_dir, "%s.dev.lemma" % short_name)
             train_args += ['--eval_file', eval_file]
         train_args = base_args + train_args + extra_args + extra_train_args
 
@@ -68,7 +69,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
     if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
         eval_args = []
         if "--eval_file" not in extra_args:
-            eval_file = os.path.join("data", "lemma_classifier", "%s.dev.lemma" % short_name)
+            eval_file = os.path.join(lemma_classifier_dir, "%s.dev.lemma" % short_name)
             eval_args += ['--eval_file', eval_file]
         model_type_args = ["--model_type", command_args.model_type.name.lower()]
         eval_args = bert_args + model_type_args + base_args + eval_args + embedding_args + extra_args
@@ -77,7 +78,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
     if mode == Mode.SCORE_TEST or mode == Mode.TRAIN:
         eval_args = []
         if "--eval_file" not in extra_args:
-            eval_file = os.path.join("data", "lemma_classifier", "%s.test.lemma" % short_name)
+            eval_file = os.path.join(lemma_classifier_dir, "%s.test.lemma" % short_name)
             eval_args += ['--eval_file', eval_file]
         model_type_args = ["--model_type", command_args.model_type.name.lower()]
         eval_args = bert_args + model_type_args + base_args + eval_args + embedding_args + extra_args
