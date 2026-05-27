@@ -1,3 +1,18 @@
+"""
+Attaches an existing LemmaClassifier (or potentially any contextual lemmatizer) to an existing lemma.trainer.Trainer
+
+Used by the run_lemma.py script to build a combined lemmatizer w/ contextual lemmatizers.
+
+Example usage for assembling an English lemmatizer.  Note that you can list multiple classifiers at once:
+
+python3 stanza/models/lemma/attach_lemma_classifier.py
+    --input saved_models/lemma/en_combined_charlm_lemmatizer.pt
+    --output en_combined_charlm.pt
+    --remove_existing
+    --classifier saved_models/lemma_classifier/en_combined.s_lemma_classifier.pt
+                 saved_models/lemma_classifier/en_combined.her_lemma_classifier.pt
+"""
+
 import argparse
 import logging
 
@@ -16,6 +31,7 @@ def attach_classifier(input_filename, output_filename, classifiers, remove_exist
     for classifier in classifiers:
         logger.info("Loading %s", classifier)
         classifier = LemmaClassifier.load(classifier)
+        logger.info("  Lemma classifier operates on word(s) %s with tag %s", classifier.target_words, classifier.target_upos)
         trainer.contextual_lemmatizers.append(classifier)
 
     logger.info("Total contextual_lemmatizers: %d", len(trainer.contextual_lemmatizers))
