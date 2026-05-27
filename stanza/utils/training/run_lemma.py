@@ -177,7 +177,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
                 lemma_classifier_args.extend(['--wordvec_pretrain_file', command_args.wordvec_pretrain_file])
 
             for lc_treebank in lc_treebanks:
-                run_lemma_classifier.main([lc_treebank] + lemma_classifier_args)
+                run_lemma_classifier.main([lc_treebank] + lemma_classifier_args, paths=paths)
 
             if lc_save_dir is None:
                 lc_save_dir = os.path.join('saved_models', 'lemma_classifier')

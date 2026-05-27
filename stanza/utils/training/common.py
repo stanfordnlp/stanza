@@ -78,7 +78,7 @@ def add_charlm_args(parser):
     parser.add_argument('--charlm', default="default", type=str, help='Which charlm to run on.  Will use the default charlm for this language/model if not set.  Set to None to turn off charlm for languages with a default charlm')
     parser.add_argument('--no_charlm', dest='charlm', action="store_const", const=None, help="Don't use a charlm, even if one is used by default for this package")
 
-def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argparse=None, build_model_filename=None, choose_charlm_method=None, args=None):
+def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argparse=None, build_model_filename=None, choose_charlm_method=None, args=None, paths=None):
     """
     A main program for each of the run_xyz scripts
 
@@ -95,7 +95,8 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
     else:
         logger.info("Training program called with:\n" + " ".join(args))
 
-    paths = default_paths.get_default_paths()
+    if paths is None:
+        paths = default_paths.get_default_paths()
 
     parser = build_argparse(sub_argparse)
     if add_specific_args is not None:
