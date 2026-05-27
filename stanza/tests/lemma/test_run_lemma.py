@@ -36,6 +36,7 @@ import pytest
 
 from stanza.models.lemma.trainer import Trainer
 from stanza.tests import TEST_WORKING_DIR
+import stanza.utils.datasets.prepare_lemma_classifier as prepare_lemma_classifier
 from stanza.utils.training import run_lemma
 from stanza.utils.training.common import Mode
 
@@ -217,6 +218,16 @@ def trained_model_path(tmp_path_factory, pretrain_file):
     extra_args --wordvec_pretrain_file   -> forwarded into run_lemma_classifier
                                            (prevents any network download)
     """
+    # Fail fast if DATASET_TARGETS has changed, rather than letting the
+    # mismatch surface as a confusing target_upos or classifier-count error.
+    expected_stems = {"'s", "her"}
+    actual_stems = {lc.word for lc in prepare_lemma_classifier.DATASET_TARGETS["en_combined"]}
+    assert actual_stems == expected_stems, (
+        f"DATASET_TARGETS['en_combined'] has changed from {expected_stems} to "
+        f"{actual_stems}. Update _LC_DATA, TRAIN_CONLLU, and the target_words/"
+        f"target_upos assertions in this test to match the new targets."
+    )
+
     tmp = tmp_path_factory.mktemp("run_lemma_integration")
 
     lemma_data_dir = tmp / "data" / "lemma"
