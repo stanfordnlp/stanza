@@ -37,6 +37,8 @@ def add_lemma_args(parser):
     parser.add_argument('--no_lemma_classifier', dest='lemma_classifier', action='store_false',
                         help="Don't use the lemma classifier datasets.  Default is to build lemma classifier as part of the original lemmatizer if the charlm is used")
 
+    parser.add_argument('--wordvec_pretrain_file', default=None, type=str,
+                        help="Location for finding the word vectors, if not default.  Used by the lemma classifier (which not all languages support)")
     parser.add_argument('--lemma_classifier_save_dir', default=None, type=str,
                         help="Save the lemma classifiers in this directory instead of the default lemma classifier home")
 
@@ -164,14 +166,18 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
                 lc_treebanks = ["%s.%s" % (short_name, lc.filename) for lc in prepare_lemma_classifier.DATASET_TARGETS[short_name]]
             else:
                 lc_treebanks = [short_name]
+
+            lc_charlm_args = ['--no_charlm'] if command_args.charlm is None else ['--charlm', command_args.charlm]
+            lemma_classifier_args = lc_charlm_args
+            if command_args.force:
+                lemma_classifier_args.append('--force')
+            if lc_save_dir:
+                lemma_classifier_args.extend(['--save_dir', lc_save_dir])
+            if command_args.wordvec_pretrain_file is not None:
+                lemma_classifier_args.extend(['--wordvec_pretrain_file', command_args.wordvec_pretrain_file])
+
             for lc_treebank in lc_treebanks:
-                lc_charlm_args = ['--no_charlm'] if command_args.charlm is None else ['--charlm', command_args.charlm]
-                lemma_classifier_args = [lc_treebank] + lc_charlm_args
-                if command_args.force:
-                    lemma_classifier_args.append('--force')
-                if lc_save_dir:
-                    lemma_classifier_args.extend(['--save_dir', lc_save_dir])
-                run_lemma_classifier.main(lemma_classifier_args)
+                run_lemma_classifier.main([lc_treebank] + lemma_classifier_args)
 
             if lc_save_dir is None:
                 lc_save_dir = os.path.join('saved_models', 'lemma_classifier')
