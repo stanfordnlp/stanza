@@ -27,6 +27,8 @@ class LemmaClassifier(ABC, nn.Module):
         self.label_decoder = label_decoder
         self.label_encoder = {y: x for x, y in label_decoder.items()}
         self.target_words = target_words
+        if isinstance(target_upos, str):
+            target_upos = [target_upos]
         self.target_upos = target_upos
         self.unsaved_modules = []
 

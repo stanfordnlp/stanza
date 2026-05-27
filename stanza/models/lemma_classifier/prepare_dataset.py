@@ -26,6 +26,11 @@ class DataProcessor():
     def __init__(self, target_word: str, target_upos: List[str], allowed_lemmas: str):
         self.target_word = target_word
         self.target_word_regex = re.compile(target_word)
+        # the "correct" .json format for the data files is ["AUX"]
+        # but if the .json file has a single entry "AUX"
+        # we don't want that to later turn into set("A", "U", "X")
+        if isinstance(target_upos, str):
+            target_upos = [target_upos]
         self.target_upos = target_upos
         self.allowed_lemmas = re.compile(allowed_lemmas)
 
