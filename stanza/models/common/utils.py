@@ -617,11 +617,12 @@ def embedding_name(args):
     such as electra, roberta, etc.  Maybe even phobert for VI, for example
     """
     embedding = "nocharlm"
-    if args['wordvec_pretrain_file'] is None and args['wordvec_file'] is None:
+    # lemmatizer can use charlm w/o using pretrain, for example
+    if 'wordvec_pretrain_file' in args and args['wordvec_pretrain_file'] is None and args['wordvec_file'] is None:
         embedding = "nopretrain"
-    if args.get('charlm', True) and (args['charlm_forward_file'] or args['charlm_backward_file']):
+    if args.get('charlm', True) and (args.get('charlm_forward_file') or args.get('charlm_backward_file')):
         embedding = "charlm"
-    if args['bert_model']:
+    if args.get('bert_model'):
         if args['bert_model'] in TRANSFORMER_NICKNAMES:
             embedding = TRANSFORMER_NICKNAMES[args['bert_model']]
         else:
@@ -636,6 +637,7 @@ def standard_model_file_name(args, model_type, **kwargs):
     The expectation is that the args will have something like
 
       parser.add_argument('--save_name', type=str, default="{shorthand}_{embedding}_parser.pt", help="File name to save the model")
+      parser.add_argument('--save_dir', type=str, default='saved_models/lemma', help='Root dir for saving models.')
 
     Then the model shorthand, embedding type, and other args will be
     turned into arguments in a format string

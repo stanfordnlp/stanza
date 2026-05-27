@@ -119,16 +119,8 @@ def all_lowercase(doc):
                 return False
     return True
 
-def build_model_filename(args):
-    embedding = "nocharlm"
-    if args['charlm'] and args['charlm_forward_file']:
-        embedding = "charlm"
-    model_file = args['save_name'].format(shorthand=args['shorthand'],
-                                          embedding=embedding)
-    model_dir = os.path.split(model_file)[0]
-    if not model_dir.startswith(args['save_dir']):
-        model_file = os.path.join(args['save_dir'], model_file)
-    return model_file
+def model_file_name(args):
+    return utils.standard_model_file_name(args, "lemmatizer")
 
 def train(args):
     # load data
@@ -142,7 +134,7 @@ def train(args):
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, vocab=vocab, evaluation=True)
 
     utils.ensure_dir(args['save_dir'])
-    model_file = build_model_filename(args)
+    model_file = model_file_name(args)
     logger.info("Using full savename: %s", model_file)
 
     # gold path
@@ -259,7 +251,7 @@ def train(args):
 def evaluate(args):
     # file paths
     system_pred_file = args['output_file']
-    model_file = build_model_filename(args)
+    model_file = model_file_name(args)
 
     # load model
     trainer = Trainer(model_file=model_file, device=args['device'], args=args)
