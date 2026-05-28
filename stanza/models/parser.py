@@ -149,7 +149,7 @@ def build_argparse():
     parser.add_argument('--no_distance', dest='distance', action='store_false', help="Turn off distance term.")
 
     # Originally, we used a single adam optimizer, stopping after 1000 stalled iterations,
-    # with a couple other hyperparameters corresponding to:  TODO
+    # with a couple other hyperparameters corresponding to:
     #   --max_steps_before_stop 1000
     #   --beta2 0.95
     #   --lr 3e-3
