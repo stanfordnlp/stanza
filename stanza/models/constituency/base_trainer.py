@@ -87,14 +87,10 @@ class BaseTrainer:
             else:
                 raise FileNotFoundError("Cannot find model in {} or in {}".format(filename, os.path.join(args['save_dir'], filename)))
         try:
-            # TODO: currently cannot switch this to weights_only=True
-            # without in some way changing the model to save enums in
-            # a safe manner, probably by converting to int
             try:
                 checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
             except UnpicklingError as e:
-                checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=False)
-                warnings.warn("The saved constituency parser has an old format using Enum, set, unsanitized Transitions, etc.  This version of Stanza can support reading both the new and the old formats.  Future versions will only allow loading with weights_only=True.  Please resave the constituency parser using this version ASAP.")
+                raise UnpicklingError("Unpickling %s failed.  If this is because it is an older model that needs weights_only=False, please convert it with a Stanza version 1.12.1 or earlier by loading and then saving." % filename) from e
         except BaseException:
             logger.exception("Cannot load model from %s", filename)
             raise
