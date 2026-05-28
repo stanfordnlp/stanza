@@ -107,7 +107,7 @@ class TestParser:
     def test_with_bert_finetuning(self, tmp_path, wordvec_pretrain_file):
         trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2'])
         assert 'bert_optimizer' in trainer.optimizer.keys()
-        assert 'bert_scheduler' in trainer.scheduler.keys()
+        assert 'bert_optimizer_scheduler' in trainer.scheduler.keys()
 
     def test_with_bert_finetuning_resaved(self, tmp_path, wordvec_pretrain_file):
         """
@@ -115,7 +115,7 @@ class TestParser:
         """
         trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2'])
         assert 'bert_optimizer' in trainer.optimizer.keys()
-        assert 'bert_scheduler' in trainer.scheduler.keys()
+        assert 'bert_optimizer_scheduler' in trainer.scheduler.keys()
 
         save_name = trainer.args['save_name']
         filename = tmp_path / save_name
@@ -138,7 +138,7 @@ class TestParser:
     def test_with_peft(self, tmp_path, wordvec_pretrain_file):
         trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--bert_model', 'hf-internal-testing/tiny-bert', '--bert_finetune', '--bert_hidden_layers', '2', '--use_peft'])
         assert 'bert_optimizer' in trainer.optimizer.keys()
-        assert 'bert_scheduler' in trainer.scheduler.keys()
+        assert 'bert_optimizer_scheduler' in trainer.scheduler.keys()
 
     def test_single_optimizer_checkpoint(self, tmp_path, wordvec_pretrain_file):
         trainer = run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=['--optim', 'adam'])

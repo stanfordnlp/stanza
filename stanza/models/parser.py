@@ -213,6 +213,11 @@ def build_argparse():
     parser.add_argument('--eval_interval', type=int, default=100)
     parser.add_argument('--checkpoint_interval', type=int, default=500)
     parser.add_argument('--max_steps_before_stop', type=int, default=2000)
+
+    parser.add_argument('--plateau_decay', type=float, default=0.8, help='If set, decay the learning rate of the first optimizer every plateau_steps by plateau_decay')
+    parser.add_argument('--plateau_steps', type=int, default=500, help='If set, decay the learning rate of the first optimizer every plateau_steps by plateau_decay')
+    parser.add_argument('--no_plateau', action='store_false', dest='use_plateau', default=True, help="Don't use a plateau scheduler")
+
     parser.add_argument('--batch_size', type=int, default=5000)
     parser.add_argument('--second_batch_size', type=int, default=None, help='Use a different batch size for the second optimizer.  Can be relevant for models with different transformer finetuning settings between optimizers, for example, where the larger batch size is impossible for FT the transformer"')
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help='Gradient clipping.')
@@ -459,7 +464,8 @@ def train(args):
                 force_checkpoint = True
 
             for scheduler_name, scheduler in trainer.scheduler.items():
-                logger.info('scheduler %s learning rate: %s', scheduler_name, scheduler.get_last_lr())
+                scheduler.step(num_steps=args['eval_interval'], metrics=dev_score)
+                logger.info('scheduler %s: %s', scheduler_name, scheduler.status())
             if args['log_norms']:
                 trainer.model.log_norms()
 

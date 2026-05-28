@@ -18,6 +18,7 @@ from stanza.models.common.trainer import Trainer as BaseTrainer
 from stanza.models.common import utils, loss
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, NoTransformerFoundationCache
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
+from stanza.models.common.warmup_plateau_scheduler import WarmupThenPlateauScheduler
 from stanza.models.depparse.model import EnsembleGraphParser, GraphParser
 from stanza.models.depparse.transition.model import SubtreeCombination, EnsembleTransitionParser, TransitionParser
 from stanza.models.pos.vocab import MultiVocab
@@ -105,22 +106,29 @@ class Trainer(BaseTrainer, ABC):
                                                        is_peft=self.args.get('use_peft', False),
                                                        bert_finetune_layers=self.args.get('bert_finetune_layers', None))
         self.scheduler = {}
-        if self.args.get("second_stage", False) and self.args.get('second_optim'):
-            if self.args.get('second_warmup_steps', None):
-                for name, optimizer in self.optimizer.items():
-                    name = name + "_scheduler"
-                    warmup_scheduler = transformers.get_constant_schedule_with_warmup(optimizer, self.args['second_warmup_steps'])
-                    self.scheduler[name] = warmup_scheduler
-        else:
-            if "bert_optimizer" in self.optimizer:
-                zero_scheduler = torch.optim.lr_scheduler.ConstantLR(self.optimizer["bert_optimizer"], factor=0, total_iters=self.args['bert_start_finetuning'])
-                warmup_scheduler = transformers.get_constant_schedule_with_warmup(
-                    self.optimizer["bert_optimizer"],
-                    self.args['bert_warmup_steps'])
-                self.scheduler["bert_scheduler"] = torch.optim.lr_scheduler.SequentialLR(
-                    self.optimizer["bert_optimizer"],
-                    schedulers=[zero_scheduler, warmup_scheduler],
-                    milestones=[self.args['bert_start_finetuning']])
+        for name, optimizer in self.optimizer.items():
+            name = name + "_scheduler"
+            if self.args.get("second_stage", False) and self.args.get('second_optim'):
+                num_freeze_steps = 0
+                num_warmup_steps = self.args.get('second_warmup_steps', 0)
+            else:
+                num_freeze_steps = 0
+                num_warmup_steps = 0
+                if name.startswith("bert_") or name.startswith("peft_"):
+                    num_freeze_steps = self.args.get('bert_start_finetuning', 0)
+                    num_warmup_steps = self.args.get('bert_warmup_steps', 0)
+            patience = self.args.get('plateau_steps', None) if self.args.get('use_plateau') else None
+            decay = self.args.get('plateau_decay', 0.9)
+            logger.debug("Building scheduler %s with num_freeze_steps %d, num_warmup_steps %d, decay factor %f, patience %s",
+                         name, num_freeze_steps, num_warmup_steps, decay, patience)
+            warmup_scheduler = WarmupThenPlateauScheduler(optimizer,
+                                                          num_freeze_steps = num_freeze_steps,
+                                                          num_warmup_steps = num_warmup_steps,
+                                                          reset_optimizer_on_unfreeze=True,
+                                                          mode = "max",   # we are passing in F1 scores
+                                                          factor = decay,
+                                                          patience = patience)
+            self.scheduler[name] = warmup_scheduler
 
     def update(self, batch, eval=False):
         device = self.model.get_device()
@@ -142,8 +150,6 @@ class Trainer(BaseTrainer, ABC):
         torch.nn.utils.clip_grad_norm_(self.model.parameters(), self.args['max_grad_norm'])
         for opt in self.optimizer.values():
             opt.step()
-        for scheduler in self.scheduler.values():
-            scheduler.step()
         return loss_val, batch_stats
 
     def predict(self, batch, unsort=True):
