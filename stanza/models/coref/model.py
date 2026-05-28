@@ -249,9 +249,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         logger.debug(f"Loading from {path}...")
         try:
             state_dicts = torch.load(path, map_location=map_location, weights_only=True)
-        except UnpicklingError:
-            state_dicts = torch.load(path, map_location=map_location, weights_only=False)
-            warnings.warn("The saved coref model has an old format using Config instead of the Config mapped to dict to store weights.  This version of Stanza can support reading both the new and the old formats.  Future versions will only allow loading with weights_only=True.  Please resave the coref model using this version ASAP.")
+        except UnpicklingError as e:
+            raise UnpicklingError("Unpickling %s failed.  If this is because it is an older model that needs weights_only=False, please convert it with a Stanza version 1.12.1 or earlier by loading and then saving." % path) from e
         self.epochs_trained = state_dicts.pop("epochs_trained", 0)
         # just ignore a config in the model, since we should already have one
         # TODO: some config elements may be fixed parameters of the model,
@@ -327,9 +326,8 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
             raise FileNotFoundError("coref model file %s not found" % path)
         try:
             state_dicts = torch.load(path, map_location=map_location, weights_only=True)
-        except UnpicklingError:
-            state_dicts = torch.load(path, map_location=map_location, weights_only=False)
-            warnings.warn("The saved coref model has an old format using Config instead of the Config mapped to dict to store weights.  This version of Stanza can support reading both the new and the old formats.  Future versions will only allow loading with weights_only=True.  Please resave the coref model using this version ASAP.")
+        except UnpicklingError as e:
+            raise UnpicklingError("Unpickling %s failed.  If this is because it is an older model that needs weights_only=False, please convert it with a Stanza version 1.12.1 or earlier by loading and then saving." % path) from e
         epochs_trained = state_dicts.pop("epochs_trained", 0)
         config = state_dicts.pop('config', None)
         if config is None:

@@ -59,12 +59,10 @@ class Pretrain:
     def load(self):
         if self.filename is not None and os.path.exists(self.filename):
             try:
-                # TODO: after making the next release, remove the weights_only=False version
                 try:
                     data = torch.load(self.filename, lambda storage, loc: storage, weights_only=True)
-                except UnpicklingError:
-                    data = torch.load(self.filename, lambda storage, loc: storage, weights_only=False)
-                    warnings.warn("The saved pretrain has an old format using numpy.ndarray instead of torch to store weights.  This version of Stanza can support reading both the new and the old formats.  Future versions will only allow loading with weights_only=True.  Please resave the pretrained embedding using this version ASAP.")
+                except UnpicklingError as e:
+                    raise UnpicklingError("Unpickling %s failed.  If this is because it is an older model that needs weights_only=False, please convert it with a Stanza version 1.12.1 or earlier by loading and then saving." % self.filename) from e
                 logger.debug("Loaded pretrain from {}".format(self.filename))
                 if not isinstance(data, dict):
                     raise RuntimeError("File {} exists but is not a stanza pretrain file.  It is not a dict, whereas a Stanza pretrain should have a dict with 'emb' and 'vocab'".format(self.filename))

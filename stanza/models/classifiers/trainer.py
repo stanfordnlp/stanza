@@ -74,13 +74,10 @@ class Trainer:
             else:
                 raise FileNotFoundError("Cannot find model in {} or in {}".format(filename, os.path.join(args.save_dir, filename)))
         try:
-            # TODO: can remove the try/except once the new version is out
-            #checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
             try:
                 checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=True)
             except UnpicklingError as e:
-                checkpoint = torch.load(filename, lambda storage, loc: storage, weights_only=False)
-                warnings.warn("The saved classifier has an old format using SimpleNamespace and/or Enum instead of a dict to store config.  This version of Stanza can support reading both the new and the old formats.  Future versions will only allow loading with weights_only=True.  Please resave the pretrained classifier using this version ASAP.")
+                raise UnpicklingError("Unpickling %s failed.  If this is because it is an older model that needs weights_only=False, please convert it with a Stanza version 1.12.1 or earlier by loading and then saving." % filename) from e
         except BaseException:
             logger.exception("Cannot load model from {}".format(filename))
             raise
