@@ -129,6 +129,9 @@ class Trainer(BaseTrainer, ABC):
                                                           factor = decay,
                                                           patience = patience)
             self.scheduler[name] = warmup_scheduler
+        self.bert_finetuning = any(x.startswith("bert") or x.startswith("peft") for x in self.optimizer)
+        self.model.bert_finetuning = self.bert_finetuning
+        logger.debug("Bert finetuning during this training portion: %s", self.model.bert_finetuning)
 
     def update(self, batch, eval=False):
         device = self.model.get_device()
