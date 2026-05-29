@@ -876,3 +876,138 @@ class TestStatus:
         for _ in range(11):
             sched.step(EVAL_STEPS, metrics=0.9)
         assert "cooldown_remaining" in str(sched.status())
+
+
+# ---------------------------------------------------------------------------
+# 16. reset_optimizer_on_unfreeze
+# ---------------------------------------------------------------------------
+
+class TestResetOptimizerOnUnfreeze:
+    def test_state_cleared_at_unfreeze(self):
+        """Optimizer state for all parameters should be empty after the first
+        step() that exits the freeze phase."""
+        opt, sched = make_scheduler(200, 200, patience=None,
+                                    reset_optimizer_on_unfreeze=True)
+        # Seed the optimizer state by doing a real forward/backward pass
+        # (or just poke it directly, which is simpler in a unit test).
+        model_params = list(opt.param_groups[0]["params"])
+        for p in model_params:
+            opt.state[p]["dummy_accum"] = torch.zeros_like(p)
+
+        assert any(opt.state for _ in [None])  # state is non-empty before unfreeze
+
+        sched.step(200)  # total=200, exits freeze → reset fires
+        for p in model_params:
+            assert p not in opt.state, "optimizer state should be cleared at unfreeze"
+
+    def test_state_cleared_exactly_once(self):
+        """The reset must not fire a second time on subsequent steps."""
+        opt, sched = make_scheduler(200, 200, patience=None,
+                                    reset_optimizer_on_unfreeze=True)
+        sched.step(200)  # exits freeze, reset fires, _optimizer_reset_done=True
+
+        # Seed some state after the reset
+        for p in opt.param_groups[0]["params"]:
+            opt.state[p]["post_reset"] = torch.zeros_like(p)
+
+        sched.step(100)  # still in warmup, reset must NOT fire again
+        for p in opt.param_groups[0]["params"]:
+            assert "post_reset" in opt.state[p], (
+                "optimizer state should not be cleared on subsequent steps"
+            )
+
+    def test_reset_fires_on_boundary_spanning_step(self):
+        """A single step() that covers both freeze and warmup should still reset."""
+        opt, sched = make_scheduler(200, 200, patience=None,
+                                    reset_optimizer_on_unfreeze=True)
+        for p in opt.param_groups[0]["params"]:
+            opt.state[p]["accum"] = torch.zeros_like(p)
+
+        sched.step(350)  # spans freeze→warmup boundary in one call
+        for p in opt.param_groups[0]["params"]:
+            assert p not in opt.state
+
+    def test_reset_fires_when_spanning_all_phases(self):
+        """A step() that spans freeze→warmup→plateau should still reset."""
+        opt, sched = make_scheduler(100, 100, patience=None,
+                                    reset_optimizer_on_unfreeze=True)
+        for p in opt.param_groups[0]["params"]:
+            opt.state[p]["accum"] = torch.zeros_like(p)
+
+        sched.step(1000)  # covers all three phases
+        for p in opt.param_groups[0]["params"]:
+            assert p not in opt.state
+
+    def test_no_reset_when_flag_false(self):
+        """With reset_optimizer_on_unfreeze=False (default), state is untouched."""
+        opt, sched = make_scheduler(200, 200, patience=None,
+                                    reset_optimizer_on_unfreeze=False)
+        for p in opt.param_groups[0]["params"]:
+            opt.state[p]["accum"] = torch.zeros_like(p)
+
+        sched.step(200)
+        for p in opt.param_groups[0]["params"]:
+            assert "accum" in opt.state[p], "state should be preserved when flag is False"
+
+    def test_no_reset_when_no_freeze(self):
+        """With num_freeze_steps=0 there is no freeze→warmup transition,
+        so the reset should never fire even if the flag is True."""
+        opt, sched = make_scheduler(0, 200, patience=None,
+                                    reset_optimizer_on_unfreeze=True)
+        for p in opt.param_groups[0]["params"]:
+            opt.state[p]["accum"] = torch.zeros_like(p)
+
+        sched.step(100)  # in warmup from the start, no freeze boundary
+        for p in opt.param_groups[0]["params"]:
+            assert "accum" in opt.state[p]
+
+    def test_optimizer_reset_done_flag_set(self):
+        _, sched = make_scheduler(200, 0, patience=None,
+                                  reset_optimizer_on_unfreeze=True)
+        assert not sched._optimizer_reset_done
+        sched.step(200)
+        assert sched._optimizer_reset_done
+
+    def test_optimizer_reset_done_not_set_when_still_frozen(self):
+        _, sched = make_scheduler(200, 0, patience=None,
+                                  reset_optimizer_on_unfreeze=True)
+        sched.step(100)   # still in freeze
+        assert not sched._optimizer_reset_done
+
+    def test_reset_works_with_multiple_param_groups(self):
+        opt, sched = make_scheduler(200, 200, n_groups=2, patience=None,
+                                    reset_optimizer_on_unfreeze=True)
+        for group in opt.param_groups:
+            for p in group["params"]:
+                opt.state[p]["accum"] = torch.zeros_like(p)
+
+        sched.step(200)
+        for group in opt.param_groups:
+            for p in group["params"]:
+                assert p not in opt.state
+
+    def test_state_dict_preserves_reset_done_flag(self):
+        """After a checkpoint round-trip, _optimizer_reset_done is restored
+        so the reset does not fire again on resumption."""
+        opt, sched = make_scheduler(200, 200, patience=None,
+                                    reset_optimizer_on_unfreeze=True)
+        sched.step(200)   # fires reset, sets _optimizer_reset_done=True
+        assert sched._optimizer_reset_done
+
+        sd = sched.state_dict()
+        opt2, sched2 = make_scheduler(200, 200, patience=None,
+                                      reset_optimizer_on_unfreeze=True)
+        sched2.load_state_dict(sd)
+        assert sched2._optimizer_reset_done
+
+        # Seed state after reload and confirm next step doesn't clear it
+        for p in opt2.param_groups[0]["params"]:
+            opt2.state[p]["post_reload"] = torch.zeros_like(p)
+        sched2.step(100)
+        for p in opt2.param_groups[0]["params"]:
+            assert "post_reload" in opt2.state[p]
+
+    def test_state_dict_contains_reset_done_key(self):
+        _, sched = make_scheduler(100, 100, patience=None,
+                                  reset_optimizer_on_unfreeze=True)
+        assert "_optimizer_reset_done" in sched.state_dict()

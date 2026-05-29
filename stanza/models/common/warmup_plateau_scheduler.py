@@ -19,6 +19,12 @@ Pass patience=None to disable plateau decay entirely; the scheduler then
 acts as a pure freeze-then-warmup-then-constant schedule, and metrics is
 never required in step().
 
+Pass reset_optimizer_on_unfreeze=True to clear the optimizer's accumulated
+state (momentum buffers, second-moment estimates, etc.) at the moment the
+freeze phase ends.  This prevents stale accumulator history built up during
+freeze from miscalibrating adaptive optimizers (Adadelta, Adam, RMSprop)
+when the parameters first start being updated.
+
 Because every duration is expressed in steps, the LR schedule is completely
 independent of how frequently you choose to evaluate.
 """
@@ -99,6 +105,15 @@ class WarmupThenPlateauScheduler:
         (default 1e-8).
     verbose : bool
         Print a message when the LR is decayed (default False).
+    reset_optimizer_on_unfreeze : bool
+        If True, the optimizer's accumulated state is cleared for all
+        parameter groups at the moment the freeze phase ends (i.e. on
+        the first step() call that moves total_steps past
+        num_freeze_steps).  This is recommended when using adaptive
+        optimizers (Adadelta, Adam, AdamW, RMSprop) with a non-zero
+        freeze period, to prevent accumulator history built up during
+        freeze from producing a miscalibrated effective LR at the start
+        of warmup.  Has no effect when num_freeze_steps=0 (default False).
     """
 
     def __init__(
@@ -116,6 +131,7 @@ class WarmupThenPlateauScheduler:
         min_lr: float | list[float] = 0.0,
         eps: float = 1e-8,
         verbose: bool = False,
+        reset_optimizer_on_unfreeze: bool = False,
     ):
         if patience is not None and factor >= 1.0:
             raise ValueError(f"factor must be < 1.0, got {factor}")
@@ -145,6 +161,7 @@ class WarmupThenPlateauScheduler:
         self.threshold_mode = threshold_mode
         self.eps = eps
         self.verbose = verbose
+        self.reset_optimizer_on_unfreeze = reset_optimizer_on_unfreeze
 
         # Capture base LRs from the optimizer before we touch anything
         self._base_lrs: list[float] = [g["lr"] for g in optimizer.param_groups]
@@ -164,6 +181,9 @@ class WarmupThenPlateauScheduler:
         # Step-based phase tracking
         self._total_steps: int = 0
         self._warmup_steps_elapsed: int = 0
+        # Tracks whether the optimizer reset at unfreeze has been done,
+        # so it fires exactly once even if a step() call spans the boundary.
+        self._optimizer_reset_done: bool = False
 
         # Plateau counters
         self._best: float = float("inf") if mode == "min" else float("-inf")
@@ -256,6 +276,14 @@ class WarmupThenPlateauScheduler:
         prev_phase = self._current_phase()
         self._total_steps += num_steps
 
+        # Reset optimizer state on the first step that exits the freeze phase.
+        if (self.reset_optimizer_on_unfreeze
+                and not self._optimizer_reset_done
+                and prev_phase == "freeze"
+                and self._current_phase() != "freeze"):
+            self._reset_optimizer_state()
+            self._optimizer_reset_done = True
+
         # Accumulate steps that fell inside the warmup window.
         # A single step() call may span a phase boundary, so we only count
         # the portion that actually landed in warmup.
@@ -315,6 +343,23 @@ class WarmupThenPlateauScheduler:
                 self._steps_without_improvement = 0
 
         self._apply_lr()
+
+    # ------------------------------------------------------------------
+    # Optimizer reset
+    # ------------------------------------------------------------------
+
+    def _reset_optimizer_state(self):
+        """Clear per-parameter optimizer state for all param groups.
+
+        PyTorch optimizers store their running statistics (momentum buffers,
+        squared-gradient accumulators, etc.) in optimizer.state, keyed by
+        parameter tensor.  Clearing these entries causes the optimizer to
+        reinitialise them from scratch on the next step(), as if the
+        parameters had never been seen before.
+        """
+        for group in self.optimizer.param_groups:
+            for p in group["params"]:
+                self.optimizer.state.pop(p, None)
 
     # ------------------------------------------------------------------
     # Plateau internals
@@ -447,6 +492,7 @@ class WarmupThenPlateauScheduler:
             "_cooldown_steps_remaining": self._cooldown_steps_remaining,
             "_plateau_multipliers": self._plateau_multipliers,
             "_plateau_phase_started": self._plateau_phase_started,
+            "_optimizer_reset_done": self._optimizer_reset_done,
         }
 
     def load_state_dict(self, state_dict: dict):
@@ -458,4 +504,5 @@ class WarmupThenPlateauScheduler:
         self._cooldown_steps_remaining = state_dict["_cooldown_steps_remaining"]
         self._plateau_multipliers = state_dict["_plateau_multipliers"]
         self._plateau_phase_started = state_dict["_plateau_phase_started"]
+        self._optimizer_reset_done = state_dict["_optimizer_reset_done"]
         self._apply_lr()
