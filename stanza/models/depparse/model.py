@@ -214,9 +214,10 @@ class EmbeddingParser(BaseParser):
 
         if self.bert_model is not None:
             device = next(self.parameters()).device
+            bert_finetuning = getattr(self, 'bert_finetuning', False)
             processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=True,
                                                      num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
-                                                     detach=not self.args.get('bert_finetune', False) or not self.training,
+                                                     detach=not bert_finetuning or not self.training,
                                                      peft_name=self.peft_name)
             if self.bert_layer_mix is not None:
                 # use a linear layer to weighted average the embedding dynamically
