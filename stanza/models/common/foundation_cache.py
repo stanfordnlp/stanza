@@ -31,11 +31,11 @@ class FoundationCache:
             self.lock = other.lock
         self.local_files_only=local_files_only
 
-    def load_bert(self, transformer_name, local_files_only=None):
-        m, t, _ = self.load_bert_with_peft(transformer_name, None, local_files_only=local_files_only)
+    def load_bert(self, transformer_name, local_files_only=None, enable_gradient_checkpointing=False):
+        m, t, _ = self.load_bert_with_peft(transformer_name, None, local_files_only=local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
         return m, t
 
-    def load_bert_with_peft(self, transformer_name, peft_name, local_files_only=None):
+    def load_bert_with_peft(self, transformer_name, peft_name, local_files_only=None, enable_gradient_checkpointing=False):
         """
         Load a transformer only once
 
@@ -49,10 +49,25 @@ class FoundationCache:
                     local_files_only = self.local_files_only
                 model, tokenizer = bert_embedding.load_bert(transformer_name, local_files_only=local_files_only)
                 self.bert[transformer_name] = BertRecord(model, tokenizer, {})
+
             else:
                 logger.debug("Reusing bert %s", transformer_name)
 
             bert_record = self.bert[transformer_name]
+            if enable_gradient_checkpointing:
+                # an issue with reusing existing bert models
+                # and enabling gradient checkpointing is that
+                # existing peft wrappers won't properly train
+                # hopefully that doesn't come up too often
+                # one way we try to avoid that is by only doing the
+                # enabling in the training routines, which generally
+                # only do one at a time
+                bert_record.model.gradient_checkpointing_enable()
+                # not all versions will enable input grads
+                # in which case some versions of peft might think the model
+                # doesn't need grads and winds up not finetuning anything
+                # enabling it ourselves here prevents that from happening
+                bert_record.model.enable_input_require_grads()
             if not peft_name:
                 return bert_record.model, bert_record.tokenizer, None
             if peft_name not in bert_record.peft_ids:
@@ -101,26 +116,26 @@ class NoTransformerFoundationCache(FoundationCache):
     since it will then have the finetuned weights for other models
     which don't want them
     """
-    def load_bert(self, transformer_name, local_files_only=None):
-        return load_bert(transformer_name, local_files_only=self.local_files_only if local_files_only is None else local_files_only)
+    def load_bert(self, transformer_name, local_files_only=None, enable_gradient_checkpointing=False):
+        return load_bert(transformer_name, local_files_only=self.local_files_only if local_files_only is None else local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
 
-    def load_bert_with_peft(self, transformer_name, peft_name, local_files_only=None):
-        return load_bert_with_peft(transformer_name, peft_name, local_files_only=self.local_files_only if local_files_only is None else local_files_only)
+    def load_bert_with_peft(self, transformer_name, peft_name, local_files_only=None, enable_gradient_checkpointing=False):
+        return load_bert_with_peft(transformer_name, peft_name, local_files_only=self.local_files_only if local_files_only is None else local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
 
-def load_bert(model_name, foundation_cache=None, local_files_only=None):
+def load_bert(model_name, foundation_cache=None, local_files_only=None, enable_gradient_checkpointing=False):
     """
     Load a bert, possibly using a foundation cache, ignoring the cache if None
     """
     if foundation_cache is None:
-        return bert_embedding.load_bert(model_name, local_files_only=local_files_only)
+        return bert_embedding.load_bert(model_name, local_files_only=local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
     else:
-        return foundation_cache.load_bert(model_name, local_files_only=local_files_only)
+        return foundation_cache.load_bert(model_name, local_files_only=local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
 
-def load_bert_with_peft(model_name, peft_name, foundation_cache=None, local_files_only=None):
+def load_bert_with_peft(model_name, peft_name, foundation_cache=None, local_files_only=None, enable_gradient_checkpointing=False):
     if foundation_cache is None:
-        m, t = bert_embedding.load_bert(model_name, local_files_only=local_files_only)
+        m, t = bert_embedding.load_bert(model_name, local_files_only=local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
         return m, t, peft_name
-    return foundation_cache.load_bert_with_peft(model_name, peft_name, local_files_only=local_files_only)
+    return foundation_cache.load_bert_with_peft(model_name, peft_name, local_files_only=local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
 
 def load_charlm(charlm_file, foundation_cache=None, finetune=False):
     if not charlm_file:

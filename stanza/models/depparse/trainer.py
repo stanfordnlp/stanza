@@ -63,7 +63,7 @@ class Trainer(BaseTrainer, ABC):
             self.args = args
             self.vocab = vocab
 
-            bert_model, bert_tokenizer = load_bert(self.args['bert_model'])
+            bert_model, bert_tokenizer = load_bert(self.args['bert_model'], enable_gradient_checkpointing=args['enable_gradient_checkpointing'])
             peft_name = None
             if self.args['use_peft']:
                 # fine tune the bert if we're using peft
@@ -196,6 +196,10 @@ class Trainer(BaseTrainer, ABC):
             model_type = "ensemble_transition"
         else:
             raise ValueError("Unknown model type: %s" % type(self.model))
+        # remove the gradient checkpointing arg so that when we reload,
+        # the model isn't trying to gradient checkpoint in a pipeline
+        if "enable_gradient_checkpointing" in config:
+            config.pop("enable_gradient_checkpointing")
         params = {
             'model': model_state,
             'vocab': self.vocab.state_dict(),
@@ -278,6 +282,11 @@ class Trainer(BaseTrainer, ABC):
                 logger.debug("Found peft weights for depparse; loading a peft adapter")
                 loaded_args["use_peft"] = True
 
+            # the loaded_args should not have been saved with this value
+            # (it gets removed in save())
+            # but the passed in args from the main program might have it,
+            # if someone deliberately set it while training
+            enable_gradient_checkpointing = loaded_args.get('enable_gradient_checkpointing')
             # load model
             emb_matrix = None
             if loaded_args['pretrain'] and pretrain is not None: # we use pretrain only if args['pretrain'] == True and pretrain is not None
@@ -288,7 +297,7 @@ class Trainer(BaseTrainer, ABC):
             peft_name = None
             if loaded_args.get('use_peft', False):
                 force_bert_saved = True
-                bert_model, bert_tokenizer, peft_name = load_bert_with_peft(loaded_args['bert_model'], "depparse", foundation_cache)
+                bert_model, bert_tokenizer, peft_name = load_bert_with_peft(loaded_args['bert_model'], "depparse", foundation_cache, enable_gradient_checkpointing=enable_gradient_checkpointing)
                 bert_model = load_peft_wrapper(bert_model, lora_weights, loaded_args, logger, peft_name)
                 logger.debug("Loaded peft with name %s", peft_name)
             else:
@@ -296,7 +305,7 @@ class Trainer(BaseTrainer, ABC):
                     logger.debug("Model %s has a finetuned transformer.  Not using transformer cache to make sure the finetuned version of the transformer isn't accidentally used elsewhere", model_name)
                     foundation_cache = NoTransformerFoundationCache(foundation_cache)
                     force_bert_saved = True
-                bert_model, bert_tokenizer = load_bert(loaded_args.get('bert_model'), foundation_cache)
+                bert_model, bert_tokenizer = load_bert(loaded_args.get('bert_model'), foundation_cache, enable_gradient_checkpointing=enable_gradient_checkpointing)
 
             if 'output_basic.weight' in checkpoint['model']:
                 model = TransitionTrainer.build_model(loaded_args, vocab, emb_matrix=emb_matrix, foundation_cache=foundation_cache, bert_model=bert_model, bert_tokenizer=bert_tokenizer, force_bert_saved=force_bert_saved, peft_name=peft_name)

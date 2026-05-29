@@ -76,7 +76,7 @@ def load_tokenizer(model_name, tokenizer_kwargs=None, local_files_only=False):
         return bert_tokenizer
     return None
 
-def load_bert(model_name, tokenizer_kwargs=None, local_files_only=False):
+def load_bert(model_name, tokenizer_kwargs=None, local_files_only=False, enable_gradient_checkpointing=False):
     if model_name:
         # such as: "vinai/phobert-base"
         try:
@@ -85,6 +85,13 @@ def load_bert(model_name, tokenizer_kwargs=None, local_files_only=False):
             raise ImportError("Please install transformers library for BERT support! Try `pip install transformers`.")
         bert_model = AutoModel.from_pretrained(model_name, local_files_only=local_files_only)
         bert_tokenizer = load_tokenizer(model_name, tokenizer_kwargs=tokenizer_kwargs, local_files_only=local_files_only)
+        if enable_gradient_checkpointing:
+            bert_model.gradient_checkpointing_enable()
+            # not all versions will enable input grads
+            # in which case some versions of peft might think the model
+            # doesn't need grads and winds up not finetuning anything
+            # enabling it ourselves here prevents that from happening
+            bert_model.enable_input_require_grads()
         return bert_model, bert_tokenizer
     return None, None
 

@@ -143,6 +143,7 @@ def build_argparse():
     parser.add_argument('--bert_start_finetuning', default=500, type=int, help='When to start finetuning the transformer')
     parser.add_argument('--bert_warmup_steps', default=500, type=int, help='How many steps for a linear warmup when finetuning the transformer')
     parser.add_argument('--bert_weight_decay', default=0.0, type=float, help='Weight decay bert parameters by this much')
+    parser.add_argument('--enable_gradient_checkpointing', default=False, action='store_true', help='Enable gradient checkpointing when training')
 
     parser.add_argument('--no_pretrain', dest='pretrain', action='store_false', help="Turn off pretrained embeddings.")
     parser.add_argument('--no_linearization', dest='linearization', action='store_false', help="Turn off linearization term.")
