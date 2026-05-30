@@ -31,3 +31,14 @@ def test_run_bert_empty_word(tiny_bert):
 
     assert len(foo) == 1
     assert torch.allclose(foo[0], bar[0])
+
+class TestLoadBert:
+    def test_loads_model_and_tokenizer(self):
+        model, tokenizer = load_bert(BERT_MODEL)
+        assert model is not None
+        assert tokenizer is not None
+
+    def test_none_model_name_returns_none(self):
+        model, tokenizer = load_bert(None)
+        assert model is None
+        assert tokenizer is None
