@@ -42,3 +42,25 @@ class TestLoadBert:
         model, tokenizer = load_bert(None)
         assert model is None
         assert tokenizer is None
+
+    # Note: some decoder-style models (LLaMA, GPT) set use_cache=False
+    # automatically when gradient_checkpointing_enable() is called, because
+    # their KV cache is incompatible with gradient checkpointing during
+    # training.  Encoder-only models like BERT and ELECTRA don't use the KV
+    # cache during the forward pass, so transformers leaves use_cache
+    # unchanged for them.  There is nothing to test or enforce here on the
+    # load_bert side -- the behaviour is entirely within transformers.
+    def test_gradient_checkpointing_disabled_by_default(self):
+        from stanza.models.common.bert_embedding import load_bert
+        model, _ = load_bert(BERT_MODEL)
+        assert not model.is_gradient_checkpointing
+
+    def test_gradient_checkpointing_enabled_when_requested(self):
+        from stanza.models.common.bert_embedding import load_bert
+        model, _ = load_bert(BERT_MODEL, enable_gradient_checkpointing=True)
+        assert model.is_gradient_checkpointing
+
+    def test_gradient_checkpointing_false_explicit(self):
+        from stanza.models.common.bert_embedding import load_bert
+        model, _ = load_bert(BERT_MODEL, enable_gradient_checkpointing=False)
+        assert not model.is_gradient_checkpointing
