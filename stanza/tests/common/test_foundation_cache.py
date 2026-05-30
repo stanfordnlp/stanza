@@ -14,6 +14,8 @@ from stanza.tests import TEST_MODELS_DIR
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
+BERT_MODEL = "hf-internal-testing/tiny-bert"
+
 def make_tiny_bert():
     """Load the tiny-bert model and tokenizer directly."""
     from transformers import AutoModel, AutoTokenizer
@@ -47,8 +49,6 @@ def test_charlm_cache():
     # it should remember the cached version
     model = cache.load_charlm(temp_file)
 
-BERT_MODEL = "hf-internal-testing/tiny-bert"
-
 class TestFoundationCacheLoadBert:
     def test_loads_successfully(self):
         cache = FoundationCache()
@@ -67,6 +67,21 @@ class TestFoundationCacheLoadBert:
         model, tokenizer = cache.load_bert(None)
         assert model is None
         assert tokenizer is None
+
+    def test_gradient_checkpointing_enabled_on_cached_model(self):
+        cache = FoundationCache()
+        # First call without checkpointing
+        model1, _ = cache.load_bert(BERT_MODEL, enable_gradient_checkpointing=False)
+        assert not model1.is_gradient_checkpointing
+        # Second call enables it on the same (cached) object
+        model2, _ = cache.load_bert(BERT_MODEL, enable_gradient_checkpointing=True)
+        assert model1 is model2
+        assert model2.is_gradient_checkpointing
+
+    def test_gradient_checkpointing_disabled_by_default(self):
+        cache = FoundationCache()
+        model, _ = cache.load_bert(BERT_MODEL)
+        assert not model.is_gradient_checkpointing
 
 
 class TestFoundationCacheLoadBertWithPeft:
@@ -93,6 +108,41 @@ class TestFoundationCacheLoadBertWithPeft:
         assert model is None
         assert tokenizer is None
         assert peft_name is None
+
+    def test_gradient_checkpointing_enabled_before_peft_name_assigned(self):
+        """
+        The critical ordering test: gradient checkpointing must be enabled on
+        the base model before PEFT wraps it.  We verify this by checking that
+        the model has gradient checkpointing on when the peft_name is returned,
+        meaning the flag was set before any PEFT adapter was registered.
+
+        Since foundation_cache only assigns the peft_name (wrapping is done
+        by the caller), what we're really testing here is that checkpointing
+        is applied to the base model at the right point in load_bert_with_peft.
+        """
+        cache = FoundationCache()
+        model, _, peft_name = cache.load_bert_with_peft(
+            BERT_MODEL, "depparse", enable_gradient_checkpointing=True
+        )
+        assert model.is_gradient_checkpointing
+
+    def test_gradient_checkpointing_disabled_by_default_with_peft(self):
+        cache = FoundationCache()
+        model, _, _ = cache.load_bert_with_peft(BERT_MODEL, "depparse")
+        assert not model.is_gradient_checkpointing
+
+    def test_gradient_checkpointing_persists_on_cached_model(self):
+        """Once enabled on a cached model, gradient checkpointing stays on
+        for subsequent callers that also request it."""
+        cache = FoundationCache()
+        model1, _, _ = cache.load_bert_with_peft(
+            BERT_MODEL, "depparse", enable_gradient_checkpointing=True
+        )
+        model2, _, _ = cache.load_bert_with_peft(
+            BERT_MODEL, "ner", enable_gradient_checkpointing=True
+        )
+        assert model1 is model2
+        assert model2.is_gradient_checkpointing
 
 class TestFoundationCacheThreadSafety:
     def test_concurrent_loads_return_same_object(self):
@@ -210,4 +260,15 @@ class TestNoTransformerFoundationCache:
         model1, _ = no_cache.load_bert(BERT_MODEL)
         model2, _ = no_cache.load_bert(BERT_MODEL)
         assert model1 is not model2
+
+    def test_gradient_checkpointing_still_works(self):
+        from stanza.models.common.foundation_cache import (
+            FoundationCache, NoTransformerFoundationCache
+        )
+        cache = FoundationCache()
+        no_cache = NoTransformerFoundationCache(cache)
+        model, _ = no_cache.load_bert(
+            BERT_MODEL, enable_gradient_checkpointing=True
+        )
+        assert model.is_gradient_checkpointing
 
