@@ -6,6 +6,8 @@ import warnings
 import pytest
 import torch
 
+from peft import get_peft_model_state_dict
+
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
 from stanza.models import ner_tagger
@@ -249,13 +251,57 @@ def test_with_bert_finetune(pretrain_file, tmp_path):
     reloaded_trainer.save(bar_save_filename)
     assert model_file_has_bert(bar_save_filename)
 
-def test_with_peft_finetune(pretrain_file, tmp_path):
-    # TODO: check that the peft tensors are moving when training?
+def test_with_peft_finetune(pretrain_file, tmp_path, monkeypatch):
+    """
+    Verify that PEFT LoRA training moves the adapter weights but not the
+    frozen base transformer weights.
+
+    We monkeypatch Trainer.__init__ to capture the model's state immediately
+    after construction, before any training steps.  This avoids any dependency
+    on random seeds producing identical initialization across two separate
+    Trainer constructions.
+    """
+    initial_lora = {}
+    initial_frozen_weights = {}
+    original_init = Trainer.__init__
+
+    def capturing_init(self, *args, **kwargs):
+        original_init(self, *args, **kwargs)
+        # only capture on the first construction (the training run),
+        # not on any subsequent loads
+        if not initial_lora and hasattr(self.model, 'bert_model') and self.model.peft_name:
+            for k, v in get_peft_model_state_dict(self.model.bert_model, adapter_name=self.model.peft_name).items():
+                initial_lora[k] = v.clone()
+            for name, param in self.model.bert_model.named_parameters():
+                if not param.requires_grad:
+                    initial_frozen_weights[name] = param.data.clone()
+                    break  # one frozen param is sufficient
+
+    monkeypatch.setattr(Trainer, '__init__', capturing_init)
+
     trainer = run_training(pretrain_file, tmp_path, '--bert_model', 'hf-internal-testing/tiny-bert', '--use_peft')
     model_file = os.path.join(trainer.args['save_dir'], trainer.args['save_name'])
+
+    assert initial_lora, "Monkeypatch did not capture initial LoRA weights — check that Trainer.__init__ was called"
+    assert initial_frozen_weights, "Monkeypatch did not capture any frozen base weights"
+
+    # --- Saved checkpoint checks ---
     checkpoint = torch.load(model_file, lambda storage, loc: storage, weights_only=True)
     assert 'bert_lora' in checkpoint
     assert not any(x.startswith("bert_model.") for x in checkpoint['model'].keys())
 
-    # test loading
+    # --- LoRA weights should have moved ---
+    trained_lora = get_peft_model_state_dict(trainer.model.bert_model, adapter_name=trainer.model.peft_name)
+    assert any(
+        not torch.allclose(initial_lora[k], trained_lora[k])
+        for k in initial_lora
+    ), "Expected at least one LoRA weight to change during training, but all were identical"
+
+    # --- Frozen base weights should be unchanged ---
+    frozen_name, initial_frozen = next(iter(initial_frozen_weights.items()))
+    trained_frozen = trainer.model.bert_model.state_dict()[frozen_name]
+    assert torch.allclose(initial_frozen, trained_frozen), \
+        f"Base transformer weight '{frozen_name}' changed during PEFT training, but it should be frozen"
+
+    # --- Test loading ---
     reloaded_trainer = Trainer(args=trainer.args, model_file=model_file)
