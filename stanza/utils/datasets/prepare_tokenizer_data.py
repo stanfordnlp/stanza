@@ -12,9 +12,11 @@ Data is output in 4 files:
 a file containing the mwt information
 a file containing the words and sentences in conllu format
 a file containing the raw text of each paragraph
-a file of 0,1,2 indicating word break or sentence break on a character level for the raw text
+a file of 0,1,2,3,4 indicating word break or sentence break on a character level for the raw text
   1: end of word
   2: end of sentence
+  3: end of MWT
+  4: ends both MWT and sentence
 """
 
 PARAGRAPH_BREAK = re.compile(r'\n\s*\n')
