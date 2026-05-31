@@ -142,6 +142,39 @@ class TestLemmatizer:
         """
         self.run_training(tmp_path, TRAIN_DATA, DEV_DATA)
 
+    def test_dict_only_train(self, tmp_path):
+        """
+        Train a dictionary-only lemmatizer via --dict_only and verify:
+          - no seq2seq model was built
+          - the dictionary was populated from the training data
+          - known words are predicted correctly
+          - unknown words fall back to the word itself
+          - all known words are flagged as skippable by skip_seq2seq
+        """
+        saved_model = self.run_training(tmp_path, TRAIN_DATA, DEV_DATA,
+                                        extra_args=["--dict_only"])
+
+        # no seq2seq model should have been constructed
+        assert saved_model.model is None
+
+        # spot-check words that appear in TRAIN_DATA with known lemmas;
+        # these should be in composite_dict (word+pos) at minimum
+        known_pairs = [("authorities", "NOUN"),
+                       ("announced",   "VERB"),
+                       ("operating",   "VERB")]
+        expected    = ["authority", "announce", "operate"]
+        preds = saved_model.predict_dict(known_pairs)
+        assert preds == expected, \
+            f"Dict lemmatizer produced wrong lemmas: {list(zip(known_pairs, preds))}"
+
+        # unknown words should be returned as-is
+        assert saved_model.predict_dict([("xyzzy", "NOUN")]) == ["xyzzy"]
+
+        # all known pairs should be flagged as skippable
+        skip = saved_model.skip_seq2seq(known_pairs)
+        assert all(skip), \
+            f"Expected all known words to be skippable, but got: {list(zip(known_pairs, skip))}"
+
     def test_charlm_train(self, tmp_path, charlm_args):
         """
         Simple test of a few 'epochs' of lemmatizer training
@@ -153,3 +186,179 @@ class TestLemmatizer:
         save_name = os.path.join(args['save_dir'], args['save_name'])
         checkpoint = torch.load(save_name, lambda storage, loc: storage, weights_only=True)
         assert not any(x.startswith("contextual_embedding") for x in checkpoint['model'].keys())
+
+
+class TestDictLemmatizer:
+    """
+    Tests for the dictionary component of the lemmatizer.
+
+    The dict lemmatizer is tested in isolation from the seq2seq model,
+    since its behavior is fully determined by the training triples and
+    can be checked exactly — unlike the seq2seq, which only approximates.
+    """
+
+    @pytest.fixture
+    def empty_trainer(self):
+        """
+        A minimal Trainer with empty dicts and no seq2seq model.
+
+        dict_only=True skips building the seq2seq, so no vocab or
+        pretrain file is needed.
+        """
+        args = {'dict_only': True, 'caseless': False}
+        t = trainer.Trainer.__new__(trainer.Trainer)
+        t.args = args
+        t.caseless = False
+        t.word_dict = {}
+        t.composite_dict = {}
+        t.contextual_lemmatizers = []
+        t.model = None
+        return t
+
+    def test_train_dict_basic(self, empty_trainer):
+        """
+        Known (word, pos, lemma) triples should be retrievable from
+        both composite_dict and word_dict after training.
+        """
+        triples = [("authorities", "NOUN", "authority"),
+                   ("announced", "VERB", "announce"),
+                   ("running", "VERB", "run")]
+        empty_trainer.train_dict(triples)
+
+        assert empty_trainer.composite_dict[("authorities", "NOUN")] == "authority"
+        assert empty_trainer.composite_dict[("announced", "VERB")] == "announce"
+        assert empty_trainer.word_dict["authorities"] == "authority"
+        assert empty_trainer.word_dict["running"] == "run"
+
+    def test_train_dict_frequency_priority(self, empty_trainer):
+        """
+        When a word appears with multiple lemmas, the most frequent
+        mapping should win.
+        """
+        triples = [("ran", "VERB", "run"),
+                   ("ran", "VERB", "run"),
+                   ("ran", "VERB", "run"),
+                   ("ran", "VERB", "ran")]  # less frequent
+        empty_trainer.train_dict(triples)
+
+        assert empty_trainer.composite_dict[("ran", "VERB")] == "run"
+        assert empty_trainer.word_dict["ran"] == "run"
+
+    def test_train_dict_no_word_dict_update(self, empty_trainer):
+        """
+        With update_word_dict=False, only composite_dict is populated.
+        """
+        triples = [("authorities", "NOUN", "authority")]
+        empty_trainer.train_dict(triples, update_word_dict=False)
+
+        assert empty_trainer.composite_dict[("authorities", "NOUN")] == "authority"
+        assert "authorities" not in empty_trainer.word_dict
+
+    def test_predict_dict_composite_priority(self, empty_trainer):
+        """
+        composite_dict (word+pos) takes priority over word_dict.
+
+        This matters for words that have different lemmas for different POS,
+        e.g. "runs" as NOUN -> "run" but "runs" as VERB -> "run" too,
+        though the test uses a case where they differ.
+        """
+        empty_trainer.composite_dict[("left", "VERB")] = "leave"
+        empty_trainer.composite_dict[("left", "ADJ")] = "left"
+        empty_trainer.word_dict["left"] = "leave"  # word_dict would be wrong for ADJ
+
+        assert empty_trainer.predict_dict([("left", "VERB")]) == ["leave"]
+        assert empty_trainer.predict_dict([("left", "ADJ")]) == ["left"]
+
+    def test_predict_dict_word_dict_fallback(self, empty_trainer):
+        """
+        When a (word, pos) pair is absent from composite_dict but the
+        word is in word_dict, word_dict is used as fallback.
+        """
+        empty_trainer.word_dict["running"] = "run"
+        # no composite_dict entry for ("running", "VERB")
+
+        assert empty_trainer.predict_dict([("running", "VERB")]) == ["run"]
+
+    def test_predict_dict_unknown_fallback(self, empty_trainer):
+        """
+        Words absent from both dicts should be returned as-is (identity).
+        """
+        result = empty_trainer.predict_dict([("xyzzy", "NOUN")])
+        assert result == ["xyzzy"]
+
+    def test_skip_seq2seq(self, empty_trainer):
+        """
+        skip_seq2seq should return True for words in either dict and
+        False for unknown words.
+        """
+        empty_trainer.composite_dict[("announced", "VERB")] = "announce"
+        empty_trainer.word_dict["running"] = "run"
+
+        pairs = [("announced", "VERB"),   # in composite_dict
+                 ("running", "NOUN"),     # in word_dict (pos doesn't match composite)
+                 ("xyzzy", "NOUN")]       # unknown
+
+        skip = empty_trainer.skip_seq2seq(pairs)
+        assert skip == [True, True, False]
+
+    def test_ensemble_prefers_dict(self, empty_trainer):
+        """
+        ensemble() should use the dict prediction for known words and
+        fall back to the seq2seq prediction (other_preds) for unknowns.
+        """
+        empty_trainer.composite_dict[("announced", "VERB")] = "announce"
+        empty_trainer.word_dict["running"] = "run"
+
+        pairs = [("announced", "VERB"),   # known via composite_dict
+                 ("running", "NOUN"),     # known via word_dict
+                 ("xyzzy", "NOUN")]       # unknown: should use seq2seq pred
+
+        seq2seq_preds = ["announce_wrong", "run_wrong", "the_seq2seq_answer"]
+        result = empty_trainer.ensemble(pairs, seq2seq_preds)
+
+        assert result == ["announce", "run", "the_seq2seq_answer"]
+
+    def test_ensemble_none_fallback(self, empty_trainer):
+        """
+        ensemble() should never return None — if the dict lookup
+        somehow yields None, it falls back to the word itself.
+        """
+        # manually inject a None to simulate a corrupt dict entry
+        empty_trainer.composite_dict[("broken", "NOUN")] = None
+
+        result = empty_trainer.ensemble([("broken", "NOUN")], ["seq2seq_pred"])
+        assert result == ["broken"]
+
+    def test_dict_roundtrip(self, tmp_path):
+        """
+        Train a dict-only lemmatizer, save it, reload it, and verify
+        that predictions are identical before and after the roundtrip.
+        """
+        args = {'dict_only': True, 'caseless': False}
+        t = trainer.Trainer.__new__(trainer.Trainer)
+        t.args = args
+        t.caseless = False
+        t.word_dict = {}
+        t.composite_dict = {}
+        t.contextual_lemmatizers = []
+        t.model = None
+
+        triples = [("authorities", "NOUN", "authority"),
+                   ("announced", "VERB", "announce"),
+                   ("running", "VERB", "run")]
+        t.train_dict(triples)
+
+        # need a vocab for save/load; borrow from a minimal MultiVocab
+        from stanza.models.lemma.vocab import MultiVocab, Vocab
+        char_vocab = Vocab("abcdefghijklmnopqrstuvwxyz", "en")
+        pos_vocab = Vocab(["NOUN", "VERB"], "en")
+        t.vocab = MultiVocab({'char': char_vocab, 'pos': pos_vocab})
+
+        save_path = str(tmp_path / "dict_lemmatizer.pt")
+        t.save(save_path)
+
+        loaded = trainer.Trainer(model_file=save_path, device='cpu')
+
+        pairs = [("authorities", "NOUN"), ("announced", "VERB"),
+                 ("running", "VERB"), ("xyzzy", "NOUN")]
+        assert loaded.predict_dict(pairs) == t.predict_dict(pairs)
