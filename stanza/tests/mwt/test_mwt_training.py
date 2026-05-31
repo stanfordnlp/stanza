@@ -21,9 +21,11 @@ import pytest
 import torch
 
 from stanza.models import mwt_expander
-from stanza.models.mwt.trainer import Trainer
 from stanza.models.mwt.character_classifier import CharacterClassifier
+from stanza.models.mwt.data import BinaryDataLoader, DataLoader
+from stanza.models.mwt.trainer import Trainer
 from stanza.models.common.seq2seq_model import Seq2SeqModel
+from stanza.utils.conll import CoNLL
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
@@ -182,7 +184,7 @@ class TestMWTTraining:
         trainer, model_file = run_training(tmp_path)
         assert os.path.exists(model_file)
         assert not trainer.args['force_exact_pieces'], \
-            "Expected auto-detection to not set trainer.args['force_exact_pieces'] for French MWT"
+            "Expected auto-detection to leave force_exact_pieces unset/False for French MWT"
         assert isinstance(trainer.model, Seq2SeqModel), \
             "Expected seq2seq model when auto-detection picks non-exact-pieces path"
 
@@ -215,6 +217,80 @@ class TestMWTTraining:
         assert trainer.expansion_dict["du"]  == "de le"
         assert trainer.expansion_dict["au"]  == "à le"
         assert trainer.expansion_dict["des"] == "de les"
+
+    def test_seq2seq_inference(self, tmp_path):
+        """
+        After training the seq2seq model, predict() should run without error
+        and return one expansion string per MWT in the eval doc.
+
+        FR_DEV has one sentence with one MWT ("des"), so we expect exactly
+        one prediction.  We do not assert the exact text — two epochs of
+        training on tiny data is not reliable enough for that — but we do
+        assert it is a non-empty string, which rules out the blank-output
+        fallback path in predict() that substitutes the original token.
+        """
+        trainer, model_file = run_training(tmp_path, extra_args=["--no_force_exact_pieces"])
+        loaded = Trainer(model_file=model_file)
+
+        doc = CoNLL.conll2doc(input_str=FR_DEV)
+        dataloader = DataLoader(doc, 10, loaded.args, vocab=loaded.vocab,
+                                evaluation=True, expand_unk_vocab=True)
+        preds = []
+        for batch in dataloader.to_loader():
+            preds += loaded.predict(batch)
+
+        # FR_DEV has one MWT ("des")
+        assert len(preds) == 1, f"Expected 1 prediction, got {len(preds)}"
+        assert isinstance(preds[0], str) and preds[0], \
+            f"Expected a non-empty string prediction, got {preds[0]!r}"
+
+    def test_character_classifier_inference(self, tmp_path):
+        """
+        After training the CharacterClassifier model on English possessives,
+        predict() should return one expansion per MWT.
+
+        EN_DEV has one sentence with one MWT ("Children's"), so we expect
+        exactly one prediction.  As with the seq2seq test we don't assert
+        exact text given the short training run, but we do assert it is
+        non-empty and contains a space (i.e. the token was actually split).
+        """
+        trainer, model_file = run_training(tmp_path, train_text=EN_TRAIN, dev_text=EN_DEV)
+        loaded = Trainer(model_file=model_file)
+
+        doc = CoNLL.conll2doc(input_str=EN_DEV)
+        dataloader = BinaryDataLoader(doc, 10, loaded.args, vocab=loaded.vocab,
+                                      evaluation=True, expand_unk_vocab=True)
+        preds = []
+        for batch in dataloader.to_loader():
+            preds += loaded.predict(batch, never_decode_unk=True, vocab=dataloader.vocab)
+
+        # EN_DEV has one MWT ("Children's")
+        assert len(preds) == 1, f"Expected 1 prediction, got {len(preds)}"
+        assert isinstance(preds[0], str) and preds[0], \
+            f"Expected a non-empty string prediction, got {preds[0]!r}"
+        assert ' ' in preds[0], \
+            f"Expected the prediction to contain a space (token was split), got {preds[0]!r}"
+
+    def test_dict_only_inference(self, tmp_path):
+        """
+        The dict-only model's predict_dict() should return exact expansions
+        for known MWT and the original token for unknowns.
+
+        Unlike the neural inference tests, dict predictions are fully
+        deterministic from the training data, so we can assert exact values.
+        """
+        trainer, _ = run_training(tmp_path, extra_args=["--dict_only", "--no_force_exact_pieces"])
+
+        doc = CoNLL.conll2doc(input_str=FR_DEV)
+        # get_mwt_expansions(evaluation=True) returns the surface forms of MWT tokens
+        mwt_tokens = doc.get_mwt_expansions(evaluation=True)
+
+        preds = trainer.predict_dict(mwt_tokens)
+
+        # FR_DEV has one MWT: "des" -> "de les"
+        assert len(preds) == 1, f"Expected 1 prediction, got {len(preds)}"
+        assert preds[0] == "de les", \
+            f"Expected dict to expand 'des' to 'de les', got {preds[0]!r}"
 
     def test_save_load_roundtrip(self, tmp_path):
         """
