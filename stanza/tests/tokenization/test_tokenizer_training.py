@@ -259,14 +259,13 @@ class TestTokenizer:
                                      extra_args=['--input_dropout'])
         assert os.path.exists(args['save_name'])
 
-    # disabled because of a bug in conv_res
-    #def test_conv_res(self, tmp_path):
-    #    """
-    #    Verify --conv_res (convolutional residual layers) trains without error.
-    #    """
-    #    trainer, args = run_training(tmp_path, TRAIN_SENTENCES_NO_MWT,
-    #                                 extra_args=['--conv_res', '1'])
-    #    assert os.path.exists(args['save_name'])
+    def test_conv_res(self, tmp_path):
+        """
+        Verify --conv_res (convolutional residual layers) trains without error.
+        """
+        trainer, args = run_training(tmp_path, TRAIN_SENTENCES_NO_MWT,
+                                     extra_args=['--conv_res', '1'])
+        assert os.path.exists(args['save_name'])
 
     def test_save_load_roundtrip(self, tmp_path):
         """

@@ -72,12 +72,13 @@ class Tokenizer(nn.Module):
         feats = self.dropout_feat(feats)
 
         emb = torch.cat([emb, feats], 2)
+        if self.args['conv_res'] is not None:
+            conv_input = emb.transpose(1, 2).contiguous()
         emb = pack_padded_sequence(emb, lengths, batch_first=True)
         inp, _ = self.rnn(emb)
         inp, _ = pad_packed_sequence(inp, batch_first=True)
 
         if self.args['conv_res'] is not None:
-            conv_input = emb.transpose(1, 2).contiguous()
             if not self.args.get('hier_conv_res', False):
                 for l in self.conv_res:
                     inp = inp + l(conv_input).transpose(1, 2).contiguous()
