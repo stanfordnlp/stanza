@@ -1441,12 +1441,13 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
         sents = read_sentences_from_conllu(input_conllu)
         write_sentences_to_conllu(output_conllu, sents)
 
-def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, augment=True):
+def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args):
     """
     Process a normal UD treebank with train/dev/test splits
 
     SL-SSJ and other datasets with inline modifications all use this code path as well.
     """
+    augment = args.augment
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment)
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment)
     prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment)
@@ -1595,7 +1596,7 @@ def process_treebank(treebank, model_type, paths, args):
             if not common.find_treebank_dataset_file(treebank, udbase_dir, "dev", "conllu", fail=False):
                 success = process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args)
             else:
-                success = process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args.augment)
+                success = process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args)
 
     if success and (model_type is common.ModelType.TOKENIZER or model_type is common.ModelType.MWT):
         if not short_name in ('th_orchid', 'th_lst20'):
