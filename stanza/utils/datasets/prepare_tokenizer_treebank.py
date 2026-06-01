@@ -718,68 +718,6 @@ def write_augmented_dataset(input_conllu, output_conllu, augment_function):
 
     write_sentences_to_conllu(output_conllu, new_sents)
 
-def remove_spaces_from_sentences(sents):
-    """
-    Makes sure every word in the list of sentences has SpaceAfter=No.
-
-    Returns a new list of sentences
-    """
-    new_sents = []
-    for sentence in sents:
-        new_sentence = []
-        for word in sentence:
-            if word.startswith("#"):
-                new_sentence.append(word)
-                continue
-            pieces = word.split("\t")
-            if pieces[-1] == "_":
-                pieces[-1] = "SpaceAfter=No"
-            elif pieces[-1].find("SpaceAfter=No") >= 0:
-                pass
-            else:
-                raise ValueError("oops")
-            word = "\t".join(pieces)
-            new_sentence.append(word)
-        new_sents.append(new_sentence)
-    return new_sents
-
-def remove_spaces(input_conllu, output_conllu):
-    """
-    Turns a dataset into something appropriate for building a segmenter.
-
-    For example, this works well on the Korean datasets.
-    """
-    sents = read_sentences_from_conllu(input_conllu)
-
-    new_sents = remove_spaces_from_sentences(sents)
-
-    write_sentences_to_conllu(output_conllu, new_sents)
-
-
-def build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_conllu):
-    """
-    Builds a combined dataset out of multiple Korean datasets.
-
-    Currently this uses GSD and Kaist.  If a segmenter-appropriate
-    dataset was requested, spaces are removed.
-
-    TODO: we need to handle the difference in xpos tags somehow.
-    """
-    gsd_conllu = common.find_treebank_dataset_file("UD_Korean-GSD", udbase_dir, dataset, "conllu")
-    kaist_conllu = common.find_treebank_dataset_file("UD_Korean-Kaist", udbase_dir, dataset, "conllu")
-    sents = read_sentences_from_conllu(gsd_conllu) + read_sentences_from_conllu(kaist_conllu)
-
-    segmenter = short_name.endswith("_seg")
-    if segmenter:
-        sents = remove_spaces_from_sentences(sents)
-
-    write_sentences_to_conllu(output_conllu, sents)
-
-def build_combined_korean(udbase_dir, tokenizer_dir, short_name):
-    for dataset in ("train", "dev", "test"):
-        output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
-        build_combined_korean_dataset(udbase_dir, tokenizer_dir, short_name, dataset, output_conllu)
-
 def build_combined_italian_dataset(paths, model_type, dataset):
     udbase_dir = paths["UDBASE"]
     if dataset == 'train':
@@ -1431,8 +1369,6 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
 
     if short_name == "te_mtg" and dataset == 'train' and augment:
         write_augmented_dataset(input_conllu, output_conllu, augment_telugu)
-    elif short_name.startswith("ko_") and short_name.endswith("_seg"):
-        remove_spaces(input_conllu, output_conllu)
     elif short_name.startswith("grc_") and short_name.endswith("-diacritics"):
         write_augmented_dataset(input_conllu, output_conllu, augment_accents)
     elif dataset == 'train' and augment:
@@ -1572,8 +1508,6 @@ def process_treebank(treebank, model_type, paths, args):
         convert_th_best.main(paths["STANZA_EXTERN_DIR"], tokenizer_dir)
     elif short_name == "ml_cochin":
         convert_ml_cochin.main(paths["STANZA_EXTERN_DIR"], tokenizer_dir)
-    elif short_name.startswith("ko_combined"):
-        build_combined_korean(udbase_dir, tokenizer_dir, short_name)
     elif short_name in COMBINED_FNS: # eg "it_combined", "en_combined", etc
         build_combined_dataset(paths, short_name, model_type, args)
     elif short_name in BIO_DATASETS:
