@@ -203,7 +203,7 @@ class NERTagger(nn.Module):
         if self.bert_model is not None:
             device = next(self.parameters()).device
             processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, device, keep_endpoints=False,
-                                                     detach=not self.args.get('bert_finetune', False),
+                                                     detach=not self.args.get('bert_finetune', False) or not self.training,
                                                      bert_layer_mix=self.bert_layer_mix if self.bert_layer_mix is not None else None,
                                                      peft_name=self.peft_name)
 
