@@ -323,14 +323,9 @@ class CNNClassifier(BaseClassifier):
     def extract_bert_embeddings(self, inputs, max_phrase_len, begin_paddings, device):
         bert_embeddings = extract_bert_embeddings(self.config.bert_model, self.bert_tokenizer, self.bert_model, inputs, device,
                                                   keep_endpoints=False,
-                                                  num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
                                                   detach=not self.config.bert_finetune,
+                                                  bert_layer_mix=self.bert_layer_mix if self.bert_layer_mix is not None else None,
                                                   peft_name=self.peft_name)
-        if self.bert_layer_mix is not None:
-            # add the average so that the default behavior is to
-            # take an average of the N layers, and anything else
-            # other than that needs to be learned
-            bert_embeddings = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in bert_embeddings]
         bert_inputs = torch.zeros((len(inputs), max_phrase_len, bert_embeddings[0].shape[-1]), device=device)
         for idx, rep in enumerate(bert_embeddings):
             start = begin_paddings[idx]

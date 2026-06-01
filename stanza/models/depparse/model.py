@@ -216,12 +216,9 @@ class EmbeddingParser(BaseParser):
             device = next(self.parameters()).device
             bert_finetuning = getattr(self, 'bert_finetuning', False)
             processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=True,
-                                                     num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
                                                      detach=not bert_finetuning or not self.training,
+                                                     bert_layer_mix=self.bert_layer_mix if self.bert_layer_mix is not None else None,
                                                      peft_name=self.peft_name)
-            if self.bert_layer_mix is not None:
-                # use a linear layer to weighted average the embedding dynamically
-                processed_bert = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in processed_bert]
 
             # we are using the first endpoint from the transformer as the "word" for ROOT
             processed_bert = [x[:-1, :] for x in processed_bert]
