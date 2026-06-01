@@ -180,16 +180,9 @@ class Tagger(nn.Module):
         if self.bert_model is not None:
             device = next(self.parameters()).device
             processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, text, device, keep_endpoints=False,
-                                                     num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
                                                      detach=not self.args.get('bert_finetune', False) or not self.training,
+                                                     bert_layer_mix=self.bert_layer_mix if self.bert_layer_mix is not None else None,
                                                      peft_name=self.peft_name)
-
-            if self.bert_layer_mix is not None:
-                # add the average so that the default behavior is to
-                # take an average of the N layers, and anything else
-                # other than that needs to be learned
-                # TODO: refactor this
-                processed_bert = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in processed_bert]
 
             processed_bert = pad_sequence(processed_bert, batch_first=True)
             inputs += [pack(processed_bert)]

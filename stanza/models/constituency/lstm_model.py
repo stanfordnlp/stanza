@@ -796,14 +796,9 @@ class LSTMModel(BaseModel, nn.Module):
             # we will take 1:-1 if we don't care about the endpoints
             bert_embeddings = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, all_word_labels, device,
                                                       keep_endpoints=self.sentence_boundary_vectors is not SentenceBoundary.NONE,
-                                                      num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
                                                       detach=not self.args['bert_finetune'] and not self.args['stage1_bert_finetune'],
+                                                      bert_layer_mix=self.bert_layer_mix if self.bert_layer_mix is not None else None,
                                                       peft_name=self.peft_name)
-            if self.bert_layer_mix is not None:
-                # add the average so that the default behavior is to
-                # take an average of the N layers, and anything else
-                # other than that needs to be learned
-                bert_embeddings = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in bert_embeddings]
 
             all_word_inputs = [torch.cat((x, y), axis=1) for x, y in zip(all_word_inputs, bert_embeddings)]
 

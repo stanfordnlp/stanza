@@ -147,26 +147,36 @@ def needs_length_filter(model_name):
         return True
     return False
 
-def cloned_feature(feature, num_layers, detach=True):
+def cloned_feature(feature, detach=True, bert_layer_mix=None):
     """
-    Clone & detach the feature, keeping the last N layers (or averaging -2,-3,-4 if not specified)
+    Clone & detach the feature, averaging the last N layers (or averaging -2,-3,-4 if not specified)
 
-    averaging 3 of the last 4 layers worked well for non-VI languages
+    averaging 3 of the last 4 layers worked well for non-VI languages.
+    otherwise, can pass in a torch.Linear (without bias) for a weighted average
     """
     # in most cases, need to call with features.hidden_states
     # bartpho is different - it has features.decoder_hidden_states
     # feature[2] is the same for bert, but it didn't work for
     # older versions of transformers for xlnet
-    if num_layers is None:
-        feature = torch.stack(feature[-4:-1], axis=3).sum(axis=3) / 4
+    if bert_layer_mix is not None:
+        N = bert_layer_mix.in_features
+        layers = feature[-N:]
     else:
-        feature = torch.stack(feature[-num_layers:], axis=3)
-    if detach:
-        return feature.clone().detach()
-    else:
-        return feature
+        layers = feature[-4:-1]  # legacy: average of last 3 layers
 
-def extract_bart_word_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach=True):
+    if detach:
+        layers = [f.clone().detach() for f in layers]
+
+    if bert_layer_mix is not None:
+        uniform = sum(layers) / N
+        weighted = sum(w * f for w, f in zip(bert_layer_mix.weight[0], layers))
+        return uniform + weighted
+    else:
+        # this was a historical miscounting
+        # probably no models still use it anyway
+        return sum(layers) / 4
+
+def extract_bart_word_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, detach=True, bert_layer_mix=None):
     """
     Handles vi-bart.  May need testing before using on other bart
 
@@ -188,10 +198,10 @@ def extract_bart_word_embeddings(model_name, tokenizer, model, data, device, kee
         if detach:
             with torch.no_grad():
                 features = model(input_ids, attention_mask=attention_mask, output_hidden_states=True)
-                features = cloned_feature(features.decoder_hidden_states, num_layers, detach)
+                features = cloned_feature(features.decoder_hidden_states, detach, bert_layer_mix)
         else:
             features = model(input_ids, attention_mask=attention_mask, output_hidden_states=True)
-            features = cloned_feature(features.decoder_hidden_states, num_layers, detach)
+            features = cloned_feature(features.decoder_hidden_states, detach, bert_layer_mix)
 
         for feature, sentence in zip(features, data):
             # +2 for the endpoints
@@ -202,7 +212,7 @@ def extract_bart_word_embeddings(model_name, tokenizer, model, data, device, kee
 
     return processed
 
-def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach=True):
+def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, detach=True, bert_layer_mix=None):
     """
     Extract transformer embeddings using a method specifically for phobert
 
@@ -253,10 +263,10 @@ def extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_
             with torch.no_grad():
                 # TODO: is the clone().detach() necessary?
                 feature = model(padded_input.clone().detach().to(device), attention_mask=attention_mask, output_hidden_states=True)
-                features += cloned_feature(feature.hidden_states, num_layers, detach)
+                features += cloned_feature(feature.hidden_states, detach, bert_layer_mix)
         else:
             feature = model(padded_input.to(device), attention_mask=attention_mask, output_hidden_states=True)
-            features += cloned_feature(feature.hidden_states, num_layers, detach)
+            features += cloned_feature(feature.hidden_states, detach, bert_layer_mix)
 
     assert len(features)==size
     assert len(features)==len(processed)
@@ -321,7 +331,7 @@ def fix_blank_tokens(tokenizer, data):
         new_data.append(new_sentence)
     return new_data
 
-def extract_llama_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach=True):
+def extract_llama_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, detach=True, bert_layer_mix=None):
     # will calculate attention masks ourselves later
     tokenized = tokenizer(data, is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
 
@@ -347,9 +357,9 @@ def extract_llama_embeddings(model_name, tokenizer, model, data, device, keep_en
 
         if detach:
             with torch.no_grad():
-                features += build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_layers, detach, device)
+                features += build_cloned_features(model, tokenizer, attention_tensor, id_tensor, detach, bert_layer_mix, device)
         else:
-            features += build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_layers, detach, device)
+            features += build_cloned_features(model, tokenizer, attention_tensor, id_tensor, detach, bert_layer_mix, device)
 
     processed = []
     #process the output
@@ -363,7 +373,7 @@ def extract_llama_embeddings(model_name, tokenizer, model, data, device, keep_en
     return processed
 
 
-def extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach=True):
+def extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, detach=True, bert_layer_mix=None):
     # using attention masks makes contextual embeddings much more useful for downstream tasks
     tokenized = tokenizer(data, is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=False)
     #tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=True)
@@ -413,14 +423,14 @@ def extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_en
                 # feature[2] is the same for bert, but it didn't work for
                 # older versions of transformers for xlnet
                 # feature = feature[2]
-                features += cloned_feature(feature.hidden_states, num_layers, detach)
+                features += cloned_feature(feature.hidden_states, detach, bert_layer_mix)
         else:
             id_tensor = torch.tensor(input_ids, device=device)
             feature = model(id_tensor, attention_mask=attention_mask, output_hidden_states=True)
             # feature[2] is the same for bert, but it didn't work for
             # older versions of transformers for xlnet
             # feature = feature[2]
-            features += cloned_feature(feature.hidden_states, num_layers, detach)
+            features += cloned_feature(feature.hidden_states, detach, bert_layer_mix)
 
     processed = []
     #process the output
@@ -433,7 +443,7 @@ def extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_en
 
     return processed
 
-def build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_layers, detach, device):
+def build_cloned_features(model, tokenizer, attention_tensor, id_tensor, detach, bert_layer_mix, device):
     """
     Extract an embedding from the given transformer for a certain attention mask and tokens range
 
@@ -449,7 +459,7 @@ def build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_lay
     """
     if attention_tensor.shape[1] <= tokenizer.model_max_length:
         features = model(id_tensor, attention_mask=attention_tensor, output_hidden_states=True)
-        features = cloned_feature(features.hidden_states, num_layers, detach)
+        features = cloned_feature(features.hidden_states, detach, bert_layer_mix)
         return features
 
     slices = []
@@ -463,7 +473,7 @@ def build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_lay
         attention_slice = remaining_attention[:, :tokenizer.model_max_length]
         id_slice = remaining_ids[:, :tokenizer.model_max_length]
         features = model(id_slice, attention_mask=attention_slice, output_hidden_states=True)
-        features = cloned_feature(features.hidden_states, num_layers, detach)
+        features = cloned_feature(features.hidden_states, detach, bert_layer_mix)
         if len(slices) > 0:
             features = features[:, prefix_len:, :]
         slices.append(features)
@@ -497,7 +507,7 @@ def convert_to_position_list(sentence, offsets):
             break
     return list_offsets
 
-def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach):
+def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, detach, bert_layer_mix):
     #add add_prefix_space = True for RoBerTa-- error if not
     # using attention masks makes contextual embeddings much more useful for downstream tasks
     tokenized = tokenizer(data, padding="longest", is_split_into_words=True, return_offsets_mapping=False, return_attention_mask=True)
@@ -534,9 +544,9 @@ def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_end
         id_tensor = torch.tensor(tokenized['input_ids'][128*i:128*i+128], device=device)
         if detach:
             with torch.no_grad():
-                features += build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_layers, detach, device)
+                features += build_cloned_features(model, tokenizer, attention_tensor, id_tensor, detach, bert_layer_mix, device)
         else:
-            features += build_cloned_features(model, tokenizer, attention_tensor, id_tensor, num_layers, detach, device)
+            features += build_cloned_features(model, tokenizer, attention_tensor, id_tensor, detach, bert_layer_mix, device)
 
     processed = []
     #process the output
@@ -549,12 +559,12 @@ def extract_base_embeddings(model_name, tokenizer, model, data, device, keep_end
 
     return processed
 
-def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers=None, detach=True, peft_name=None):
+def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, detach=True, bert_layer_mix=None, peft_name=None):
     """
     Extract transformer embeddings using a generic roberta extraction
 
     data: list of list of string (the text tokens)
-    num_layers: how many to return.  If None, the average of -2, -3, -4 is returned
+    bert_layer_mix: how to average the final layers.  If None, the average of -2, -3, -4 is returned
     """
     # TODO: can maybe cache this value for a model and save some time
     # TODO: too bad it isn't thread safe, but then again, who does?
@@ -566,21 +576,21 @@ def extract_bert_embeddings(model_name, tokenizer, model, data, device, keep_end
         model.set_adapter(peft_name)
 
     if model_name.startswith("vinai/phobert"):
-        return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+        return extract_phobert_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, detach, bert_layer_mix)
 
     if 'bart' in model_name:
         # this should work with "vinai/bartpho-word"
         # not sure this works with any other Bart
-        return extract_bart_word_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+        return extract_bart_word_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, detach, bert_layer_mix)
 
     if isinstance(data, tuple):
         data = list(data)
 
     if "xlnet" in model_name:
-        return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+        return extract_xlnet_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, detach, bert_layer_mix)
 
     if "LLaMA" in model_name:
-        return extract_llama_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+        return extract_llama_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, detach, bert_layer_mix)
 
-    return extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, num_layers, detach)
+    return extract_base_embeddings(model_name, tokenizer, model, data, device, keep_endpoints, detach, bert_layer_mix)
 

@@ -46,6 +46,7 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
             nn.ReLU(),
             nn.Linear(64, output_dim)
         )
+        self.bert_layer_mix = nn.Linear(2, 1, bias=False)
 
     def get_save_dict(self):
         save_dict = {
@@ -78,9 +79,10 @@ class LemmaClassifierWithTransformer(LemmaClassifier):
         """
         device = next(self.transformer.parameters()).device
         bert_embeddings = extract_bert_embeddings(self.transformer_name, self.tokenizer, self.transformer, sentences, device,
-                                                  keep_endpoints=False, num_layers=1, detach=True)
+                                                  keep_endpoints=False, detach=True,
+                                                  bert_layer_mix=self.bert_layer_mix if self.bert_layer_mix is not None else None)
         embeddings = [emb[idx] for idx, emb in zip(idx_positions, bert_embeddings)]
-        embeddings = torch.stack(embeddings, dim=0)[:, :, 0]
+        embeddings = torch.stack(embeddings, dim=0)
         # pass to the MLP
         output = self.mlp(embeddings)
         return output

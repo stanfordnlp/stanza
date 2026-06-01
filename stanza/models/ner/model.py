@@ -203,12 +203,9 @@ class NERTagger(nn.Module):
         if self.bert_model is not None:
             device = next(self.parameters()).device
             processed_bert = extract_bert_embeddings(self.args['bert_model'], self.bert_tokenizer, self.bert_model, sentences, device, keep_endpoints=False,
-                                                     num_layers=self.bert_layer_mix.in_features if self.bert_layer_mix is not None else None,
                                                      detach=not self.args.get('bert_finetune', False),
+                                                     bert_layer_mix=self.bert_layer_mix if self.bert_layer_mix is not None else None,
                                                      peft_name=self.peft_name)
-            if self.bert_layer_mix is not None:
-                # use a linear layer to weighted average the embedding dynamically
-                processed_bert = [self.bert_layer_mix(feature).squeeze(2) + feature.sum(axis=2) / self.bert_layer_mix.in_features for feature in processed_bert]
 
             processed_bert = pad_sequence(processed_bert, batch_first=True)
             inputs += [pack(processed_bert)]
