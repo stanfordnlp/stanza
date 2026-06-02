@@ -17,6 +17,8 @@ class UnknownLanguageError(ValueError):
 # using the two letter abbreviations, so we add those for non-UD
 # languages in the hopes that we've guessed right if those languages
 # are eventually processed
+# One source for the known languages UD may add in the future:
+#   https://universaldependencies.org/languages.html
 lcode2lang_raw = [
     ("abq", "Abaza"),
     ("ab",  "Abkhazian"),
