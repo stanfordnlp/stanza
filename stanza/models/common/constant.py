@@ -211,7 +211,7 @@ lcode2lang_raw = [
     ("nyq", "Nayini"),
     ("ng",  "Ndonga"),
     ("nap", "Neapolitan"),
-    ("nrk", "Nenets"),
+    ("yrk", "Nenets"),
     ("ne",  "Nepali"),
     ("new", "Newar"),
     ("yrl", "Nheengatu"),
