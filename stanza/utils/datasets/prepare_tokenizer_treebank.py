@@ -1293,6 +1293,13 @@ def build_combined_dataset(paths, short_name, model_type, args):
                 extra_sents = extra_fn(paths, model_type, dataset, args)
                 if extra_sents:
                     sents['extra'] = extra_sents
+            if dataset == 'train':
+                for additional_filename in args.additional_files:
+                    additional_sentences = read_sentences_from_conllu(additional_filename)
+                    print("Loaded %d additional sentences from %s" % (len(additional_sentences), additional_filename))
+                    if additional_filename not in sents:
+                        sents[additional_filename] = []
+                    sents[additional_filename].extend(additional_sentences)
             output_zip = os.path.splitext(output_conllu)[0] + ".zip"
             with zipfile.ZipFile(output_zip, "w") as zout:
                 for filename in list(sents.keys()):
@@ -1306,6 +1313,11 @@ def build_combined_dataset(paths, short_name, model_type, args):
                 extra_sents = extra_fn(paths, model_type, dataset, args)
                 if extra_sents:
                     sents.extend(extra_sents)
+            if dataset == 'train':
+                for additional_filename in args.additional_files:
+                    additional_sentences = read_sentences_from_conllu(additional_filename)
+                    print("Loaded %d additional sentences from %s" % (len(additional_sentences), additional_filename))
+                    sents.extend(additional_sentences)
             write_sentences_to_conllu(output_conllu, sents)
 
 BIO_DATASETS = ("en_craft", "en_genia", "en_mimic")
