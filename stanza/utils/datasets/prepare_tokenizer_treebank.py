@@ -35,6 +35,8 @@ import zipfile
 from collections import Counter
 
 from stanza.models.common.constant import treebank_to_short_name
+from stanza.models.common.short_name_to_treebank import canonical_treebank_name
+from stanza.resources.default_packages import default_treebanks
 import stanza.utils.datasets.common as common
 from stanza.utils.datasets.common import read_sentences_from_conllu, write_sentences_to_conllu, write_sentences_to_file, INT_RE, MWT_RE, MWT_OR_COPY_RE
 import stanza.utils.datasets.tokenization.convert_ml_cochin as convert_ml_cochin
@@ -1277,10 +1279,29 @@ COMBINED_EXTRA_FNS = {
     "es_combined": build_extra_combined_spanish_dataset,
 }
 
+def build_combined_other_dataset(language, paths, model_type, dataset):
+    """
+    For languages which don't have a dedicated combined building function,
+    we can use this function to build the default treebank as the "combined" dataset.
+
+    Then the user can supply any additional training datasets with --additional_files
+    """
+    udbase_dir = paths["UDBASE"]
+    package = default_treebanks[language]
+    short_name = "%s_%s" % (language, package)
+    full_name = canonical_treebank_name(short_name)
+    print("Using treebank %s section %s as the base for %s_combined %s" % (full_name, dataset, language, dataset))
+    conllu_file = common.find_treebank_dataset_file(full_name, udbase_dir, dataset, "conllu", fail=True)
+    return read_sentences_from_conllu(conllu_file)
+
 def build_combined_dataset(paths, short_name, model_type, args):
     random.seed(1234)
     tokenizer_dir = paths["TOKENIZE_DATA_DIR"]
-    build_fn = COMBINED_FNS[short_name]
+    if short_name not in COMBINED_FNS:
+        short_lang = short_name.split("_")[0]
+        build_fn = lambda paths, model_type, dataset: build_combined_other_dataset(short_lang, paths, model_type, dataset)
+    else:
+        build_fn = COMBINED_FNS[short_name]
     extra_fn = COMBINED_EXTRA_FNS.get(short_name, None)
     for dataset in ("train", "dev", "test"):
         output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
@@ -1520,7 +1541,7 @@ def process_treebank(treebank, model_type, paths, args):
         convert_th_best.main(paths["STANZA_EXTERN_DIR"], tokenizer_dir)
     elif short_name == "ml_cochin":
         convert_ml_cochin.main(paths["STANZA_EXTERN_DIR"], tokenizer_dir)
-    elif short_name in COMBINED_FNS: # eg "it_combined", "en_combined", etc
+    elif short_name.endswith("_combined"): # eg "it_combined", "en_combined", etc
         build_combined_dataset(paths, short_name, model_type, args)
     elif short_name in BIO_DATASETS:
         build_bio_dataset(paths, udbase_dir, tokenizer_dir, handparsed_dir, short_name, model_type, args.augment)
