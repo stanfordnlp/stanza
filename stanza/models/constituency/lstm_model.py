@@ -213,9 +213,9 @@ class ConstituencyComposition(Enum):
     UNTIED_KEY            = 10
 
 class LSTMModel(BaseModel, nn.Module):
-    def __init__(self, pretrain, forward_charlm, backward_charlm, bert_model, bert_tokenizer, force_bert_saved, peft_name, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
+    def __init__(self, pt, forward_charlm, backward_charlm, bert_model, bert_tokenizer, force_bert_saved, peft_name, transitions, constituents, tags, words, rare_words, root_labels, constituent_opens, unary_limit, args):
         """
-        pretrain: a Pretrain object
+        pt: a Pretrain object
         transitions: a list of all possible transitions which will be
           used to build trees
         constituents: a list of all possible constituents in the treebank
@@ -241,14 +241,14 @@ class LSTMModel(BaseModel, nn.Module):
         self.args = args
         self.unsaved_modules = []
 
-        emb_matrix = pretrain.emb
+        emb_matrix = pt.emb
         self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(emb_matrix, freeze=True))
 
         # replacing NBSP picks up a whole bunch of words for VI
-        self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pretrain.vocab) }
+        self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pt.vocab) }
         # precompute tensors for the word indices
         # the tensors should be put on the GPU if needed by calling to(device)
-        self.register_buffer('vocab_tensors', torch.tensor(range(len(pretrain.vocab)), requires_grad=False))
+        self.register_buffer('vocab_tensors', torch.tensor(range(len(pt.vocab)), requires_grad=False))
         self.vocab_size = emb_matrix.shape[0]
         self.embedding_dim = emb_matrix.shape[1]
 

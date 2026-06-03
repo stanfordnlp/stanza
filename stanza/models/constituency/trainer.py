@@ -178,7 +178,7 @@ class Trainer(BaseTrainer):
             if all(isinstance(x, str) for x in transitions):
                 transitions = [Transition.from_repr(x) for x in transitions]
 
-            model = LSTMModel(pretrain=pt,
+            model = LSTMModel(pt=pt,
                               forward_charlm=forward_charlm,
                               backward_charlm=backward_charlm,
                               bert_model=bert_model,
