@@ -244,12 +244,7 @@ class LSTMModel(BaseModel, nn.Module):
         emb_matrix = pt.emb
         self.add_unsaved_module('embedding', nn.Embedding.from_pretrained(emb_matrix, freeze=True))
 
-        # replacing NBSP picks up a whole bunch of words for VI
-        self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pt.vocab) }
-        # precompute tensors for the word indices
-        # the tensors should be put on the GPU if needed by calling to(device)
-        self.register_buffer('vocab_tensors', torch.tensor(range(len(pt.vocab)), requires_grad=False))
-        self.vocab_size = emb_matrix.shape[0]
+        self.emb_vocab = pt.vocab
         self.embedding_dim = emb_matrix.shape[1]
 
         self.constituents = sorted(list(constituents))
@@ -670,7 +665,7 @@ class LSTMModel(BaseModel, nn.Module):
         return output_layers
 
     def num_words_known(self, words):
-        return sum(word in self.vocab_map or word.lower() in self.vocab_map for word in words)
+        return sum(word in self.emb_vocab or word.lower() in self.emb_vocab for word in words)
 
     @property
     def retag_method(self):
@@ -737,12 +732,12 @@ class LSTMModel(BaseModel, nn.Module):
         """
         device = next(self.parameters()).device
 
-        vocab_map = self.vocab_map
+        emb_vocab = self.emb_vocab
         def map_word(word):
-            idx = vocab_map.get(word, None)
-            if idx is not None:
+            idx = emb_vocab.unit2id(word)
+            if idx != UNK_ID:
                 return idx
-            return vocab_map.get(word.lower(), UNK_ID)
+            return emb_vocab.unit2id(word.lower())
 
         all_word_inputs = []
         all_word_labels = [[word.children[0].label for word in tagged_words]
@@ -750,7 +745,7 @@ class LSTMModel(BaseModel, nn.Module):
 
         for sentence_idx, tagged_words in enumerate(tagged_word_lists):
             word_labels = all_word_labels[sentence_idx]
-            word_idx = torch.stack([self.vocab_tensors[map_word(word.children[0].label)] for word in tagged_words])
+            word_idx = torch.tensor([map_word(word.children[0].label) for word in tagged_words], device=device)
             word_input = self.embedding(word_idx)
 
             # this occasionally learns UNK at train time
