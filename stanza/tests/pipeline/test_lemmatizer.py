@@ -135,7 +135,7 @@ def test_latin_caseless_lemmatizer():
         assert word.lemma == expected
 
 def test_contextual_lemmatizer():
-    nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, package={"lemma": "default_accurate"}, download_method="reuse_resources")
+    nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, package={"lemma": "default_accurate"}, download_method=None)
     lemmatizer = nlp.processors['lemma']._trainer
     # the accurate model should have a 's classifier
     assert len(lemmatizer.contextual_lemmatizers) > 0
