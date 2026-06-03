@@ -146,3 +146,11 @@ def test_contextual_lemmatizer():
     # contextual classifier gets it right,
     # unless it gets retrained really badly
     assert doc.sentences[0].words[1].lemma == "have"
+
+    doc = nlp("There's a small boat over there")
+    assert len(doc.sentences) == 1
+    assert doc.sentences[0].words[1].text == "'s"
+    # this test should be simple enough that the
+    # contextual classifier gets it right,
+    # unless it gets retrained really badly
+    assert doc.sentences[0].words[1].lemma == "be"
