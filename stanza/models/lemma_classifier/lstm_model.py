@@ -25,7 +25,6 @@ class LemmaClassifierLSTM(LemmaClassifier):
                  use_charlm=False, charlm_forward_file=None, charlm_backward_file=None):
         """
         Args:
-            vocab_size (int): Size of the vocab being used (if custom vocab)
             output_dim (int): Size of output vector from MLP layer
             upos_to_id (Mapping[str, int]): A dictionary mapping UPOS tag strings to their respective IDs
             pt_embedding (Pretrain): pretrained embeddings
@@ -51,8 +50,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
 
         emb_matrix = pt_embedding.emb
         self.add_unsaved_module("embeddings", nn.Embedding.from_pretrained(emb_matrix, freeze=True))
-        self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pt_embedding.vocab) }
-        self.vocab_size = emb_matrix.shape[0]
+        self.emb_vocab = pt_embedding.vocab
         self.embedding_dim = emb_matrix.shape[1]
 
         self.known_words = known_words
@@ -144,7 +142,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
         token_ids = []
         delta_token_ids = []
         for words in sentences:
-            sentence_token_ids = [self.vocab_map.get(word.lower(), UNK_ID) for word in words]
+            sentence_token_ids = self.emb_vocab.map([word.lower() for word in words])
             sentence_token_ids = torch.tensor(sentence_token_ids, device=device)
             token_ids.append(sentence_token_ids)
 
