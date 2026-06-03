@@ -532,10 +532,6 @@ class CNNClassifier(BaseClassifier):
             params["bert_lora"] = get_peft_model_state_dict(self.bert_model, adapter_name=self.peft_name)
         return params
 
-    def preprocess_data(self, sentences):
-        sentences = [data.update_text(s, self.config.wordvec_type) for s in sentences]
-        return sentences
-
     def extract_sentences(self, doc):
         # TODO: tokens or words better here?
         return [[token.text for token in sentence.tokens] for sentence in doc.sentences]
