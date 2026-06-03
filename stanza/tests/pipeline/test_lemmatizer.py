@@ -139,7 +139,10 @@ def test_contextual_lemmatizer():
     lemmatizer = nlp.processors['lemma']._trainer
     # the accurate model should have a 's classifier
     assert len(lemmatizer.contextual_lemmatizers) > 0
-    # ideally the doc would have 'have' as the lemma for the second
-    # word, but maybe it's not always accurate.  actually, it works
-    # fine at the time of this test
     doc = nlp("He's added a contextual lemmatizer")
+    assert len(doc.sentences) == 1
+    assert doc.sentences[0].words[1].text == "'s"
+    # this test should be simple enough that the
+    # contextual classifier gets it right,
+    # unless it gets retrained really badly
+    assert doc.sentences[0].words[1].lemma == "have"
