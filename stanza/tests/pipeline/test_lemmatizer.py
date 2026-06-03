@@ -142,14 +142,16 @@ def test_contextual_lemmatizer():
     doc = nlp("He's added a contextual lemmatizer")
     assert len(doc.sentences) == 1
     assert doc.sentences[0].words[1].text == "'s"
+    assert doc.sentences[0].words[1].pos == "AUX"
     # this test should be simple enough that the
     # contextual classifier gets it right,
     # unless it gets retrained really badly
     assert doc.sentences[0].words[1].lemma == "have"
 
-    doc = nlp("There's a small boat over there")
+    doc = nlp("He's a little tired")
     assert len(doc.sentences) == 1
     assert doc.sentences[0].words[1].text == "'s"
+    assert doc.sentences[0].words[1].pos == "AUX"
     # this test should be simple enough that the
     # contextual classifier gets it right,
     # unless it gets retrained really badly
