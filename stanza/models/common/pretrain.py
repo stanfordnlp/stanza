@@ -227,7 +227,7 @@ class Pretrain:
             emb[i+len(VOCAB_PREFIX)] = torch.tensor([float(x) for x in line[-cols:]], dtype=torch.float32)
 
         # if there were word pieces separated with spaces, rejoin them with nbsp instead
-        # this way, the normalize_unit method in vocab.py can find the word at test time
+        # this way, the normalize_unit method in PretrainedWordVocab can find the word at test time
         words = ['\xa0'.join(line[:-cols]) for line in lines]
         if failed > 0:
             logger.info("Failed to read %d lines from embedding", failed)
