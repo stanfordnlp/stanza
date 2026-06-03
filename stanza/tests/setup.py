@@ -39,6 +39,7 @@ logger.info("DOWNLOADING MODELS")
 
 stanza.download(lang='en', model_dir=models_dir, logging_level='info')
 stanza.download(lang='en', model_dir=models_dir, package=None, processors={"ner":"ncbi_disease"})
+stanza.download(lang='en', model_dir=models_dir, logging_level='info', processors="tokenize,sentiment")
 stanza.download(lang='en', model_dir=models_dir, package='default_accurate', processors="lemma")
 stanza.download(lang='fr', model_dir=models_dir, logging_level='info')
 # Latin ITTB has no case information for the lemmatizer
