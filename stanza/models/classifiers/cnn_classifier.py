@@ -142,8 +142,7 @@ class CNNClassifier(BaseClassifier):
         # you want to spend a long time debugging this
         self.unk = nn.Parameter(torch.randn(self.embedding_dim) / np.sqrt(self.embedding_dim) / 10.0)
 
-        # replacing NBSP picks up a whole bunch of words for VI
-        self.vocab_map = { word.replace('\xa0', ' '): i for i, word in enumerate(pretrain.vocab) }
+        self.emb_vocab = pretrain.vocab
 
         if self.config.extra_wordvec_method is not ExtraVectors.NONE:
             if not extra_vocab:
@@ -337,16 +336,16 @@ class CNNClassifier(BaseClassifier):
         # assume all pieces are on the same device
         device = next(self.parameters()).device
 
-        vocab_map = self.vocab_map
+        emb_vocab = self.emb_vocab
         def map_word(word):
-            idx = vocab_map.get(word, None)
-            if idx is not None:
+            idx = emb_vocab.unit2id(word)
+            if idx != UNK_ID:
                 return idx
-            if word[-1] == "'":
-                idx = vocab_map.get(word[:-1], None)
-                if idx is not None:
+            if len(word) > 1 and word[-1] == "'":
+                idx = emb_vocab.unit2id(word[:-1])
+                if idx != UNK_ID:
                     return idx
-            return vocab_map.get(word.lower(), UNK_ID)
+            return emb_vocab.unit2id(word.lower())
 
         inputs = [x.text if isinstance(x, SentimentDatum) else x for x in inputs]
         # we will pad each phrase so either it matches the longest
