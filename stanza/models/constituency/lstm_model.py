@@ -947,10 +947,52 @@ class LSTMModel(BaseModel, nn.Module):
                 hx = self.reduce_forward(lstm_output[:, :self.hidden_size]) + self.reduce_backward(lstm_output[:, self.hidden_size:])
             lstm_hx = self.nonlinearity(hx).unsqueeze(0)
             lstm_cx = None
+
         elif self.constituency_composition == ConstituencyComposition.MAX:
-            node_hx = [[child.value.tree_hx for child in children] for children in children_lists]
-            unpacked_hx = [self.lstm_input_dropout(torch.max(torch.stack(nhx), 0).values) for nhx in node_hx]
-            packed_hx = torch.stack(unpacked_hx, axis=1)
+            # this block uses scatter_reduce to use scatter_reduce instead of
+            # running a loop over max
+            # should be slightly more efficient
+            # this was the original:
+            #node_hx = [[child.value.tree_hx for child in children] for children in children_lists]
+            #unpacked_hx = [self.lstm_input_dropout(torch.max(torch.stack(nhx), 0).values) for nhx in node_hx]
+            #packed_hx = torch.stack(unpacked_hx, axis=1)
+            #hx = self.reduce_linear(packed_hx)
+            #lstm_hx = self.nonlinearity(hx)
+            #lstm_cx = None
+            group_sizes = [len(children) for children in children_lists]
+
+            # tree_hx per child is (1, hidden_size); squeeze to (hidden_size,)
+            # then cat to (total_children, hidden_size) — keep 2D with reshape
+            flat_hx = torch.stack(
+                [child.value.tree_hx.squeeze(0) for children in children_lists
+                 for child in children],
+                dim=0
+            )
+
+            # TODO: an minor experiment to run would be to put the
+            # dropout here, instead of later.
+            # then for some dimensions, the second best children would
+            # get trained instead of the best children
+            # this may or may not make a difference
+            # dropout before the max: each child's coordinates compete
+            # after zeroing, so the winning child may vary stochastically
+            #flat_hx = self.lstm_input_dropout(flat_hx)
+
+            # which output group each child belongs to
+            # e.g. groups of size [2, 3, 1] → [0, 0, 1, 1, 1, 2]
+            index = torch.repeat_interleave(
+                torch.arange(len(children_lists), device=flat_hx.device),
+                torch.tensor(group_sizes, device=flat_hx.device)
+            )
+            index_expanded = index.unsqueeze(1).expand(-1, self.hidden_size)
+
+            # amax over each group: (num_groups, hidden_size)
+            out = torch.zeros(len(children_lists), self.hidden_size, device=flat_hx.device)
+            out.scatter_reduce_(0, index_expanded, flat_hx, reduce="amax", include_self=False)
+
+            out = self.lstm_input_dropout(out)
+
+            packed_hx = out.unsqueeze(0)
             hx = self.reduce_linear(packed_hx)
             lstm_hx = self.nonlinearity(hx)
             lstm_cx = None
