@@ -764,7 +764,7 @@ class LSTMModel(BaseModel, nn.Module):
                     tag_labels = [None if random.random() < self.args['tag_unknown_frequency'] else word.label for word in tagged_words]
                 else:
                     tag_labels = [word.label for word in tagged_words]
-                tag_idx = torch.stack([self.tag_tensors[self.tag_map.get(tag, UNK_ID)] for tag in tag_labels])
+                tag_idx = torch.tensor([self.tag_map.get(tag, UNK_ID) for tag in tag_labels], device=device)
                 tag_input = self.tag_embedding(tag_idx)
                 word_inputs.append(tag_input)
 
