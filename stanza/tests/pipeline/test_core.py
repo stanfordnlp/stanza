@@ -222,6 +222,7 @@ def test_unknown_language_tokenizer(unknown_language_name):
     tokenize_processor = base_pipe.processors["tokenize"]
 
     pipe=stanza.Pipeline(unknown_language_name,
+                         model_dir=TEST_MODELS_DIR,
                          processors="tokenize",
                          allow_unknown_language=True,
                          tokenize_model_path=tokenize_processor.config['model_path'],
