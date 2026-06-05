@@ -897,12 +897,14 @@ class LSTMModel(BaseModel, nn.Module):
         else:
             return Constituent(word, word_node.hx[:self.hidden_size].unsqueeze(0), None)
 
-    def dummy_constituent(self, dummy):
-        label = dummy.label
-        open_index = self.constituent_open_tensors[self.constituent_open_map[label]]
-        hx = self.dummy_embedding(open_index)
+    def dummy_constituents(self, dummy_list):
+        constituents = []
+        labels = [self.constituent_open_map[dummy.label] for dummy in dummy_list]
+        open_idx = torch.tensor(labels, device=self.word_zeros.device)
+        open_hx = self.dummy_embedding(open_idx)
         # the cx doesn't matter: the dummy will be discarded when building a new constituent
-        return Constituent(dummy, hx.unsqueeze(0), None)
+        constituents = [Constituent(dummy, hx.unsqueeze(0), None) for dummy, hx in zip(dummy_list, open_hx)]
+        return constituents
 
     def build_constituents(self, labels, children_lists):
         """
