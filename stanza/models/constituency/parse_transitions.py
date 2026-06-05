@@ -360,7 +360,11 @@ class OpenConstituent(Transition):
     def update_state(self, state, model):
         # open a new constituent which can later be closed
         # puts a DUMMY constituent on the stack to mark where the constituents end
-        return state.word_position, state.constituents, model.dummy_constituent(Dummy(self.label)), None
+        return state.word_position, state.constituents, Dummy(self.label), OpenConstituent
+
+    @staticmethod
+    def build_constituents(model, data):
+        return model.dummy_constituents(data)
 
     def is_legal(self, state, model):
         """
