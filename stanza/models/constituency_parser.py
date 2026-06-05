@@ -750,6 +750,10 @@ def build_argparse():
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
     parser.add_argument('--wandb_norm_regex', default=None, help='Log on wandb any tensor whose norm matches this matrix.  Might get cluttered?')
 
+    parser.add_argument('--limit_treebank', default=None, type=int, help='Only test this many sentences')
+    parser.add_argument('--write_profile', default=None, help='Write a profile of the constituency parser when scoring the dev set')
+    parser.add_argument('--profile_sort', default='cuda', choices=['cpu', 'cuda'], help='How to sort the profile output of the parser')
+
     return parser
 
 def build_model_filename(args):

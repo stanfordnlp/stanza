@@ -8,6 +8,8 @@ import re
 import torch
 from torch import nn
 
+from torch.profiler import profile, record_function, ProfilerActivity
+
 #from stanza.models.common import pretrain
 
 from stanza.models.common import utils
@@ -78,6 +80,9 @@ def evaluate(args, model_file, retag_pipeline):
         treebank = tree_reader.read_treebank(args['eval_file'])
         tlogger.info("Read %d trees for evaluation", len(treebank))
 
+        if args['limit_treebank']:
+            treebank = treebank[:args['limit_treebank']]
+
         retagged_treebank = treebank
         if retag_pipeline is not None:
             retag_method = trainer.model.retag_method
@@ -88,7 +93,18 @@ def evaluate(args, model_file, retag_pipeline):
 
         if args['log_norms']:
             trainer.log_norms()
-        f1, kbestF1, _ = run_dev_set(trainer.model, retagged_treebank, treebank, args, evaluator, analyze_first_errors=True)
+        if args['write_profile']:
+            with profile(
+                    activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],
+                    with_stack=True,
+                    record_shapes=True,
+            ) as prof:
+                f1, kbestF1, _ = run_dev_set(trainer.model, retagged_treebank, treebank, args, evaluator, analyze_first_errors=True)
+            sort_by = 'cuda_time_total' if args['profile_sort'] == 'cuda' else 'self_cpu_time_total'
+            tlogger.info("Profile results for %d sentences:\n%s", len(retagged_treebank), prof.key_averages(group_by_stack_n=5).table(sort_by=sort_by, row_limit=30))
+            prof.export_chrome_trace(args['write_profile'])
+        else:
+            f1, kbestF1, _ = run_dev_set(trainer.model, retagged_treebank, treebank, args, evaluator, analyze_first_errors=True)
         tlogger.info("F1 score on %s: %f", args['eval_file'], f1)
         if kbestF1 is not None:
             tlogger.info("KBest F1 score on %s: %f", args['eval_file'], kbestF1)
