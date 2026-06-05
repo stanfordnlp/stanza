@@ -91,7 +91,7 @@ class BaseModel(ABC):
         """
 
     @abstractmethod
-    def dummy_constituent(self, dummy):
+    def dummy_constituents(self, dummy_list):
         """
         When using a dummy node as a sentinel, transform it to something usable by this model
         """
@@ -512,8 +512,8 @@ class SimpleModel(BaseModel):
     def transform_word_to_constituent(self, state):
         return state.get_word(state.word_position)
 
-    def dummy_constituent(self, dummy):
-        return dummy
+    def dummy_constituents(self, dummy_list):
+        return dummy_list
 
     def build_constituents(self, labels, children_lists):
         constituents = []
