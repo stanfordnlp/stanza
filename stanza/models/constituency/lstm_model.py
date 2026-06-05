@@ -470,8 +470,6 @@ class LSTMModel(BaseModel, nn.Module):
 
         self.transitions = sorted(list(transitions))
         self.transition_map = { t: i for i, t in enumerate(self.transitions) }
-        # precompute tensors for the transitions
-        self.register_buffer('transition_tensors', torch.tensor(range(len(transitions)), requires_grad=False))
         self.transition_embedding = nn.Embedding(num_embeddings = len(transitions),
                                                  embedding_dim = self.transition_embedding_dim)
         nn.init.normal_(self.transition_embedding.weight, std=0.25)
@@ -1129,7 +1127,8 @@ class LSTMModel(BaseModel, nn.Module):
 
         Significantly faster than doing one transition at a time.
         """
-        transition_idx = torch.stack([self.transition_tensors[self.transition_map[transition]] for transition in transitions])
+        transition_idx = torch.tensor([self.transition_map[transition] for transition in transitions],
+                                      device=self.word_zeros.device)
         transition_input = self.transition_embedding(transition_idx).unsqueeze(0)
         return self.transition_stack.push_states(transition_stacks, transitions, transition_input)
 
