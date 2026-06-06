@@ -562,8 +562,45 @@ def build_argparse():
     # Large Margin is from Large Margin In Softmax Cross-Entropy Loss
     # it did not help on an Italian VIT test
     # scores went from 0.8252 to 0.8248
-    parser.add_argument('--loss', default='cross', help='cross, large_margin, or focal.  Focal requires `pip install focal_loss_torch`')
+    # perhaps the reg_lambda was too high for the number of classes learned
+    # (one class per Open type)
+    # experimenting with different values of reg_lambda on the ja_alt dataset,
+    # the dev scores look like this after 200 iterations (May 2026 defaults)
+    #   0.001 : 0.928365
+    #   0.002 : 0.930509
+    #   0.0025: 0.929854
+    #   0.003 : 0.930621
+    #   0.004 : 0.926896
+    #   0.005 : 0.932288
+    #   0.006 : 0.926906
+    #   0.007 : 0.930171
+    #   0.008 : 0.929211
+    #   0.009 : 0.930499
+    #   0.01  : 0.929094
+    #   0.025 : 0.927757
+    #   0.05  : 0.929669
+    #   0.1   : 0.928322
+    #   0.15  : 0.927854
+    #   0.2   : 0.927908
+    # compare with the original loss: 0.928963
+    # running 5x averaged with 0.003: 0.929756
+    # however, running this on two other datasets proved less helpful
+    # so the `--loss large_margin` setting is preserved as an option,
+    # but cross-entropy is kept as the default, since large_margin
+    # did not lead to a consistent improvement.
+    #           cross-entropy    large-margin, 0.003
+    #  de_spmrl  0.9586            0.95844          - 0.00016
+    #  en_ptb3   0.96299           0.96296          - 0.00003
+    #  id_icon   0.896481          0.89698          + 0.0005
+    #  it_vit    0.849556          0.849382         - 0.0002
+    #  ja_alt    0.928963          0.929756         + 0.0007
+    #
+    # Another experiment to run would be a weighted cross entropy
+    # using the transition frequencies as weights
+    parser.add_argument('--loss', default='cross', choices=['cross', 'large_margin', 'focal'],
+                        help='cross, large_margin, or focal.  Focal requires `pip install focal_loss_torch`')
     parser.add_argument('--loss_focal_gamma', default=2, type=float, help='gamma value for a focal loss')
+    parser.add_argument('--loss_reg_lambda', default=0.003, type=float, help='reg_lambda for large margin loss')
 
     # turn off dropout for word_dropout, predict_dropout, and lstm_input_dropout
     # this mechanism doesn't actually turn off lstm_layer_dropout (yet)
@@ -773,6 +810,12 @@ def build_model_filename(args):
             if args['rattn_sinks'] > 0:
                 rattn += "s%d" % args['rattn_sinks']
 
+    loss = args['loss']
+    if loss == 'large_margin':
+        loss = "%s_%f" % (loss, args['loss_reg_lambda'])
+    elif loss == 'focal':
+        loss = "%s_%f" % (loss, args['loss_focal_gamma'])
+
     model_save_file = args['save_name'].format(shorthand=args['shorthand'],
                                                oracle_level=args['oracle_level'],
                                                embedding=embedding,
@@ -781,6 +824,7 @@ def build_model_filename(args):
                                                transition_scheme=args['transition_scheme'].name.lower().replace("_", ""),
                                                tscheme=args['transition_scheme'].short_name,
                                                trans_layers=args['bert_hidden_layers'],
+                                               loss=loss,
                                                rattn=rattn,
                                                seed=args['seed'])
     model_save_file = re.sub("_+", "_", model_save_file)
