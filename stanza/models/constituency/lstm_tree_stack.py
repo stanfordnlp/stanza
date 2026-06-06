@@ -38,8 +38,8 @@ class LSTMTreeStack(nn.Module):
         if uses_boundary_vector:
             self.register_parameter('start_embedding', torch.nn.Parameter(0.2 * torch.randn(input_size, requires_grad=True)))
         else:
-            self.register_buffer('input_zeros',  torch.zeros(num_lstm_layers, 1, input_size))
-            self.register_buffer('hidden_zeros', torch.zeros(num_lstm_layers, 1, hidden_size))
+            self.register_buffer('input_zeros',  torch.zeros(num_lstm_layers, input_size))
+            self.register_buffer('hidden_zeros', torch.zeros(num_lstm_layers, hidden_size))
 
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_lstm_layers, dropout=dropout)
         self.input_dropout = input_dropout
@@ -58,15 +58,17 @@ class LSTMTreeStack(nn.Module):
         if self.uses_boundary_vector:
             start = self.start_embedding.unsqueeze(0).unsqueeze(0)
             output, (hx, cx) = self.lstm(start)
+            output = output[0, 0, :]
+            hx = hx.squeeze(1)
+            cx = cx.squeeze(1)
         else:
             start = self.input_zeros
             hx = self.hidden_zeros
             cx = self.hidden_zeros
+            # for the initial state, last layer hx is hx[-1, 0, :]
+            output = hx[-1]
 
-        # for the initial state, last layer hx is hx[-1, 0, :]
-        initial_output = hx[-1, 0, :]
-
-        return TreeStack(value=Node(initial_value, hx, cx, initial_output), parent=None, length=1)
+        return TreeStack(value=Node(initial_value, hx, cx, output), parent=None, length=1)
 
     def push_states(self, stacks, values, inputs):
         """
@@ -78,15 +80,15 @@ class LSTMTreeStack(nn.Module):
         """
         inputs = self.input_dropout(inputs)
 
-        hx = torch.cat([t.value.lstm_hx for t in stacks], axis=1)
-        cx = torch.cat([t.value.lstm_cx for t in stacks], axis=1)
+        hx = torch.stack([t.value.lstm_hx for t in stacks], dim=1)
+        cx = torch.stack([t.value.lstm_cx for t in stacks], dim=1)
         output, (hx, cx) = self.lstm(inputs, (hx, cx))
 
         # output shape: (1, batch, hidden_size) since input is one step
         # squeeze the time dimension once rather than slicing per node
         last_layer = output[0]  # (batch, hidden_size)
 
-        new_stacks = [stack.push(Node(transition, hx[:, i:i+1, :], cx[:, i:i+1, :], last_layer[i]))
+        new_stacks = [stack.push(Node(transition, hx[:, i, :], cx[:, i, :], last_layer[i]))
                       for i, (stack, transition) in enumerate(zip(stacks, values))]
         return new_stacks
 
