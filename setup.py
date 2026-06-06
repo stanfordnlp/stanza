@@ -126,6 +126,9 @@ setup(
             'streamlit',
             'ipython',
         ],
+        'matplotlib': [
+            'matplotlib',
+        ],
         'morphseg': [
             'morphseg>=0.2.5.1',
         ]
