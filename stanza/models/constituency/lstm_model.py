@@ -1094,7 +1094,7 @@ class LSTMModel(BaseModel, nn.Module):
                 for value in reversed(label):
                     node = Tree(label=value, children=children)
                     children = node
-            constituents.append(Constituent(node, lstm_hx[:, idx, :], lstm_cx[:, idx, :] if lstm_cx is not None else None))
+            constituents.append(Constituent(node, lstm_hx[:, idx], lstm_cx[:, idx] if lstm_cx is not None else None))
         return constituents
 
     def push_constituents(self, constituent_stacks, constituents):
