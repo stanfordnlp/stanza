@@ -66,20 +66,20 @@ KO_SHORTHAND = 'ko_gsd'
 
 # utils for clean up
 # only allow removal of dirs/files in this approved list
-REMOVABLE_PATHS = ['en_ewt_models', 'en_ewt_tokenizer.pt', 'en_ewt_mwt_expander.pt', 'en_ewt_tagger.pt',
-                   'en_ewt.pretrain.pt', 'en_ewt_lemmatizer.pt', 'en_ewt_parser.pt', 'fr_gsd_models',
-                   'fr_gsd_tokenizer.pt', 'fr_gsd_mwt_expander.pt', 'fr_gsd_tagger.pt', 'fr_gsd.pretrain.pt',
-                   'fr_gsd_lemmatizer.pt', 'fr_gsd_parser.pt', 'ar_padt_models', 'ar_padt_tokenizer.pt',
-                   'ar_padt_mwt_expander.pt', 'ar_padt_tagger.pt', 'ar_padt.pretrain.pt', 'ar_padt_lemmatizer.pt',
-                   'ar_padt_parser.pt', 'de_gsd_models', 'de_gsd_tokenizer.pt', 'de_gsd_mwt_expander.pt',
-                   'de_gsd_tagger.pt', 'de_gsd.pretrain.pt', 'de_gsd_lemmatizer.pt', 'de_gsd_parser.pt',
-                   'kk_ktb_models', 'kk_ktb_tokenizer.pt', 'kk_ktb_mwt_expander.pt', 'kk_ktb_tagger.pt',
-                   'kk_ktb.pretrain.pt', 'kk_ktb_lemmatizer.pt', 'kk_ktb_parser.pt', 'ko_gsd_models',
-                   'ko_gsd_tokenizer.pt', 'ko_gsd_mwt_expander.pt', 'ko_gsd_tagger.pt', 'ko_gsd.pretrain.pt',
-                   'ko_gsd_lemmatizer.pt', 'ko_gsd_parser.pt']
+REMOVABLE_PATHS = frozenset(['en_ewt_models', 'en_ewt_tokenizer.pt', 'en_ewt_mwt_expander.pt', 'en_ewt_tagger.pt',
+                             'en_ewt.pretrain.pt', 'en_ewt_lemmatizer.pt', 'en_ewt_parser.pt', 'fr_gsd_models',
+                             'fr_gsd_tokenizer.pt', 'fr_gsd_mwt_expander.pt', 'fr_gsd_tagger.pt', 'fr_gsd.pretrain.pt',
+                             'fr_gsd_lemmatizer.pt', 'fr_gsd_parser.pt', 'ar_padt_models', 'ar_padt_tokenizer.pt',
+                             'ar_padt_mwt_expander.pt', 'ar_padt_tagger.pt', 'ar_padt.pretrain.pt', 'ar_padt_lemmatizer.pt',
+                             'ar_padt_parser.pt', 'de_gsd_models', 'de_gsd_tokenizer.pt', 'de_gsd_mwt_expander.pt',
+                             'de_gsd_tagger.pt', 'de_gsd.pretrain.pt', 'de_gsd_lemmatizer.pt', 'de_gsd_parser.pt',
+                             'kk_ktb_models', 'kk_ktb_tokenizer.pt', 'kk_ktb_mwt_expander.pt', 'kk_ktb_tagger.pt',
+                             'kk_ktb.pretrain.pt', 'kk_ktb_lemmatizer.pt', 'kk_ktb_parser.pt', 'ko_gsd_models',
+                             'ko_gsd_tokenizer.pt', 'ko_gsd_mwt_expander.pt', 'ko_gsd_tagger.pt', 'ko_gsd.pretrain.pt',
+                             'ko_gsd_lemmatizer.pt', 'ko_gsd_parser.pt'])
 
 
-def safe_rm(path_to_rm):
+def safe_rm(path_to_rm: str) -> None:
     """
     Safely remove a directory of files or a file
     1.) check path exists, files are files, dirs are dirs
@@ -106,10 +106,10 @@ def safe_rm(path_to_rm):
         os.rmdir(dir_to_rm)
         assert not os.path.exists(dir_to_rm), f'Error removing: {dir_to_rm}'
 
-def compare_ignoring_whitespace(predicted, expected):
+def compare_ignoring_whitespace(predicted: str, expected: str) -> None:
     predicted = re.sub('[ \t]+', ' ', predicted.strip())
     predicted = re.sub('\r\n', '\n', predicted)
     expected = re.sub('[ \t]+', ' ', expected.strip())
     expected = re.sub('\r\n', '\n', expected)
-    assert predicted == expected
+    assert predicted == expected, f"Predicted:\n{predicted}\nExpected:\n{expected}"
 
