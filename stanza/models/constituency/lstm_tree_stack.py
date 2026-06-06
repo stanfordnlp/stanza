@@ -16,7 +16,7 @@ import torch.nn as nn
 
 from stanza.models.constituency.tree_stack import TreeStack
 
-Node = namedtuple("Node", ['value', 'lstm_hx', 'lstm_cx'])
+Node = namedtuple("Node", ['value', 'lstm_hx', 'lstm_cx', 'output'])
 
 class LSTMTreeStack(nn.Module):
     def __init__(self, input_size, hidden_size, num_lstm_layers, dropout, uses_boundary_vector, input_dropout):
@@ -62,7 +62,11 @@ class LSTMTreeStack(nn.Module):
             start = self.input_zeros
             hx = self.hidden_zeros
             cx = self.hidden_zeros
-        return TreeStack(value=Node(initial_value, hx, cx), parent=None, length=1)
+
+        # for the initial state, last layer hx is hx[-1, 0, :]
+        initial_output = hx[-1, 0, :]
+
+        return TreeStack(value=Node(initial_value, hx, cx, initial_output), parent=None, length=1)
 
     def push_states(self, stacks, values, inputs):
         """
@@ -77,7 +81,12 @@ class LSTMTreeStack(nn.Module):
         hx = torch.cat([t.value.lstm_hx for t in stacks], axis=1)
         cx = torch.cat([t.value.lstm_cx for t in stacks], axis=1)
         output, (hx, cx) = self.lstm(inputs, (hx, cx))
-        new_stacks = [stack.push(Node(transition, hx[:, i:i+1, :], cx[:, i:i+1, :]))
+
+        # output shape: (1, batch, hidden_size) since input is one step
+        # squeeze the time dimension once rather than slicing per node
+        last_layer = output[0]  # (batch, hidden_size)
+
+        new_stacks = [stack.push(Node(transition, hx[:, i:i+1, :], cx[:, i:i+1, :], last_layer[i]))
                       for i, (stack, transition) in enumerate(zip(stacks, values))]
         return new_stacks
 
@@ -87,4 +96,4 @@ class LSTMTreeStack(nn.Module):
 
         Refactored so that alternate structures have an easy way of getting the output
         """
-        return stack.value.lstm_hx[-1, 0, :]
+        return stack.value.output
