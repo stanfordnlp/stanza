@@ -375,9 +375,9 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
         process_outputs = lambda x: torch.softmax(x, dim=1)
         model_loss_function = FocalLoss(reduction='sum', gamma=args['loss_focal_gamma'])
     elif args['loss'] == 'large_margin':
-        tlogger.info("Building LargeMarginInSoftmaxLoss(sum)")
+        tlogger.info("Building LargeMarginInSoftmaxLoss(sum), reg_lambda=%f",  args['loss_reg_lambda'])
         process_outputs = lambda x: x
-        model_loss_function = LargeMarginInSoftmaxLoss(reduction='sum')
+        model_loss_function = LargeMarginInSoftmaxLoss(reduction='sum', reg_lambda=args['loss_reg_lambda'])
     else:
         raise ValueError("Unexpected loss term: %s" % args['loss'])
 

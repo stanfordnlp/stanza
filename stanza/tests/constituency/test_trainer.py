@@ -254,6 +254,15 @@ class TestTrainer:
         with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
             self.run_train_test(wordvec_pretrain_file, tmpdirname)
 
+    def test_large_margin_loss(self, wordvec_pretrain_file):
+        """
+        Test the whole thing for a few iterations on the fake data
+        ... but this time, use the large margin loss
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            args = ['--loss', 'large_margin', '--save_name', '{shorthand}_{loss}_constituency.pt']
+            self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
+
     def test_early_dropout(self, wordvec_pretrain_file):
         """
         Test the whole thing for a few iterations on the fake data
