@@ -58,7 +58,6 @@ class LSTMTreeStack(nn.Module):
         if self.uses_boundary_vector:
             start = self.start_embedding.unsqueeze(0).unsqueeze(0)
             output, (hx, cx) = self.lstm(start)
-            start = output[0, 0, :]
         else:
             start = self.input_zeros
             hx = self.hidden_zeros
