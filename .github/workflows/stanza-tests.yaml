@@ -32,6 +32,7 @@ jobs:
           pip3 install -e .[transformers]
           pip3 install -e .[tokenizers]
           pip3 install -e .[morphseg]
+          pip3 install -e .[matplotlib]
           # set up for tests
           echo "Running stanza test set up..."
           rm -rf $STANZA_TEST_HOME
