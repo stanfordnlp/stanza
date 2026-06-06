@@ -1107,8 +1107,6 @@ class LSTMModel(BaseModel, nn.Module):
         # averaged over 5 trials, had the following loss in accuracy:
         # 150 epochs: 0.8971 to 0.8953
         # 200 epochs: 0.8985 to 0.8964
-        current_nodes = [stack.value for stack in constituent_stacks]
-
         constituent_input = torch.stack([x.tree_hx[-1:] for x in constituents], axis=1)
         #constituent_input = constituent_input.unsqueeze(0)
         # the constituents are already Constituent(tree, tree_hx, tree_cx)
