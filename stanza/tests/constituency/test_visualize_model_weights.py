@@ -15,7 +15,11 @@ Tests are grouped into four levels:
   3. Rendering level: render_weight_image writes a valid PNG to a temp
      path without raising.  Image content is not checked.
 
-  4. Degeneracy detection: _is_degenerate correctly identifies collapsed
+  4. Forget gate summary: print_forget_gate_summary produces a correctly
+     formatted table, handles collapsed LSTMs gracefully, and covers the
+     multi-LSTM and missing-checkpoint cases.
+
+  5. Degeneracy detection: _is_degenerate correctly identifies collapsed
      LSTMs (all weights driven to zero by optimizer starvation), and
      _draw_degenerate_panel renders without error.
 """
@@ -39,6 +43,7 @@ from stanza.utils.constituency.visualize_model_weights import (
     get_linear,
     get_lstm_gate_weights,
     render_weight_image,
+    print_forget_gate_summary,
     _is_degenerate,
     _draw_degenerate_panel,
 )
@@ -450,7 +455,85 @@ class TestRenderWeightImage:
 
 
 # ---------------------------------------------------------------------------
-# 7. Degeneracy detection
+# 7. Forget gate summary table
+# ---------------------------------------------------------------------------
+
+class TestForgetGateSummary:
+    def _make_gate_stats(self, forget_bias_mean, hidden=8, inp=4, collapsed=False):
+        """Build a minimal gate_stats dict with a controlled forget gate bias mean."""
+        if collapsed:
+            # simulate a fully collapsed LSTM — all norms zero
+            sd = {
+                'lstm.weight_ih_l0': torch.zeros(4 * hidden, inp),
+                'lstm.weight_hh_l0': torch.zeros(4 * hidden, hidden),
+                'lstm.bias_ih_l0':   torch.zeros(4 * hidden),
+                'lstm.bias_hh_l0':   torch.zeros(4 * hidden),
+            }
+        else:
+            bih = torch.zeros(4 * hidden)
+            bih[hidden:2*hidden] = forget_bias_mean  # forget gate slice
+            sd = {
+                'lstm.weight_ih_l0': torch.randn(4 * hidden, inp),
+                'lstm.weight_hh_l0': torch.randn(4 * hidden, hidden),
+                'lstm.bias_ih_l0':   bih,
+                'lstm.bias_hh_l0':   torch.zeros(4 * hidden),
+            }
+        return compute_gate_stats(get_lstm_gate_weights(sd, 'lstm'))
+
+    def test_prints_without_error(self, capsys):
+        """Basic smoke test: table prints without raising."""
+        gs1 = self._make_gate_stats(1.0)
+        gs2 = self._make_gate_stats(0.5)
+        all_lstm_stats = {'word_lstm': [gs1, gs2]}
+        print_forget_gate_summary(['ckpt_0', 'ckpt_1'], ['word_lstm'], all_lstm_stats)
+        out = capsys.readouterr().out
+        assert 'word_lstm' in out
+        assert 'ckpt_0' in out
+
+    def test_forget_bias_values_appear(self, capsys):
+        """The forget gate mean for each checkpoint should appear in the output."""
+        gs1 = self._make_gate_stats(1.0)
+        gs2 = self._make_gate_stats(0.5)
+        all_lstm_stats = {'lstm': [gs1, gs2]}
+        print_forget_gate_summary(['epoch_1', 'epoch_2'], ['lstm'], all_lstm_stats)
+        out = capsys.readouterr().out
+        assert '+1.000' in out
+        assert '+0.500' in out
+
+    def test_collapsed_lstm_shown_as_collapsed(self, capsys):
+        """A collapsed LSTM entry should show COLLAPSED rather than a number."""
+        gs_healthy   = self._make_gate_stats(1.0)
+        gs_collapsed = self._make_gate_stats(0.0, collapsed=True)
+        all_lstm_stats = {'word_lstm': [gs_healthy, gs_collapsed]}
+        print_forget_gate_summary(['ckpt_0', 'ckpt_1'], ['word_lstm'], all_lstm_stats)
+        out = capsys.readouterr().out
+        assert 'COLLAPSED' in out
+        assert '+1.000' in out
+
+    def test_multiple_lstms(self, capsys):
+        """All LSTM prefixes should appear as columns."""
+        gs = self._make_gate_stats(0.75)
+        all_lstm_stats = {
+            'word_lstm':             [gs],
+            'constituent_stack.lstm': [gs],
+        }
+        print_forget_gate_summary(['ckpt_0'], ['word_lstm', 'constituent_stack.lstm'],
+                                  all_lstm_stats)
+        out = capsys.readouterr().out
+        assert 'word_lstm' in out
+        assert 'constituent_stack.lstm' in out
+
+    def test_empty_stats_shown_as_na(self, capsys):
+        """A checkpoint where an LSTM wasn't found should show N/A."""
+        gs = self._make_gate_stats(1.0)
+        all_lstm_stats = {'word_lstm': [gs, {}]}  # second checkpoint missing
+        print_forget_gate_summary(['ckpt_0', 'ckpt_1'], ['word_lstm'], all_lstm_stats)
+        out = capsys.readouterr().out
+        assert 'N/A' in out
+
+
+# ---------------------------------------------------------------------------
+# 8. Degeneracy detection
 # ---------------------------------------------------------------------------
 
 class TestDegeneracyDetection:
