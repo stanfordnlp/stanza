@@ -655,6 +655,61 @@ def _print_gate_summary(gate_stats, lstm_prefix):
                   f"ρ(whh)={gs['spectral_radius']:.3f}")
 
 
+def print_forget_gate_summary(labels, lstm_prefixes, all_lstm_stats):
+    """
+    Print a compact summary table of forget gate bias mean across all
+    checkpoints for each LSTM, one row per checkpoint.
+
+    Collapsed LSTMs are shown as '  COLLAPSED' rather than a numeric value
+    so the table remains readable even when some modules degenerate.
+
+    Example output:
+
+      Forget gate bias summary (mean across all layers/directions)
+      checkpoint                word_lstm   transition_stack.lstm   constituent_stack.lstm
+      epoch_001                    +1.000                  +1.000                   +1.000
+      epoch_010                    +0.910                  +0.972                   +0.936
+      epoch_050                    +0.563               COLLAPSED                   +0.872
+    """
+    print("\n" + "=" * 72)
+    print("  Forget gate bias summary (mean across all layers/directions)")
+
+    # column width: max of prefix length and a sample value like '+0.000'
+    col_w = max(10, max(len(p) for p in lstm_prefixes))
+    label_w = max(12, max(len(l) for l in labels))
+
+    # header
+    header = f"  {'checkpoint':<{label_w}}"
+    for prefix in lstm_prefixes:
+        header += f"  {prefix:>{col_w}}"
+    print(header)
+
+    for label, *stats_per_prefix in zip(labels, *[all_lstm_stats[p] for p in lstm_prefixes]):
+        row = f"  {label:<{label_w}}"
+        for gate_stats in stats_per_prefix:
+            if not gate_stats:
+                # prefix not found in this checkpoint
+                row += f"  {'N/A':>{col_w}}"
+                continue
+
+            # check for collapse
+            all_norms = [gate_stats[entry_idx][gate]['weight_hh_norm']
+                         for entry_idx in gate_stats
+                         for gate in GATE_NAMES]
+            if all_norms and max(all_norms) < 1e-30:
+                row += f"  {'COLLAPSED':>{col_w}}"
+                continue
+
+            # average forget gate bias_mean across all layers and directions
+            forget_means = [gate_stats[entry_idx]['forget']['bias_mean']
+                            for entry_idx in gate_stats]
+            avg = sum(forget_means) / len(forget_means)
+            row += f"  {avg:>+{col_w}.3f}"
+        print(row)
+
+    print("=" * 72 + "\n")
+
+
 def run_stats_mode(checkpoints, labels, out_dir, lstm_prefixes, linear_names):
     all_states      = []
     # { linear_name: [stats_per_checkpoint] }
@@ -710,6 +765,8 @@ def run_stats_mode(checkpoints, labels, out_dir, lstm_prefixes, linear_names):
             plot_lstm_timeseries(stats_list, labels, prefix, out_dir)
 
     plot_gate_bias_distributions(all_states, lstm_prefixes, labels, out_dir)
+
+    print_forget_gate_summary(labels, lstm_prefixes, all_lstm_stats)
 
 
 # ---------------------------------------------------------------------------
