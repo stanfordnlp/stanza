@@ -316,8 +316,10 @@ def get_split_optimizer(name,
                         bert_weight_decay=None,
                         charlm_learning_rate=0.0,
                         is_peft=False,
-                        bert_finetune_layers=None):
+                        bert_finetune_layers=None,
+                        opt_logger=None):
     """Same as `get_optimizer`, but splits the optimizer for Bert into a separate optimizer"""
+    opt_logger = opt_logger if opt_logger is not None else logger
     base_parameters = [p for n, p in model.named_parameters()
                        if p.requires_grad and not n.startswith("bert_model.")
                        and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
@@ -354,12 +356,12 @@ def get_split_optimizer(name,
         extra_args["weight_decay"] = weight_decay
 
     optimizers = {
-        "general_optimizer": dispatch_optimizer(name, parameters, opt_logger=logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
+        "general_optimizer": dispatch_optimizer(name, parameters, opt_logger=opt_logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
     }
     if bert_parameters is not None and bert_learning_rate > 0.0:
         if bert_weight_decay is not None:
             extra_args['weight_decay'] = bert_weight_decay
-        optimizers["bert_optimizer"] = dispatch_optimizer(name, bert_parameters, opt_logger=logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
+        optimizers["bert_optimizer"] = dispatch_optimizer(name, bert_parameters, opt_logger=opt_logger, lr=lr, betas=betas, eps=eps, momentum=momentum, **extra_args)
     return optimizers
 
 
