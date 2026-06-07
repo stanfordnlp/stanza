@@ -412,6 +412,7 @@ def process_ja_alt(paths, dataset_name, *args):
     split_files = [os.path.join(input_dir, "URL-%s.txt" % shard) for shard in SHARDS]
     output_dir = paths["CONSTITUENCY_DATA_DIR"]
     output_files = [os.path.join(output_dir, "%s_%s.mrg" % (dataset_name, shard)) for shard in SHARDS]
+    print("Reading input files from %s" % input_files)
     convert_alt(input_files, split_files, output_files)
 
 def process_pt_cintil(paths, dataset_name, *args):
