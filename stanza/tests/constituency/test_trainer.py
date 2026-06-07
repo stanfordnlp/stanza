@@ -263,6 +263,16 @@ class TestTrainer:
             args = ['--loss', 'large_margin', '--save_name', '{shorthand}_{loss}_constituency.pt']
             self.run_train_test(wordvec_pretrain_file, tmpdirname, extra_args=args)
 
+    def test_lstm_bias(self, wordvec_pretrain_file):
+        """
+        Test the whole thing for a few iterations on the fake data
+        """
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdirname:
+            args = ['--lstm_forget_init', '1.0',
+                    '--lstm_bias_weight_decay', '0.0',
+                    '--save_name', '{shorthand}_{forget}_constituency.pt']
+            _, model = self.run_train_test(wordvec_pretrain_file, tmpdirname, num_epochs=6, extra_args=args)
+
     def test_early_dropout(self, wordvec_pretrain_file):
         """
         Test the whole thing for a few iterations on the fake data

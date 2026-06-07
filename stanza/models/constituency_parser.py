@@ -711,6 +711,7 @@ def build_argparse():
     parser.add_argument('--condense_output_threshold', default=0.001, type=float, help='Threshold at which to condense an output row (relative to the other output rows)')
 
     parser.add_argument('--lstm_forget_init', default=1.0, type=float, help='Initialization value for the forget gates of the LSTMs')
+    parser.add_argument('--lstm_bias_weight_decay', default=None, type=float, help='Use this weight decay for LSTM bias vectors, if set')
 
     parser.add_argument('--sentence_boundary_vectors', default=SentenceBoundary.EVERYTHING, type=lambda x: SentenceBoundary[x.upper()],
                         help='Vectors to learn at the start & end of sentences.  {}'.format(", ".join(x.name for x in SentenceBoundary)))
@@ -837,6 +838,8 @@ def build_model_filename(args):
     elif loss == 'focal':
         loss = "%s_%f" % (loss, args['loss_focal_gamma'])
 
+    forget = "forget_%s_%s" % (args['lstm_forget_init'], args['lstm_bias_weight_decay'])
+
     model_save_file = args['save_name'].format(shorthand=args['shorthand'],
                                                oracle_level=args['oracle_level'],
                                                embedding=embedding,
@@ -846,7 +849,7 @@ def build_model_filename(args):
                                                tscheme=args['transition_scheme'].short_name,
                                                trans_layers=args['bert_hidden_layers'],
                                                loss=loss,
-                                               lstm_forget_init=args['lstm_forget_init'],
+                                               forget=forget,
                                                rattn=rattn,
                                                seed=args['seed'])
     model_save_file = re.sub("_+", "_", model_save_file)

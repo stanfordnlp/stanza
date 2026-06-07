@@ -246,12 +246,21 @@ def dispatch_optimizer(name, parameters, opt_logger, lr=None, betas=None, eps=No
     else:
         raise ValueError("Unsupported optimizer: {}".format(name))
 
+_LSTM_BIAS_RE = re.compile(r'\.bias_(?:ih|hh)_l\d+(?:_reverse)?$')
 
-def extract_base_optimizer_parameters(model, lr, charlm_learning_rate):
-    base_parameters = [p for n, p in model.named_parameters()
+def extract_base_optimizer_parameters(model, lr, charlm_learning_rate, lstm_bias_weight_decay):
+    base_parameters = [(n, p) for n, p in model.named_parameters()
                        if p.requires_grad and not n.startswith("bert_model.")
                        and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
-    parameters = [{'param_group_name': 'base', 'params': base_parameters}]
+    if lstm_bias_weight_decay is not None:
+        lstm_bias_parameters = [p for n, p in base_parameters if _LSTM_BIAS_RE.search(n)]
+        base_parameters = [p for n, p in base_parameters if not _LSTM_BIAS_RE.search(n)]
+        parameters = [
+            {'param_group_name': 'base', 'params': base_parameters},
+            {'param_group_name': 'lstm_bias', 'params': lstm_bias_parameters, 'weight_decay': lstm_bias_weight_decay}
+        ]
+    else:
+        parameters = [{'param_group_name': 'base', 'params': [p for n, p in base_parameters]}]
 
     charlm_parameters = [p for n, p in model.named_parameters()
                          if p.requires_grad and (n.startswith("charmodel_forward.") or n.startswith("charmodel_backward."))]
@@ -269,11 +278,12 @@ def get_optimizer(name,
                   bert_learning_rate=0.0,
                   bert_weight_decay=None,
                   charlm_learning_rate=0.0,
+                  lstm_bias_weight_decay=None,
                   is_peft=False,
                   bert_finetune_layers=None,
                   opt_logger=None):
     opt_logger = opt_logger if opt_logger is not None else logger
-    parameters = extract_base_optimizer_parameters(model, lr, charlm_learning_rate)
+    parameters = extract_base_optimizer_parameters(model, lr, charlm_learning_rate, lstm_bias_weight_decay)
 
     if not is_peft:
         bert_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
@@ -319,12 +329,13 @@ def get_split_optimizer(name,
                         bert_learning_rate=0.0,
                         bert_weight_decay=None,
                         charlm_learning_rate=0.0,
+                        lstm_bias_weight_decay=None,
                         is_peft=False,
                         bert_finetune_layers=None,
                         opt_logger=None):
     """Same as `get_optimizer`, but splits the optimizer for Bert into a separate optimizer"""
     opt_logger = opt_logger if opt_logger is not None else logger
-    parameters = extract_base_optimizer_parameters(model, lr, charlm_learning_rate)
+    parameters = extract_base_optimizer_parameters(model, lr, charlm_learning_rate, lstm_bias_weight_decay)
 
     bert_parameters = None
     if not is_peft:
