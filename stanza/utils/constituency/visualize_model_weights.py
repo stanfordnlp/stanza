@@ -16,6 +16,7 @@ Two modes of operation:
        weight_hh norm, and weight_hh spectral radius
    This mode requires at least one checkpoint; passing several gives a
    time-series view of how the statistics evolve.
+   Use --no_plots to skip PNG output and print terminal summaries only.
 
 Usage examples:
 
@@ -33,6 +34,11 @@ Usage examples:
       --checkpoints epoch_001.pt epoch_200.pt \\
       --lstms word_lstm transition_stack.lstm constituent_stack.lstm \\
       --linears reduce_linear word_to_constituent
+
+  # Stats only, no PNG output — terminal summaries only
+  python visualize_model_weights.py --mode stats --no_plots \\
+      --checkpoints epoch_001.pt epoch_010.pt epoch_200.pt \\
+      --lstms word_lstm transition_stack.lstm constituent_stack.lstm
 
   # Discover what linear and LSTM keys are available in a checkpoint
   python visualize_model_weights.py --list_keys --checkpoints model_best.pt
@@ -710,7 +716,8 @@ def print_forget_gate_summary(labels, lstm_prefixes, all_lstm_stats):
     print("=" * 72 + "\n")
 
 
-def run_stats_mode(checkpoints, labels, out_dir, lstm_prefixes, linear_names):
+def run_stats_mode(checkpoints, labels, out_dir, lstm_prefixes, linear_names,
+                   no_plots=False):
     all_states      = []
     # { linear_name: [stats_per_checkpoint] }
     all_linear_stats = {n: [] for n in linear_names}
@@ -752,19 +759,18 @@ def run_stats_mode(checkpoints, labels, out_dir, lstm_prefixes, linear_names):
 
     print()
 
-    # --- plots ---
-    for name in linear_names:
-        stats_list = all_linear_stats[name]
-        plot_linear_timeseries(stats_list, labels, name, out_dir)
+    # --- plots (skipped when --no_plots is set) ---
+    if not no_plots:
+        for name in linear_names:
+            plot_linear_timeseries(all_linear_stats[name], labels, name, out_dir)
 
-    plot_linear_distributions(all_states, linear_names, labels, out_dir)
+        plot_linear_distributions(all_states, linear_names, labels, out_dir)
 
-    for prefix in lstm_prefixes:
-        stats_list = all_lstm_stats[prefix]
-        if any(stats_list):
-            plot_lstm_timeseries(stats_list, labels, prefix, out_dir)
+        for prefix in lstm_prefixes:
+            if any(all_lstm_stats[prefix]):
+                plot_lstm_timeseries(all_lstm_stats[prefix], labels, prefix, out_dir)
 
-    plot_gate_bias_distributions(all_states, lstm_prefixes, labels, out_dir)
+        plot_gate_bias_distributions(all_states, lstm_prefixes, labels, out_dir)
 
     print_forget_gate_summary(labels, lstm_prefixes, all_lstm_stats)
 
@@ -803,6 +809,9 @@ def parse_args():
                         help='Print all linear and LSTM prefixes found in the first '
                              'checkpoint, then exit.  Useful for discovering valid '
                              '--linears / --lstms values.')
+    parser.add_argument('--no_plots', action='store_true',
+                        help='Skip all PNG output in stats mode and print terminal '
+                             'summaries only.  Has no effect in image mode.')
     parser.add_argument('--out_dir', default='.',
                         help='Output directory for PNG files (default: current directory)')
     return parser.parse_args()
@@ -837,7 +846,8 @@ def main():
 
     if args.mode in ('stats', 'both'):
         print("\n--- Statistics mode ---")
-        run_stats_mode(checkpoints, labels, args.out_dir, args.lstms, args.linears)
+        run_stats_mode(checkpoints, labels, args.out_dir, args.lstms, args.linears,
+                       no_plots=args.no_plots)
 
     print("\nDone.")
 
