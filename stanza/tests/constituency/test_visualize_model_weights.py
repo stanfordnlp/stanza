@@ -19,7 +19,10 @@ Tests are grouped into four levels:
      formatted table, handles collapsed LSTMs gracefully, and covers the
      multi-LSTM and missing-checkpoint cases.
 
-  5. Degeneracy detection: _is_degenerate correctly identifies collapsed
+  5. --no_plots flag: run_stats_mode with no_plots=True produces no PNG
+     files; without the flag, PNG files are written as expected.
+
+  6. Degeneracy detection: _is_degenerate correctly identifies collapsed
      LSTMs (all weights driven to zero by optimizer starvation), and
      _draw_degenerate_panel renders without error.
 """
@@ -533,7 +536,76 @@ class TestForgetGateSummary:
 
 
 # ---------------------------------------------------------------------------
-# 8. Degeneracy detection
+# 8. --no_plots flag
+# ---------------------------------------------------------------------------
+
+class TestNoPlotsFlag:
+    """
+    Verify that run_stats_mode with no_plots=True produces terminal output
+    but writes no PNG files to the output directory.
+    """
+
+    @pytest.fixture(scope='class')
+    def wordvec_pretrain_file(self):
+        return f'{TEST_WORKING_DIR}/in/tiny_emb.pt'
+
+    @pytest.fixture(scope='class')
+    def trainer(self, wordvec_pretrain_file):
+        return build_trainer(wordvec_pretrain_file)
+
+    def test_no_plots_writes_no_files(self, trainer):
+        from stanza.utils.constituency.visualize_model_weights import run_stats_mode
+        state = trainer.model.state_dict()
+
+        # Write a temporary checkpoint that load_checkpoint can read
+        with tempfile.TemporaryDirectory() as d:
+            ckpt_path = os.path.join(d, 'model.pt')
+            out_dir   = os.path.join(d, 'out')
+            os.makedirs(out_dir)
+
+            # Wrap in the structure load_checkpoint expects
+            torch.save({'params': {'model': state}}, ckpt_path,
+                       _use_new_zipfile_serialization=False)
+
+            run_stats_mode(
+                checkpoints=[ckpt_path],
+                labels=['test'],
+                out_dir=out_dir,
+                lstm_prefixes=['word_lstm'],
+                linear_names=['reduce_linear'],
+                no_plots=True,
+            )
+
+            png_files = [f for f in os.listdir(out_dir) if f.endswith('.png')]
+            assert png_files == [], f"Expected no PNGs with no_plots=True, got: {png_files}"
+
+    def test_plots_written_without_flag(self, trainer):
+        from stanza.utils.constituency.visualize_model_weights import run_stats_mode
+        state = trainer.model.state_dict()
+
+        with tempfile.TemporaryDirectory() as d:
+            ckpt_path = os.path.join(d, 'model.pt')
+            out_dir   = os.path.join(d, 'out')
+            os.makedirs(out_dir)
+
+            torch.save({'params': {'model': state}}, ckpt_path,
+                       _use_new_zipfile_serialization=False)
+
+            run_stats_mode(
+                checkpoints=[ckpt_path],
+                labels=['test'],
+                out_dir=out_dir,
+                lstm_prefixes=['word_lstm'],
+                linear_names=['reduce_linear'],
+                no_plots=False,
+            )
+
+            png_files = [f for f in os.listdir(out_dir) if f.endswith('.png')]
+            assert len(png_files) > 0, "Expected PNG files with no_plots=False"
+
+
+# ---------------------------------------------------------------------------
+# 9. Degeneracy detection
 # ---------------------------------------------------------------------------
 
 class TestDegeneracyDetection:
