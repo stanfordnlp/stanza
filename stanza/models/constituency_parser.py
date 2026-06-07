@@ -710,6 +710,8 @@ def build_argparse():
     parser.add_argument('--no_condense_output_layers', dest='condense_output_layers', default=True, action='store_false', help='After training, dead output rows will be removed from the output layers.  (Not impossible transitions, of course.)  This can be turned off, but it has no effect on accuracy and makes the final model slightly smaller and faster')
     parser.add_argument('--condense_output_threshold', default=0.001, type=float, help='Threshold at which to condense an output row (relative to the other output rows)')
 
+    parser.add_argument('--lstm_forget_init', default=1.0, type=float, help='Initialization value for the forget gates of the LSTMs')
+
     parser.add_argument('--sentence_boundary_vectors', default=SentenceBoundary.EVERYTHING, type=lambda x: SentenceBoundary[x.upper()],
                         help='Vectors to learn at the start & end of sentences.  {}'.format(", ".join(x.name for x in SentenceBoundary)))
     parser.add_argument('--constituency_composition', default=ConstituencyComposition.MAX, type=lambda x: ConstituencyComposition[x.upper()],
@@ -844,6 +846,7 @@ def build_model_filename(args):
                                                tscheme=args['transition_scheme'].short_name,
                                                trans_layers=args['bert_hidden_layers'],
                                                loss=loss,
+                                               lstm_forget_init=args['lstm_forget_init'],
                                                rattn=rattn,
                                                seed=args['seed'])
     model_save_file = re.sub("_+", "_", model_save_file)

@@ -40,7 +40,7 @@ from torch.nn.utils.rnn import pack_padded_sequence
 from stanza.models.common.bert_embedding import extract_bert_embeddings
 from stanza.models.common.maxout_linear import MaxoutLinear
 from stanza.models.common.relative_attn import RelativeAttention
-from stanza.models.common.utils import attach_bert_model, build_nonlinearity, unsort
+from stanza.models.common.utils import attach_bert_model, build_nonlinearity, initialize_forget_gate_bias, unsort
 from stanza.models.common.vocab import PAD_ID, UNK_ID
 from stanza.models.constituency.base_model import BaseModel
 from stanza.models.constituency.label_attention import LabelAttentionModule
@@ -460,7 +460,12 @@ class LSTMModel(BaseModel, nn.Module):
             if self.args['rattn_reverse'] and self.args['rattn_cat']:
                 self.word_input_size += self.rel_attn_reverse.d_output
 
-        self.word_lstm = nn.LSTM(input_size=self.word_input_size, hidden_size=self.hidden_size, num_layers=self.num_lstm_layers, bidirectional=True, dropout=self.lstm_layer_dropout)
+        self.word_lstm = nn.LSTM(input_size=self.word_input_size,
+                                 hidden_size=self.hidden_size,
+                                 num_layers=self.num_lstm_layers,
+                                 bidirectional=True,
+                                 dropout=self.lstm_layer_dropout)
+        initialize_forget_gate_bias(self.word_lstm, self.args.get('lstm_forget_init', 0.0))
 
         # after putting the word_delta_tag input through the word_lstm, we get back
         # hidden_size * 2 output with the front and back lstms concatenated.
@@ -479,7 +484,8 @@ class LSTMModel(BaseModel, nn.Module):
                                                   num_lstm_layers=self.num_lstm_layers,
                                                   dropout=self.lstm_layer_dropout,
                                                   uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
-                                                  input_dropout=self.lstm_input_dropout)
+                                                  input_dropout=self.lstm_input_dropout,
+                                                  forget_bias=self.args.get('lstm_forget_init', 0.0))
         elif args['transition_stack'] == StackHistory.ATTN:
             self.transition_stack = TransformerTreeStack(input_size=self.transition_embedding_dim,
                                                          output_size=self.transition_hidden_size,
@@ -505,7 +511,8 @@ class LSTMModel(BaseModel, nn.Module):
                                                    num_lstm_layers=self.num_lstm_layers,
                                                    dropout=self.lstm_layer_dropout,
                                                    uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
-                                                   input_dropout=self.lstm_input_dropout)
+                                                   input_dropout=self.lstm_input_dropout,
+                                                   forget_bias=self.args.get('lstm_forget_init', 0.0))
         elif args['constituent_stack'] == StackHistory.ATTN:
             self.constituent_stack = TransformerTreeStack(input_size=self.hidden_size,
                                                           output_size=self.hidden_size,

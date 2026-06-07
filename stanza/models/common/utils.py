@@ -1052,3 +1052,29 @@ def evaluating(net):
     finally:
         if istrain:
             net.train()
+
+def initialize_forget_gate_bias(lstm, bias_value=1.0):
+    """
+    Initialize the forget gate bias of an LSTM to a positive constant.
+
+    Starting with a positive forget gate bias (commonly +1) encourages the
+    model to remember cell state early in training rather than defaulting to
+    the neutral sigmoid(0)=0.5 posture.  See Jozefowicz et al. (2015),
+    "An Empirical Exploration of Recurrent Network Architectures."
+
+    Sets bias_ih to bias_value and bias_hh to 0.0 for the forget gate slice
+    in every layer and direction (forward and reverse for bidirectional LSTMs).
+    The combined pre-activation bias (bias_ih + bias_hh) is thus bias_value.
+
+    Args:
+        lstm:       an nn.LSTM module
+        bias_value: value to initialize the forget gate bias to (default 1.0)
+    """
+    H = lstm.hidden_size
+    suffixes = ['']
+    if lstm.bidirectional:
+        suffixes.append('_reverse')
+    for layer in range(lstm.num_layers):
+        for suffix in suffixes:
+            nn.init.constant_(getattr(lstm, f'bias_ih_l{layer}{suffix}')[H:2*H], bias_value)
+            nn.init.constant_(getattr(lstm, f'bias_hh_l{layer}{suffix}')[H:2*H], 0.0)
