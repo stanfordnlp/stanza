@@ -247,6 +247,18 @@ def dispatch_optimizer(name, parameters, opt_logger, lr=None, betas=None, eps=No
         raise ValueError("Unsupported optimizer: {}".format(name))
 
 
+def extract_base_optimizer_parameters(model, lr, charlm_learning_rate):
+    base_parameters = [p for n, p in model.named_parameters()
+                       if p.requires_grad and not n.startswith("bert_model.")
+                       and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
+    parameters = [{'param_group_name': 'base', 'params': base_parameters}]
+
+    charlm_parameters = [p for n, p in model.named_parameters()
+                         if p.requires_grad and (n.startswith("charmodel_forward.") or n.startswith("charmodel_backward."))]
+    if len(charlm_parameters) > 0 and charlm_learning_rate > 0:
+        parameters.append({'param_group_name': 'charlm', 'params': charlm_parameters, 'lr': lr * charlm_learning_rate})
+    return parameters
+
 def get_optimizer(name,
                   model,
                   lr,
@@ -261,15 +273,7 @@ def get_optimizer(name,
                   bert_finetune_layers=None,
                   opt_logger=None):
     opt_logger = opt_logger if opt_logger is not None else logger
-    base_parameters = [p for n, p in model.named_parameters()
-                       if p.requires_grad and not n.startswith("bert_model.")
-                       and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
-    parameters = [{'param_group_name': 'base', 'params': base_parameters}]
-
-    charlm_parameters = [p for n, p in model.named_parameters()
-                         if p.requires_grad and (n.startswith("charmodel_forward.") or n.startswith("charmodel_backward."))]
-    if len(charlm_parameters) > 0 and charlm_learning_rate > 0:
-        parameters.append({'param_group_name': 'charlm', 'params': charlm_parameters, 'lr': lr * charlm_learning_rate})
+    parameters = extract_base_optimizer_parameters(model, lr, charlm_learning_rate)
 
     if not is_peft:
         bert_parameters = [p for n, p in model.named_parameters() if p.requires_grad and n.startswith("bert_model.")]
@@ -320,15 +324,7 @@ def get_split_optimizer(name,
                         opt_logger=None):
     """Same as `get_optimizer`, but splits the optimizer for Bert into a separate optimizer"""
     opt_logger = opt_logger if opt_logger is not None else logger
-    base_parameters = [p for n, p in model.named_parameters()
-                       if p.requires_grad and not n.startswith("bert_model.")
-                       and not n.startswith("charmodel_forward.") and not n.startswith("charmodel_backward.")]
-    parameters = [{'param_group_name': 'base', 'params': base_parameters}]
-
-    charlm_parameters = [p for n, p in model.named_parameters()
-                         if p.requires_grad and (n.startswith("charmodel_forward.") or n.startswith("charmodel_backward."))]
-    if len(charlm_parameters) > 0 and charlm_learning_rate > 0:
-        parameters.append({'param_group_name': 'charlm', 'params': charlm_parameters, 'lr': lr * charlm_learning_rate})
+    parameters = extract_base_optimizer_parameters(model, lr, charlm_learning_rate)
 
     bert_parameters = None
     if not is_peft:
