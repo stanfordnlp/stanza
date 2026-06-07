@@ -14,12 +14,13 @@ from collections import namedtuple
 import torch
 import torch.nn as nn
 
+from stanza.models.common.utils import initialize_forget_gate_bias
 from stanza.models.constituency.tree_stack import TreeStack
 
 Node = namedtuple("Node", ['value', 'lstm_hx', 'lstm_cx', 'output'])
 
 class LSTMTreeStack(nn.Module):
-    def __init__(self, input_size, hidden_size, num_lstm_layers, dropout, uses_boundary_vector, input_dropout):
+    def __init__(self, input_size, hidden_size, num_lstm_layers, dropout, uses_boundary_vector, input_dropout, forget_bias):
         """
         Prepare LSTM and parameters
 
@@ -44,6 +45,8 @@ class LSTMTreeStack(nn.Module):
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_size, num_layers=num_lstm_layers, dropout=dropout)
         self.input_dropout = input_dropout
 
+        if forget_bias is not None:
+            initialize_forget_gate_bias(self.lstm, forget_bias)
 
     def initial_state(self, initial_value=None):
         """
