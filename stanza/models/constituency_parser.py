@@ -707,6 +707,8 @@ def build_argparse():
     # JA   0.92896325       0.930728
     parser.add_argument('--num_output_layers', default=2, type=int, help='How many layers to use at the prediction level')
 
+    parser.add_argument('--lstm_forget_init', default=1.0, type=float, help='Initialization value for the forget gates of the LSTMs')
+
     parser.add_argument('--sentence_boundary_vectors', default=SentenceBoundary.EVERYTHING, type=lambda x: SentenceBoundary[x.upper()],
                         help='Vectors to learn at the start & end of sentences.  {}'.format(", ".join(x.name for x in SentenceBoundary)))
     parser.add_argument('--constituency_composition', default=ConstituencyComposition.MAX, type=lambda x: ConstituencyComposition[x.upper()],
@@ -841,6 +843,7 @@ def build_model_filename(args):
                                                tscheme=args['transition_scheme'].short_name,
                                                trans_layers=args['bert_hidden_layers'],
                                                loss=loss,
+                                               lstm_forget_init=args['lstm_forget_init'],
                                                rattn=rattn,
                                                seed=args['seed'])
     model_save_file = re.sub("_+", "_", model_save_file)
