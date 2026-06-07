@@ -145,6 +145,7 @@ def build_optimizer(args, model, build_simple_adadelta=False):
                          weight_decay=weight_decay,
                          bert_learning_rate=bert_learning_rate,
                          bert_weight_decay=weight_decay*bert_weight_decay,
+                         lstm_bias_weight_decay=args.get('lstm_bias_weight_decay', None),
                          is_peft=args.get('use_peft', False),
                          bert_finetune_layers=args['bert_finetune_layers'],
                          opt_logger=tlogger)
