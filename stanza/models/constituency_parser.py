@@ -710,6 +710,9 @@ def build_argparse():
     parser.add_argument('--no_condense_output_layers', dest='condense_output_layers', default=True, action='store_false', help='After training, dead output rows will be removed from the output layers.  (Not impossible transitions, of course.)  This can be turned off, but it has no effect on accuracy and makes the final model slightly smaller and faster')
     parser.add_argument('--condense_output_threshold', default=0.001, type=float, help='Threshold at which to condense an output row (relative to the other output rows)')
 
+    # Setting the --lstm_forget_init without also setting the --lstm_bias_weight_decay
+    # is basically useless, since the weight decay pushes the forget bias
+    # (and all the biases) to 0
     parser.add_argument('--lstm_forget_init', default=1.0, type=float, help='Initialization value for the forget gates of the LSTMs')
     parser.add_argument('--lstm_bias_weight_decay', default=None, type=float, help='Use this weight decay for LSTM bias vectors, if set')
 
