@@ -707,6 +707,9 @@ def build_argparse():
     # JA   0.92896325       0.930728
     parser.add_argument('--num_output_layers', default=2, type=int, help='How many layers to use at the prediction level')
 
+    # Setting the --lstm_forget_init without also setting the --lstm_bias_weight_decay
+    # is basically useless, since the weight decay pushes the forget bias
+    # (and all the biases) to 0
     parser.add_argument('--lstm_forget_init', default=1.0, type=float, help='Initialization value for the forget gates of the LSTMs')
     parser.add_argument('--lstm_bias_weight_decay', default=None, type=float, help='Use this weight decay for LSTM bias vectors, if set')
 
