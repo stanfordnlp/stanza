@@ -152,6 +152,8 @@ def build_trainer(args, train_trees, dev_trees, silver_trees, foundation_cache, 
     if None in tags:
         raise RuntimeError("Fatal problem: the tagger put None on some of the nodes!")
     tlogger.info("Unique tags in training set: %s", tags)
+    tag_counts = Tree.get_tag_counts(train_trees)
+    tlogger.info("Tag counts: %s", tag_counts)
     # no need to fail for missing tags between train/dev set
     # the model has an unknown tag embedding
     for tag in Tree.get_unique_tags(dev_trees):
