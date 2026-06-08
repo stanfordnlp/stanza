@@ -369,6 +369,19 @@ class Tree(StanzaObject):
         return sorted(tags)
 
     @staticmethod
+    def get_tag_counts(trees):
+        """
+        Walks over all of the trees and gets the count of the unique constituent names from the trees
+        """
+        if isinstance(trees, Tree):
+            trees = [trees]
+
+        tags = Counter()
+        for tree in trees:
+            tree.visit_preorder(preterminal = lambda x: tags.update([x.label]))
+        return tags
+
+    @staticmethod
     def get_unique_words(trees):
         """
         Walks over all of the trees and gets all of the unique words from the trees
