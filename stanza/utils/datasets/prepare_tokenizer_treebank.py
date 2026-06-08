@@ -1492,7 +1492,7 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
                             train_input_conllu=train_input_conllu,
                             train_output_conllu=train_output_conllu,
                             dev_output_conllu=dev_output_conllu,
-                            split_ratio=args.split_ratio):
+                            xv_ratio=args.split_ratio):
         return False
 
     # the test set is already fine
