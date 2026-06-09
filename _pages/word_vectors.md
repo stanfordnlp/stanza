@@ -243,6 +243,17 @@ Multilingual Facilitation (pp. 275-288).
 University of Helsinki.
 https://doi.org/10.31885/9789515150257
 
+In 2023 some of the same group produced a new set of Erzya word vectors; the newer vectors gave a clear benefit for POS and seemed neutral for depparse, so we switched to these vectors for 1.13.0.
+
+
+Alnajjar, K., Hämäläinen M, Rueter J. (2023).
+[Sentiment Analysis Using Aligned Word Embeddings for Uralic Languages](https://aclanthology.org/2023.resourceful-1.3).
+In "Proceedings of the Second Workshop on Resources and
+Representations for Under-Resourced Languages and Domains
+(RESOURCEFUL-2023)", Association for Computational Linguistics.
+
+
+
 ### Komi Zyrian
 
 For Komi Zyrian, fasttext has word vectors for Komi, but they don't
