@@ -184,7 +184,7 @@ specific_default_pretrains = {
     "mr":      "fasttextwiki",
     "mt":      "fasttextwiki",
     "my":      "ucsy",
-    "myv":     "mokha",
+    "myv":     "rootroo",
     "nb":      "conll17",
     "nds":     "fasttext157",
     "nl":      "conll17",
