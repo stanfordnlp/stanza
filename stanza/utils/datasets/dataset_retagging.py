@@ -50,9 +50,9 @@ def choose_tagger_model(short_language, dataset, tagger_model, args):
     if len(candidates) > 1:
         ending = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(short_language))
         if ending is not None:
-            endings = ("_%s_tagger.pt" % ending, "_charlm_tagger.pt", "_nocharlm_tagger.pt")
+            endings = ("_%s_tagger.pt" % ending, "_charlm_tagger.pt", "_nocharlm_tagger.pt", "_nopretrain_tagger.pt")
         else:
-            endings = ("_charlm_tagger.pt", "_nocharlm_tagger.pt")
+            endings = ("_charlm_tagger.pt", "_nocharlm_tagger.pt", "_nopretrain_tagger.pt")
         for ending in endings:
             best_candidates = [x for x in candidates if x.endswith(ending)]
             if len(best_candidates) == 1:
