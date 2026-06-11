@@ -2,10 +2,12 @@
 Test various resource downloading functions from resources/common.py
 """
 
+import json
 import logging
 import os
 import pytest
 import tempfile
+from unittest.mock import patch
 
 import stanza
 from stanza.resources import common
@@ -43,22 +45,55 @@ def test_download_tokenize_mwt():
         # mwt should be added to the list
         assert len(pipeline.loaded_processors) == 2
 
+
+def _fake_request_file(url, path, *args, **kwargs):
+    """
+    Stand-in for request_file: creates the destination file without hitting
+    the network.  resources.json is handled by writing the real resources dict
+    (already loaded from TEST_MODELS_DIR) into the temp dir before download()
+    is called, so this mock only needs to stub out model .pt file downloads.
+    """
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    open(path, "wb").close()
+
 def test_download_non_default():
     """
-    Test the download path for a single file rather than the default zip
-
-    The expectation is that an NER model will also download two charlm models.
-    If that layout changes on purpose, this test will fail and will need to be updated
+    Test the download path for a single file rather than the default zip.
+ 
+    The expectation is that an NER model will also download two charlm models
+    and a pretrain.  If that layout changes on purpose, this test will fail
+    and will need to be updated.
+ 
+    The real resources.json is loaded from TEST_MODELS_DIR so the dependency
+    resolution reflects the actual package structure.  request_file is mocked
+    so no network traffic is generated.
     """
-    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-        stanza.download("en", model_dir=test_dir, processors="ner", package="ontonotes_charlm", verbose=False)
-        assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
-        en_dir = os.path.join(test_dir, 'en')
-        en_dir_listing = sorted(os.listdir(en_dir))
-        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain']
-        assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes_charlm.pt']
-        for i in en_dir_listing:
-            assert len(os.listdir(os.path.join(en_dir, i))) == 1
+    resources = common.load_resources_json(TEST_MODELS_DIR)
+ 
+    with patch("stanza.resources.common.request_file", side_effect=_fake_request_file):
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+            # Write the real resources.json into the temp dir so download()
+            # can load it without fetching from the network.
+            resources_path = os.path.join(test_dir, "resources.json")
+            with open(resources_path, "w", encoding="utf-8") as fh:
+                json.dump(resources, fh)
+
+            stanza.download(
+                "en",
+                model_dir=test_dir,
+                processors="ner",
+                package="ontonotes_charlm",
+                verbose=False,
+                download_json=False,
+            )
+
+            assert sorted(os.listdir(test_dir)) == ["en", "resources.json"]
+            en_dir = os.path.join(test_dir, "en")
+            en_dir_listing = sorted(os.listdir(en_dir))
+            assert en_dir_listing == ["backward_charlm", "forward_charlm", "ner", "pretrain"]
+            assert os.listdir(os.path.join(en_dir, "ner")) == ["ontonotes_charlm.pt"]
+            for i in en_dir_listing:
+                assert len(os.listdir(os.path.join(en_dir, i))) == 1
 
 
 def test_download_two_models():
