@@ -109,15 +109,22 @@ def test_download_two_models():
     will fail.  Best way to update it will be two different models
     which download two different charlms
     """
-    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-        stanza.download("en", model_dir=test_dir, processors="ner", package={"ner": ["ontonotes_charlm", "anatem"]}, verbose=False)
-        assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
-        en_dir = os.path.join(test_dir, 'en')
-        en_dir_listing = sorted(os.listdir(en_dir))
-        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain']
-        assert sorted(os.listdir(os.path.join(en_dir, 'ner'))) == ['anatem.pt', 'ontonotes_charlm.pt']
-        for i in en_dir_listing:
-            assert len(os.listdir(os.path.join(en_dir, i))) == 2
+    resources = common.load_resources_json(TEST_MODELS_DIR)
+
+    with patch("stanza.resources.common.request_file", side_effect=_fake_request_file):
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+            resources_path = os.path.join(test_dir, "resources.json")
+            with open(resources_path, "w", encoding="utf-8") as fh:
+                json.dump(resources, fh)
+
+            stanza.download("en", model_dir=test_dir, processors="ner", package={"ner": ["ontonotes_charlm", "anatem"]}, verbose=False, download_json=False)
+            assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
+            en_dir = os.path.join(test_dir, 'en')
+            en_dir_listing = sorted(os.listdir(en_dir))
+            assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'ner', 'pretrain']
+            assert sorted(os.listdir(os.path.join(en_dir, 'ner'))) == ['anatem.pt', 'ontonotes_charlm.pt']
+            for i in en_dir_listing:
+                assert len(os.listdir(os.path.join(en_dir, i))) == 2
 
 
 def test_process_pipeline_parameters():
