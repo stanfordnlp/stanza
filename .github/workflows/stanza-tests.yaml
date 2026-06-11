@@ -19,6 +19,7 @@ jobs:
           #. $CONDA_PREFIX/etc/profile.d/conda.sh
           . /home/stanzabuild/miniconda3/etc/profile.d/conda.sh
           conda activate stanza
+          export HF_HUB_DISABLE_XET=1   # newer downloads are intermittently failing...
           export STANZA_TEST_HOME=/scr/stanza_test
           export CORENLP_HOME=$STANZA_TEST_HOME/corenlp_dir
           export CLASSPATH=$CORENLP_HOME/*:
