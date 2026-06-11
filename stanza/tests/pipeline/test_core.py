@@ -65,31 +65,100 @@ def test_pretagged():
 
 def test_download_missing_ner_model():
     """
-    Test that the pipeline will automatically download missing models
+    Test that the pipeline will automatically download missing models.
+
+    Tokenize is pre-seeded (already "downloaded"); ner, charlm, and pretrain
+    are absent and should be fetched automatically by Pipeline.  request_file
+    is mocked so no network traffic is generated.  All models that Pipeline
+    will load are restored from TEST_MODELS_DIR so torch can open them.
     """
     with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-        stanza.download("en", model_dir=test_dir, processors="tokenize", package="combined", verbose=False)
-        pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize,ner", package={"ner": ("ontonotes_charlm")})
+        # Tokenize was already present; the rest are "downloaded" by Pipeline.
+        # All of them need real content because Pipeline loads every processor.
+        model_rel_paths = [
+            "tokenize/combined.pt",
+            "mwt/combined.pt",
+            "ner/ontonotes-ww-multi_charlm.pt",
+            "forward_charlm/1billion.pt",
+            "backward_charlm/1billion.pt",
+            "pretrain/conll17.pt",
+        ]
+        real_files = {
+            os.path.join(test_dir, "en", rel): os.path.join(TEST_MODELS_DIR, "en", rel)
+            for rel in model_rel_paths
+        }
 
-        assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
-        en_dir = os.path.join(test_dir, 'en')
-        en_dir_listing = sorted(os.listdir(en_dir))
-        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'mwt', 'ner', 'pretrain', 'tokenize']
-        assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes_charlm.pt']
+        def fake_request_file_with_restore(url, path, *args, **kwargs):
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            if path.endswith("resources.json"):
+                real_path = os.path.join(TEST_MODELS_DIR, "resources.json")
+                with open(real_path, encoding="utf-8") as fin:
+                    data = fin.read()
+                with open(path, "w", encoding="utf-8") as fout:
+                    fout.write(data)
+            elif path in real_files:
+                shutil.copy2(real_files[path], path)
+            else:
+                open(path, "wb").close()
+
+        _seed_from_models_dir(test_dir, "en", ["tokenize/combined.pt", "mwt/combined.pt"])
+
+        with patch("stanza.resources.common.request_file", side_effect=fake_request_file_with_restore):
+            with patch("stanza.pipeline.core.download_resources_json", side_effect=lambda *a, **kw: fake_request_file_with_restore(None, os.path.join(a[0], "resources.json"))):
+                pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize,ner", package={"ner": ("ontonotes-ww-multi_charlm")})
+
+                assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
+                en_dir = os.path.join(test_dir, 'en')
+                en_dir_listing = sorted(os.listdir(en_dir))
+                assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'mwt', 'ner', 'pretrain', 'tokenize']
+                assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes-ww-multi_charlm.pt']
 
 
 def test_download_missing_resources():
     """
-    Test that the pipeline will automatically download missing models
+    Test that the pipeline will automatically download missing models.
+
+    No models are pre-seeded; everything including resources.json must be
+    fetched by Pipeline.  request_file is mocked so no network traffic is
+    generated.  All models that Pipeline will load are restored from
+    TEST_MODELS_DIR so torch can open them.
     """
     with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-        pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize,ner", package={"tokenize": "combined", "ner": "ontonotes_charlm"})
+        model_rel_paths = [
+            "tokenize/combined.pt",
+            "mwt/combined.pt",
+            "ner/ontonotes-ww-multi_charlm.pt",
+            "forward_charlm/1billion.pt",
+            "backward_charlm/1billion.pt",
+            "pretrain/conll17.pt",
+        ]
+        real_files = {
+            os.path.join(test_dir, "en", rel): os.path.join(TEST_MODELS_DIR, "en", rel)
+            for rel in model_rel_paths
+        }
 
-        assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
-        en_dir = os.path.join(test_dir, 'en')
-        en_dir_listing = sorted(os.listdir(en_dir))
-        assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'mwt', 'ner', 'pretrain', 'tokenize']
-        assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes_charlm.pt']
+        def fake_request_file_with_restore(url, path, *args, **kwargs):
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            if path.endswith("resources.json"):
+                real_path = os.path.join(TEST_MODELS_DIR, "resources.json")
+                with open(real_path, encoding="utf-8") as fin:
+                    data = fin.read()
+                with open(path, "w", encoding="utf-8") as fout:
+                    fout.write(data)
+            elif path in real_files:
+                shutil.copy2(real_files[path], path)
+            else:
+                open(path, "wb").close()
+
+        with patch("stanza.resources.common.request_file", side_effect=fake_request_file_with_restore):
+            with patch("stanza.pipeline.core.download_resources_json", side_effect=lambda *a, **kw: fake_request_file_with_restore(None, os.path.join(a[0], "resources.json"))):
+                pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize,ner", package={"tokenize": "combined", "ner": "ontonotes-ww-multi_charlm"})
+
+                assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
+                en_dir = os.path.join(test_dir, 'en')
+                en_dir_listing = sorted(os.listdir(en_dir))
+                assert en_dir_listing == ['backward_charlm', 'forward_charlm', 'mwt', 'ner', 'pretrain', 'tokenize']
+                assert os.listdir(os.path.join(en_dir, 'ner')) == ['ontonotes-ww-multi_charlm.pt']
 
 
 def test_download_resources_overwrites():
