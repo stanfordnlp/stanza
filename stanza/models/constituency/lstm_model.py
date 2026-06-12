@@ -465,7 +465,8 @@ class LSTMModel(BaseModel, nn.Module):
                                  num_layers=self.num_lstm_layers,
                                  bidirectional=True,
                                  dropout=self.lstm_layer_dropout)
-        initialize_forget_gate_bias(self.word_lstm, self.args.get('lstm_forget_init', 0.0))
+        if self.args.get('lstm_forget_init') is not None:
+            initialize_forget_gate_bias(self.word_lstm, self.args['lstm_forget_init'])
 
         # after putting the word_delta_tag input through the word_lstm, we get back
         # hidden_size * 2 output with the front and back lstms concatenated.
@@ -485,7 +486,7 @@ class LSTMModel(BaseModel, nn.Module):
                                                   dropout=self.lstm_layer_dropout,
                                                   uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
                                                   input_dropout=self.lstm_input_dropout,
-                                                  forget_bias=self.args.get('lstm_forget_init', 0.0))
+                                                  forget_bias=self.args.get('lstm_forget_init'))
         elif args['transition_stack'] == StackHistory.ATTN:
             self.transition_stack = TransformerTreeStack(input_size=self.transition_embedding_dim,
                                                          output_size=self.transition_hidden_size,
@@ -512,7 +513,7 @@ class LSTMModel(BaseModel, nn.Module):
                                                    dropout=self.lstm_layer_dropout,
                                                    uses_boundary_vector=self.sentence_boundary_vectors is SentenceBoundary.EVERYTHING,
                                                    input_dropout=self.lstm_input_dropout,
-                                                   forget_bias=self.args.get('lstm_forget_init', 0.0))
+                                                   forget_bias=self.args.get('lstm_forget_init'))
         elif args['constituent_stack'] == StackHistory.ATTN:
             self.constituent_stack = TransformerTreeStack(input_size=self.hidden_size,
                                                           output_size=self.hidden_size,
