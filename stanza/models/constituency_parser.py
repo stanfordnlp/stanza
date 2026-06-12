@@ -713,7 +713,7 @@ def build_argparse():
     # Setting the --lstm_forget_init without also setting the --lstm_bias_weight_decay
     # is basically useless, since the weight decay pushes the forget bias
     # (and all the biases) to 0
-    parser.add_argument('--lstm_forget_init', default=1.0, type=float, help='Initialization value for the forget gates of the LSTMs')
+    parser.add_argument('--lstm_forget_init', default=None, type=float, help='Initialization value for the forget gates of the LSTMs')
     parser.add_argument('--lstm_bias_weight_decay', default=None, type=float, help='Use this weight decay for LSTM bias vectors, if set')
 
     parser.add_argument('--sentence_boundary_vectors', default=SentenceBoundary.EVERYTHING, type=lambda x: SentenceBoundary[x.upper()],
