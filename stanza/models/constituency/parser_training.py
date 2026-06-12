@@ -101,7 +101,7 @@ def evaluate(args, model_file, retag_pipeline):
             ) as prof:
                 f1, kbestF1, _ = run_dev_set(trainer.model, retagged_treebank, treebank, args, evaluator, analyze_first_errors=True)
             sort_by = 'cuda_time_total' if args['profile_sort'] == 'cuda' else 'self_cpu_time_total'
-            tlogger.info("Profile results for %d sentences:\n%s", len(retagged_treebank), prof.key_averages(group_by_stack_n=5).table(sort_by=sort_by, row_limit=30))
+            tlogger.info("Profile results for %d sentences:\n%s", len(retagged_treebank), prof.key_averages(group_by_stack_n=5).table(sort_by=sort_by, row_limit=args['profile_row_limit']))
             prof.export_chrome_trace(args['write_profile'])
         else:
             f1, kbestF1, _ = run_dev_set(trainer.model, retagged_treebank, treebank, args, evaluator, analyze_first_errors=True)

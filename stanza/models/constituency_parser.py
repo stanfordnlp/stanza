@@ -790,6 +790,7 @@ def build_argparse():
     parser.add_argument('--limit_treebank', default=None, type=int, help='Only test this many sentences')
     parser.add_argument('--write_profile', default=None, help='Write a profile of the constituency parser when scoring the dev set')
     parser.add_argument('--profile_sort', default='cuda', choices=['cpu', 'cuda'], help='How to sort the profile output of the parser')
+    parser.add_argument('--profile_row_limit', default=30, type=int, help='How many rows to output when printing a profile')
 
     return parser
 
