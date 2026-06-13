@@ -690,7 +690,22 @@ def build_argparse():
 
     parser.add_argument('--num_lstm_layers', default=2, type=int, help='How many layers to use in the LSTMs')
     parser.add_argument('--num_tree_lstm_layers', default=None, type=int, help='How many layers to use in the TREE_LSTMs, if used.  This also increases the width of the word outputs to match the tree lstm inputs.  Default 2 if TREE_LSTM or TREE_LSTM_CX, 1 otherwise')
-    parser.add_argument('--num_output_layers', default=3, type=int, help='How many layers to use at the prediction level')
+    # Number of output layers in the final MLP
+    # Previous versions used 3, but had a bug which did not include
+    # any nonlinearity between the final two layers
+    # It turned out that condensing those layers into one layer was
+    # mathematically possible and gave the exact same results
+    # We then built a few models with different seeds, averaging the
+    # dev set scores, and found that there wasn't really an advantage
+    # to continuing to use 3 layers
+    # (although note the difference in JA scores)
+    #     2 output layers  3 output layers
+    # DE   0.95859975       0.958617
+    # EN   0.962747         0.962415
+    # ID   0.8964806        0.896985
+    # IT   0.8497188        0.849343
+    # JA   0.92896325       0.930728
+    parser.add_argument('--num_output_layers', default=2, type=int, help='How many layers to use at the prediction level')
 
     parser.add_argument('--sentence_boundary_vectors', default=SentenceBoundary.EVERYTHING, type=lambda x: SentenceBoundary[x.upper()],
                         help='Vectors to learn at the start & end of sentences.  {}'.format(", ".join(x.name for x in SentenceBoundary)))
