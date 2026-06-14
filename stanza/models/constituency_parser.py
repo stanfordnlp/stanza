@@ -717,6 +717,7 @@ def build_argparse():
     # IT   0.8497188        0.849343
     # JA   0.92896325       0.930728
     parser.add_argument('--num_output_layers', default=2, type=int, help='How many layers to use at the prediction level')
+    parser.add_argument('--output_layer_sizes', default=None, type=int, nargs='+', help='How large to make the intermediate connections in the output layers.  Default if not specified will be the same as --hidden_size for each layer')
 
     # Setting the --lstm_forget_init without also setting the --lstm_bias_weight_decay
     # is basically useless, since the weight decay pushes the forget bias
@@ -975,6 +976,13 @@ def parse_args(args=None):
 
     if args.wandb_name or args.wandb_norm_regex:
         args.wandb = True
+
+    if args.output_layer_sizes is not None:
+        expected = args.num_output_layers - 1
+        if len(args.output_layer_sizes) != expected:
+            parser.error(f'--output_layer_sizes must have exactly {expected} value(s) '
+                         f'for --num_output_layers {args.num_output_layers} '
+                         f'(got {len(args.output_layer_sizes)})')
 
     args = vars(args)
 
