@@ -29,6 +29,7 @@ from stanza.models.constituency.top_down_oracle import TopDownOracle
 from stanza.models.constituency.trainer import Trainer
 from stanza.models.constituency.utils import retag_trees, build_optimizer, build_scheduler, verify_transitions, get_open_nodes, check_constituents, check_root_labels, remove_duplicate_trees, remove_singleton_trees
 from stanza.server.parser_eval import EvaluateParser, ParseResult
+from stanza.utils.constituency import condense_output_layers
 from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
@@ -279,6 +280,14 @@ def train(args, model_load_file, retag_pipeline):
 
     if args['wandb']:
         wandb.finish()
+
+
+    if args['condense_output_layers']:
+        tlogger.info("Condensing output layers in %s", args['save_name'])
+        summary = condense_output_layers.condense_model(args['save_name'], args['save_name'], threshold=args['condense_output_threshold'])
+        for r in summary['results']:
+            tlogger.info("  output_layers.%d: %d -> %d (%d dead neurons)",
+                         r['layer_idx'], r['original_size'], r['live'], r['dead'])
 
     return trainer
 
