@@ -128,6 +128,8 @@ class Trainer(BaseTrainer):
         update_args.pop("constituency_composition", None)
         update_args.pop("constituent_stack", None)
         update_args.pop("num_tree_lstm_layers", None)
+        update_args.pop("num_output_layers", None)
+        update_args.pop("output_layer_sizes", None)
         update_args.pop("transition_scheme", None)
         update_args.pop("transition_stack", None)
         update_args.pop("maxout_k", None)
