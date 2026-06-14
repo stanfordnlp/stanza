@@ -650,8 +650,12 @@ class LSTMModel(BaseModel, nn.Module):
         # word_lstm:         hidden_size * num_tree_lstm_layers
         # transition_stack:  transition_hidden_size
         # constituent_stack: hidden_size
-        predict_input_size = [self.hidden_size + self.hidden_size * self.num_tree_lstm_layers + self.transition_hidden_size] + [self.hidden_size] * middle_layers
-        predict_output_size = [self.hidden_size] * middle_layers + [final_layer_size]
+        # output_layer_sizes stores the condensed output size of each middle layer.
+        # If absent (uncompressed model), default to hidden_size for all middle layers.
+        first_input_size = self.hidden_size + self.hidden_size * self.num_tree_lstm_layers + self.transition_hidden_size
+        middle_output_sizes = self.args.get('output_layer_sizes', [self.hidden_size] * middle_layers)
+        predict_input_size  = [first_input_size] + middle_output_sizes
+        predict_output_size = middle_output_sizes + [final_layer_size]
         if not maxout_k:
             output_layers = nn.ModuleList([nn.Linear(input_size, output_size)
                                            for input_size, output_size in zip(predict_input_size, predict_output_size)])
