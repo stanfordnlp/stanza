@@ -718,6 +718,8 @@ def build_argparse():
     # JA   0.92896325       0.930728
     parser.add_argument('--num_output_layers', default=2, type=int, help='How many layers to use at the prediction level')
     parser.add_argument('--output_layer_sizes', default=None, type=int, nargs='+', help='How large to make the intermediate connections in the output layers.  Default if not specified will be the same as --hidden_size for each layer')
+    parser.add_argument('--no_condense_output_layers', dest='condense_output_layers', default=True, action='store_false', help='After training, dead output rows will be removed from the output layers.  (Not impossible transitions, of course.)  This can be turned off, but it has no effect on accuracy and makes the final model slightly smaller and faster')
+    parser.add_argument('--condense_output_threshold', default=0.001, type=float, help='Threshold at which to condense an output row (relative to the other output rows)')
 
     # Setting the --lstm_forget_init without also setting the --lstm_bias_weight_decay
     # is basically useless, since the weight decay pushes the forget bias

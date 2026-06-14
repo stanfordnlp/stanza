@@ -661,7 +661,9 @@ class LSTMModel(BaseModel, nn.Module):
         # output_layer_sizes stores the condensed output size of each middle layer.
         # If absent (uncompressed model), default to hidden_size for all middle layers.
         first_input_size = self.hidden_size + self.hidden_size * self.num_tree_lstm_layers + self.transition_hidden_size
-        middle_output_sizes = self.args.get('output_layer_sizes', [self.hidden_size] * middle_layers)
+        middle_output_sizes = self.args.get('output_layer_sizes')
+        if middle_output_sizes is None:
+            middle_output_sizes = [self.hidden_size] * middle_layers
         predict_input_size  = [first_input_size] + middle_output_sizes
         predict_output_size = middle_output_sizes + [final_layer_size]
         if not maxout_k:
