@@ -254,7 +254,7 @@ class Trainer(BaseTrainer):
                               trainer.model.rare_words,
                               trainer.model.root_labels,
                               trainer.model.constituent_opens,
-                              trainer.model.unary_limit(),
+                              trainer.model.unary_limit,
                               args)
             model = model.to(args['device'])
             model.copy_with_new_structure(trainer.model)

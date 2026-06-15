@@ -549,7 +549,7 @@ def iterate_training(args, trainer, train_trees, train_sequences, transitions, d
                                   model.rare_words,
                                   model.root_labels,
                                   model.constituent_opens,
-                                  model.unary_limit(),
+                                  model.unary_limit,
                                   temp_args)
             new_model.to(device)
             new_model.copy_with_new_structure(model)
