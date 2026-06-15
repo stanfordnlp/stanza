@@ -74,8 +74,8 @@ class Ensemble(nn.Module):
         self.models = nn.ModuleList(models)
 
         for model_idx, model in enumerate(self.models):
-            if self.models[0].transition_scheme() != model.transition_scheme():
-                raise ValueError("Models {} and {} are incompatible.  {} vs {}".format(filenames[0], filenames[model_idx], self.models[0].transition_scheme(), model.transition_scheme()))
+            if self.models[0].transition_scheme != model.transition_scheme:
+                raise ValueError("Models {} and {} are incompatible.  {} vs {}".format(filenames[0], filenames[model_idx], self.models[0].transition_scheme, model.transition_scheme))
             if self.models[0].transitions != model.transitions:
                 raise ValueError(f"Models {filenames[0]} and {filenames[model_idx]} are incompatible: different transitions\n{filenames[0]}:\n{self.models[0].transitions}\n{filenames[model_idx]}:\n{model.transitions}")
             if self.models[0].constituents != model.constituents:
@@ -86,6 +86,10 @@ class Ensemble(nn.Module):
                 raise ValueError("Models %s and %s are incompatible: different uses_xpos" % (filenames[0], filenames[model_idx]))
             if self.models[0].reverse_sentence != model.reverse_sentence:
                 raise ValueError("Models %s and %s are incompatible: different reverse_sentence" % (filenames[0], filenames[model_idx]))
+
+        self.transition_scheme = self.models[0].transition_scheme
+        self.is_top_down = self.models[0].is_top_down
+        self.unary_limit = min(m.unary_limit for m in self.models)
 
         self._reverse_sentence = self.models[0].reverse_sentence
 
@@ -119,22 +123,6 @@ class Ensemble(nn.Module):
     @property
     def device(self):
         return next(self.parameters()).device
-
-    def unary_limit(self):
-        """
-        Limit on the number of consecutive unary transitions
-        """
-        return min(m.unary_limit() for m in self.models)
-
-    def transition_scheme(self):
-        return self.models[0].transition_scheme()
-
-    def has_unary_transitions(self):
-        return self.models[0].has_unary_transitions()
-
-    @property
-    def is_top_down(self):
-        return self.models[0].is_top_down
 
     @property
     def reverse_sentence(self):
