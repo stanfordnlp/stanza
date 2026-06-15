@@ -2,8 +2,10 @@ import os
 
 import pytest
 import torch
+import torch.nn as nn
 
 from stanza.models.common import pretrain
+from stanza.models.common.maxout_linear import MaxoutLinear
 from stanza.models.common.utils import set_random_seed
 from stanza.models.constituency import parse_transitions
 from stanza.tests import *
@@ -491,19 +493,30 @@ def test_maxout(pretrain_file):
     """
     Test with and without maxout layers for output
     """
+    hidden_size = 128
+
     model = build_model(pretrain_file, '--maxout_k', '0')
     run_forward_checks(model)
-    # check the output size & implicitly check the type
-    # to check for a particularly silly bug
+    # check the output size & type to check for a particularly silly bug reoccuring
+    assert isinstance(model.output_layers[-1], nn.Linear)
     assert model.output_layers[-1].weight.shape[0] == len(model.transitions)
 
-    model = build_model(pretrain_file, '--maxout_k', '2')
+    model = build_model(pretrain_file, '--maxout_k', '2', '--hidden_size', str(hidden_size))
     run_forward_checks(model)
-    assert model.output_layers[-1].linear.weight.shape[0] == len(model.transitions) * 2
+    assert isinstance(model.output_layers[0], MaxoutLinear)
+    assert isinstance(model.output_layers[-1], nn.Linear)
+    assert model.output_layers[0].linear.weight.shape[0] == hidden_size * 2
+    assert model.output_layers[-1].weight.shape[0] == len(model.transitions)
+    assert model.output_layers[-1].weight.shape[1] == hidden_size
 
-    model = build_model(pretrain_file, '--maxout_k', '3')
+    model = build_model(pretrain_file, '--maxout_k', '3', '--hidden_size', str(hidden_size))
     run_forward_checks(model)
-    assert model.output_layers[-1].linear.weight.shape[0] == len(model.transitions) * 3
+    assert len(model.output_layers) == 2
+    assert isinstance(model.output_layers[0], MaxoutLinear)
+    assert isinstance(model.output_layers[-1], nn.Linear)
+    assert model.output_layers[0].linear.weight.shape[0] == hidden_size * 3
+    assert model.output_layers[-1].weight.shape[0] == len(model.transitions)
+    assert model.output_layers[-1].weight.shape[1] == hidden_size
 
 def check_structure_test(pretrain_file, args1, args2):
     """
