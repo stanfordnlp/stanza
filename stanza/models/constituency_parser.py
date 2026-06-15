@@ -710,8 +710,43 @@ def build_argparse():
     # Setting the --lstm_forget_init without also setting the --lstm_bias_weight_decay
     # is basically useless, since the weight decay pushes the forget bias
     # (and all the biases) to 0
+    #
+    # Experimenting with the forget init with weight decay off didn't consistently help
+    #
+    # Setting the weight_decay to a value such as 0 is the more interesting experiment
+    # We ran some extensive experiments which seem to show a tiny benefit for setting it to 0.0:
+    #
+    #  no forget initialization, regular weight decay
+    # DE 0.95859975
+    # EN 0.962747
+    # ID 0.8964806
+    # IT 0.8497188
+    # JA 0.92896325
+    #
+    #  default pytorch init, wd 0
+    # DE 0.9585272
+    # EN 0.9625
+    # ID 0.8966382
+    # IT 0.8496492
+    # JA 0.930267
+    #
+    #  f0, wd 0
+    # DE 0.9580726
+    # EN 0.963001
+    # ID 0.8970284
+    # IT 0.8504895999999998
+    # JA 0.929522
+    #
+    #  f1, wd 0
+    # DE 0.9581934
+    # EN 0.9626946666666667
+    # JA 0.9294432499999999
+    #
+    #  f1, wd 0.0001
+    # EN 0.9626686666666666
     parser.add_argument('--lstm_forget_init', default=None, type=float, help='Initialization value for the forget gates of the LSTMs')
-    parser.add_argument('--lstm_bias_weight_decay', default=None, type=float, help='Use this weight decay for LSTM bias vectors, if set')
+    parser.add_argument('--lstm_bias_weight_decay', default=0.0, type=float, help='Use this weight decay for LSTM bias vectors, if set')
+    parser.add_argument('--no_lstm_bias_weight_decay', dest='lstm_bias_weight_decay', action='store_const', const=None, help='Use the same weight decay as the active optimizer for LSTM bias vectors')
 
     parser.add_argument('--sentence_boundary_vectors', default=SentenceBoundary.EVERYTHING, type=lambda x: SentenceBoundary[x.upper()],
                         help='Vectors to learn at the start & end of sentences.  {}'.format(", ".join(x.name for x in SentenceBoundary)))
