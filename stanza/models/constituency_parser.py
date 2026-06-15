@@ -878,6 +878,11 @@ def build_model_filename(args):
 
     forget = "forget_%s_%s" % (args['lstm_forget_init'], args['lstm_bias_weight_decay'])
 
+    if args['maxout_k']:
+        output = "%d_maxout_%d" % (args['num_output_layers'], args['maxout_k'])
+    else:
+        output = "%d_linear" % args['num_output_layers']
+
     model_save_file = args['save_name'].format(shorthand=args['shorthand'],
                                                oracle_level=args['oracle_level'],
                                                embedding=embedding,
@@ -888,6 +893,7 @@ def build_model_filename(args):
                                                trans_layers=args['bert_hidden_layers'],
                                                loss=loss,
                                                forget=forget,
+                                               output=output,
                                                rattn=rattn,
                                                seed=args['seed'])
     model_save_file = re.sub("_+", "_", model_save_file)
