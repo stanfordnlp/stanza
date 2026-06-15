@@ -2,9 +2,7 @@
 A utilitiy class for keeping track of intermediate parse states
 """
 
-from collections import namedtuple
-
-class TreeStack(namedtuple('TreeStack', ['value', 'parent', 'length'])):
+class TreeStack:
     """
     A stack which can branch in several directions, as long as you
     keep track of the branching heads
@@ -31,6 +29,13 @@ class TreeStack(namedtuple('TreeStack', ['value', 'parent', 'length'])):
 
     Implemented as a namedtuple to make it a bit more efficient
     """
+    __slots__ = ('value', 'parent', 'length')
+
+    def __init__(self, value, parent, length):
+        self.value = value
+        self.parent = parent
+        self.length = length
+
     def pop(self):
         return self.parent
 
