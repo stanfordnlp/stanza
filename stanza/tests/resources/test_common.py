@@ -2,10 +2,12 @@
 Test various resource downloading functions from resources/common.py
 """
 
+import hashlib
 import json
 import logging
 import os
 import pytest
+import requests
 import tempfile
 from unittest.mock import patch
 
@@ -35,6 +37,96 @@ def test_assert_file_exists():
             common.assert_file_exists(filename, md5="12345", alternate_md5="12345")
 
         common.assert_file_exists(filename, md5="12345", alternate_md5=EXPECTED_MD5)
+
+
+FILE_CONTENT = b"Unban mox opal!"
+# MD5 of FILE_CONTENT, verified independently
+FILE_CONTENT_MD5 = hashlib.md5(FILE_CONTENT).hexdigest()
+
+NON_HF_URL = "http://nlp.stanford.edu/software/stanza/fake_model.pt"
+HF_URL = "https://huggingface.co/stanfordnlp/stanza-en/resolve/v1.13.0/models/ner/fake_model.pt"
+
+
+class FakeResponse:
+    """
+    Minimal mock of a requests.Response sufficient for download_file.
+    """
+    def __init__(self, content=FILE_CONTENT, status_code=200):
+        self.status_code = status_code
+        self._content = content
+        self.headers = {"content-length": str(len(content))}
+
+    def iter_content(self, chunk_size=131072):
+        yield self._content
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            raise requests.exceptions.HTTPError(
+                f"{self.status_code} Client Error", response=self
+            )
+
+
+def test_parse_hf_url():
+    """
+    Test that _parse_hf_url correctly identifies HF URLs and extracts components,
+    and returns None for non-HF URLs.
+    """
+    result = common._parse_hf_url(HF_URL)
+    assert result == ("stanfordnlp/stanza-en", "v1.13.0", "models/ner/fake_model.pt")
+
+    assert common._parse_hf_url(NON_HF_URL) is None
+    assert common._parse_hf_url("https://github.com/stanfordnlp/stanza") is None
+    assert common._parse_hf_url("") is None
+
+
+def test_download_file_non_hf():
+    """
+    Test the raw requests path in download_file using a non-HF URL.
+
+    requests.get is mocked so no network traffic is generated.
+    Verifies that chunked content is written correctly to the destination.
+    """
+    with patch("stanza.resources.common.requests.get", return_value=FakeResponse()):
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+            dest = os.path.join(test_dir, "fake_model.pt")
+            status = common.download_file(NON_HF_URL, dest, proxies=None)
+            assert status == 200
+            assert os.path.exists(dest)
+            assert common.get_md5(dest) == FILE_CONTENT_MD5
+
+
+def test_download_file_non_hf_404():
+    """
+    Test that download_file raises on a 404 when raise_for_status=True,
+    and does not raise when raise_for_status=False (default).
+    """
+    with patch("stanza.resources.common.requests.get", return_value=FakeResponse(content=b"", status_code=404)):
+        with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+            dest = os.path.join(test_dir, "fake_model.pt")
+
+            # default: no exception, but status code reflects the failure
+            status = common.download_file(NON_HF_URL, dest, proxies=None)
+            assert status == 404
+
+            with pytest.raises(requests.exceptions.HTTPError):
+                common.download_file(NON_HF_URL, dest, proxies=None, raise_for_status=True)
+
+
+def test_download_file_hf_url_with_proxies():
+    """
+    Test that a HF URL with proxies set falls back to the raw requests path
+    rather than going through hf_hub_download.
+    """
+    with patch("stanza.resources.common.requests.get", return_value=FakeResponse()) as mock_get:
+        with patch("stanza.resources.common.huggingface_hub.hf_hub_download") as mock_hf:
+            with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+                dest = os.path.join(test_dir, "fake_model.pt")
+                proxies = {"https": "http://proxy.example.com:8080"}
+                status = common.download_file(HF_URL, dest, proxies=proxies)
+                assert status == 200
+                mock_get.assert_called_once()
+                mock_hf.assert_not_called()
+                assert common.get_md5(dest) == FILE_CONTENT_MD5
 
 
 def test_download_tokenize_mwt():
