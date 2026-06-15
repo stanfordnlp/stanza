@@ -667,7 +667,8 @@ class LSTMModel(BaseModel, nn.Module):
                 initialize_linear(output_layer, self.args['nonlinearity'], input_size)
         else:
             output_layers = nn.ModuleList([MaxoutLinear(input_size, output_size, maxout_k)
-                                           for input_size, output_size in zip(predict_input_size, predict_output_size)])
+                                           for input_size, output_size in zip(predict_input_size[:-1], predict_output_size[:-1])])
+            output_layers.append(nn.Linear(predict_input_size[-1], predict_output_size[-1]))
         return output_layers
 
     def num_words_known(self, words):
@@ -1170,7 +1171,8 @@ class LSTMModel(BaseModel, nn.Module):
         hx = torch.cat((word_hx, transition_hx, constituent_hx), axis=1)
         for idx, output_layer in enumerate(self.output_layers):
             hx = self.predict_dropout(hx)
-            hx = self.nonlinearity(hx)
+            if not self.maxout_k:
+                hx = self.nonlinearity(hx)
             hx = output_layer(hx)
         return hx
 
