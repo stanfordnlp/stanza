@@ -142,6 +142,15 @@ def condense_model(input_path: str,
             'results': [],
         }
 
+    maxout_k = args.get('maxout_k', 0)
+    if maxout_k:
+        logger.info("Model uses maxout_k=%d; output layer condensation is not supported for maxout models.", maxout_k)
+        return {
+            'num_layers': num_output_layers,
+            'middle_layers': 0,
+            'results': [],
+        }
+
     # output_layer_sizes may already be set from a previous run of this script
     # or because the user specified sizes at training time.  In either case,
     # the weights may have further dead neurons, so we always re-detect on the
