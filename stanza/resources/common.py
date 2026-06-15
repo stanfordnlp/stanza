@@ -10,11 +10,14 @@ import json
 import logging
 import os
 from pathlib import Path
+import re
 import requests
 import shutil
 import tempfile
 import zipfile
 
+import huggingface_hub
+from packaging import version
 from platformdirs import user_cache_dir
 from tqdm.auto import tqdm
 
@@ -113,10 +116,45 @@ def assert_file_exists(path, md5=None, alternate_md5=None):
             else:
                 raise ValueError("md5 for %s is %s, expected %s" % (path, file_md5, md5))
 
+_HF_URL_RE = re.compile(
+    r'^https://huggingface\.co/(?P<repo_id>[^/]+/[^/]+)/resolve/(?P<revision>[^/]+)/(?P<filename>.+)$'
+)
+
+def _parse_hf_url(url):
+    m = _HF_URL_RE.match(url)
+    if m is None:
+        return None
+    return m.group('repo_id'), m.group('revision'), m.group('filename')
+
 def download_file(url, path, proxies, raise_for_status=False):
     """
     Download a URL into a file as specified by `path`.
+
+    For HuggingFace Hub URLs (when no proxy is configured), routes through
+    huggingface_hub so that Xet, retries, and auth are handled correctly.
+    Falls back to raw requests for non-HF URLs or when proxies are in use.
     """
+    hf_parts = _parse_hf_url(url)
+    if hf_parts is not None and not proxies:
+        repo_id, revision, filename = hf_parts
+        # TODO: here we could use local_dir, but the local layout
+        #   en/constituency/ptb3-revised_electra-large.pt
+        # unfortunately does not match the HF layout
+        #   https://huggingface.co/stanfordnlp/stanza-en/resolve/v1.13.0/models/constituency/ptb3-revised_electra-large.pt
+        kwargs = dict(
+            repo_id=repo_id,
+            filename=filename,
+            revision=revision,
+        )
+        # local_dir_use_symlinks was removed in v1.0; only pass it on older versions
+        # the problem here is that older versions might unexpectedly produce
+        # symlinks here
+        if version.parse(huggingface_hub.__version__) < version.parse("1.0.0"):
+            kwargs["local_dir_use_symlinks"] = False
+        cached = huggingface_hub.hf_hub_download(**kwargs)
+        shutil.copy2(cached, path)
+        return 200
+
     verbose = logger.level in [0, 10, 20]
     r = requests.get(url, stream=True, proxies=proxies)
     if raise_for_status:
