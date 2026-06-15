@@ -54,9 +54,9 @@ class BaseModel(ABC):
         self._reverse_sentence = reverse_sentence
         self._root_labels = sorted(list(root_labels))
 
-        self._is_top_down = (self._transition_scheme is TransitionScheme.TOP_DOWN or
-                             self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY or
-                             self._transition_scheme is TransitionScheme.TOP_DOWN_COMPOUND)
+        self.is_top_down = (self._transition_scheme is TransitionScheme.TOP_DOWN or
+                            self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY or
+                            self._transition_scheme is TransitionScheme.TOP_DOWN_COMPOUND)
 
     @abstractmethod
     def initial_word_queues(self, tagged_word_lists):
@@ -161,13 +161,6 @@ class BaseModel(ABC):
         Whether or not this model uses unary transitions, based on transition_scheme
         """
         return self._transition_scheme is TransitionScheme.TOP_DOWN_UNARY
-
-    @property
-    def is_top_down(self):
-        """
-        Whether or not this model is TOP_DOWN
-        """
-        return self._is_top_down
 
     @property
     def reverse_sentence(self):
