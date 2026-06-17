@@ -390,6 +390,7 @@ default_ners = {
     "pl": "nkjp",
     "ru": "wikiner",
     "sd": "siner",
+    "sl": "uner-ssj_nocharlm",
     "sv": "suc3shuffle",
     "te": "ilner_charlm",
     "th": "lst20",
