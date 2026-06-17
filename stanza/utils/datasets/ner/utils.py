@@ -53,7 +53,7 @@ def convert_bioes_to_bio(base_input_path, base_output_path, short_name):
         write_sentences(output_filename, new_sentences)
 
 
-def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="bio", shard_names=SHARDS, shards=SHARDS):
+def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="bio", shard_names=SHARDS, shards=SHARDS, prefix=None):
     """
     Convert BIO files to json
 
@@ -64,13 +64,16 @@ def convert_bio_to_json(base_input_path, base_output_path, short_name, suffix="b
     This also will rewrite a BIOES as json
     """
     for input_shard, output_shard in zip(shard_names, shards):
-        input_filename = os.path.join(base_input_path, '%s.%s.%s' % (short_name, input_shard, suffix))
-        if not os.path.exists(input_filename):
-            alt_filename = os.path.join(base_input_path, '%s.%s' % (input_shard, suffix))
-            if os.path.exists(alt_filename):
-                input_filename = alt_filename
-            else:
-                raise FileNotFoundError('Cannot find %s component of %s in %s or %s' % (output_shard, short_name, input_filename, alt_filename))
+        if prefix is None:
+            candidates = [os.path.join(base_input_path, '%s.%s.%s' % (short_name, input_shard, suffix)),
+                          os.path.join(base_input_path, '%s.%s' % (input_shard, suffix))]
+        else:
+            candidates = [os.path.join(base_input_path, '%s%s.%s' % (prefix, input_shard, suffix))]
+        for input_filename in candidates:
+            if os.path.exists(input_filename):
+                break
+        else:
+            raise FileNotFoundError('Cannot find %s component of %s in: %s' % (output_shard, short_name, candidates))
         output_filename = os.path.join(base_output_path, '%s.%s.json' % (short_name, output_shard))
         print("Converting %s to %s" % (input_filename, output_filename))
         prepare_ner_file.process_dataset(input_filename, output_filename)
