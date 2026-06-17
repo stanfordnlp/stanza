@@ -1144,7 +1144,7 @@ def dict_to_conll_text(token_dict, id_connector="-"):
                     coref_position = "middle-"
                 is_representative = "repr-" if chain.is_representative else ""
                 misc_chains.append("%s%sid%d" % (coref_position, is_representative, chain.chain.index))
-            misc.append("{}={}".format(key, ",".join(misc_chains)))
+            misc.append("{}={}".format(COREF_CHAINS, ",".join(misc_chains)))
 
     if MORPHEMES in token_dict and token_dict[MORPHEMES]:
         misc.append("Morphemes={}".format(",".join(token_dict[MORPHEMES])))

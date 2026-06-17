@@ -616,3 +616,23 @@ def test_speaker():
     doc.sentences[0].speaker = "Siri"
     assert doc.sentences[0].speaker == 'Siri'
     assert "# speaker = Siri" in doc.sentences[0].comments
+
+def test_coref_chains_misc_key():
+    """The coref chains should be serialized under the coref_chains MISC key, not ner.
+
+    Regression test: dict_to_conll_text used to reuse a stale `key` loop variable
+    (left as NER), writing coref annotations as `ner=...` and colliding with a
+    real NER value when both were present.
+    """
+    from stanza.models.common.doc import dict_to_conll_text, ID, TEXT, NER, COREF_CHAINS
+    from stanza.models.coref.coref_chain import CorefChain, CorefAttachment
+
+    chain = CorefChain(index=3, mentions=[], representative_text="Joe", representative_index=0)
+    attachment = CorefAttachment(chain, is_start=True, is_end=True, is_representative=True)
+
+    misc = dict_to_conll_text({ID: (1,), TEXT: "Joe", COREF_CHAINS: [attachment]}).split("\t")[-1]
+    assert misc == "coref_chains=unit-repr-id3"
+
+    # NER and coref must remain distinct keys when both are present
+    misc = dict_to_conll_text({ID: (1,), TEXT: "Joe", NER: "S-PERSON", COREF_CHAINS: [attachment]}).split("\t")[-1]
+    assert misc == "ner=S-PERSON|coref_chains=unit-repr-id3"
