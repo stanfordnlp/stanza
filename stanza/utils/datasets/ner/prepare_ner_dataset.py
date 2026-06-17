@@ -1443,7 +1443,7 @@ def process_en_conllpp(paths, short_name):
     This is ONLY a test set
 
     the test set has entities start with I- instead of B- unless they
-    are in the middle of a sentence, but that should be find, as
+    are in the middle of a sentence, but that should be fine, as
     process_tags in the NER model converts those to B- in a BIOES
     conversion
     """
