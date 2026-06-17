@@ -478,6 +478,18 @@ ang_ewt is an Old English dataset available here:
     cd $NERBASE/ang
     git clone git@github.com:dmetola/Old_English-OEDT.git
   - python3 stanza/utils/datasets/ner/prepare_ner_dataset.py ang_ewt
+
+Universal NER has a set of languages which are originally UD datasets,
+  tagged for NER.
+  For example, UNER_Slovenian_SSJ
+  - git clone the repo as follows:
+    cd $NERBASE
+    mkdir -p uner
+    cd uner
+    git clone git@github.com:UniversalNER/UNER_Slovenian_SSJ.git
+  - python3 stanza/utils/datasets/ner/prepare_ner_dataset.py sl_uner-ssj
+  Currently the only dataset known to work with this is in fact sl_uner-ssj
+  If others don't work, please feel free to file an issue on our github
 """
 
 import glob
@@ -489,7 +501,7 @@ import shutil
 import sys
 import tempfile
 
-from stanza.models.common.constant import treebank_to_short_name, lcode2lang, lang_to_langcode, two_to_three_letters
+from stanza.models.common.constant import treebank_to_short_name, lcode2lang, langcode_to_lang, lang_to_langcode, two_to_three_letters
 from stanza.models.ner.utils import to_bio2, bio2_to_bioes
 import stanza.utils.default_paths as default_paths
 
@@ -1485,6 +1497,35 @@ def process_ang_ewt(paths, short_name):
     base_input_path = os.path.join(paths["NERBASE"], "ang", "Old_English-OEDT")
     convert_bio_to_json(base_input_path, paths["NER_DATA_DIR"], short_name)
 
+UNER_RE = re.compile("([-a-z]+)_uner-(.+)")
+
+def process_uner(paths, short_name):
+    match = UNER_RE.match(short_name.lower())
+    assert match  # we shouldn't get here for non-uner datasets
+    short_lang = match.groups()[0]
+    lang = langcode_to_lang(short_lang)
+    dataset_name = match.groups()[1]
+    caseless_glob = "".join("[%s%s]" % (x.lower(), x.upper()) for x in dataset_name)
+    search_dataset = "UNER_%s_%s" % (lang, caseless_glob)
+    search_dataset = os.path.join(paths["NERBASE"], "uner", search_dataset)
+    possible_paths = glob.glob(search_dataset)
+    if len(possible_paths) == 0:
+        raise FileNotFoundError("Could not find any datasets matching %s\nPerhaps you need to git clone a repo?" % search_dataset)
+    if len(possible_paths) > 1:
+        raise FileNotFoundError("This is very confusing - found multiple datasets matching %s\n%s" % (search_dataset, possible_paths))
+    dataset_path = possible_paths[0]
+
+    datasets = []
+    print("Found %s in %s ... converting bio2 files to internal json format" % (short_name, dataset_path))
+    for shard in SHARDS:
+        input_filename = os.path.join(dataset_path, "%s_%s-ud-%s.iob2" % (short_lang, dataset_name, shard))
+        if not os.path.exists(input_filename):
+            raise FileNotFoundError("Expected %s under %s for the %s dataset" % (input_filename, dataset_path, short_name))
+        sentences = read_tsv(input_filename, text_column=1, annotation_column=2, skip_comments=True)
+        print("Read %d sentences from %s" % (len(sentences), input_filename))
+        datasets.append(sentences)
+    write_dataset(datasets, paths["NER_DATA_DIR"], short_name)
+
 DATASET_MAPPING = {
     "ang_ewt":           process_ang_ewt,
     "ar_aqmar":          process_ar_aqmar,
@@ -1556,6 +1597,8 @@ def main(dataset_name):
         process_toy_dataset(paths, dataset_name)
     elif dataset_name.lower().endswith("_masakhane"):
         process_masakhane(paths, dataset_name)
+    elif UNER_RE.match(dataset_name.lower()):
+        process_uner(paths, dataset_name)
     else:
         for ending in SUFFIX_MAPPING:
             if dataset_name.endswith(ending):
