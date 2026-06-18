@@ -678,8 +678,19 @@ def build_argparse():
     #  0.8253 with maxout, k = 3              (5)
     # The speed in terms of trees/second might be slightly slower with maxout.
     #  51.4 it/s on a Titan Xp with maxout 2 and 51.9 it/s with relu
-    # It might also be worth running some experiments with bigger
-    # output layers to see if that makes up for the difference in score.
+    #
+    # Running a few more experiments in June 2026, with N-1 maxout
+    # layers and one final linear output layer, averaged dev scores
+    # over a few models, makes it look like noise at best:
+    #
+    # Config                  ID         IT         DE
+    # ----------------------  ---------  ---------  ---------
+    # Baseline                0.896995   0.849654   0.958804
+    # Maxout k=2              0.897340   0.848253   0.958643
+    # Maxout k=3              0.896351   0.849062   0.958899
+    # Maxout k=5              0.896050
+    # Maxout k=2, 3 layers    0.896525   0.848185   0.958639
+    # Maxout k=5, 3 layers    0.895786
     parser.add_argument('--maxout_k', default=None, type=int, help="Use maxout layers instead of a nonlinearity for the output layers")
 
     parser.add_argument('--use_silver_words', default=True, dest='use_silver_words', action='store_true', help="Train/don't train word vectors for words only in the silver dataset")
