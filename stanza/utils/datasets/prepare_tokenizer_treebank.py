@@ -1012,6 +1012,24 @@ def build_combined_french_dataset(paths, model_type, dataset):
 
     return sents
 
+def build_combined_slovenian_dataset(paths, model_type, dataset):
+    # According to Kaja Dobrovoljc (and Claude), the annotation schemes for these two datasets are very compatible
+    udbase_dir = paths["UDBASE"]
+    if dataset == 'train':
+        train_treebanks = ["UD_Slovenian-SSJ", "UD_Slovenian-SST"]
+        sents = []
+        for treebank in train_treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
+            new_sents = read_sentences_from_conllu(conllu_file)
+            print("Read %d sentences from %s" % (len(new_sents), conllu_file))
+            sents.extend(new_sents)
+
+    else:
+        ssj_conllu = common.find_treebank_dataset_file("UD_Slovenian-SSJ", udbase_dir, dataset, "conllu")
+        sents = read_sentences_from_conllu(ssj_conllu)
+
+    return sents
+
 def build_combined_finnish_dataset(paths, model_type, dataset):
     """
     Combine the TDT dataset with a small file of tokenization fixes
@@ -1108,6 +1126,7 @@ COMBINED_FNS = {
     "he_combined": build_combined_hebrew_dataset,
     "it_combined": build_combined_italian_dataset,
     "ja_combined": build_combined_japanese_dataset,
+    "sl_combined": build_combined_slovenian_dataset,
     "sq_combined": build_combined_albanian_dataset,
 }
 
