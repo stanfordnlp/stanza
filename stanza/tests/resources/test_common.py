@@ -10,6 +10,7 @@ import pytest
 import requests
 import tempfile
 from unittest.mock import patch
+import zipfile
 
 import stanza
 from stanza.resources import common
@@ -289,3 +290,89 @@ def test_download_restores_logging_level(tmp_path, monkeypatch):
     assert stanza.logger.level == logging.WARNING, (
         f"Expected WARNING ({logging.WARNING}) after download, got {stanza.logger.level}"
     )
+
+
+def _make_malicious_zip(zip_path, member_name, content=b"pwned"):
+    """
+    Build a zip file containing a single entry whose name is `member_name`.
+
+    zipfile.ZipFile.write() would normalize a path like this, so we use
+    writestr() with an explicit ZipInfo, which does not sanitize the name -
+    this mirrors what a maliciously crafted zip looks like on disk.
+    """
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr(zipfile.ZipInfo(member_name), content)
+
+
+def test_unzip_blocks_relative_traversal():
+    """
+    A zip entry like "../../evil.txt" should not be extracted outside
+    the target directory.
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        target_dir = os.path.join(test_dir, "target")
+        os.makedirs(target_dir)
+        zip_path = os.path.join(target_dir, "evil.zip")
+        _make_malicious_zip(zip_path, "../../evil.txt")
+
+        with pytest.raises(ValueError):
+            common.unzip(target_dir, "evil.zip")
+
+        # nothing should have escaped onto disk outside test_dir
+        assert not os.path.exists(os.path.join(test_dir, "..", "evil.txt"))
+        escaped_path = os.path.normpath(os.path.join(target_dir, "..", "..", "evil.txt"))
+        assert not os.path.exists(escaped_path)
+
+
+def test_unzip_blocks_nested_traversal():
+    """
+    Traversal hidden a few directories deep, e.g. "subdir/../../../evil.txt",
+    should also be rejected.
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        target_dir = os.path.join(test_dir, "target")
+        os.makedirs(target_dir)
+        zip_path = os.path.join(target_dir, "evil.zip")
+        _make_malicious_zip(zip_path, "subdir/../../../evil.txt")
+
+        with pytest.raises(ValueError):
+            common.unzip(target_dir, "evil.zip")
+
+
+def test_unzip_blocks_absolute_path():
+    """
+    A zip entry with an absolute path should not be written to that
+    absolute location.
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        target_dir = os.path.join(test_dir, "target")
+        os.makedirs(target_dir)
+        zip_path = os.path.join(target_dir, "evil.zip")
+
+        # a path well outside any plausible target dir
+        absolute_evil = os.path.join(tempfile.gettempdir(), "stanza_test_evil_absolute.txt")
+        _make_malicious_zip(zip_path, absolute_evil)
+
+        with pytest.raises(ValueError):
+            common.unzip(target_dir, "evil.zip")
+
+        assert not os.path.exists(absolute_evil)
+
+
+def test_unzip_allows_well_formed_zip():
+    """
+    Sanity check: a normal zip with safe relative paths should still
+    extract correctly after the path-safety check is added.
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        target_dir = os.path.join(test_dir, "target")
+        os.makedirs(target_dir)
+        zip_path = os.path.join(target_dir, "good.zip")
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr("models/default.pt", b"fake model data")
+            zf.writestr("readme.txt", b"safe content")
+
+        common.unzip(target_dir, "good.zip")
+
+        assert os.path.exists(os.path.join(target_dir, "models", "default.pt"))
+        assert os.path.exists(os.path.join(target_dir, "readme.txt"))
