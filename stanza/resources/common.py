@@ -82,12 +82,30 @@ def get_md5(path):
         raise
     return hashlib.md5(data).hexdigest()
 
+def _is_within_directory(directory, target):
+    """
+    Check that `target` resolves to a path inside `directory`.
+    """
+    directory = os.path.realpath(directory)
+    target = os.path.realpath(target)
+    return os.path.commonpath([directory]) == os.path.commonpath([directory, target])
+
 def unzip(path, filename):
     """
     Fully unzip a file `filename` that's in a directory `dir`.
+
+    Before unzipping, paths are checked so that a 'zip slip' error cannot happen.
+    See https://github.com/stanfordnlp/stanza/security/advisories/GHSA-2fwf-f686-7p34
     """
     logger.debug(f'Unzip: {path}/{filename}...')
     with zipfile.ZipFile(os.path.join(path, filename)) as f:
+        for member in f.namelist():
+            member_path = os.path.join(path, member)
+            if not _is_within_directory(path, member_path):
+                raise ValueError(
+                    f"Zip file {filename} contains an entry that would extract "
+                    f"outside of the target directory: {member}"
+                )
         f.extractall(path)
 
 def get_root_from_zipfile(filename):
