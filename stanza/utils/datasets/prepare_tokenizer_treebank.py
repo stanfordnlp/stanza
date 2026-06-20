@@ -292,90 +292,6 @@ def augment_comma_separations(sents, ratio=0.03):
             
     return sents + new_sents
 
-def augment_move_comma(sents, ratio=0.02):
-    """
-    Move the comma from after a word to before the next word some fraction of the time
-
-    We looks for this exact pattern:
-      w1, w2
-    and replace it with
-      w1 ,w2
-
-    The idea is that this is a relatively common typo, but the tool
-    won't learn how to tokenize it without some help.
-
-    Note that this modification replaces the original text.
-    """
-    new_sents = []
-    num_operations = 0
-    for sentence in sents:
-        if random.random() > ratio:
-            new_sents.append(sentence)
-            continue
-
-        found = False
-        for word_idx, word in enumerate(sentence):
-            if word.startswith("#"):
-                continue
-            if word_idx == 0 or word_idx >= len(sentence) - 2:
-                continue
-            pieces = word.split("\t")
-            if pieces[1] == ',' and not has_space_after_no(pieces[-1]):
-                # found a comma with a space after it
-                prev_word = sentence[word_idx-1]
-                if not has_space_after_no(prev_word.split("\t")[-1]):
-                    # unfortunately, the previous word also had a
-                    # space after it.  does not fit what we are
-                    # looking for
-                    continue
-                # also, want to skip instances near MWT or copy nodes,
-                # since those are harder to rearrange
-                next_word = sentence[word_idx+1]
-                if MWT_OR_COPY_RE.match(next_word.split("\t")[0]):
-                    continue
-                if MWT_OR_COPY_RE.match(prev_word.split("\t")[0]):
-                    continue
-                # at this point, the previous word has no space and the comma does
-                found = True
-                break
-
-        if not found:
-            new_sents.append(sentence)
-            continue
-
-        new_sentence = list(sentence)
-
-        pieces = new_sentence[word_idx].split("\t")
-        pieces[-1] = add_space_after_no(pieces[-1])
-        new_sentence[word_idx] = "\t".join(pieces)
-
-        pieces = new_sentence[word_idx-1].split("\t")
-        prev_word = pieces[1]
-        pieces[-1] = remove_space_after_no(pieces[-1])
-        new_sentence[word_idx-1] = "\t".join(pieces)
-
-        next_word = new_sentence[word_idx+1].split("\t")[1]
-
-        for text_idx, text_line in enumerate(sentence):
-            # look for the line that starts with "# text".
-            # keep going until we find it, or silently ignore it
-            # if the dataset isn't in that format
-            if text_line.startswith("# text"):
-                old_chunk = prev_word + ", " + next_word
-                new_chunk = prev_word + " ," + next_word
-                word_idx = text_line.find(old_chunk)
-                if word_idx < 0:
-                    raise RuntimeError("Unexpected #text line which did not contain the original text to be modified.  Looking for\n" + old_chunk + "\n" + text_line)
-                new_text_line = text_line[:word_idx] + new_chunk + text_line[word_idx+len(old_chunk):]
-                new_sentence[text_idx] = new_text_line
-                break
-
-        new_sents.append(new_sentence)
-        num_operations = num_operations + 1
-
-    print("Swapped 'w1, w2' for 'w1 ,w2' %d times" % num_operations)
-    return new_sents
-
 def augment_apos(sents):
 
     """
@@ -682,7 +598,6 @@ def augment_punct(sents):
     """
     new_sents = augment_apos(sents)
     new_sents = augment_quotes(new_sents)
-    new_sents = augment_move_comma(new_sents)
     new_sents = augment_comma_separations(new_sents)
     new_sents = augment_initial_punct(new_sents)
     new_sents = augment_ellipses(new_sents)
