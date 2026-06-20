@@ -82,6 +82,17 @@ augment_mid_sent_punct  (augment_mid_punct_prob)
     dashes appear in real text with all of these conventions.  Eligible pairs
     are checked via augment_vocab(..., final=False).
 
+comma_typo  (comma_typo_prob)
+    Simulates a common typing mistake by moving a space from after a
+    comma to before it: "w1, w2" -> "w1 ,w2".  The comma itself stays
+    attached to w2 (no label change there) while w1's final character
+    becomes a continuation rather than a word end, and a new word-end
+    space is inserted before the comma.  Teaches the tokenizer to
+    correctly split "w1 ,w2" into three tokens (w1, comma, w2) instead
+    of treating ",w2" as a glued unit.  Eligibility (whether ',' is
+    actually used in this dataset) is checked once via augment_vocab()-
+    style logic so the augmentation is a no-op on datasets with no commas.
+
 drop_last_char  (last_char_drop_prob)
     Drops the final character of a training window with some probability,
     relabelling the new final character as a sentence end.  Teaches the model
@@ -426,6 +437,14 @@ class DataLoader(TokenizationDataset):
         if augment_mid_punct_prob > 0.0:
             self.mid_sent_augmentations = self.build_mid_sent_augmentations(self.vocab, self.data, MID_SENT_AUGMENT_PAIRS)
 
+        comma_typo_prob = 0.0 if evaluation else args.get('comma_typo_prob', 0.0)
+        if comma_typo_prob > 0.0:
+            self.comma_typo_eligible = ',' in self.vocab
+            if self.comma_typo_eligible:
+                logger.debug('Based on the training data, will augment "w1, w2" -> "w1 ,w2" comma typos')
+            else:
+                logger.debug('Based on the training data, no comma found, so comma typos will not be augmented')
+
     def __len__(self):
         return len(self.sentence_ids)
 
@@ -666,6 +685,63 @@ class DataLoader(TokenizationDataset):
             return encoded
         return None
 
+    def comma_typo(self, sentence):
+        """
+        Simulates "w1, w2" -> "w1 ,w2", a common typing mistake where the
+        space intended after the comma is instead typed before it.
+
+        Eligible positions are commas which are:
+          - preceded immediately by a non-space character (end of w1)
+          - followed immediately by a space, which is in turn followed
+            by a non-space character (start of w2)
+          - i.e. a normal "<word>, <word>" pattern
+
+        The transformation:
+          - w1's final character keeps its original word-end label (1) —
+            w1 is still a complete word, exactly as in the natural
+            "w1 , w2" pattern (space before comma) already found in the
+            data, where the space is a continuation (0) and the letter
+            before it carries the word-end label.
+          - the newly inserted space is a continuation (0), matching that
+            same natural pattern.
+          - the comma keeps its own label (still a word end) but the
+            "space" unit moves from after it to before it.
+          - w2's first character is unaffected (still a continuation/word-end
+            as it always was, since it never had a label change)
+        """
+        if not getattr(self, 'comma_typo_eligible', False):
+            return None
+        if len(sentence[3]) <= 3 or len(sentence[3]) >= self.args['max_seqlen']:
+            return None
+
+        eligible = [
+            idx for idx, char in enumerate(sentence[3])
+            if char == ','
+            and 0 < idx < len(sentence[3]) - 2
+            and sentence[3][idx - 1] != ' '
+            and sentence[1][idx - 1] != 0   # idx-1 is a genuine word end
+            and sentence[3][idx + 1] == ' '
+            and sentence[3][idx + 2] != ' '
+        ]
+        if not eligible:
+            return None
+
+        idx = random.choice(eligible)
+        all_units = [(x, int(y)) for x, y in zip(sentence[3], sentence[1])]
+
+        new_units = list(all_units)
+        # remove the space currently after the comma (at idx+1)
+        del new_units[idx + 1]
+        # insert a new space, itself a continuation, before the comma.
+        # w1's final character (at idx-1) keeps its original word-end
+        # label untouched -- w1 is still a complete word.
+        new_units.insert(idx, (' ', 0))
+
+        encoded = self.para_to_sentences(new_units)
+        if not encoded:
+            return None
+        return encoded
+
 
     def next(self, eval_offsets=None, unit_dropout=0.0, feat_unit_dropout=0.0):
         ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
@@ -684,6 +760,7 @@ class DataLoader(TokenizationDataset):
             split_mwt_prob = 0.0 if self.eval else self.args.get('split_mwt_prob', 0.0)
             augment_mid_punct_prob = 0.0 if self.eval else self.args.get('augment_mid_punct_prob', 0.0)
             augment_final_punct_prob = 0.0 if self.eval else self.args.get('augment_final_punct_prob', 0.0)
+            comma_typo_prob = 0.0 if self.eval else self.args.get('comma_typo_prob', 0.0)
 
             pid, sid = id_pair if self.eval else random.choice(self.sentence_ids)
             sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
@@ -747,6 +824,13 @@ class DataLoader(TokenizationDataset):
                 for sentence_idx, sentence in enumerate(sentences):
                     if random.random() < augment_mid_punct_prob:
                         new_sentence = self.augment_mid_sent_punct(sentence)
+                        if new_sentence is not None:
+                            sentences[sentence_idx] = new_sentence[0]
+
+            if comma_typo_prob > 0.0:
+                for sentence_idx, sentence in enumerate(sentences):
+                    if random.random() < comma_typo_prob:
+                        new_sentence = self.comma_typo(sentence)
                         if new_sentence is not None:
                             sentences[sentence_idx] = new_sentence[0]
 

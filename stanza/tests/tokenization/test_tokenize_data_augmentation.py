@@ -61,6 +61,14 @@ HELLO_LABELS = "0000110000012"
 SPACED_COMMA_TEXT   = "Hello , world."
 SPACED_COMMA_LABELS = "00001010000012"
 
+# "Hello,world."  (comma already attached, no space anywhere near it —
+# used to confirm comma_typo leaves already-glued commas alone, since
+# there is no trailing space for it to relocate)
+#  H e l l o ,  w o r l d  .
+#  0 0 0 0 0 1  0 0 0 0 1  2
+ATTACHED_COMMA_TEXT   = "Hello,world."
+ATTACHED_COMMA_LABELS = "000001000012"
+
 
 def write_and_load(raw_text, labels, extra_args=None):
     """Write text+labels to temp files and return a DataLoader."""
@@ -366,5 +374,138 @@ class TestMovePunctBack:
         loader.move_punct = build_move_punct_set(loader.data, move_back_prob=0.02)
         sentence = loader.sentences[0][0]
         results = run_trials(lambda: loader.move_punct_back(sentence))
+        assert len(results) == 0
+
+
+# ---------------------------------------------------------------------------
+# comma_typo
+# ---------------------------------------------------------------------------
+
+class TestCommaTypo:
+
+    def _loader(self, text=HELLO_TEXT, labels=HELLO_LABELS):
+        # comma_typo_prob=1.0 activates the vocab check in __init__;
+        # all other augmentation probs remain at 0.0
+        return write_and_load(text, labels, extra_args={'comma_typo_prob': 1.0})
+
+    def test_eligible_when_comma_present(self):
+        """A comma anywhere in the training data marks comma_typo as eligible."""
+        loader = self._loader()
+        assert loader.comma_typo_eligible is True
+
+    def test_ineligible_when_no_comma(self):
+        """No comma anywhere in the training data -> comma_typo never activates."""
+        # "Hi there."  H i   t h e r e  .   labels 0 1 0 0 0 0 0 1 2
+        loader = self._loader(text="Hi there.", labels="010000012")
+        assert loader.comma_typo_eligible is False
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_typo(sentence))
+        assert len(results) == 0
+
+    def test_moves_space_to_before_comma(self):
+        """'Hello, world.' should always become 'Hello ,world.'."""
+        loader = self._loader()
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_typo(sentence))
+        assert len(results) > 0, "comma_typo never returned a result"
+        for result in results:
+            chars = result[0][3]
+            assert ''.join(chars) == "Hello ,world."
+
+    def test_comma_remains_own_token(self):
+        """After the typo, the comma must still carry a non-zero (own-token) label."""
+        loader = self._loader()
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_typo(sentence))
+        assert len(results) > 0
+        for result in results:
+            new_sentence = result[0]
+            comma_idx = new_sentence[3].index(',')
+            assert new_sentence[1][comma_idx] != 0, "comma should not be a continuation"
+
+    def test_preceding_word_end_label_unchanged(self):
+        """
+        w1's final character must KEEP its word-end label (1) after the typo.
+
+        This mirrors the natural "w1 , w2" pattern (space before comma)
+        already in the corpus, where the space is a continuation (0) and
+        the letter before it carries the word-end label. Demoting w1's
+        final character to a continuation would incorrectly teach the
+        tokenizer that "w1 ," is a single token spanning the space.
+        """
+        loader = self._loader()
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_typo(sentence))
+        assert len(results) > 0
+        for result in results:
+            new_sentence = result[0]
+            chars = new_sentence[3]
+            o_idx = chars.index('o')  # last letter of "Hello"
+            assert new_sentence[1][o_idx] == 1, "'o' should remain a word end, not become a continuation"
+
+    def test_inserted_space_is_continuation(self):
+        """The newly inserted space (before the comma) must carry label 0."""
+        loader = self._loader()
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_typo(sentence))
+        assert len(results) > 0
+        for result in results:
+            new_sentence = result[0]
+            chars = new_sentence[3]
+            comma_idx = chars.index(',')
+            assert chars[comma_idx - 1] == ' ', "expected a space immediately before the comma"
+            assert new_sentence[1][comma_idx - 1] == 0, "inserted space should be a continuation"
+
+    def test_matches_natural_spaced_comma_labels(self):
+        """
+        The augmented "Hello ,world." should carry the same labels, at every
+        shared position, as the naturally occurring "Hello , world." -- i.e.
+        comma_typo should produce a label sequence consistent with how the
+        corpus already encodes a word followed by a space-separated comma.
+        """
+        loader = self._loader()
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_typo(sentence))
+        assert len(results) > 0
+
+        gold_loader = self._loader(text="Hello , world.", labels="00001010000012")
+        gold_sentence = gold_loader.sentences[0][0]
+        gold_chars = gold_sentence[3]
+        gold_labels = [int(l) for l in gold_sentence[1]]
+
+        for result in results:
+            new_sentence = result[0]
+            chars = new_sentence[3]
+            labels = [int(l) for l in new_sentence[1]]
+            # "Hello ,world." == "Hello , world." with the space after the
+            # comma removed -- so every position up to and including the
+            # comma should match gold exactly, label for label.
+            comma_idx = chars.index(',')
+            assert chars[:comma_idx + 1] == gold_chars[:comma_idx + 1]
+            assert labels[:comma_idx + 1] == gold_labels[:comma_idx + 1]
+
+    def test_does_not_move_already_attached_comma(self):
+        """A comma with no following space (already glued to w2) should never trigger."""
+        loader = self._loader(text=ATTACHED_COMMA_TEXT, labels=ATTACHED_COMMA_LABELS)
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_typo(sentence))
+        assert len(results) == 0
+
+    def test_comma_in_number_not_moved(self):
+        """A comma with label 0 (inside a number token, e.g. '1,000') is never moved."""
+        # "1,000 here."  1(0) ,(0) 0(0)0(0)0(1) space(0) h(0)e(0)r(0)e(1) .(2)
+        text   = "1,000 here."
+        labels = "00001" "0" "0001" "2"
+        loader = self._loader(text=text, labels=labels)
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_typo(sentence))
+        assert len(results) == 0, "should not augment a comma inside a number"
+
+    def test_no_op_when_not_eligible(self):
+        """Even with the per-call gate active, an explicitly disabled loader stays inert."""
+        loader = self._loader()
+        loader.comma_typo_eligible = False
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_typo(sentence))
         assert len(results) == 0
 

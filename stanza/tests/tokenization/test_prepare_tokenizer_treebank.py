@@ -305,68 +305,6 @@ def test_augment_space_final_punct():
     expected = doc + read_test_doc(ARABIC_SPACE_AFTER_RESULT)
     assert doc2 == expected
 
-ENGLISH_COMMA_SWAP_TEST_CASE="""
-# sent_id = reviews-086839-0004
-# text = Approx 4 months later, the compressor went out.
-1	Approx	approx	ADV	RB	_	3	advmod	3:advmod	_
-2	4	4	NUM	CD	NumType=Card	3	nummod	3:nummod	_
-3	months	month	NOUN	NNS	Number=Plur	4	obl:npmod	4:obl:npmod	_
-4	later	late	ADV	RBR	Degree=Cmp	8	advmod	8:advmod	SpaceAfter=No
-5	,	,	PUNCT	,	_	8	punct	8:punct	_
-6	the	the	DET	DT	Definite=Def|PronType=Art	7	det	7:det	_
-7	compressor	compressor	NOUN	NN	Number=Sing	8	nsubj	8:nsubj	_
-8	went	go	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	0:root	_
-9	out	out	ADP	RP	_	8	compound:prt	8:compound:prt	SpaceAfter=No
-10	.	.	PUNCT	.	_	8	punct	8:punct	_
-
-# sent_id = reviews-086839-0004b
-# text = Approx 4 months later , the compressor went out.
-1	Approx	approx	ADV	RB	_	3	advmod	3:advmod	_
-2	4	4	NUM	CD	NumType=Card	3	nummod	3:nummod	_
-3	months	month	NOUN	NNS	Number=Plur	4	obl:npmod	4:obl:npmod	_
-4	later	late	ADV	RBR	Degree=Cmp	8	advmod	8:advmod	_
-5	,	,	PUNCT	,	_	8	punct	8:punct	_
-6	the	the	DET	DT	Definite=Def|PronType=Art	7	det	7:det	_
-7	compressor	compressor	NOUN	NN	Number=Sing	8	nsubj	8:nsubj	_
-8	went	go	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	0:root	_
-9	out	out	ADP	RP	_	8	compound:prt	8:compound:prt	SpaceAfter=No
-10	.	.	PUNCT	.	_	8	punct	8:punct	_
-"""
-
-ENGLISH_COMMA_SWAP_RESULT="""
-# sent_id = reviews-086839-0004
-# text = Approx 4 months later ,the compressor went out.
-1	Approx	approx	ADV	RB	_	3	advmod	3:advmod	_
-2	4	4	NUM	CD	NumType=Card	3	nummod	3:nummod	_
-3	months	month	NOUN	NNS	Number=Plur	4	obl:npmod	4:obl:npmod	_
-4	later	late	ADV	RBR	Degree=Cmp	8	advmod	8:advmod	_
-5	,	,	PUNCT	,	_	8	punct	8:punct	SpaceAfter=No
-6	the	the	DET	DT	Definite=Def|PronType=Art	7	det	7:det	_
-7	compressor	compressor	NOUN	NN	Number=Sing	8	nsubj	8:nsubj	_
-8	went	go	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	0:root	_
-9	out	out	ADP	RP	_	8	compound:prt	8:compound:prt	SpaceAfter=No
-10	.	.	PUNCT	.	_	8	punct	8:punct	_
-
-# sent_id = reviews-086839-0004b
-# text = Approx 4 months later , the compressor went out.
-1	Approx	approx	ADV	RB	_	3	advmod	3:advmod	_
-2	4	4	NUM	CD	NumType=Card	3	nummod	3:nummod	_
-3	months	month	NOUN	NNS	Number=Plur	4	obl:npmod	4:obl:npmod	_
-4	later	late	ADV	RBR	Degree=Cmp	8	advmod	8:advmod	_
-5	,	,	PUNCT	,	_	8	punct	8:punct	_
-6	the	the	DET	DT	Definite=Def|PronType=Art	7	det	7:det	_
-7	compressor	compressor	NOUN	NN	Number=Sing	8	nsubj	8:nsubj	_
-8	went	go	VERB	VBD	Mood=Ind|Tense=Past|VerbForm=Fin	0	root	0:root	_
-9	out	out	ADP	RP	_	8	compound:prt	8:compound:prt	SpaceAfter=No
-10	.	.	PUNCT	.	_	8	punct	8:punct	_
-"""
-
-def test_augment_space_final_punct():
-    doc = read_test_doc(ENGLISH_COMMA_SWAP_TEST_CASE)
-    doc2 = prepare_tokenizer_treebank.augment_move_comma(doc, ratio=1.0)
-    expected = read_test_doc(ENGLISH_COMMA_SWAP_RESULT)
-    assert doc2 == expected
-
 COMMA_SEP_TEST_CASE = """
 # text = Fuzzy people, floating people
 1	Fuzzy	fuzzy	ADJ	JJ	Degree=Pos	2	amod	2:amod	_
