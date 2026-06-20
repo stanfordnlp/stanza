@@ -49,6 +49,8 @@ stanza.download(lang='zh', model_dir=models_dir, logging_level='info')
 # useful not just for verifying RtL, but because the default Arabic has a unique style of xpos tags
 stanza.download(lang='ar', model_dir=models_dir, logging_level='info')
 stanza.download(lang='multilingual', model_dir=models_dir, logging_level='info')
+# want to download the TE tokenizer so as to test its sentence final processing
+stanza.download(lang='te', model_dir=models_dir, processors='tokenize', logging_level='info')
 
 logger.info("DOWNLOADING STANZA TOKENIZERS FOR MORPHSEG TESTS")
 
