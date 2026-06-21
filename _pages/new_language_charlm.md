@@ -95,7 +95,7 @@ python3 -m stanza.utils.charlm.make_lm_data $CHARLM_RAW_DIR $CHARLM_DIR --langs 
 
 {% include alerts.html %}
 {{ note }}
-{{ "make_lm_data has several subprocess calls which are not expected to work on Windows." | markdownify }}
+{{ "make_lm_data has several subprocess calls which are not expected to work on Windows.  This will be fixed in the next release of Stanza!" | markdownify }}
 {{ end }}
 
 {% include alerts.html %}
