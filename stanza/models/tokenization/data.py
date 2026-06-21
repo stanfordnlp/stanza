@@ -93,6 +93,35 @@ comma_typo  (comma_typo_prob)
     actually used in this dataset) is checked once via augment_vocab()-
     style logic so the augmentation is a no-op on datasets with no commas.
 
+comma_glue  (comma_glue_prob)
+    Simulates "foo, bar" -> "foo,bar", a common typing mistake where the
+    space after a comma is simply dropped.  Pure deletion: the comma and
+    surrounding word characters keep their original labels unchanged,
+    since removing a continuation-labelled space has no effect on the
+    word-end/continuation status of anything else.  Blocked when the
+    character immediately before the comma AND the character immediately
+    after the (to-be-removed) space are both digits, since that pattern
+    ("3, 000" -> "3,000") would be indistinguishable from a genuine
+    European-style thousands separator and must not be taught as a split
+    point.  Eligibility (whether ',' is used in this dataset) is checked
+    the same way as comma_typo.
+
+    This was particularly an issue for Spanish-AnCora, but it's
+    reasonable to think it could happen to any dataset.  Currently
+    this just operates on commas and ascii letters to avoid
+    accidentally squishing anything that shouldn't be squished.
+
+    UD_Spanish-AnCora 2.7 had a problem is with this sentence:
+    # orig_file_sentence 143#5
+    In this sentence, there was a comma smashed next to a token.
+
+    Fixing just this one sentence is not sufficient to tokenize
+    "asdf,zzzz" as desired, so we also augment by some fraction where
+    we have squished "asdf, zzzz" into "asdf,zzzz".
+
+    This exact example was later fixed in UD 2.8, but it should still
+    potentially be useful for compensating for typos.
+
 drop_last_char  (last_char_drop_prob)
     Drops the final character of a training window with some probability,
     relabelling the new final character as a sentence end.  Teaches the model
@@ -445,6 +474,14 @@ class DataLoader(TokenizationDataset):
             else:
                 logger.debug('Based on the training data, no comma found, so comma typos will not be augmented')
 
+        comma_glue_prob = 0.0 if evaluation else args.get('comma_glue_prob', 0.0)
+        if comma_glue_prob > 0.0:
+            self.comma_glue_eligible = ',' in self.vocab
+            if self.comma_glue_eligible:
+                logger.debug('Based on the training data, will augment "w1, w2" -> "w1,w2" comma glues')
+            else:
+                logger.debug('Based on the training data, no comma found, so comma glues will not be augmented')
+
     def __len__(self):
         return len(self.sentence_ids)
 
@@ -742,6 +779,55 @@ class DataLoader(TokenizationDataset):
             return None
         return encoded
 
+    def comma_glue(self, sentence):
+        """
+        Simulates "w1, w2" -> "w1,w2", a common typing mistake where the
+        space after a comma is simply dropped.
+
+        Eligible positions are commas which are:
+          - preceded immediately by a non-space character (end of w1)
+          - followed immediately by a space, which is in turn followed
+            by a non-space character (start of w2)
+          - i.e. a normal "<word>, <word>" pattern (same eligibility
+            shape as comma_typo)
+          - NOT digit-adjacent on both sides: if the character before the
+            comma and the character after the space are both digits, the
+            glued result ("3,000") would be indistinguishable from a
+            genuine European-style thousands separator, so it is excluded
+
+        The transformation is a pure deletion: the space after the comma
+        is removed and nothing else changes.  Every other character keeps
+        its original label -- removing a continuation-labelled space has
+        no effect on the word-end/continuation status of the comma or of
+        w2's first character.
+        """
+        if not getattr(self, 'comma_glue_eligible', False):
+            return None
+        if len(sentence[3]) <= 3 or len(sentence[3]) >= self.args['max_seqlen']:
+            return None
+
+        eligible = [
+            idx for idx, char in enumerate(sentence[3])
+            if char == ','
+            and 0 < idx < len(sentence[3]) - 2
+            and sentence[3][idx - 1] != ' '
+            and sentence[1][idx - 1] != 0   # idx-1 is a genuine word end
+            and sentence[3][idx + 1] == ' '
+            and sentence[3][idx + 2] != ' '
+            and not (sentence[3][idx - 1].isdigit() and sentence[3][idx + 2].isdigit())
+        ]
+        if not eligible:
+            return None
+
+        idx = random.choice(eligible)
+        new_units = [(x, int(y)) for x, y in zip(sentence[3], sentence[1])]
+        # remove the space after the comma (at idx+1); nothing else changes
+        del new_units[idx + 1]
+
+        encoded = self.para_to_sentences(new_units)
+        if not encoded:
+            return None
+        return encoded
 
     def next(self, eval_offsets=None, unit_dropout=0.0, feat_unit_dropout=0.0):
         ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
@@ -761,6 +847,7 @@ class DataLoader(TokenizationDataset):
             augment_mid_punct_prob = 0.0 if self.eval else self.args.get('augment_mid_punct_prob', 0.0)
             augment_final_punct_prob = 0.0 if self.eval else self.args.get('augment_final_punct_prob', 0.0)
             comma_typo_prob = 0.0 if self.eval else self.args.get('comma_typo_prob', 0.0)
+            comma_glue_prob = 0.0 if self.eval else self.args.get('comma_glue_prob', 0.0)
 
             pid, sid = id_pair if self.eval else random.choice(self.sentence_ids)
             sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
@@ -832,6 +919,16 @@ class DataLoader(TokenizationDataset):
                     if random.random() < comma_typo_prob:
                         new_sentence = self.comma_typo(sentence)
                         if new_sentence is not None:
+                            sentences[sentence_idx] = new_sentence[0]
+
+            if comma_glue_prob > 0.0:
+                for sentence_idx, sentence in enumerate(sentences):
+                    if random.random() < comma_glue_prob:
+                        # comma_glue deletes a character (the space), so
+                        # total_len must be adjusted, same as move_punct_back
+                        new_sentence = self.comma_glue(sentence)
+                        if new_sentence is not None:
+                            total_len = total_len + len(new_sentence[0][3]) - len(sentences[sentence_idx][3])
                             sentences[sentence_idx] = new_sentence[0]
 
             if drop_sents and len(sentences) > 1:

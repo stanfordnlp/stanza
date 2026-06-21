@@ -28,3 +28,16 @@ def test_comma_typos(en_tokenize_pipeline):
     assert len(doc.sentences) == 1
     assert len(doc.sentences[0].words) == 5
     assert doc.sentences[0].words[1].text == ','
+
+def test_comma_glued(en_tokenize_pipeline):
+    text = "This, tests comma gluing"
+    doc = en_tokenize_pipeline(text)
+    assert len(doc.sentences) == 1
+    assert len(doc.sentences[0].words) == 5
+    assert doc.sentences[0].words[1].text == ','
+
+    text = "This,tests comma gluing"
+    doc = en_tokenize_pipeline(text)
+    assert len(doc.sentences) == 1
+    assert len(doc.sentences[0].words) == 5
+    assert doc.sentences[0].words[1].text == ','

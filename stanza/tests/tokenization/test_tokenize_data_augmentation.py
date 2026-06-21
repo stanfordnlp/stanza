@@ -20,10 +20,13 @@ Label encoding reminder (see data.py module docstring):
 
 import pytest
 import random
+import re
 import os
 import tempfile
+import inspect
 
 from stanza.tests import TEST_WORKING_DIR
+from stanza.models.tokenization import data as data_module
 from stanza.models.tokenization.data import (
     DataLoader,
     MID_SENT_AUGMENT_PAIRS,
@@ -33,6 +36,21 @@ from stanza.models.tokenization.data import (
 from stanza.models.tokenization.vocab import Vocab
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
+
+
+def discover_augmentation_probs():
+    """
+    Find every '*_prob' DataLoader argument referenced in data.py, by
+    scanning its source for args.get('xxx_prob', ...) / args['xxx_prob'].
+
+    This drives the next()-integration smoke test below. Deriving the list
+    from the source (instead of hand-maintaining it here) means a newly
+    added augmentation is automatically picked up the next time the tests
+    run -- no separate edit to this test file is required when someone adds
+    a new `whatever_prob` argument to DataLoader.
+    """
+    source = inspect.getsource(data_module)
+    return sorted(set(re.findall(r"args(?:\.get)?\(?\[?'(\w+_prob)'", source)))
 
 
 # ---------------------------------------------------------------------------
@@ -509,3 +527,231 @@ class TestCommaTypo:
         results = run_trials(lambda: loader.comma_typo(sentence))
         assert len(results) == 0
 
+
+# ---------------------------------------------------------------------------
+# comma_glue
+# ---------------------------------------------------------------------------
+
+class TestCommaGlue:
+
+    def _loader(self, text=HELLO_TEXT, labels=HELLO_LABELS):
+        # comma_glue_prob=1.0 activates the vocab check in __init__;
+        # all other augmentation probs remain at 0.0
+        return write_and_load(text, labels, extra_args={'comma_glue_prob': 1.0})
+
+    def test_eligible_when_comma_present(self):
+        """A comma anywhere in the training data marks comma_glue as eligible."""
+        loader = self._loader()
+        assert loader.comma_glue_eligible is True
+
+    def test_ineligible_when_no_comma(self):
+        """No comma anywhere in the training data -> comma_glue never activates."""
+        # "Hi there."  H i   t h e r e  .   labels 0 1 0 0 0 0 0 1 2
+        loader = self._loader(text="Hi there.", labels="010000012")
+        assert loader.comma_glue_eligible is False
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_glue(sentence))
+        assert len(results) == 0
+
+    def test_removes_space_after_comma(self):
+        """'Hello, world.' should always become 'Hello,world.'."""
+        loader = self._loader()
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_glue(sentence))
+        assert len(results) > 0, "comma_glue never returned a result"
+        for result in results:
+            chars = result[0][3]
+            assert ''.join(chars) == "Hello,world."
+
+    def test_matches_naturally_glued_comma_labels(self):
+        """
+        The augmented "Hello,world." should be character-for-character and
+        label-for-label identical to the naturally occurring "Hello,world."
+        -- i.e. comma_glue's pure-deletion transform should produce a label
+        sequence consistent with how the corpus already encodes a comma
+        attached on both sides.
+        """
+        loader = self._loader()
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_glue(sentence))
+        assert len(results) > 0
+
+        # "Hello,world."  H e l l o , w o r l d .
+        #                 0 0 0 0 1 1 0 0 0 0 1 2
+        gold_loader = self._loader(text="Hello,world.", labels="000011000012")
+        gold_sentence = gold_loader.sentences[0][0]
+        gold_chars = list(gold_sentence[3])
+        gold_labels = [int(l) for l in gold_sentence[1]]
+
+        for result in results:
+            new_sentence = result[0]
+            chars = list(new_sentence[3])
+            labels = [int(l) for l in new_sentence[1]]
+            assert chars == gold_chars
+            assert labels == gold_labels
+
+    def test_does_not_glue_already_attached_comma(self):
+        """A comma with no following space (already glued to w2) should never trigger."""
+        loader = self._loader(text=ATTACHED_COMMA_TEXT, labels=ATTACHED_COMMA_LABELS)
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_glue(sentence))
+        assert len(results) == 0
+
+    def test_comma_in_number_not_glued(self):
+        """A comma with label 0 (inside a number token, e.g. '1,000') is never glued."""
+        # "1,000 here."  1(0) ,(0) 0(0)0(0)0(1) space(0) h(0)e(0)r(0)e(1) .(2)
+        text   = "1,000 here."
+        labels = "00001" "0" "0001" "2"
+        loader = self._loader(text=text, labels=labels)
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_glue(sentence))
+        assert len(results) == 0, "should not glue a comma already inside a number"
+
+    def test_blocked_when_digit_adjacent_on_both_sides(self):
+        """
+        '3, 000 things.' must never be glued to '3,000 things.', since that
+        would be indistinguishable from a genuine European-style thousands
+        separator and must not be taught as a place to split.
+        """
+        # "3, 000 things."  3(1) ,(1) space(0) 0(0)0(0)0(1) space(0) t..s(0..1) .(2)
+        text   = "3, 000 things."
+        labels = "11" "0" "001" "0" "000001" "2"
+        loader = self._loader(text=text, labels=labels)
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_glue(sentence))
+        assert len(results) == 0, "should not glue a comma between two digit runs"
+
+    def test_allowed_when_digit_only_before_comma(self):
+        """'3, bar.' (digit before, non-digit after) is safe to glue -> '3,bar.'."""
+        # "3, bar."  3(1) ,(1) space(0) b(0)a(0)r(1) .(2)
+        text   = "3, bar."
+        labels = "11" "0" "001" "2"
+        loader = self._loader(text=text, labels=labels)
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_glue(sentence))
+        assert len(results) > 0, "should be allowed when only the left side is a digit"
+        for result in results:
+            assert ''.join(result[0][3]) == "3,bar."
+
+    def test_allowed_when_digit_only_after_comma(self):
+        """'foo, 5 bar.' (non-digit before, digit after) is safe to glue -> 'foo,5 bar.'."""
+        # "foo, 5 bar."  f(0)o(0)o(1) ,(1) space(0) 5(1) space(0) b(0)a(0)r(1) .(2)
+        text   = "foo, 5 bar."
+        labels = "001" "1" "0" "1" "0" "001" "2"
+        loader = self._loader(text=text, labels=labels)
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_glue(sentence))
+        assert len(results) > 0, "should be allowed when only the right side is a digit"
+        for result in results:
+            assert ''.join(result[0][3]) == "foo,5 bar."
+
+    def test_no_op_when_not_eligible(self):
+        """Even with the per-call gate active, an explicitly disabled loader stays inert."""
+        loader = self._loader()
+        loader.comma_glue_eligible = False
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.comma_glue(sentence))
+        assert len(results) == 0
+
+
+# ---------------------------------------------------------------------------
+# Integration: DataLoader.next()
+# ---------------------------------------------------------------------------
+#
+# Every test above calls an augmentation method directly on a `sentence`
+# tuple. That's the right level for testing the augmentation logic itself,
+# but it never exercises next() / strings_starting(), which is the code
+# path actually used during training. A bug that only manifests there
+# (e.g. a method definition accidentally lost or misplaced during an edit,
+# or a missing total_len adjustment for a length-changing augmentation)
+# would not be caught by any of the method-level tests above. These tests
+# close that gap by running the real batch-fetching path end to end.
+#
+# The set of augmentation probs exercised here is discovered automatically
+# from data.py's source (see discover_augmentation_probs() above), rather
+# than hand-listed -- so adding a new `whatever_prob` augmentation to
+# DataLoader does NOT require touching this test file; the next pytest run
+# will pick it up and smoke-test it through next() automatically.
+
+# A small multi-sentence/multi-paragraph corpus with several commas, long
+# enough that batch_size=2 has more than one paragraph to sample from.
+# Paragraphs are separated by a blank line, matching the corpus format
+# used elsewhere in this file.
+#   "Hello, world."   0000110000012
+#   "foo, bar."       001100012
+#   "This, that."     00011000012
+#   "A, b."           11012
+INTEGRATION_TEXT = "Hello, world.\n\nfoo, bar.\n\nThis, that.\n\nA, b.\n"
+INTEGRATION_LABELS = "0000110000012" + "\n\n" + "001100012" + "\n\n" + "00011000012" + "\n\n" + "11012" + "\n"
+
+
+class TestDataLoaderNextIntegration:
+
+    def test_discovery_finds_known_probs(self):
+        """
+        Guard against the discovery regex silently breaking (e.g. if the
+        '*_prob' naming convention or the args.get(...) call style in
+        data.py ever changes): if discover_augmentation_probs() starts
+        returning an empty or suspiciously short list, the parametrized
+        test below would silently run zero/fewer cases instead of failing.
+        This pins a minimum expected set so that kind of breakage is loud.
+        """
+        found = discover_augmentation_probs()
+        expected_minimum = {
+            'comma_typo_prob', 'comma_glue_prob', 'punct_move_back_prob',
+            'last_char_move_prob', 'last_char_drop_prob', 'split_mwt_prob',
+            'augment_mid_punct_prob', 'augment_final_punct_prob',
+        }
+        missing = expected_minimum - set(found)
+        assert not missing, f"discover_augmentation_probs() stopped finding: {missing}"
+
+    def _loader(self, extra_args=None):
+        args = {'batch_size': 2}
+        if extra_args:
+            args.update(extra_args)
+        return write_and_load(INTEGRATION_TEXT, INTEGRATION_LABELS, extra_args=args)
+
+    @pytest.mark.parametrize("prob_arg", discover_augmentation_probs())
+    def test_next_runs_with_augmentation_active(self, prob_arg):
+        """
+        DataLoader.next() must run without error, repeatedly, with each
+        augmentation probability set to 1.0 individually. This is a smoke
+        test: it does not check label correctness (that's covered by the
+        method-level tests above), only that the full batch-fetching path
+        -- including whichever augmentation is active -- does not crash
+        and returns correctly-shaped output.
+        """
+        loader = self._loader(extra_args={prob_arg: 1.0})
+        for _ in range(10):
+            units, labels, feats, raw_units = loader.next()
+            assert units.shape == labels.shape
+            assert units.shape[0] == feats.shape[0] == len(raw_units)
+
+    def test_next_runs_with_all_augmentations_active(self):
+        """Sanity check that the augmentations don't crash when combined."""
+        loader = self._loader(extra_args={
+            prob_arg: 0.5 for prob_arg in discover_augmentation_probs()
+        })
+        for _ in range(20):
+            units, labels, feats, raw_units = loader.next()
+            assert units.shape == labels.shape
+
+    def test_comma_glue_observable_in_real_batches(self):
+        """
+        With comma_glue_prob=1.0, repeatedly drawn batches should eventually
+        contain a comma with no space immediately after it -- i.e. confirm
+        the augmentation actually reaches the data returned by next(), not
+        just that next() avoids crashing.
+        """
+        loader = self._loader(extra_args={'comma_glue_prob': 1.0})
+        assert loader.comma_glue_eligible is True
+
+        saw_glued_comma = False
+        for _ in range(50):
+            _, _, _, raw_units = loader.next()
+            for sent_raw in raw_units:
+                chars = [c for c in sent_raw if c != '<PAD>']
+                for j, c in enumerate(chars[:-1]):
+                    if c == ',' and chars[j + 1] != ' ':
+                        saw_glued_comma = True
+        assert saw_glued_comma, "comma_glue never appeared to fire across 50 batches"
