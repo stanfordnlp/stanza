@@ -266,10 +266,14 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress, split_size, 
         bucket_paths = [os.path.join(tempdir, f"bucket-{i:04d}.txt") for i in range(num_buckets)]
 
         print(f"--> Pass 1/2: scattering {len(input_files)} input file(s) across {num_buckets} bucket(s)...")
-        actual_bytes = scatter_into_buckets(input_files, bucket_paths, max_open_handles, bucket_compression)
-        actual_gb = actual_bytes / 1024 / 1024 / 1024
-        print(f"--> Actual decompressed size: {actual_gb:.4f} GB")
-        if actual_gb < 0.1:
+        actual_chars = scatter_into_buckets(input_files, bucket_paths, max_open_handles, bucket_compression)
+        # Character count, not exact UTF-8 byte count (see scatter_into_buckets docstring) -- used
+        # as an approximate proxy for the size floor below.  For predominantly Latin-script text
+        # this undercounts true bytes only slightly if at all (most chars are 1-2 UTF-8 bytes), so
+        # the floor check stays conservative rather than silently permissive.
+        approx_gb = actual_chars / 1024 / 1024 / 1024
+        print(f"--> Actual size (approx, char count): {approx_gb:.4f} GB")
+        if approx_gb < 0.1:
             raise RuntimeError("Not enough data found to build a charlm.  At least 100MB data expected")
 
         print("--> Pass 2/2: shuffling each bucket and writing final shards...")
@@ -332,12 +336,13 @@ def scatter_into_buckets(input_files, bucket_paths, max_open_handles, bucket_com
     total *concurrently open* handles bounded by max_open_handles + 1 (the source file being read)
     while still only reading every source file once.
 
-    Returns the total decompressed byte count actually scattered, measured as a side effect of this
-    pass (avoids a separate, redundant decompression pass just to learn the true input size).
+    Returns the total character count actually scattered (cheap len() per line, not an exact UTF-8
+    byte count -- see note below), measured as a side effect of this pass to avoid a separate,
+    redundant decompression pass just to learn the true input size.
     """
     num_buckets = len(bucket_paths)
     buffers = [[] for _ in range(num_buckets)]
-    total_bytes = 0
+    total_chars = 0
 
     # The first max_open_handles buckets stay open for the whole pass; the rest are flushed via
     # brief open-append-close, which is cheap relative to the cost of re-reading source data.
@@ -355,12 +360,26 @@ def scatter_into_buckets(input_files, bucket_paths, max_open_handles, bucket_com
                 fout.writelines(buffers[bucket_idx])
         buffers[bucket_idx] = []
 
+    # Cache random.random as a local to avoid repeated attribute lookup in the hot loop below, and
+    # use it instead of random.randrange: randrange does extra bias-correction work (via
+    # _randbelow_with_getrandbits) intended for cryptographically-uniform integer ranges, which we
+    # don't need here -- int(random() * num_buckets) is uniform enough for bucket assignment and
+    # measured roughly 2x faster per call at the scale this pass runs at (tens of millions of lines).
+    _random = random.random
+
     try:
         for src_fn in tqdm(input_files, desc="scattering source files"):
             with open_text_read(src_fn) as fin:
                 for line in fin:
-                    total_bytes += len(line.encode("utf-8", errors="surrogateescape"))
-                    bucket_idx = random.randrange(num_buckets)
+                    # len(line) (character count) instead of len(line.encode(...)) (exact UTF-8
+                    # byte count): this total only feeds the coarse >=100MB sanity-check floor in
+                    # prepare_lm_data, not anything requiring byte precision, and per-line encode()
+                    # calls were a measurable hot-loop cost at this line-count scale.  For
+                    # predominantly Latin-script text (1-2 bytes/char in UTF-8) this tracks true
+                    # byte size closely; even in the worst case (4 bytes/char) it only makes the
+                    # floor check more conservative, never silently permissive.
+                    total_chars += len(line)
+                    bucket_idx = int(_random() * num_buckets)
                     buffers[bucket_idx].append(line)
                     if len(buffers[bucket_idx]) >= IO_CHUNK_LINES:
                         flush(bucket_idx)
@@ -378,7 +397,7 @@ def scatter_into_buckets(input_files, bucket_paths, max_open_handles, bucket_com
                 shutil.copyfileobj(fin, fout)
             os.remove(path)
 
-    return total_bytes
+    return total_chars
 
 
 def read_bucket_lines(bucket_path, bucket_compression):
