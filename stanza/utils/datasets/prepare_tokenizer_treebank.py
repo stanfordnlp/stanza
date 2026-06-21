@@ -220,78 +220,6 @@ def augment_telugu(sents):
             new_sents.append(new_sentence)
     return sents + new_sents
 
-COMMA_SEPARATED_RE = re.compile(" ([a-zA-Z]+)[,] ([a-zA-Z]+) ")
-def augment_comma_separations(sents, ratio=0.03):
-    """Find some fraction of the sentences which match "asdf, zzzz" and squish them to "asdf,zzzz"
-
-    This leaves the tokens and all of the other data the same.  The
-    only change made is to change SpaceAfter=No for the "," token and
-    adjust the #text line, with the assumption that the conllu->txt
-    conversion will correctly handle this change.
-
-    This was particularly an issue for Spanish-AnCora, but it's
-    reasonable to think it could happen to any dataset.  Currently
-    this just operates on commas and ascii letters to avoid
-    accidentally squishing anything that shouldn't be squished.
-
-    UD_Spanish-AnCora 2.7 had a problem is with this sentence:
-    # orig_file_sentence 143#5
-    In this sentence, there was a comma smashed next to a token.
-
-    Fixing just this one sentence is not sufficient to tokenize
-    "asdf,zzzz" as desired, so we also augment by some fraction where
-    we have squished "asdf, zzzz" into "asdf,zzzz".
-
-    This exact example was later fixed in UD 2.8, but it should still
-    potentially be useful for compensating for typos.
-    """
-    new_sents = []
-    for sentence in sents:
-        for text_idx, text_line in enumerate(sentence):
-            # look for the line that starts with "# text".
-            # keep going until we find it, or silently ignore it
-            # if the dataset isn't in that format
-            if text_line.startswith("# text"):
-                break
-        else:
-            continue
-
-        match = COMMA_SEPARATED_RE.search(sentence[text_idx])
-        if match and random.random() < ratio:
-            for idx, word in enumerate(sentence):
-                if word.startswith("#"):
-                    continue
-                # find() doesn't work because we wind up finding substrings
-                if word.split("\t")[1] != match.group(1):
-                    continue
-                if sentence[idx+1].split("\t")[1] != ',':
-                    continue
-                if sentence[idx+2].split("\t")[1] != match.group(2):
-                    continue
-                break
-            if idx == len(sentence) - 1:
-                # this can happen with MWTs.  we may actually just
-                # want to skip MWTs anyway, so no big deal
-                continue
-            # now idx+1 should be the line with the comma in it
-            comma = sentence[idx+1]
-            pieces = comma.split("\t")
-            assert pieces[1] == ','
-            pieces[-1] = add_space_after_no(pieces[-1])
-            comma = "\t".join(pieces)
-            new_sent = sentence[:idx+1] + [comma] + sentence[idx+2:]
-
-            text_offset = sentence[text_idx].find(match.group(1) + ", " + match.group(2))
-            text_len = len(match.group(1) + ", " + match.group(2))
-            new_text = sentence[text_idx][:text_offset] + match.group(1) + "," + match.group(2) + sentence[text_idx][text_offset+text_len:]
-            new_sent[text_idx] = new_text
-
-            new_sents.append(new_sent)
-
-    print("Added %d new sentences with asdf, zzzz -> asdf,zzzz" % len(new_sents))
-            
-    return sents + new_sents
-
 def augment_apos(sents):
 
     """
@@ -598,7 +526,6 @@ def augment_punct(sents):
     """
     new_sents = augment_apos(sents)
     new_sents = augment_quotes(new_sents)
-    new_sents = augment_comma_separations(new_sents)
     new_sents = augment_initial_punct(new_sents)
     new_sents = augment_ellipses(new_sents)
     new_sents = augment_brackets(new_sents)
