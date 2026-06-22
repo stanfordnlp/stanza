@@ -76,7 +76,7 @@ def test_download_missing_ner_model():
         # Tokenize was already present; the rest are "downloaded" by Pipeline.
         # All of them need real content because Pipeline loads every processor.
         model_rel_paths = [
-            "tokenize/combined.pt",
+            "tokenize/combined_nocharlm.pt",
             "mwt/combined.pt",
             "ner/ontonotes-ww-multi_charlm.pt",
             "forward_charlm/1billion.pt",
@@ -101,7 +101,7 @@ def test_download_missing_ner_model():
             else:
                 open(path, "wb").close()
 
-        _seed_from_models_dir(test_dir, "en", ["tokenize/combined.pt", "mwt/combined.pt"])
+        _seed_from_models_dir(test_dir, "en", ["tokenize/combined_nocharlm.pt", "mwt/combined.pt"])
 
         with patch("stanza.resources.common.request_file", side_effect=fake_request_file_with_restore):
             with patch("stanza.pipeline.core.download_resources_json", side_effect=lambda *a, **kw: fake_request_file_with_restore(None, os.path.join(a[0], "resources.json"))):
@@ -125,7 +125,7 @@ def test_download_missing_resources():
     """
     with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
         model_rel_paths = [
-            "tokenize/combined.pt",
+            "tokenize/combined_nocharlm.pt",
             "mwt/combined.pt",
             "ner/ontonotes-ww-multi_charlm.pt",
             "forward_charlm/1billion.pt",
@@ -166,7 +166,7 @@ def test_download_resources_overwrites():
     Test that the DOWNLOAD_RESOURCES method overwrites an existing resources.json
     """
     with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-        model_rel_paths = ["tokenize/combined.pt", "mwt/combined.pt"]
+        model_rel_paths = ["tokenize/combined_nocharlm.pt", "mwt/combined.pt"]
         _seed_from_models_dir(test_dir, "en", model_rel_paths)
 
         real_files = {
@@ -275,7 +275,7 @@ def check_download_method_updates(download_method):
     Run a single test of creating a pipeline with a given download_method, checking that the model is updated
     """
     with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-        model_rel_paths = ["tokenize/combined.pt", "mwt/combined.pt"]
+        model_rel_paths = ["tokenize/combined_nocharlm.pt", "mwt/combined.pt"]
         _seed_from_models_dir(test_dir, "en", model_rel_paths)
 
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
