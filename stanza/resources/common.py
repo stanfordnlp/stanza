@@ -247,6 +247,9 @@ def add_mwt(processors, resources, lang):
     tokenize and mwt pair in the resources file, mwt is added so no missing
     mwt errors are raised.
     """
+    if MWT in processors:
+        return
+
     value = processors[TOKENIZE]
     if value in resources[lang][PACKAGES] and MWT in resources[lang][PACKAGES][value]:
         logger.warning("Language %s package %s expects mwt, which has been added", lang, value)
@@ -254,6 +257,12 @@ def add_mwt(processors, resources, lang):
     elif (value in resources[lang][TOKENIZE] and MWT in resources[lang] and value in resources[lang][MWT]):
         logger.warning("Language %s package %s expects mwt, which has been added", lang, value)
         processors[MWT] = value
+    elif value in resources[lang][TOKENIZE] and MWT in resources[lang]:
+        if value.endswith("_nocharlm") or value.endswith("_charlm"):
+            value = value.rsplit("_", maxsplit=1)[0]
+            if value in resources[lang][MWT]:
+                logger.warning("Language %s package %s expects mwt, which has been added", lang, value)
+                processors[MWT] = value
 
 def maintain_processor_list(resources, lang, package, processors, allow_pretrain=False, maybe_add_mwt=True):
     """

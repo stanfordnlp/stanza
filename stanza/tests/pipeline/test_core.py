@@ -228,16 +228,16 @@ def test_download_not_repeated():
     Test that a model is only downloaded once if it already matches the expected model from the resources file
     """
     with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
-        stanza.download("en", model_dir=test_dir, processors="tokenize", package="combined")
+        pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize", package={"tokenize": "combined_nocharlm"})
 
         assert sorted(os.listdir(test_dir)) == ['en', 'resources.json']
         en_dir = os.path.join(test_dir, 'en')
         en_dir_listing = sorted(os.listdir(en_dir))
         assert en_dir_listing == ['mwt', 'tokenize']
-        tokenize_path = os.path.join(en_dir, "tokenize", "combined.pt")
+        tokenize_path = os.path.join(en_dir, "tokenize", "combined_nocharlm.pt")
         mod_time = os.path.getmtime(tokenize_path)
 
-        pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize", package={"tokenize": "combined"})
+        pipe = stanza.Pipeline("en", model_dir=test_dir, processors="tokenize", package={"tokenize": "combined_nocharlm"})
         assert os.path.getmtime(tokenize_path) == mod_time
 
 def test_download_none():
