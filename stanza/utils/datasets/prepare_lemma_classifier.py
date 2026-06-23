@@ -38,12 +38,12 @@ def process_treebank(paths, short_name, word, upos, allowed_lemmas, sections=SEC
 
     return output_filenames
 
-def convert_en_combined_docs(docs, target_word, target_upos):
+def convert_combined_docs(docs, target_word, target_upos, allowed_lemmas=".*"):
     sentences = [ [], [], [] ]
 
     for section_docs, section_sentences in zip(docs, sentences):
         for filename, doc in section_docs:
-            processor = prepare_dataset.DataProcessor(target_word=target_word, target_upos=target_upos, allowed_lemmas=".*")
+            processor = prepare_dataset.DataProcessor(target_word=target_word, target_upos=target_upos, allowed_lemmas=allowed_lemmas)
             new_sentences = processor.process_document(doc, save_name=None)
             print("Extracted %d sentences from %s" % (len(new_sentences), filename))
             section_sentences.extend(new_sentences)
@@ -75,7 +75,7 @@ def process_en_combined(paths, short_name):
 
     for target_word, target_upos, target_filename in DATASET_TARGETS["en_combined"]:
         print("Processing %s_%s" % (target_word, target_upos))
-        sentences = convert_en_combined_docs(docs, target_word, target_upos)
+        sentences = convert_combined_docs(docs, target_word, target_upos)
 
         for section, section_sentences in zip(SECTIONS, sentences):
             output_filename = os.path.join(output_dir, "%s.%s.%s.lemma" % (short_name, target_filename, section))
@@ -136,6 +136,55 @@ def process_el_gdt(paths, short_name):
 
     process_treebank(paths, short_name, word, upos, allowed_lemmas)
 
+def process_sl(paths, short_name):
+    # TODO: could refactor some with the en equivalent
+    udbase_dir = paths["UDBASE"]
+    output_dir = paths["LEMMA_CLASSIFIER_DATA_DIR"]
+    os.makedirs(output_dir, exist_ok=True)
+
+    if short_name == 'sl_ssj':
+        train_treebanks = ["UD_Slovenian-SSJ"]
+        extra_files = []
+    elif short_name == 'sl_sst':
+        train_treebanks = ["UD_Slovenian-SST"]
+        extra_files = []
+    elif short_name == 'sl_combined':
+        train_treebanks = ["UD_Slovenian-SSJ", "UD_Slovenian-SST"]
+
+        extra_path = os.path.join(paths["STANZA_EXTERN_DIR"], "slovenian", "SUK.CoNLL-U")
+        if not os.path.exists(extra_path):
+            raise FileNotFoundError("Cannot find SUK extra data.  Please download from https://www.clarin.si/repository/xmlui/handle/11356/1959 and put it in %s" % extra_path)
+        extra_files = []
+        for filename in ["ssj500k-tag.ud.conllu", "ambiga.ud.conllu"]:
+            extra_files.append(os.path.join(extra_path, filename))
+            if not os.path.exists(extra_files[-1]):
+                raise FileNotFoundError("Could not find expected extra path %s" % extra_files[-1])
+
+    docs = [ [], [], [] ]
+    for treebank in train_treebanks:
+        for section_idx, section in enumerate(SECTIONS):
+            filename = find_treebank_dataset_file(treebank, udbase_dir, section, "conllu", fail=True)
+            doc = CoNLL.conll2doc(filename)
+            docs[section_idx].append((filename, doc))
+            print("Loaded %s" % filename)
+    for filename in extra_files:
+        doc = CoNLL.conll2doc(filename)
+        docs[0].append((filename, doc))
+        print("Loaded %s" % filename)
+
+    target_word = "(?i:dela|delu|delom|delih|deli)"
+    target_upos = "NOUN"
+    allowed_lemmas = "del|delo"
+
+    print("Processing %s_%s" % (target_word, target_upos))
+    sentences = convert_combined_docs(docs, target_word, target_upos, allowed_lemmas)
+
+    for section, section_sentences in zip(SECTIONS, sentences):
+        output_filename = os.path.join(output_dir, "%s.%s.lemma" % (short_name, section))
+        prepare_dataset.DataProcessor.write_output_file(output_filename, target_upos, section_sentences)
+        print("Wrote %s sentences to %s" % (len(section_sentences), output_filename))
+
+
 DATASET_MAPPING = {
     "ar_padt":           process_ar_padt,
     "el_gdt":            process_el_gdt,
@@ -144,6 +193,10 @@ DATASET_MAPPING = {
     "hi_hdtb":           process_hi_hdtb,
     "ja_combined":       process_ja_gsd,
     "ja_gsd":            process_ja_gsd,
+
+    "sl_combined":       process_sl,
+    "sl_ssj":            process_sl,
+    "sl_sst":            process_sl,
 }
 
 DATASET_TARGETS = {
