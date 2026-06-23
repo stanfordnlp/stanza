@@ -10,7 +10,7 @@ from stanza.utils.conll import CoNLL
 
 SECTIONS = ("train", "dev", "test")
 
-Target = namedtuple("Target", "word upos filename")
+Target = namedtuple("Target", "word upos filename lemmas")
 
 def process_treebank(paths, short_name, word, upos, allowed_lemmas, sections=SECTIONS, dataset_to_use=None):
     if dataset_to_use is None:
@@ -73,7 +73,7 @@ def process_en_combined(paths, short_name):
         docs[2].append((filename, doc))
         print("Loaded %s" % filename)
 
-    for target_word, target_upos, target_filename in DATASET_TARGETS["en_combined"]:
+    for target_word, target_upos, target_filename, _ in DATASET_TARGETS["en_combined"]:
         print("Processing %s_%s" % (target_word, target_upos))
         sentences = convert_combined_docs(docs, target_word, target_upos)
 
@@ -172,17 +172,14 @@ def process_sl(paths, short_name):
         docs[0].append((filename, doc))
         print("Loaded %s" % filename)
 
-    target_word = "(?i:dela|delu|delom|delih|deli)"
-    target_upos = "NOUN"
-    allowed_lemmas = "del|delo"
+    for target_word, target_upos, target_filename, allowed_lemmas in DATASET_TARGETS[short_name]:
+        print("Processing %s_%s" % (target_word, target_upos))
+        sentences = convert_combined_docs(docs, target_word, target_upos, allowed_lemmas)
 
-    print("Processing %s_%s" % (target_word, target_upos))
-    sentences = convert_combined_docs(docs, target_word, target_upos, allowed_lemmas)
-
-    for section, section_sentences in zip(SECTIONS, sentences):
-        output_filename = os.path.join(output_dir, "%s.%s.lemma" % (short_name, section))
-        prepare_dataset.DataProcessor.write_output_file(output_filename, target_upos, section_sentences)
-        print("Wrote %s sentences to %s" % (len(section_sentences), output_filename))
+        for section, section_sentences in zip(SECTIONS, sentences):
+            output_filename = os.path.join(output_dir, "%s.%s.%s.lemma" % (short_name, target_filename, section))
+            prepare_dataset.DataProcessor.write_output_file(output_filename, target_upos, section_sentences)
+            print("Wrote %s sentences to %s" % (len(section_sentences), output_filename))
 
 
 DATASET_MAPPING = {
@@ -201,10 +198,17 @@ DATASET_MAPPING = {
 
 DATASET_TARGETS = {
     "en_combined":       [
-        Target("'s",  "AUX",  "s"),   # since we don't want filenames with 's
-        Target("her", "PRON", "her"),
+        Target("'s",  "AUX",  "s",    None),   # since we don't want filenames with 's
+        Target("her", "PRON", "her",  None),
+    ],
+    "sl_combined":       [
+        Target("(?i:rok|roka|roke|roki)",         "NOUN",  "rok",   "rok|roka"),
+        Target("(?i:dela|delu|delom|delih|deli)", "NOUN",  "del",   "del|delo"),
     ]
 }
+
+DATASET_TARGETS["sl_ssj"] = DATASET_TARGETS["sl_combined"]
+DATASET_TARGETS["sl_sst"] = DATASET_TARGETS["sl_combined"]
 
 def main(dataset_name):
     paths = get_default_paths()
