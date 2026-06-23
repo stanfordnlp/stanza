@@ -311,6 +311,7 @@ default_charlms = {
     "pt": "oscar2023",
     "ru": "newswiki",
     "sd": "isra",
+    "sl": "oscar2023",
     "sv": "conll17",
     "te": "oscar2022",
     "th": "oscar",
