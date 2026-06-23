@@ -71,6 +71,10 @@ def build_model_filename(paths, short_name, command_args, extra_args):
                   "--shorthand", short_name,
                   "--mode", "train"]
     train_args = train_args + charlm_args + extra_args
+    if command_args.save_name is not None:
+        train_args.extend(["--save_name", command_args.save_name])
+    if command_args.save_dir is not None:
+        train_args.extend(["--save_dir", command_args.save_dir])
     args = lemmatizer.parse_args(train_args)
     save_name = lemmatizer.model_file_name(args)
     return save_name
