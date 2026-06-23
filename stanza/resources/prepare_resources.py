@@ -339,7 +339,12 @@ def process_dirs(args):
 def get_default_pos_package(lang, ud_package, known_resources):
     charlm_package = get_pos_charlm_package(lang, ud_package)
     if charlm_package is not None:
-        return ud_package + "_charlm"
+        charlm_package = ud_package + "_charlm"
+        nocharlm_package = ud_package + "_nocharlm"
+        if charlm_package in known_resources.get("pos", {}):
+            return charlm_package
+        else:
+            return nocharlm_package
     if lang in no_pretrain_languages:
         return ud_package + "_nopretrain"
     transformer = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(lang, None), None)
@@ -356,16 +361,21 @@ def get_default_pos_package(lang, ud_package, known_resources):
 def get_default_depparse_package(lang, ud_package, known_resources):
     charlm_package = get_depparse_charlm_package(lang, ud_package)
     if charlm_package is not None:
-        return ud_package + "_charlm"
+        charlm_package = ud_package + "_charlm"
+        nocharlm_package = ud_package + "_nocharlm"
+        if charlm_package in known_resources.get("depparse", {}):
+            return charlm_package
+        else:
+            return nocharlm_package
     if lang in no_pretrain_languages:
         return ud_package + "_nopretrain"
     transformer = TRANSFORMER_NICKNAMES.get(TRANSFORMERS.get(lang, None), None)
     transformer_package = "%s_%s" % (ud_package, transformer)
     nocharlm_package = "%s_nocharlm" % ud_package
     # TODO: use a defaultdict here instead
-    if nocharlm_package in known_resources.get("pos", {}):
+    if nocharlm_package in known_resources.get("depparse", {}):
         return nocharlm_package
-    if transformer_package in known_resources.get("pos", {}):
+    if transformer_package in known_resources.get("depparse", {}):
         return transformer_package
     # this will probably cause a problem when there is no model of this name
     return ud_package + "_nocharlm"
