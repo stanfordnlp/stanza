@@ -1030,6 +1030,26 @@ def build_combined_slovenian_dataset(paths, model_type, dataset):
 
     return sents
 
+def build_extra_combined_slovenian_dataset(paths, model_type, dataset, args):
+    if dataset != 'train' or model_type != common.ModelType.LEMMA:
+        return []
+
+    base_path = os.path.join(paths["STANZA_EXTERN_DIR"], "slovenian", "SUK.CoNLL-U")
+    if not os.path.exists(base_path):
+        raise FileNotFoundError("Cannot find SUK extra data.  Please download from https://www.clarin.si/repository/xmlui/handle/11356/1959 and put it in %s" % base_path)
+
+    all_sents = []
+    for path in ["ssj500k-tag.ud.conllu", "ambiga.ud.conllu"]:
+        path = os.path.join(base_path, path)
+        if not os.path.exists(path):
+            raise FileNotFoundError("Expected to find SUK extra data in %s, but the directory %s exists.  Did you download the right version?" % (path, base_path))
+
+        sents = read_sentences_from_conllu(path)
+        print("Read %d sentences from %s for %s information" % (len(sents), path, model_type.name))
+        all_sents.extend(sents)
+    return all_sents
+
+
 def build_combined_finnish_dataset(paths, model_type, dataset):
     """
     Combine the TDT dataset with a small file of tokenization fixes
@@ -1137,6 +1157,7 @@ COMBINED_EXTRA_FNS = {
     "fi_combined": build_extra_combined_finnish_dataset,
     "fr_combined": build_extra_combined_french_dataset,
     "it_combined": build_extra_combined_italian_dataset,
+    "sl_combined": build_extra_combined_slovenian_dataset,
     "es_combined": build_extra_combined_spanish_dataset,
 }
 
