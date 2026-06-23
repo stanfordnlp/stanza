@@ -90,7 +90,7 @@ default_treebanks = {
     "sa":      "vedic",
     "sd":      "isra",
     "sk":      "snk",
-    "sl":      "ssj",
+    "sl":      "combined",
     "sme":     "giella",
     "sq":      "combined",
     "sr":      "set",
