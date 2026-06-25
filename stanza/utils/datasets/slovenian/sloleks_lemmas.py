@@ -9,6 +9,8 @@ Sloleks 3.1 is available at: https://www.clarin.si/repository/xmlui/handle/11356
 This data goes into the Slovenian combined lemmatizer, improving the coverage of the dictionary
 """
 
+import glob
+import os
 import sys
 import re
 from collections import defaultdict
@@ -92,6 +94,17 @@ def sloleks_to_dict(filenames):
             yield(form, upos, lemma)
 
     return lines
+
+def write_sloleks_dict_file(filenames, output_filename):
+    with open(output_filename, 'w', encoding='utf-8') as fout:
+        for form, upos, lemma in sloleks_to_dict(filenames):
+            fout.write(f"# text = {form}\n")
+            fout.write(f"1\t{form}\t{lemma}\t{upos}\t_\t_\t0\troot\t_\t_\n")
+            fout.write("\n")
+
+def convert_directory(input_directory, output_filename):
+    input_filenames = glob.glob(os.path.join(input_directory, "sloleks_3.1_???.xml"))
+    write_sloleks_dict_file(input_filenames, output_filename)
 
 
 def main():

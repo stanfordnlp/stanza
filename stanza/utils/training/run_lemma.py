@@ -42,6 +42,31 @@ def add_lemma_args(parser):
     parser.add_argument('--lemma_classifier_save_dir', default=None, type=str,
                         help="Save the lemma classifiers in this directory instead of the default lemma classifier home")
 
+    parser.add_argument('--secondary_file', default=None, type=str, help='Which file to use as an external dictionary, if any.  If there is a default for the language, this overrides that default.  If you wish to cancel the default, use --no_use_secondary_file')
+    parser.add_argument('--no_use_secondary_file', default=True, dest='use_secondary_file', action='store_false',
+                        help="For datasets such as sl_combined which use an external dictionary, don't use that dictionary")
+
+def maybe_rebuild_external_dictionary(paths, short_name):
+    """
+    If the dataset is associated with an external lexicon (such as sl_combined)
+    either return the path or attempt to regenerate the lexicon
+    """
+    if short_name != 'sl_combined':
+        return None
+
+    extern_dir = paths["STANZA_EXTERN_DIR"]
+    sloleks_dir = os.path.join(extern_dir, "slovenian", "Sloleks.3.1")
+    if not os.path.exists(sloleks_dir):
+        raise FileNotFoundError("Could not find the Sloleks 3.1 dataset at %s ... please check https://www.clarin.si/repository/xmlui/handle/11356/2080" % sloleks_dir)
+    lexicon = os.path.join(sloleks_dir, "lemmas.conllu")
+    if os.path.exists(lexicon):
+        return lexicon
+
+    from stanza.utils.datasets.slovenian.sloleks_lemmas import convert_directory
+    logger.info("External lexicon for %s does not exist in %s.  Rebuilding...", short_name, lexicon)
+    convert_directory(sloleks_dir, lexicon)
+
+
 def build_model_filename(paths, short_name, command_args, extra_args):
     """
     Figure out what the model savename will be, taking into account the model settings.
@@ -131,6 +156,14 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
                           "--num_epoch", num_epochs,
                           "--mode", "train"]
             train_args = train_args + charlm_args + extra_args
+            if command_args.use_secondary_file:
+                if command_args.secondary_file:
+                    secondary_file = command_args.secondary_file
+                else:
+                    secondary_file = maybe_rebuild_external_dictionary(paths, short_name)
+                    if secondary_file is not None:
+                        train_args.extend(["--secondary_file", secondary_file])
+
             logger.info("Running train lemmatizer for {} with args {}".format(treebank, train_args))
             lemmatizer.main(train_args)
 
