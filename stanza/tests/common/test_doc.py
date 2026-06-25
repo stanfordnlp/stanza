@@ -154,7 +154,7 @@ def test_doc_id_comment(doc):
 
 @pytest.fixture(scope="module")
 def pipeline():
-    return stanza.Pipeline(dir=TEST_MODELS_DIR)
+    return stanza.Pipeline(dir=TEST_MODELS_DIR, download_method=None)
 
 def test_serialized(pipeline):
     """
