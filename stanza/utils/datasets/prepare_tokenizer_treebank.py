@@ -1031,7 +1031,7 @@ def build_combined_slovenian_dataset(paths, model_type, dataset):
     return sents
 
 def build_extra_combined_slovenian_dataset(paths, model_type, dataset, args):
-    if dataset != 'train' or model_type != common.ModelType.LEMMA:
+    if dataset != 'train' or (model_type != common.ModelType.LEMMA and model_type != common.ModelType.POS):
         return []
 
     base_path = os.path.join(paths["STANZA_EXTERN_DIR"], "slovenian", "SUK.CoNLL-U")
