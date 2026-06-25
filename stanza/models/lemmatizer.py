@@ -35,6 +35,8 @@ def build_argparse():
     parser.add_argument('--data_dir', type=str, default='data/lemma', help='Directory for all lemma data.')
     parser.add_argument('--train_file', type=str, default=None, help='Training input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Evaluation input file for data loader.')
+    parser.add_argument('--secondary_file', type=str, default=None, help='Secondary input file for dictionary / slower learning')
+    parser.add_argument('--secondary_lr', type=float, default=0.1, help='Slower LR for the secondary input file')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
@@ -127,6 +129,10 @@ def train(args):
     logger.info("[Loading data with batch size {}...]".format(args['batch_size']))
     train_doc = CoNLL.conll2doc(input_file=args['train_file'])
     train_batch = DataLoader(train_doc, args['batch_size'], args, evaluation=False)
+    secondary_batch = None
+    if args['secondary_file']:
+        secondary_doc = CoNLL.conll2doc(input_file=args['secondary_file'])
+        secondary_batch = DataLoader(secondary_doc, args['batch_size'], args, evaluation=False)
     vocab = train_batch.vocab
     args['vocab_size'] = vocab['char'].size
     args['pos_vocab_size'] = vocab['pos'].size
@@ -156,7 +162,10 @@ def train(args):
     logger.info("Building lemmatizer in %s", model_file)
     trainer = Trainer(args=args, vocab=vocab, device=args['device'])
     logger.info("[Training dictionary-based lemmatizer...]")
-    trainer.train_dict(train_batch.raw_data())
+    dict_data = train_batch.raw_data()
+    if secondary_batch:
+        dict_data.extend(secondary_batch.raw_data())
+    trainer.train_dict(dict_data)
     logger.info("Evaluating on dev set...")
     dev_preds = trainer.predict_dict(dev_batch.doc.get([TEXT, UPOS]))
     dev_batch.doc.set([LEMMA], dev_preds)
