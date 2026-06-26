@@ -2,11 +2,14 @@
 A trainer class to handle training and testing of models.
 """
 
+import gzip
+import io
 import os
 import sys
 import numpy as np
-from collections import Counter
+from collections import Counter, defaultdict
 import logging
+import pickle
 import torch
 from torch import nn
 import torch.nn.init as init
@@ -23,12 +26,55 @@ from stanza.models.lemma_classifier.base_model import LemmaClassifier
 
 logger = logging.getLogger('stanza')
 
+# Sentinel key in pos_dict for the pos-independent word_dict fallback
+_POS_INDEPENDENT = "*"
+
+# Version tag stored in the checkpoint to distinguish dict formats
+_DICTS_VERSION_LEGACY = 1   # old (word_dict, composite_dict) tuple
+_DICTS_VERSION_POS    = 2   # new {pos: {word: lemma}}, gzip-pickled bytes
+
+
 def unpack_batch(batch, device):
     """ Unpack a batch from the data loader. """
     inputs = [b.to(device) if b is not None else None for b in batch[:6]]
     orig_idx = batch[6]
     text = batch[7]
     return inputs, orig_idx, text
+
+
+def _pack_pos_dict(pos_dict):
+    """Serialize pos_dict to gzip-compressed pickle bytes for storage."""
+    raw = pickle.dumps(pos_dict, protocol=4)
+    buf = io.BytesIO()
+    with gzip.GzipFile(fileobj=buf, mode="wb", compresslevel=9) as gz:
+        gz.write(raw)
+    return buf.getvalue()
+
+
+def _unpack_pos_dict(data):
+    """Deserialize pos_dict from gzip-compressed pickle bytes."""
+    buf = io.BytesIO(data)
+    with gzip.GzipFile(fileobj=buf, mode="rb") as gz:
+        raw = gz.read()
+    return pickle.loads(raw)
+
+
+def _legacy_dicts_to_pos_dict(word_dict, composite_dict):
+    """
+    Convert the old (word_dict, composite_dict) pair to the new pos_dict format.
+
+    word_dict entries become pos_dict[_POS_INDEPENDENT][word] = lemma.
+    composite_dict entries that *differ* from word_dict are stored under their
+    POS tag; redundant entries (99% for Slovenian) are dropped.
+    """
+    pos_dict = defaultdict(dict)
+    for w, l in word_dict.items():
+        pos_dict[_POS_INDEPENDENT][w] = l
+    for (w, pos), l in composite_dict.items():
+        if word_dict.get(w) != l:
+            pos_dict[pos][w] = l
+    return dict(pos_dict)
+
 
 class Trainer(object):
     """ A trainer for training models. """
@@ -44,9 +90,9 @@ class Trainer(object):
             else:
                 self.model = self.build_seq2seq(args, emb_matrix, foundation_cache)
             self.vocab = vocab
-            # dict-based components
-            self.word_dict = dict()
-            self.composite_dict = dict()
+            # dict-based component: {pos: {word: lemma}}
+            # _POS_INDEPENDENT ("*") holds the pos-agnostic fallback
+            self.pos_dict = {}
             self.contextual_lemmatizers = []
 
         self.caseless = self.args.get('caseless', False)
@@ -198,70 +244,93 @@ class Trainer(object):
     def update_lr(self, new_lr):
         utils.change_lr(self.optimizer, new_lr)
 
+    def _lookup(self, w, pos):
+        """
+        Core dict lookup: composite (pos+word) first, then pos-independent fallback.
+        Returns None if the word is not in either dict.
+
+        Uses explicit `is not None` checks so that a stored value of None
+        (e.g. from a corrupt entry) does not silently fall through to the
+        fallback or be treated as a hit.
+        """
+        pos_entries = self.pos_dict.get(pos)
+        if pos_entries is not None:
+            lemma = pos_entries.get(w)
+            if lemma is not None:
+                return lemma
+        fallback = self.pos_dict.get(_POS_INDEPENDENT)
+        if fallback is not None:
+            return fallback.get(w)
+        return None
+
     def train_dict(self, triples, update_word_dict=True):
         """
-        Train a dict lemmatizer given training (word, pos, lemma) triples.
+        Train the dict lemmatizer given training (word, pos, lemma) triples.
 
-        Can update only the composite_dict (word/pos) in situations where
-        the data might be limited from the tags, such as when adding more
-        words at pipeline time
+        update_word_dict controls whether the pos-independent (_POS_INDEPENDENT)
+        entries are updated.  Set to False when adding words at pipeline time
+        where tags may be limited.
+
+        Mirrors the original priority logic: most-frequent mapping wins, and
+        composite (word+pos) entries are only stored when they differ from the
+        most-frequent mapping for that specific (word, pos) pair as recorded in
+        pos_independent.
         """
-        # accumulate counter
         ctr = Counter()
         ctr.update([(p[0], p[1], p[2]) for p in triples])
-        # find the most frequent mappings
-        for p, _ in ctr.most_common():
-            w, pos, l = p
-            if (w,pos) not in self.composite_dict:
-                self.composite_dict[(w,pos)] = l
-            if update_word_dict and w not in self.word_dict:
-                self.word_dict[w] = l
-        return
+
+        # Build a secondary counter over (w, pos) to find the most frequent
+        # lemma per (word, pos) pair — needed to correctly handle cases where
+        # the same (w, pos) appears with multiple lemmas across triples.
+        wp_ctr = Counter()
+        wp_ctr.update([(p[0], p[1]) for p in triples])
+
+        pos_independent = self.pos_dict.setdefault(_POS_INDEPENDENT, {})
+
+        # Track which (w, pos) pairs we have already assigned a composite entry,
+        # so that only the most-frequent mapping (first seen in most_common) wins.
+        seen_wp = set()
+
+        for (w, pos, l), _ in ctr.most_common():
+            # pos-independent fallback: most-frequent mapping for this word wins
+            if update_word_dict and w not in pos_independent:
+                pos_independent[w] = l
+            # composite entry: only the most-frequent lemma for (w, pos) is kept,
+            # and only when it genuinely differs from the pos-independent fallback
+            if (w, pos) not in seen_wp:
+                seen_wp.add((w, pos))
+                pos_entries = self.pos_dict.setdefault(pos, {})
+                if pos_independent.get(w) != l:
+                    pos_entries[w] = l
 
     def predict_dict(self, pairs):
         """ Predict a list of lemmas using the dict model given (word, pos) pairs. """
         lemmas = []
-        for p in pairs:
-            w, pos = p
+        for w, pos in pairs:
             if self.caseless:
                 w = w.lower()
-            if (w,pos) in self.composite_dict:
-                lemmas += [self.composite_dict[(w,pos)]]
-            elif w in self.word_dict:
-                lemmas += [self.word_dict[w]]
-            else:
-                lemmas += [w]
+            lemma = self._lookup(w, pos)
+            lemmas.append(lemma if lemma is not None else w)
         return lemmas
 
     def skip_seq2seq(self, pairs):
         """ Determine if we can skip the seq2seq module when ensembling with the frequency lexicon. """
-
         skip = []
-        for p in pairs:
-            w, pos = p
+        for w, pos in pairs:
             if self.caseless:
                 w = w.lower()
-            if (w,pos) in self.composite_dict:
-                skip.append(True)
-            elif w in self.word_dict:
-                skip.append(True)
-            else:
-                skip.append(False)
+            skip.append(self._lookup(w, pos) is not None)
         return skip
 
     def ensemble(self, pairs, other_preds):
         """ Ensemble the dict with statistical model predictions. """
-        lemmas = []
         assert len(pairs) == len(other_preds)
-        for p, pred in zip(pairs, other_preds):
-            w, pos = p
+        lemmas = []
+        for (w, pos), pred in zip(pairs, other_preds):
             if self.caseless:
                 w = w.lower()
-            if (w,pos) in self.composite_dict:
-                lemma = self.composite_dict[(w,pos)]
-            elif w in self.word_dict:
-                lemma = self.word_dict[w]
-            else:
+            lemma = self._lookup(w, pos)
+            if lemma is None:
                 lemma = pred
             if lemma is None:
                 lemma = w
@@ -279,7 +348,8 @@ class Trainer(object):
                     del model_state[k]
         params = {
             'model': model_state,
-            'dicts': (self.word_dict, self.composite_dict),
+            'dicts': _pack_pos_dict(self.pos_dict),
+            'dicts_version': _DICTS_VERSION_POS,
             'vocab': self.vocab.state_dict(),
             'config': self.args,
             'contextual': [],
@@ -302,7 +372,16 @@ class Trainer(object):
         if args is not None:
             self.args['charlm_forward_file'] = args.get('charlm_forward_file', self.args['charlm_forward_file'])
             self.args['charlm_backward_file'] = args.get('charlm_backward_file', self.args['charlm_backward_file'])
-        self.word_dict, self.composite_dict = checkpoint['dicts']
+
+        dicts_version = checkpoint.get('dicts_version', _DICTS_VERSION_LEGACY)
+        if dicts_version == _DICTS_VERSION_POS:
+            self.pos_dict = _unpack_pos_dict(checkpoint['dicts'])
+        else:
+            # legacy format: (word_dict, composite_dict) tuple
+            logger.debug("Loading legacy dict format (version %d), converting to pos_dict", dicts_version)
+            word_dict, composite_dict = checkpoint['dicts']
+            self.pos_dict = _legacy_dicts_to_pos_dict(word_dict, composite_dict)
+
         if not self.args['dict_only']:
             self.model = self.build_seq2seq(self.args, None, foundation_cache)
             # could remove strict=False after rebuilding all models,

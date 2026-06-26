@@ -51,8 +51,10 @@ def test_full_lemmatizer():
 
 def find_unknown_word(lemmatizer, base):
     for i in range(10):
+        # pos_dict: pos -> word -> lemma
+        # make sure that none of the pos slices contain this word
         base = base + "z"
-        if base not in lemmatizer.word_dict and all(x[0] != base for x in lemmatizer.composite_dict.keys()):
+        if all(base not in x for x in lemmatizer.pos_dict):
             return base
     raise RuntimeError("wtf?")
 
@@ -72,9 +74,9 @@ def test_store_results():
     assert stuff[6][0] == bz
     assert stuff[11][0] == cz
 
-    assert lemmatizer.composite_dict[(az, stuff[3][1])] == stuff[3][2]
-    assert lemmatizer.composite_dict[(bz, stuff[6][1])] == stuff[6][2]
-    assert lemmatizer.composite_dict[(cz, stuff[11][1])] == stuff[11][2]
+    assert lemmatizer.pos_dict[stuff[3][1]][az] == stuff[3][2]
+    assert lemmatizer.pos_dict[stuff[6][1]][bz] == stuff[6][2]
+    assert lemmatizer.pos_dict[stuff[11][1]][cz] == stuff[11][2]
 
     doc2 = nlp("I found an " + az + " in my " + bz + ".  It was a " + cz)
     stuff2 = doc2.get([TEXT, UPOS, LEMMA])
@@ -93,16 +95,16 @@ def test_store_results():
     assert stuff[8][0] == ez
     assert stuff[11][0] == fz
 
-    assert lemmatizer.composite_dict[(dz, stuff[3][1])] == stuff[3][2]
-    assert lemmatizer.composite_dict[(ez, stuff[8][1])] == stuff[8][2]
-    assert lemmatizer.composite_dict[(fz, stuff[11][1])] == stuff[11][2]
+    assert lemmatizer.pos_dict[stuff[3][1]][dz] == stuff[3][2]
+    assert lemmatizer.pos_dict[stuff[8][1]][ez] == stuff[8][2]
+    assert lemmatizer.pos_dict[stuff[11][1]][fz] == stuff[11][2]
 
     doc2 = nlp("It was a " + dz + ".  I found an " + ez + " in my " + fz)
     stuff2 = doc2.get([TEXT, UPOS, LEMMA])
 
     assert stuff == stuff2
 
-    assert az not in lemmatizer.word_dict
+    assert all(az not in x for x in lemmatizer.pos_dict)
 
 def test_caseless_lemmatizer():
     """

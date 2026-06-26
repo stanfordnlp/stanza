@@ -1,5 +1,6 @@
 """
-Test a couple basic functions - load & save an existing model
+Tests for the lemmatizer trainer, focusing on the dictionary component
+and the new pos_dict storage format.
 """
 
 import pytest
@@ -12,6 +13,14 @@ import torch
 
 from stanza.models import lemmatizer
 from stanza.models.lemma import trainer
+from stanza.models.lemma.trainer import (
+    _POS_INDEPENDENT,
+    _DICTS_VERSION_LEGACY,
+    _DICTS_VERSION_POS,
+    _pack_pos_dict,
+    _unpack_pos_dict,
+    _legacy_dicts_to_pos_dict,
+)
 from stanza.tests import *
 from stanza.utils.training.common import choose_lemma_charlm, build_charlm_args
 
@@ -21,7 +30,6 @@ pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 def english_model():
     models_path = os.path.join(TEST_MODELS_DIR, "en", "lemma", "*")
     models = glob.glob(models_path)
-    # we expect at least one English model downloaded for the tests
     assert len(models) >= 1, "No English lemma models downloaded during setup!  Please make sure to run the setup script."
     for model_file in models:
         if "nocharlm" in model_file:
@@ -102,7 +110,6 @@ class TestLemmatizer:
         charlm_args = build_charlm_args("en", charlm, model_dir=TEST_MODELS_DIR)
         return charlm_args
 
-
     def run_training(self, tmp_path, train_text, dev_text, extra_args=None):
         """
         Run the training for a few iterations, load & return the model
@@ -157,8 +164,7 @@ class TestLemmatizer:
         # no seq2seq model should have been constructed
         assert saved_model.model is None
 
-        # spot-check words that appear in TRAIN_DATA with known lemmas;
-        # these should be in composite_dict (word+pos) at minimum
+        # spot-check words that appear in TRAIN_DATA with known lemmas
         known_pairs = [("authorities", "NOUN"),
                        ("announced",   "VERB"),
                        ("operating",   "VERB")]
@@ -188,177 +194,305 @@ class TestLemmatizer:
         assert not any(x.startswith("contextual_embedding") for x in checkpoint['model'].keys())
 
 
+def _make_trainer():
+    """Return a minimal dict-only Trainer with empty pos_dict, no seq2seq."""
+    t = trainer.Trainer.__new__(trainer.Trainer)
+    t.args = {'dict_only': True, 'caseless': False}
+    t.caseless = False
+    t.pos_dict = {}
+    t.contextual_lemmatizers = []
+    t.model = None
+    return t
+
+
+class TestPosDictFormat:
+    """
+    Tests for the new {pos: {word: lemma}} storage format:
+    pack/unpack, legacy conversion, and the _POS_INDEPENDENT fallback.
+    """
+
+    def test_pack_unpack_roundtrip(self):
+        """_pack_pos_dict / _unpack_pos_dict must be exact inverses."""
+        pos_dict = {
+            _POS_INDEPENDENT: {"run": "run", "left": "leave"},
+            "ADJ":            {"left": "left"},
+        }
+        assert _unpack_pos_dict(_pack_pos_dict(pos_dict)) == pos_dict
+
+    def test_pack_produces_bytes(self):
+        """Packed format should be bytes (gzip-compressed pickle)."""
+        packed = _pack_pos_dict({_POS_INDEPENDENT: {"run": "run"}})
+        assert isinstance(packed, bytes)
+        # gzip magic number
+        assert packed[:2] == b'\x1f\x8b'
+
+    def test_legacy_conversion_pos_independent(self):
+        """word_dict entries become _POS_INDEPENDENT entries."""
+        word_dict = {"run": "run", "left": "leave"}
+        composite_dict = {}
+        pos_dict = _legacy_dicts_to_pos_dict(word_dict, composite_dict)
+        assert pos_dict[_POS_INDEPENDENT] == {"run": "run", "left": "leave"}
+
+    def test_legacy_conversion_drops_redundant_composite(self):
+        """
+        Composite entries that agree with word_dict are dropped —
+        they're recoverable via the _POS_INDEPENDENT fallback.
+        """
+        word_dict      = {"run": "run"}
+        composite_dict = {("run", "VERB"): "run"}   # redundant
+        pos_dict = _legacy_dicts_to_pos_dict(word_dict, composite_dict)
+        assert "VERB" not in pos_dict or "run" not in pos_dict.get("VERB", {})
+
+    def test_legacy_conversion_keeps_differing_composite(self):
+        """
+        Composite entries that differ from word_dict must be preserved,
+        since they carry real information (e.g. "left" ADJ != "left" VERB).
+        """
+        word_dict      = {"left": "leave"}           # most-frequent mapping
+        composite_dict = {("left", "ADJ"): "left"}   # genuinely different
+        pos_dict = _legacy_dicts_to_pos_dict(word_dict, composite_dict)
+        assert pos_dict["ADJ"]["left"] == "left"
+        assert pos_dict[_POS_INDEPENDENT]["left"] == "leave"
+
+    def test_lookup_pos_specific_beats_fallback(self):
+        """Composite (pos-specific) entry takes priority over _POS_INDEPENDENT."""
+        t = _make_trainer()
+        t.pos_dict = {
+            _POS_INDEPENDENT: {"left": "leave"},
+            "ADJ":            {"left": "left"},
+        }
+        assert t.predict_dict([("left", "ADJ")]) == ["left"]
+
+    def test_lookup_pos_independent_fallback(self):
+        """When no pos-specific entry exists, _POS_INDEPENDENT is used."""
+        t = _make_trainer()
+        t.pos_dict = {_POS_INDEPENDENT: {"running": "run"}}
+        assert t.predict_dict([("running", "VERB")]) == ["run"]
+
+    def test_lookup_unknown_returns_word(self):
+        """Words absent from all dicts should be returned as-is."""
+        t = _make_trainer()
+        t.pos_dict = {}
+        assert t.predict_dict([("xyzzy", "NOUN")]) == ["xyzzy"]
+
+    def test_lookup_caseless(self):
+        """With caseless=True, lookup should lowercase the word before lookup."""
+        t = _make_trainer()
+        t.caseless = True
+        t.pos_dict = {_POS_INDEPENDENT: {"baghdad": "baghdad"}}
+        # "Baghdad" should match "baghdad" after lowercasing
+        assert t.predict_dict([("Baghdad", "PROPN")]) == ["baghdad"]
+
+    def test_lookup_caseless_does_not_affect_lemma(self):
+        """Caseless only lowercases the lookup key, not the returned lemma."""
+        t = _make_trainer()
+        t.caseless = True
+        t.pos_dict = {_POS_INDEPENDENT: {"baghdad": "Baghdad"}}
+        assert t.predict_dict([("BAGHDAD", "PROPN")]) == ["Baghdad"]
+
+
 class TestDictLemmatizer:
     """
-    Tests for the dictionary component of the lemmatizer.
-
-    The dict lemmatizer is tested in isolation from the seq2seq model,
-    since its behavior is fully determined by the training triples and
-    can be checked exactly — unlike the seq2seq, which only approximates.
+    Tests for train_dict, predict_dict, skip_seq2seq, and ensemble
+    using the new pos_dict interface.
     """
 
-    @pytest.fixture
-    def empty_trainer(self):
-        """
-        A minimal Trainer with empty dicts and no seq2seq model.
-
-        dict_only=True skips building the seq2seq, so no vocab or
-        pretrain file is needed.
-        """
-        args = {'dict_only': True, 'caseless': False}
-        t = trainer.Trainer.__new__(trainer.Trainer)
-        t.args = args
-        t.caseless = False
-        t.word_dict = {}
-        t.composite_dict = {}
-        t.contextual_lemmatizers = []
-        t.model = None
-        return t
-
-    def test_train_dict_basic(self, empty_trainer):
-        """
-        Known (word, pos, lemma) triples should be retrievable from
-        both composite_dict and word_dict after training.
-        """
+    def test_train_dict_basic(self):
+        """Known triples should be retrievable after training."""
+        t = _make_trainer()
         triples = [("authorities", "NOUN", "authority"),
-                   ("announced", "VERB", "announce"),
-                   ("running", "VERB", "run")]
-        empty_trainer.train_dict(triples)
+                   ("announced",   "VERB", "announce"),
+                   ("running",     "VERB", "run")]
+        t.train_dict(triples)
 
-        assert empty_trainer.composite_dict[("authorities", "NOUN")] == "authority"
-        assert empty_trainer.composite_dict[("announced", "VERB")] == "announce"
-        assert empty_trainer.word_dict["authorities"] == "authority"
-        assert empty_trainer.word_dict["running"] == "run"
+        assert t.predict_dict([("authorities", "NOUN")]) == ["authority"]
+        assert t.predict_dict([("announced",   "VERB")]) == ["announce"]
+        assert t.predict_dict([("running",     "VERB")]) == ["run"]
 
-    def test_train_dict_frequency_priority(self, empty_trainer):
+    def test_train_dict_pos_independent_set(self):
+        """train_dict should populate the _POS_INDEPENDENT fallback."""
+        t = _make_trainer()
+        t.train_dict([("running", "VERB", "run")])
+        assert t.pos_dict[_POS_INDEPENDENT]["running"] == "run"
+
+    def test_train_dict_redundant_not_stored(self):
         """
-        When a word appears with multiple lemmas, the most frequent
-        mapping should win.
+        When the composite lemma matches the pos-independent entry,
+        no separate pos-specific entry should be stored.
         """
+        t = _make_trainer()
+        # "run" VERB -> "run": same as the pos-independent entry
+        t.train_dict([("run", "VERB", "run")])
+        assert t.pos_dict[_POS_INDEPENDENT]["run"] == "run"
+        # VERB bucket should not have a redundant entry
+        assert "run" not in t.pos_dict.get("VERB", {})
+
+    def test_train_dict_differing_pos_stored(self):
+        """
+        When a word has different lemmas for different POS, the
+        non-default mapping must be stored in a pos-specific bucket.
+        """
+        t = _make_trainer()
+        # two occurrences of VERB (most frequent -> pos_independent)
+        # one occurrence of ADJ with a different lemma
+        triples = [("left", "VERB", "leave"),
+                   ("left", "VERB", "leave"),
+                   ("left", "ADJ",  "left")]
+        t.train_dict(triples)
+        # most frequent overall mapping wins for pos_independent
+        assert t.pos_dict[_POS_INDEPENDENT]["left"] == "leave"
+        # ADJ entry stored because it differs
+        assert t.pos_dict["ADJ"]["left"] == "left"
+
+    def test_train_dict_frequency_priority(self):
+        """Most frequent mapping wins when a word appears with multiple lemmas."""
+        t = _make_trainer()
         triples = [("ran", "VERB", "run"),
                    ("ran", "VERB", "run"),
                    ("ran", "VERB", "run"),
-                   ("ran", "VERB", "ran")]  # less frequent
-        empty_trainer.train_dict(triples)
+                   ("ran", "VERB", "ran")]   # less frequent
+        t.train_dict(triples)
+        assert t.predict_dict([("ran", "VERB")]) == ["run"]
 
-        assert empty_trainer.composite_dict[("ran", "VERB")] == "run"
-        assert empty_trainer.word_dict["ran"] == "run"
+    def test_train_dict_no_word_dict_update(self):
+        """With update_word_dict=False, _POS_INDEPENDENT is not populated."""
+        t = _make_trainer()
+        t.train_dict([("authorities", "NOUN", "authority")],
+                     update_word_dict=False)
+        assert "authorities" not in t.pos_dict.get(_POS_INDEPENDENT, {})
+        # but the pos-specific bucket should still be set
+        assert t.pos_dict.get("NOUN", {}).get("authorities") == "authority"
 
-    def test_train_dict_no_word_dict_update(self, empty_trainer):
-        """
-        With update_word_dict=False, only composite_dict is populated.
-        """
-        triples = [("authorities", "NOUN", "authority")]
-        empty_trainer.train_dict(triples, update_word_dict=False)
+    def test_predict_dict_composite_priority(self):
+        """pos-specific entry takes priority over _POS_INDEPENDENT."""
+        t = _make_trainer()
+        t.pos_dict = {
+            _POS_INDEPENDENT: {"left": "leave"},
+            "ADJ":            {"left": "left"},
+        }
+        assert t.predict_dict([("left", "VERB")]) == ["leave"]  # fallback
+        assert t.predict_dict([("left", "ADJ")])  == ["left"]   # pos-specific
 
-        assert empty_trainer.composite_dict[("authorities", "NOUN")] == "authority"
-        assert "authorities" not in empty_trainer.word_dict
+    def test_predict_dict_word_dict_fallback(self):
+        """_POS_INDEPENDENT is used when no pos-specific entry exists."""
+        t = _make_trainer()
+        t.pos_dict = {_POS_INDEPENDENT: {"running": "run"}}
+        assert t.predict_dict([("running", "VERB")]) == ["run"]
 
-    def test_predict_dict_composite_priority(self, empty_trainer):
-        """
-        composite_dict (word+pos) takes priority over word_dict.
+    def test_predict_dict_unknown_fallback(self):
+        """Unknown words return as-is."""
+        t = _make_trainer()
+        assert t.predict_dict([("xyzzy", "NOUN")]) == ["xyzzy"]
 
-        This matters for words that have different lemmas for different POS,
-        e.g. "runs" as NOUN -> "run" but "runs" as VERB -> "run" too,
-        though the test uses a case where they differ.
-        """
-        empty_trainer.composite_dict[("left", "VERB")] = "leave"
-        empty_trainer.composite_dict[("left", "ADJ")] = "left"
-        empty_trainer.word_dict["left"] = "leave"  # word_dict would be wrong for ADJ
+    def test_skip_seq2seq(self):
+        """skip_seq2seq returns True for known words, False for unknowns."""
+        t = _make_trainer()
+        t.pos_dict = {
+            _POS_INDEPENDENT: {"running": "run"},
+            "VERB":           {"announced": "announce"},
+        }
+        pairs = [("announced", "VERB"),   # pos-specific
+                 ("running",   "NOUN"),   # pos-independent fallback
+                 ("xyzzy",     "NOUN")]   # unknown
+        assert t.skip_seq2seq(pairs) == [True, True, False]
 
-        assert empty_trainer.predict_dict([("left", "VERB")]) == ["leave"]
-        assert empty_trainer.predict_dict([("left", "ADJ")]) == ["left"]
-
-    def test_predict_dict_word_dict_fallback(self, empty_trainer):
-        """
-        When a (word, pos) pair is absent from composite_dict but the
-        word is in word_dict, word_dict is used as fallback.
-        """
-        empty_trainer.word_dict["running"] = "run"
-        # no composite_dict entry for ("running", "VERB")
-
-        assert empty_trainer.predict_dict([("running", "VERB")]) == ["run"]
-
-    def test_predict_dict_unknown_fallback(self, empty_trainer):
-        """
-        Words absent from both dicts should be returned as-is (identity).
-        """
-        result = empty_trainer.predict_dict([("xyzzy", "NOUN")])
-        assert result == ["xyzzy"]
-
-    def test_skip_seq2seq(self, empty_trainer):
-        """
-        skip_seq2seq should return True for words in either dict and
-        False for unknown words.
-        """
-        empty_trainer.composite_dict[("announced", "VERB")] = "announce"
-        empty_trainer.word_dict["running"] = "run"
-
-        pairs = [("announced", "VERB"),   # in composite_dict
-                 ("running", "NOUN"),     # in word_dict (pos doesn't match composite)
-                 ("xyzzy", "NOUN")]       # unknown
-
-        skip = empty_trainer.skip_seq2seq(pairs)
-        assert skip == [True, True, False]
-
-    def test_ensemble_prefers_dict(self, empty_trainer):
-        """
-        ensemble() should use the dict prediction for known words and
-        fall back to the seq2seq prediction (other_preds) for unknowns.
-        """
-        empty_trainer.composite_dict[("announced", "VERB")] = "announce"
-        empty_trainer.word_dict["running"] = "run"
-
-        pairs = [("announced", "VERB"),   # known via composite_dict
-                 ("running", "NOUN"),     # known via word_dict
-                 ("xyzzy", "NOUN")]       # unknown: should use seq2seq pred
-
-        seq2seq_preds = ["announce_wrong", "run_wrong", "the_seq2seq_answer"]
-        result = empty_trainer.ensemble(pairs, seq2seq_preds)
-
+    def test_ensemble_prefers_dict(self):
+        """ensemble uses dict for known words, seq2seq pred for unknowns."""
+        t = _make_trainer()
+        t.pos_dict = {
+            _POS_INDEPENDENT: {"running": "run"},
+            "VERB":           {"announced": "announce"},
+        }
+        pairs      = [("announced", "VERB"), ("running", "NOUN"), ("xyzzy", "NOUN")]
+        seq2seq    = ["wrong",               "wrong",             "the_seq2seq_answer"]
+        result     = t.ensemble(pairs, seq2seq)
         assert result == ["announce", "run", "the_seq2seq_answer"]
 
-    def test_ensemble_none_fallback(self, empty_trainer):
+    def test_ensemble_none_fallback(self):
         """
-        ensemble() should never return None — if the dict lookup
-        somehow yields None, it falls back to the word itself.
-        """
-        # manually inject a None to simulate a corrupt dict entry
-        empty_trainer.composite_dict[("broken", "NOUN")] = None
+        ensemble never returns None.
 
-        result = empty_trainer.ensemble([("broken", "NOUN")], ["seq2seq_pred"])
+        A corrupt None entry is treated as a miss by _lookup, so ensemble
+        falls through to the seq2seq prediction.  If that is also None
+        (which shouldn't happen in practice), it falls back to the word.
+        """
+        t = _make_trainer()
+        # corrupt None entry -> _lookup returns None -> seq2seq pred is used
+        t.pos_dict = {"NOUN": {"broken": None}}
+        result = t.ensemble([("broken", "NOUN")], ["seq2seq_pred"])
+        assert result == ["seq2seq_pred"]
+
+        # if seq2seq pred is also None, fall back to the word itself
+        result = t.ensemble([("broken", "NOUN")], [None])
         assert result == ["broken"]
 
-    def test_dict_roundtrip(self, tmp_path):
+    def test_dict_save_load_roundtrip(self, tmp_path):
         """
-        Train a dict-only lemmatizer, save it, reload it, and verify
-        that predictions are identical before and after the roundtrip.
+        Save a dict-only Trainer with the new format and reload it;
+        predictions must be identical before and after.
         """
-        args = {'dict_only': True, 'caseless': False}
-        t = trainer.Trainer.__new__(trainer.Trainer)
-        t.args = args
-        t.caseless = False
-        t.word_dict = {}
-        t.composite_dict = {}
-        t.contextual_lemmatizers = []
-        t.model = None
+        from stanza.models.lemma.vocab import MultiVocab, Vocab
 
+        t = _make_trainer()
         triples = [("authorities", "NOUN", "authority"),
-                   ("announced", "VERB", "announce"),
-                   ("running", "VERB", "run")]
+                   ("left",        "VERB", "leave"),
+                   ("left",        "VERB", "leave"),
+                   ("left",        "ADJ",  "left"),
+                   ("running",     "VERB", "run")]
         t.train_dict(triples)
 
-        # need a vocab for save/load; borrow from a minimal MultiVocab
-        from stanza.models.lemma.vocab import MultiVocab, Vocab
         char_vocab = Vocab("abcdefghijklmnopqrstuvwxyz", "en")
-        pos_vocab = Vocab(["NOUN", "VERB"], "en")
-        t.vocab = MultiVocab({'char': char_vocab, 'pos': pos_vocab})
+        pos_vocab  = Vocab(["NOUN", "VERB", "ADJ"], "en")
+        t.vocab    = MultiVocab({'char': char_vocab, 'pos': pos_vocab})
 
         save_path = str(tmp_path / "dict_lemmatizer.pt")
         t.save(save_path)
 
+        # verify the checkpoint carries the new version tag
+        checkpoint = torch.load(save_path, map_location="cpu", weights_only=False)
+        assert checkpoint['dicts_version'] == _DICTS_VERSION_POS
+        assert isinstance(checkpoint['dicts'], bytes)
+
         loaded = trainer.Trainer(model_file=save_path, device='cpu')
 
-        pairs = [("authorities", "NOUN"), ("announced", "VERB"),
-                 ("running", "VERB"), ("xyzzy", "NOUN")]
+        pairs = [("authorities", "NOUN"), ("left", "VERB"), ("left", "ADJ"),
+                 ("running", "VERB"), ("running", "NOUN"), ("xyzzy", "NOUN")]
         assert loaded.predict_dict(pairs) == t.predict_dict(pairs)
+
+    def test_legacy_load(self, tmp_path):
+        """
+        A checkpoint in the old (word_dict, composite_dict) format should
+        load transparently and produce correct predictions.
+        """
+        from stanza.models.lemma.vocab import MultiVocab, Vocab
+
+        word_dict      = {"running": "run", "left": "leave"}
+        composite_dict = {("left", "ADJ"): "left",   # differs -> must be kept
+                          ("running", "VERB"): "run"} # same as word_dict -> redundant
+
+        char_vocab = Vocab("abcdefghijklmnopqrstuvwxyz", "en")
+        pos_vocab  = Vocab(["VERB", "ADJ"], "en")
+        vocab      = MultiVocab({'char': char_vocab, 'pos': pos_vocab})
+
+        legacy_checkpoint = {
+            'model':    None,
+            'dicts':    (word_dict, composite_dict),
+            # no 'dicts_version' key — simulates an old checkpoint
+            'vocab':    vocab.state_dict(),
+            'config':   {'dict_only': True, 'caseless': False,
+                         'charlm_forward_file': None, 'charlm_backward_file': None},
+            'contextual': [],
+        }
+        save_path = str(tmp_path / "legacy_lemmatizer.pt")
+        torch.save(legacy_checkpoint, save_path, _use_new_zipfile_serialization=False)
+
+        loaded = trainer.Trainer(model_file=save_path, device='cpu')
+
+        # pos-independent fallback
+        assert loaded.predict_dict([("running", "NOUN")]) == ["run"]
+        # pos-specific entry preserved because it differs
+        assert loaded.predict_dict([("left", "ADJ")])  == ["left"]
+        # pos-independent fallback for VERB (redundant composite was dropped)
+        assert loaded.predict_dict([("left", "VERB")]) == ["leave"]
+        # unknown word
+        assert loaded.predict_dict([("xyzzy", "NOUN")]) == ["xyzzy"]
