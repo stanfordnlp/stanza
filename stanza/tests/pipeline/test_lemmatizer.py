@@ -85,7 +85,7 @@ def test_store_results():
     ez = find_unknown_word(lemmatizer, "e")
     fz = find_unknown_word(lemmatizer, "f")
 
-    # try sentences with the order long, short
+    # try sentences with the order short, long
     doc = nlp("It was a " + dz + ".  I found an " + ez + " in my " + fz)
     stuff = doc.get([TEXT, UPOS, LEMMA])
     assert len(stuff) == 12
