@@ -78,7 +78,9 @@ class LemmaClassifierTrainer(BaseLemmaClassifierTrainer):
 
 def build_argparse():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--hidden_dim", type=int, default=256, help="Size of hidden layer")
+    # 128, 192, or 256 seem to have no accuracy difference, and 128 makes the models substantially smaller
+    # (Haven't checked anything lower than 128)
+    parser.add_argument("--hidden_dim", type=int, default=128, help="Size of hidden layer")
     parser.add_argument('--wordvec_pretrain_file', type=str, default=os.path.join(os.path.dirname(__file__), "pretrain", "glove.pt"), help='Exact name of the pretrain file to read')
     parser.add_argument("--charlm", action='store_true', dest='use_charlm', default=False, help="Whether not to use the charlm embeddings")
     parser.add_argument('--charlm_shorthand', type=str, default=None, help="Shorthand for character-level language model training corpus.")
