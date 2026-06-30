@@ -609,7 +609,8 @@ def lang_to_langcode(lang):
         raise UnknownLanguageError("Unable to find language code for %s" % lang)
     return lcode
 
-RIGHT_TO_LEFT = set(["ar", "arc", "az", "ckb", "dv", "ff", "he", "ku", "mzn", "nqo", "ps", "fa", "rhg", "sd", "syr", "ur"])
+# UG (Uyghur) has two commonly used scripts, but the UD dataset is the RtL script anyway
+RIGHT_TO_LEFT = set(["aii", "ajb", "ar", "arc", "arz", "az", "azb", "bal", "ckb", "dv", "ff", "hbo", "he", "hnd", "hno", "ku", "lrc", "mzn", "nqo", "pnb", "prs", "ps", "fa", "rhg", "sd", "sdh", "skr", "syr", "ug", "ur", "yi"])
 
 def is_right_to_left(lang):
     """
