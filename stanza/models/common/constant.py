@@ -4,6 +4,8 @@ Global constants.
 These language codes mirror UD language codes when possible
 """
 
+from collections import defaultdict
+
 import re
 
 class UnknownLanguageError(ValueError):
@@ -60,6 +62,7 @@ lcode2lang_raw = [
     ("sab", "Bokota"),
     ("peh", "Bonan"),
     ("bor", "Bororo"),
+    ("bs",  "Bosnian"),
     ("brh", "Brahui"),
     ("br",  "Breton"),
     ("bzd", "Bribri"),
@@ -90,11 +93,13 @@ lcode2lang_raw = [
     ("cs",  "Czech"),
     ("da",  "Danish"),
     ("dar", "Dargwa"),
+    ("prs", "Dari"),
     ("dta", "Daur"),
     ("dv",  "Dhivehi"),
     ("sce", "Dongxiang"),
     ("nl",  "Dutch"),
     ("dz",  "Dzongkha"),
+    ("mhr", "Eastern_Mari"),
     ("egy", "Egyptian"),
     ("arz", "Egyptian_Arabic"),
     ("unk", "Enawene_Nawe"),
@@ -123,6 +128,7 @@ lcode2lang_raw = [
     ("aln", "Gheg"),
     ("bbj", "Ghomálá'"),
     ("glk", "Gilaki"),
+    ("gom", "Goan_Konkani"),
     ("gor", "Gorontalo"),
     ("got", "Gothic"),
     ("el",  "Greek"),
@@ -150,6 +156,8 @@ lcode2lang_raw = [
     ("ilo", "Ilocano"),
     ("arc", "Imperial_Aramaic"),
     ("id",  "Indonesian"),
+    ("ia",  "Interlingua"),
+    ("ie",  "Interlingue"),
     ("iu",  "Inuktitut"),
     ("ik",  "Inupiaq"),
     ("ga",  "Irish"),
@@ -164,6 +172,7 @@ lcode2lang_raw = [
     ("kn",  "Kannada"),
     ("kr",  "Kanuri"),
     ("pam", "Kapampangan"),
+    ("krc", "Karachay_Balkar"),
     ("krl", "Karelian"),
     ("arr", "Karo"),
     ("ks",  "Kashmiri"),
@@ -197,7 +206,10 @@ lcode2lang_raw = [
     ("lt",  "Lithuanian"),
     ("liv", "Livonian"),
     ("olo", "Livvi"),
+    ("jbo", "Lojban"),
+    ("lmo", "Lombard"),
     ("nds", "Low_Saxon"),
+    ("dsb", "Lower_Sorbian"),
     ("lu",  "Luba_Katanga"),
     ("lb",  "Luxembourgish"),
     ("mk",  "Macedonian"),
@@ -256,6 +268,7 @@ lcode2lang_raw = [
     ("frr", "North_Frisian"),
     ("nd",  "North_Ndebele"),
     ("sme", "North_Sami"),
+    ("hno", "Northern_Hindko"),
     ("kmr", "Northern_Kurdish"),
     ("lrc", "Northern_Luri"),
     ("nso", "Northern_Sotho"),
@@ -289,6 +302,7 @@ lcode2lang_raw = [
     ("fa",  "Persian"),
     ("pay", "Pesh"),
     ("xpg", "Phrygian"),
+    ("pms", "Piedmontese"),
     ("pbv", "Pnar"),
     ("pl",  "Polish"),
     ("qpm", "Pomak"),
@@ -304,6 +318,7 @@ lcode2lang_raw = [
     ("rm",  "Romansh"),
     ("rn",  "Rundi"),
     ("ru",  "Russian"),
+    ("rue", "Rusyn"),
     ("ruc", "Ruuli"),
     ("sm",  "Samoan"),
     ("sg",  "Sango"),
@@ -327,10 +342,13 @@ lcode2lang_raw = [
     ("soj", "Soi"),
     ("so",  "Somali"),
     ("ckb", "Sorani"),
+    ("azb", "South_Azerbaijani"),
     ("ajp", "South_Levantine_Arabic"),
     ("nr",  "South_Ndebele"),
+    ("hnd", "Southern_Hindko"),
     ("sdh", "Southern_Kurdish"),
     ("st",  "Southern_Sotho"),
+    ("diq", "Southern_Zazaki"),
     ("es",  "Spanish"),
     ("ssp", "Spanish_Sign_Language"),
     ("su",  "Sundanese"),
@@ -360,6 +378,7 @@ lcode2lang_raw = [
     ("qti", "Turkish_English"),
     ("qtd", "Turkish_German"),
     ("tk",  "Turkmen"),
+    ("tyv", "Tuvinian"),
     ("tw",  "Twi"),
     ("uk",  "Ukrainian"),
     ("xum", "Umbrian"),
@@ -377,6 +396,8 @@ lcode2lang_raw = [
     ("cy",  "Welsh"),
     ("hyw", "Western_Armenian"),
     ("fy",  "Western_Frisian"),
+    ("mrj", "Western_Mari"),
+    ("pnb", "Western_Panjabi"),
     ("nhi", "Western_Sierra_Puebla_Nahuatl"),
     ("wo",  "Wolof"),
     ("xav", "Xavante"),
@@ -467,62 +488,76 @@ lcode2lang['nb'] = 'Norwegian' # Norwegian Bokmall mapped to default norwegian
 lcode2lang['no'] = 'Norwegian'
 lcode2lang['zh'] = 'Simplified_Chinese'
 
-extra_lang_to_lcodes = {
-    "ab":  "Abkhaz",
-    "gsw": "Alemannic",
-    "my":  "Burmese",
-    "ckb": "Central_Kurdish",
-    "ny":  "Chewa",
-    "zh":  "Chinese",
-    "za":  "Chuang",
-    "dv":  "Divehi",
-    "eme": "Emerillon",
-    "lij": "Genoese",
-    "ga":  "Gaelic",
-    "ne":  "Gorkhali",
-    "ht":  "Haitian_Creole",
-    "ilo": "Ilokano",
-    "nr":  "isiNdebele",
-    "xh":  "isiXhosa",
-    "zu":  "isiZulu",
-    "jaa": "Jamamadí",
-    "kab": "Kabylian",
-    "kl":  "Kalaallisut",
-    "km":  "Khmer",
-    "ky":  "Kirghiz",
-    "lb":  "Letzeburgesch",
-    "lg":  "Luganda",
-    "jaa": "Madí",
-    "dv":  "Maldivian",
-    "mjl": "Mandeali",
-    "skr": "Multani",
-    "nb":  "Norwegian",
-    "kmr": "Kurmanji",
-    "ny":  "Nyanja",
-    "sga": "Old_Gaelic",
-    "or":  "Oriya",
-    "arr": "Ramarama",
-    "sah": "Sakha",
-    "nso": "Sepedi",
-    "tn":  "Setswana",
-    "ii":  "Sichuan_Yi",
-    "si":  "Sinhalese",
-    "ss":  "Siswati",
-    "soj": "Sohi",
-    "st":  "Sesotho",
-    "ve":  "Tshivenda",
-    "ts":  "Xitsonga",
-    "fy":  "West_Frisian",
-    "zza": "Zaza",
-}
+# additional, less common names for languages already in lcode2lang
+# this is a list of tuples rather than a dict, since a dict keyed by
+# lcode would silently clobber any language that shares an lcode with
+# another entry (eg. Divehi & Maldivian both -> dv).  each *language*
+# name still needs to be unique, which is checked below
+extra_lang_to_lcodes_raw = [
+    ("Abkhaz", "ab"),
+    ("Alemannic", "gsw"),
+    ("Bangla", "bn"),
+    ("Burmese", "my"),
+    ("Central_Kurdish", "ckb"),
+    ("Chewa", "ny"),
+    ("Chinese", "zh"),
+    ("Chuang", "za"),
+    ("Divehi", "dv"),
+    ("Emerillon", "eme"),
+    ("Gaelic", "ga"),
+    ("Genoese", "lij"),
+    ("Gorkhali", "ne"),
+    ("Haitian_Creole", "ht"),
+    ("Iloko", "ilo"),
+    ("Ilokano", "ilo"),
+    ("isiNdebele", "nr"),
+    ("isiXhosa", "xh"),
+    ("isiZulu", "zu"),
+    ("Jamamadí", "jaa"),
+    ("Kabylian", "kab"),
+    ("Kalaallisut", "kl"),
+    ("Khmer", "km"),
+    ("Kirghiz", "ky"),
+    ("Kurmanji", "kmr"),
+    ("Letzeburgesch", "lb"),
+    ("Luganda", "lg"),
+    ("Madí", "jaa"),
+    ("Maldivian", "dv"),
+    ("Mandeali", "mjl"),
+    ("Multani", "skr"),
+    ("Norwegian", "nb"),
+    ("Nyanja", "ny"),
+    ("Old_Gaelic", "sga"),
+    # treebank names changed from Old Russian to Old East Slavic in 2.8
+    ("Old_Russian", "orv"),
+    ("Oriya", "or"),
+    ("Ramarama", "arr"),
+    ("Sakha", "sah"),
+    ("Sepedi", "nso"),
+    ("Sesotho", "st"),
+    ("Setswana", "tn"),
+    ("Sichuan_Yi", "ii"),
+    ("Sinhalese", "si"),
+    ("Siswati", "ss"),
+    ("Sohi", "soj"),
+    ("Tshivenda", "ve"),
+    ("West_Frisian", "fy"),
+    ("Wu_Chinese", "wuu"),
+    ("Xitsonga", "ts"),
+    ("Zaza", "zza"),
+]
 
-for code, language in extra_lang_to_lcodes.items():
+for language, code in extra_lang_to_lcodes_raw:
     assert language not in lang2lcode
     assert code in lcode2lang
     lang2lcode[language] = code
 
-# treebank names changed from Old Russian to Old East Slavic in 2.8
-lang2lcode['Old_Russian'] = 'orv'
+extra_lang_to_lcodes = {language: code for language, code in extra_lang_to_lcodes_raw}
+assert len(extra_lang_to_lcodes) == len(extra_lang_to_lcodes_raw)
+
+extra_lcode_to_lang = defaultdict(list)
+for language, code in extra_lang_to_lcodes_raw:
+    extra_lcode_to_lang[code].append(language)
 
 # build a lowercase map from language to langcode
 langlower2lcode = {}
