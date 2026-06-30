@@ -707,7 +707,7 @@ def process_lcode(args):
     resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
     resources_new = {}
     resources_new["multilingual"] = resources["multilingual"]
-    for lang in resources:
+    for lang in sorted(resources):
         if lang == 'multilingual':
             continue
         if 'alias' in resources[lang]:
