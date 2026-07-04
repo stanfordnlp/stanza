@@ -164,6 +164,24 @@ def load_mwt_dict(filename):
     return mwt_dict
 
 def process_sentence(sentence, mwt_dict=None):
+    """Convert a raw prediction sequence into a list of token dictionaries.
+
+    Iterates over (token, label, position_info) triples and builds a list of
+    word dicts suitable for constructing a stanza Document.  When a token is
+    labelled as a multi-word token (MWT) and a matching entry is found in
+    mwt_dict, the token is expanded in place.
+
+    Args:
+        sentence: Iterable of (tok, p, position_info) triples where tok is the
+            token string, p is the prediction label (3 or 4 signals an MWT),
+            and position_info is an optional (start_char, end_char) tuple.
+        mwt_dict: Optional dict mapping token strings to (expansion, count)
+            pairs used to expand multi-word tokens.
+
+    Returns:
+        A list of word dicts with at least ID and TEXT keys, and optionally
+        START_CHAR, END_CHAR, and MISC fields.
+    """
     sent = []
     i = 0
     for tok, p, position_info in sentence:
@@ -323,6 +341,31 @@ def predict(trainer, data_generator, batch_size, max_seqlen, use_regex_tokens, n
     return all_preds, all_raw
 
 def output_predictions(output_file, trainer, data_generator, vocab, mwt_dict, max_seqlen=1000, orig_text=None, no_ssplit=False, use_regex_tokens=True, num_workers=0, postprocessor=None):
+    """Run the tokenization model over data_generator and write results to output_file.
+
+    Runs batch prediction, decodes raw predictions into token sequences, optionally
+    applies a postprocessor, and writes the result in CoNLL format.
+
+    Args:
+        output_file: File path to write CoNLL output to, or None to skip writing.
+        trainer: Trained tokenizer model with an args dict and prediction methods.
+        data_generator: Data loader yielding batches for the model.
+        vocab: Vocabulary object used to decode model outputs.
+        mwt_dict: Dict of multi-word token expansions; may be None.
+        max_seqlen: Maximum sequence length; values below 1000 are raised to 1000.
+        orig_text: Original text string; used to recover character offsets.
+        no_ssplit: If True, disable sentence splitting during decoding.
+        use_regex_tokens: If True, apply regex-based post-processing for emails/URLs.
+        num_workers: Number of worker processes for the data loader.
+        postprocessor: Optional callable that receives pre-tokenized word lists and
+            returns corrected word lists.
+
+    Returns:
+        A tuple (oov_count, offset, all_preds, doc) where oov_count is the number
+        of out-of-vocabulary tokens, offset is the character offset after decoding,
+        all_preds is the list of raw prediction arrays, and doc is the decoded
+        Document object.
+    """
     batch_size = trainer.args['batch_size']
     max_seqlen = max(1000, max_seqlen)
 
