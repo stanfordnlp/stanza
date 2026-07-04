@@ -566,6 +566,11 @@ def evaluate_trainer(args, trainer, pretrain):
     if system_pred_file:
         CoNLL.write_doc2conll(batch.doc, system_pred_file)
 
+    # check the predicted parses for heads with more than one nsubj/csubj
+    # or more than one obj, since these are not enforced by the parsing
+    # algorithm itself (unlike the single root constraint)
+    scorer.check_head_constraint_violations(batch.doc)
+
     if args['gold_labels']:
         gold_doc = CoNLL.conll2doc(input_file=args['eval_file'])
 
