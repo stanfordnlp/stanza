@@ -92,6 +92,15 @@ class StartServer(enum.Enum):
 
 
 def clean_props_file(props_file):
+    """Remove a temporary server properties file if it matches the expected pattern.
+
+    If *props_file* is a path to an existing file whose basename matches
+    ``SERVER_PROPS_TMP_FILE_PATTERN``, the file is deleted.  Otherwise the
+    function is a no-op.
+
+    Args:
+        props_file: Path to the properties file to clean up, or ``None``.
+    """
     # check if there is a temp server props file to remove and remove it
     if props_file:
         if os.path.isfile(props_file) and SERVER_PROPS_TMP_FILE_PATTERN.match(os.path.basename(props_file)):
@@ -119,6 +128,15 @@ class RobustService(object):
         atexit.register(self.atexit_kill)
 
     def is_alive(self):
+        """Check whether the service endpoint is responding to ping requests.
+
+        Returns:
+            ``True`` if the ``/ping`` endpoint returns a successful response.
+
+        Raises:
+            ShouldRetryException: If a connection error occurs, wrapping the
+                original ``requests.exceptions.ConnectionError``.
+        """
         try:
             if not self.ignore_binding_error and self.server is not None and self.server.poll() is not None:
                 return False
@@ -159,6 +177,12 @@ class RobustService(object):
                 raise FileNotFoundError("When trying to run CoreNLP, a FileNotFoundError occurred, which frequently means Java was not installed or was not in the classpath.") from e
 
     def atexit_kill(self):
+        """Attempt to terminate the server process when the Python interpreter exits.
+
+        Registered with :func:`atexit.register` at construction time.  Sends
+        ``SIGTERM`` to the subprocess without waiting, so that the interpreter
+        shutdown is not delayed.
+        """
         # make some kind of effort to stop the service (such as a
         # CoreNLP server) at the end of the program.  not waiting so
         # that the python script exiting isn't delayed
