@@ -179,6 +179,18 @@ def ud_scores(gold_conllu_file, system_conllu_file):
     return evaluation
 
 def harmonic_mean(a, weights=None):
+    """Compute the (optionally weighted) harmonic mean of a sequence of values.
+
+    Returns 0 if any element in *a* is zero.
+
+    Args:
+        a: Sequence of positive numbers.
+        weights: Optional sequence of weights the same length as *a*.
+            If ``None``, the unweighted harmonic mean is returned.
+
+    Returns:
+        The weighted harmonic mean, or 0 if any element is zero.
+    """
     if any([x == 0 for x in a]):
         return 0
     else:
@@ -373,10 +385,28 @@ def get_split_optimizer(name,
 
 
 def change_lr(optimizer, new_lr):
+    """Update the learning rate of all parameter groups in *optimizer*.
+
+    Args:
+        optimizer: A PyTorch optimizer whose learning rate should be changed.
+        new_lr: The new learning rate value to set.
+    """
     for param_group in optimizer.param_groups:
         param_group['lr'] = new_lr
 
 def flatten_indices(seq_lens, width):
+    """Convert per-sequence element indices to flat indices in a 2-D array of row width *width*.
+
+    For each sequence of length ``seq_lens[i]``, generates the flat indices
+    ``i * width + j`` for ``j`` in ``range(seq_lens[i])``.
+
+    Args:
+        seq_lens: List of sequence lengths.
+        width: The column width of the 2-D array being indexed.
+
+    Returns:
+        A flat list of integer indices.
+    """
     flat = []
     for i, l in enumerate(seq_lens):
         for j in range(l):
@@ -420,6 +450,14 @@ def print_config(config):
     logger.info("\n" + info + "\n")
 
 def normalize_text(text):
+    """Normalize *text* to Unicode NFD form.
+
+    Args:
+        text: Input string to normalise.
+
+    Returns:
+        The NFD-normalised version of *text*.
+    """
     return unicodedata.normalize('NFD', text)
 
 def unmap_with_copy(indices, src_tokens, vocab):
