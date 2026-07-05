@@ -81,6 +81,7 @@ def build_argparse():
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
     parser.add_argument('--no_gold_labels', dest='gold_labels', action='store_false', help="Don't score the eval file - perhaps it has no gold labels, for example.  Cannot be used at training time")
     parser.add_argument('--output_latex', default=False, action='store_true', help='Output the per-relation table in Latex form')
+    parser.add_argument('--resolve_head_constraints', default=False, action='store_true', help="Repair head-constraint violations (more than one nsubj/csubj or obj on a single head) in the predicted output. Off by default for eval, so LAS/UAS reflect the model's own raw output rather than a post-hoc repair; the running pipeline defaults this to on instead.")
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
     parser.add_argument('--shorthand', type=str, help="Treebank shorthand")
@@ -559,7 +560,7 @@ def evaluate_trainer(args, trainer, pretrain):
     doc = CoNLL.conll2doc(input_file=args['eval_file'])
     batch = DataLoader(doc, args['batch_size'], loaded_args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 
-    preds = predict_dataset(trainer, batch)
+    preds = predict_dataset(trainer, batch, resolve_head_constraints=args.get('resolve_head_constraints', False))
 
     # write to file and score
     batch.doc.set([HEAD, DEPREL], [y for x in preds for y in x])

@@ -65,8 +65,9 @@ class DepparseProcessor(UDProcessor):
                                min_length_to_batch_separately=self.config.get('min_length_to_batch_separately', DEFAULT_SEPARATE_BATCH))
             with torch.no_grad():
                 preds = []
+                resolve_head_constraints = self.config.get('resolve_head_constraints', True)
                 for i, b in enumerate(batch):
-                    preds += self.trainer.predict(b)
+                    preds += self.trainer.predict(b, resolve_head_constraints=resolve_head_constraints)
             if batch.data_orig_idx is not None:
                 preds = unsort(preds, batch.data_orig_idx)
             batch.doc.set((doc.HEAD, doc.DEPREL), [y for x in preds for y in x])

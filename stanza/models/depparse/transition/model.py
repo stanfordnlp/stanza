@@ -1,5 +1,6 @@
 from collections import Counter, namedtuple
 from enum import Enum
+import warnings
 
 import torch
 from torch import nn
@@ -715,7 +716,22 @@ class TransitionParser(EmbeddingParser):
         self.update_partial_tree_lstm(states, range(len(states)), partial_tree_h0, partial_tree_c0)
         return states
 
-    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, resolve_head_constraints=False):
+        # NOTE: the transition parser's greedy choose_transitions step only
+        # checks LOCAL legality (is_legal on the current parser state) --
+        # it has no equivalent to the graph parser's global rescoring, so
+        # head-constraint violations (more than one nsubj/csubj or obj on a
+        # single head) are NOT actually prevented here. Unlike the graph
+        # parser, there's no arc-score matrix to rerun Chu-Liu-Edmonds
+        # against, so the head_constraints repair mechanism doesn't carry
+        # over directly; a transition-parser-specific repair would need its
+        # own design (eg patching the finished parsed_graph post-hoc). Since
+        # this parser is currently only used to build silver datasets rather
+        # than for user-facing parsing, that gap matters less here than in
+        # the graph parser, but the parameter is accepted for interface
+        # parity with GraphParser/EnsembleGraphParser.predict.
+        if resolve_head_constraints:
+            warnings.warn("resolve_head_constraints=True was requested, but this is not yet implemented for the transition parser; predictions may still contain head-constraint violations.", stacklevel=2)
         lstm_outputs = self.embed(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
         states = self.build_initial_states(head, deprel, text, lstm_outputs, sentlens)
         device = next(self.parameters()).device
@@ -833,7 +849,11 @@ class EnsembleTransitionParser(BaseParser):
         model_partial_tree_c0 = [x[6] for x in model_forwards]
         return output_hx, left_deprels, right_deprels, model_transition_h0, model_transition_c0, model_partial_tree_h0, model_partial_tree_c0
 
-    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, resolve_head_constraints=False):
+        # see TransitionParser.predict -- not yet implemented for the
+        # transition-based parser, accepted here only for interface parity
+        if resolve_head_constraints:
+            warnings.warn("resolve_head_constraints=True was requested, but this is not yet implemented for the transition parser; predictions may still contain head-constraint violations.", stacklevel=2)
         device = self.get_device()
 
         model_states = []
