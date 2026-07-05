@@ -7,9 +7,9 @@ enforced by reweighting root arc costs -- see chuliu_edmonds_one_root), since
 they depend on which LABEL ends up chosen for each arc, not just the tree
 structure.
 
-See stanza.models.depparse.scorer for the exact SINGLETON_DEPREL_GROUPS
-definitions (including the nsubj:outer/csubj:outer exception) and for
-counting how often these violations occur across a corpus.
+SINGLETON_DEPREL_GROUPS/DEPREL_TO_GROUP below are the canonical definitions
+of which deprels are mutually exclusive on a single head; stanza.models.depparse.scorer
+imports them from here to count how often violations occur across a corpus.
 """
 
 from collections import defaultdict
@@ -18,13 +18,34 @@ import numpy as np
 
 from stanza.models.common.chuliu_edmonds import chuliu_edmonds_one_root
 from stanza.models.common.vocab import VOCAB_PREFIX_SIZE
-from stanza.models.depparse.scorer import DEPREL_TO_GROUP
+
+# groups of deprels which are mutually exclusive per head -- a single head
+# should never have more than one edge belonging to the same group.
+#
+# nsubj:pass / csubj:pass collapse into the ordinary subj group (a head
+# still shouldn't have two of nsubj/csubj/nsubj:pass/csubj:pass combined).
+#
+# nsubj:outer / csubj:outer are their own group instead, since a head can
+# legitimately have both a plain nsubj/csubj AND an nsubj:outer/csubj:outer
+# at once -- this is the "outer" clausal subject of a copula construction, eg:
+#   "The thing to keep in mind is that X, Y, and Z are more dangerous..."
+# where "thing" is nsubj:outer of "likely" and "nationalists" is a separate,
+# ordinary nsubj of the same head ("likely").
+SINGLETON_DEPREL_GROUPS = {
+    "subj": {"nsubj", "csubj", "nsubj:pass", "csubj:pass"},
+    "subj_outer": {"nsubj:outer", "csubj:outer"},
+    "obj": {"obj"},
+}
+
+# reverse lookup built from SINGLETON_DEPREL_GROUPS: exact deprel -> group name
+DEPREL_TO_GROUP = {deprel: group_name
+                    for group_name, deprels in SINGLETON_DEPREL_GROUPS.items()
+                    for deprel in deprels}
 
 def find_head_constraint_violations(tree, deprel_strs):
     """
     Finds heads with more than one dependent in the same SINGLETON_DEPREL_GROUPS
-    group (eg two nsubj, or an nsubj + csubj, or two obj) -- see
-    stanza.models.depparse.scorer for the exact group definitions.
+    group (eg two nsubj, or an nsubj + csubj, or two obj).
 
     Returns a list of (head_idx, group_name, [dependent_word_indices]) for
     each violating (head, group) combination.

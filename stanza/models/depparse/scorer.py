@@ -6,6 +6,7 @@ from collections import Counter, defaultdict, namedtuple
 import logging
 
 from stanza.models.common.utils import ud_scores
+from stanza.models.depparse.head_constraints import SINGLETON_DEPREL_GROUPS, DEPREL_TO_GROUP
 
 logger = logging.getLogger('stanza')
 
@@ -60,29 +61,6 @@ def score_named_dependencies(pred_doc, gold_doc, output_latex=False):
     if output_latex:
         log_lines.append(r"\end{tabular}")
     logger.info("F1 scores for each dependency:\n  Note that unlabeled attachment errors hurt the labeled attachment scores\n%s" % "\n".join(log_lines))
-
-# groups of deprels which are mutually exclusive per head -- a single head
-# should never have more than one edge belonging to the same group.
-#
-# nsubj:pass / csubj:pass collapse into the ordinary subj group (a head
-# still shouldn't have two of nsubj/csubj/nsubj:pass/csubj:pass combined).
-#
-# nsubj:outer / csubj:outer are their own group instead, since a head can
-# legitimately have both a plain nsubj/csubj AND an nsubj:outer/csubj:outer
-# at once -- this is the "outer" clausal subject of a copula construction, eg:
-#   "The thing to keep in mind is that X, Y, and Z are more dangerous..."
-# where "thing" is nsubj:outer of "likely" and "nationalists" is a separate,
-# ordinary nsubj of the same head ("likely").
-SINGLETON_DEPREL_GROUPS = {
-    "subj": {"nsubj", "csubj", "nsubj:pass", "csubj:pass"},
-    "subj_outer": {"nsubj:outer", "csubj:outer"},
-    "obj": {"obj"},
-}
-
-# reverse lookup built from SINGLETON_DEPREL_GROUPS: exact deprel -> group name
-DEPREL_TO_GROUP = {deprel: group_name
-                    for group_name, deprels in SINGLETON_DEPREL_GROUPS.items()
-                    for deprel in deprels}
 
 def _deprel_group_key(deprel):
     """ Maps a deprel to the SINGLETON_DEPREL_GROUPS key it belongs to, or None
