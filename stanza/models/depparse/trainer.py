@@ -155,13 +155,21 @@ class Trainer(BaseTrainer, ABC):
             opt.step()
         return loss_val, batch_stats
 
-    def predict(self, batch, unsort=True):
+    def predict(self, batch, unsort=True, resolve_head_constraints=False):
         device = self.model.get_device()
         inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
         word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel = inputs
 
         self.model.eval()
-        pred_tokens = self.model.predict(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
+        # resolve_head_constraints is accepted by every model's predict(),
+        # graph or transition -- the transition parser doesn't yet have a
+        # repair implemented for it (its greedy, locally-legal transitions
+        # can still produce head-constraint violations; it's just not
+        # something we've built a fix for there, since currently that
+        # parser is only used to build silver datasets rather than for
+        # user-facing parsing), but the parameter exists on both so this
+        # call doesn't need to dispatch on model type
+        pred_tokens = self.model.predict(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, resolve_head_constraints=resolve_head_constraints)
         if unsort:
             pred_tokens = utils.unsort(pred_tokens, orig_idx)
         if self.args.get('reversed', False):

@@ -267,14 +267,14 @@ class GraphParser(EmbeddingParser):
         self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
 
     @staticmethod
-    def decode_graph_predictions(vocab, batch_size, preds, sentlens, resolve_violations=False):
+    def decode_graph_predictions(vocab, batch_size, preds, sentlens, resolve_head_constraints=False):
         head_seqs = []
         deprel_seqs = []
         for i, l in enumerate(sentlens):
             scores = preds[0][i][:l, :l]
             labels = preds[1][i]
             tree = chuliu_edmonds_one_root(scores)
-            if resolve_violations:
+            if resolve_head_constraints:
                 label_log_probs = preds[2][i][:l, :l, :]
                 tree, raw_label_ids = resolve_head_constraint_violations(scores, label_log_probs, tree, vocab)
                 deprels = vocab.unmap([r + VOCAB_PREFIX_SIZE for r in raw_label_ids])
@@ -374,10 +374,10 @@ class GraphParser(EmbeddingParser):
         loss, _ = self.forward(*args, **kwargs)
         return loss, None
 
-    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, resolve_violations=False):
+    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, resolve_head_constraints=False):
         batch_size = word.size(0)
         _, preds = self(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
-        pred_tokens = self.decode_graph_predictions(self.vocab['deprel'], batch_size, preds, sentlens, resolve_violations=resolve_violations)
+        pred_tokens = self.decode_graph_predictions(self.vocab['deprel'], batch_size, preds, sentlens, resolve_head_constraints=resolve_head_constraints)
         return pred_tokens
 
 class EnsembleGraphParser(BaseParser):
@@ -429,10 +429,10 @@ class EnsembleGraphParser(BaseParser):
         return loss, preds
 
     # TODO: refactor this?
-    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, resolve_violations=False):
+    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, resolve_head_constraints=False):
         batch_size = word.size(0)
         _, preds = self(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
-        pred_tokens = GraphParser.decode_graph_predictions(self.vocab['deprel'], batch_size, preds, sentlens, resolve_violations=resolve_violations)
+        pred_tokens = GraphParser.decode_graph_predictions(self.vocab['deprel'], batch_size, preds, sentlens, resolve_head_constraints=resolve_head_constraints)
         return pred_tokens
 
     def get_device(self):
