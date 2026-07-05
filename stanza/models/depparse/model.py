@@ -18,6 +18,7 @@ from stanza.models.common.utils import attach_bert_model
 from stanza.models.common.vocab import CompositeVocab, VOCAB_PREFIX_SIZE
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from stanza.models.common import utils
+from stanza.models.depparse.head_constraints import resolve_head_constraint_violations
 
 logger = logging.getLogger('stanza')
 
@@ -266,9 +267,22 @@ class GraphParser(EmbeddingParser):
         self.crit = nn.CrossEntropyLoss(ignore_index=-1, reduction='sum') # ignore padding
 
     @staticmethod
-    def decode_graph_predictions(vocab, batch_size, preds, sentlens):
-        head_seqs = [chuliu_edmonds_one_root(adj[:l, :l])[1:] for adj, l in zip(preds[0], sentlens)] # remove attachment for the root
-        deprel_seqs = [vocab.unmap([preds[1][i][j+1][h] for j, h in enumerate(hs)]) for i, hs in enumerate(head_seqs)]
+    def decode_graph_predictions(vocab, batch_size, preds, sentlens, resolve_violations=False):
+        head_seqs = []
+        deprel_seqs = []
+        for i, l in enumerate(sentlens):
+            scores = preds[0][i][:l, :l]
+            labels = preds[1][i]
+            tree = chuliu_edmonds_one_root(scores)
+            if resolve_violations:
+                label_log_probs = preds[2][i][:l, :l, :]
+                tree, raw_label_ids = resolve_head_constraint_violations(scores, label_log_probs, tree, vocab)
+                deprels = vocab.unmap([r + VOCAB_PREFIX_SIZE for r in raw_label_ids])
+            else:
+                hs = tree[1:]
+                deprels = vocab.unmap([labels[j+1][h] for j, h in enumerate(hs)])
+            head_seqs.append(tree[1:]) # remove attachment for the root
+            deprel_seqs.append(deprels)
         pred_tokens = [[[head_seqs[i][j], deprel_seqs[i][j]] for j in range(sentlens[i]-1)] for i in range(batch_size)]
         return pred_tokens
 
@@ -344,6 +358,10 @@ class GraphParser(EmbeddingParser):
             loss = 0
             preds.append(F.log_softmax(unlabeled_scores, 2).detach().cpu().numpy())
             preds.append(deprel_scores.max(3)[1].detach().cpu().numpy() + VOCAB_PREFIX_SIZE)
+            # full per-arc label log-probs (not just the argmax) -- needed so a
+            # constraint-violation repair can consider "same arc, second-best
+            # label" as an alternative to rerouting the arc entirely
+            preds.append(F.log_softmax(deprel_scores, 3).detach().cpu().numpy())
 
         return loss, preds
 
@@ -356,10 +374,10 @@ class GraphParser(EmbeddingParser):
         loss, _ = self.forward(*args, **kwargs)
         return loss, None
 
-    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, resolve_violations=False):
         batch_size = word.size(0)
         _, preds = self(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
-        pred_tokens = self.decode_graph_predictions(self.vocab['deprel'], batch_size, preds, sentlens)
+        pred_tokens = self.decode_graph_predictions(self.vocab['deprel'], batch_size, preds, sentlens, resolve_violations=resolve_violations)
         return pred_tokens
 
 class EnsembleGraphParser(BaseParser):
@@ -406,14 +424,15 @@ class EnsembleGraphParser(BaseParser):
             preds = []
             preds.append(F.log_softmax(unlabeled_scores, 2).detach().cpu().numpy())
             preds.append(deprel_scores.max(3)[1].detach().cpu().numpy())
+            preds.append(F.log_softmax(deprel_scores, 3).detach().cpu().numpy())
 
         return loss, preds
 
     # TODO: refactor this?
-    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text):
+    def predict(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text, resolve_violations=False):
         batch_size = word.size(0)
         _, preds = self(word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, word_orig_idx, sentlens, wordlens, text)
-        pred_tokens = GraphParser.decode_graph_predictions(self.vocab['deprel'], batch_size, preds, sentlens)
+        pred_tokens = GraphParser.decode_graph_predictions(self.vocab['deprel'], batch_size, preds, sentlens, resolve_violations=resolve_violations)
         return pred_tokens
 
     def get_device(self):
