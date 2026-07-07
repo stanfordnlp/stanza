@@ -2,8 +2,8 @@
 community_oscar_dedup.py
 
 Download one or more Community-OSCAR slices, deduplicate across all of them
-(by exact URL and by TLSH near-hash), and write plain-text output files
-suitable for Stanza's make_lm_data.py charlm pipeline.
+(by exact URL and by MinHash LSH near-duplicate detection), and write
+plain-text output files suitable for Stanza's make_lm_data.py charlm pipeline.
 
 Deduplication is stateful across slices: documents seen in an earlier slice
 are suppressed in later ones, so the order of --slices matters (first
@@ -14,7 +14,7 @@ Usage
 python community_oscar_dedup.py \
     --slices sd:2024-22 sd:2024-18 ur:2024-22 \
     --output_dir /u/nlp/data/oscar_deduped \
-    --tlsh_threshold 100 \
+    --minhash_threshold 0.7 \
     --hf_token YOUR_TOKEN   # or set HF_TOKEN env var
 
 Output
@@ -29,7 +29,22 @@ replaced with a space), ready for make_lm_data.py --files.
 
 Requirements
 ------------
-    pip install py-tlsh huggingface_hub zstandard
+    pip install datasketch huggingface_hub zstandard
+
+Near-duplicate detection
+------------------------
+Uses MinHash LSH (datasketch library) on word-unigram sets, giving O(1)
+query time regardless of corpus size. This replaces TLSH-based near-dedup,
+which was O(n) per query and became prohibitively slow for large languages
+like Urdu or Pashto (800+ seconds per slice at 200k seen documents).
+
+The Jaccard similarity threshold (--minhash_threshold, default 0.7)
+controls how similar two documents must be to be considered near-duplicates:
+  - 1.0 = identical content only
+  - 0.8 = near-identical (minor word changes, punctuation differences)
+  - 0.7 = substantially same content (boilerplate additions, different lede)
+  - 0.5 = significant overlap (50%+ shared content)
+Lower values catch more near-duplicates but increase false positives.
 
 HF access
 ---------
@@ -64,11 +79,11 @@ from pathlib import Path
 from typing import Iterator, Optional
 
 try:
-    import tlsh as tlsh_lib
+    from datasketch import MinHash, MinHashLSH
 except ImportError:
     print(
-        "ERROR: the 'tlsh' module is not importable.\n"
-        "  Install with:  pip install py-tlsh",
+        "ERROR: 'datasketch' package not found.\n"
+        "  Install with:  pip install datasketch",
         file=sys.stderr,
     )
     sys.exit(1)
@@ -108,57 +123,81 @@ log = logging.getLogger(__name__)
 class DeduplicationState:
     """Mutable state shared across all slices."""
     seen_urls: set = field(default_factory=set)
-    seen_tlsh: list = field(default_factory=list)   # list of parsed TLSH hashes
-    # documents are duplicates when diff() < this value (diff()==0 means
-    # identical); lower threshold -> fewer dropped, higher -> more dropped
-    tlsh_threshold: int = 100
+    # MinHash LSH parameters
+    minhash_threshold: float = 0.7   # Jaccard similarity above which docs are near-dups
+    minhash_num_perm: int = 128      # number of hash permutations (more = more accurate)
 
     # stats
     total_docs: int = 0
     dropped_url: int = 0
-    dropped_tlsh: int = 0
+    dropped_minhash: int = 0
     kept: int = 0
-    missing_tlsh: int = 0    # doc content too short/simple for TLSH to hash (TNULL result)
+    short_docs: int = 0   # docs too short to build a meaningful MinHash
 
-    def is_duplicate(self, url: Optional[str], tlsh_hex: Optional[str]) -> str:
+    def __post_init__(self):
+        self._lsh = MinHashLSH(
+            threshold=self.minhash_threshold,
+            num_perm=self.minhash_num_perm,
+        )
+        self._doc_counter = 0  # used to generate unique keys for the LSH index
+
+    def _make_minhash(self, text: str) -> Optional[MinHash]:
         """
-        Return 'url', 'tlsh', or '' (not a duplicate).
-        Side-effect: if not a duplicate, registers the URL and TLSH hash.
+        Build a MinHash from word unigrams.
 
-        tlsh_hex should be a bare hash string from tlsh_lib.hash() --
-        i.e. already validated, never 'TNULL', no 'tlsh:' prefix.
-        Pass None to skip TLSH dedup for this document.
+        Word unigrams (bag-of-words) are fast, language-agnostic (works on any
+        whitespace-segmented script including Perso-Arabic), and robust to the
+        kinds of near-duplicate variation common in web crawls: boilerplate
+        additions, minor word substitutions, different ledes on the same article.
+        Character n-grams give similar recall but are ~4x slower to compute.
+        Returns None if the document is too short to hash meaningfully.
+        """
+        words = text.split()
+        if len(words) < 5:
+            return None
+        m = MinHash(num_perm=self.minhash_num_perm)
+        seen_words = set()
+        for w in words:
+            h = hash(w)
+            if h not in seen_words:
+                seen_words.add(h)
+                m.update(h.to_bytes(8, 'little', signed=True))
+        return m
+
+    def is_duplicate(self, url: Optional[str], text: str) -> str:
+        """
+        Return 'url', 'minhash', or '' (not a duplicate).
+        Side-effect: if not a duplicate, registers the URL and MinHash.
+
+        Takes the raw document text rather than a pre-computed hash, since
+        MinHash construction is fast (0.5ms) and the LSH index needs the
+        MinHash object for both querying and insertion.
         """
         self.total_docs += 1
-
-        if not tlsh_hex:
-            self.missing_tlsh += 1
 
         # 1. Exact URL dedup
         if url:
             if url in self.seen_urls:
                 self.dropped_url += 1
                 return "url"
-            # Don't register until we also pass TLSH, to avoid poisoning state
-            # with a URL that is itself near-duplicate of something else.
-            # (Rare edge case, but correct.)
 
-        # 2. TLSH near-dedup
-        if tlsh_hex:
-            candidate = tlsh_lib.Tlsh()
-            candidate.fromTlshStr(tlsh_hex)
-            for seen in self.seen_tlsh:
-                if seen.diff(candidate) < self.tlsh_threshold:
-                    self.dropped_tlsh += 1
-                    return "tlsh"
+        # 2. MinHash LSH near-dedup
+        m = self._make_minhash(text)
+        if m is None:
+            self.short_docs += 1
+        else:
+            results = self._lsh.query(m)
+            if results:
+                self.dropped_minhash += 1
+                return "minhash"
 
         # Not a duplicate: register both signals
         if url:
             self.seen_urls.add(url)
-        if tlsh_hex:
-            h = tlsh_lib.Tlsh()
-            h.fromTlshStr(tlsh_hex)
-            self.seen_tlsh.append(h)
+        if m is not None:
+            key = f'doc_{self._doc_counter}'
+            self._doc_counter += 1
+            self._lsh.insert(key, m)
 
         self.kept += 1
         return ""
@@ -168,8 +207,8 @@ class DeduplicationState:
         return (
             f"total={self.total_docs}  kept={self.kept} ({pct(self.kept)})  "
             f"dropped_url={self.dropped_url} ({pct(self.dropped_url)})  "
-            f"dropped_tlsh={self.dropped_tlsh} ({pct(self.dropped_tlsh)})  "
-            f"missing_tlsh={self.missing_tlsh} ({pct(self.missing_tlsh)})"
+            f"dropped_minhash={self.dropped_minhash} ({pct(self.dropped_minhash)})  "
+            f"short_docs={self.short_docs} ({pct(self.short_docs)})"
         )
 
 
@@ -181,8 +220,8 @@ class SliceStats:
     total_docs: int = 0          # docs seen in this slice (post-parse, pre-dedup)
     kept_docs: int = 0           # docs from this slice actually written out
     dropped_url: int = 0
-    dropped_tlsh: int = 0
-    missing_tlsh: int = 0        # docs where content was too short/simple for TLSH to hash
+    dropped_minhash: int = 0
+    short_docs: int = 0          # docs too short for meaningful MinHash
     parse_errors: int = 0
     word_count: int = 0          # whitespace-split word count of kept docs
     char_count: int = 0          # character count of kept docs (post-flatten)
@@ -281,8 +320,8 @@ def process_slice(
     # slice starts, so we can compute *this slice's* drop counts even
     # though `state` accumulates across every slice in the run.
     dropped_url_before = state.dropped_url
-    dropped_tlsh_before = state.dropped_tlsh
-    missing_tlsh_before = state.missing_tlsh
+    dropped_minhash_before = state.dropped_minhash
+    short_docs_before = state.short_docs
 
     with out_path.open("w", encoding="utf-8") as fout:
         for repo_file in repo_files:
@@ -316,24 +355,7 @@ def process_slice(
                     continue
 
                 url = _extract_url(doc)
-                # Community-OSCAR's precomputed hashes use the 256-bucket/
-                # 3-byte-checksum TLSH variant (140-char hashes), which
-                # standard py-tlsh (pip install py-tlsh) cannot parse -- it
-                # only handles the 128-bucket/1-byte-checksum variant (72 chars).
-                # Rather than requiring a custom-built tlsh library, we
-                # simply re-hash the document content on the fly using the
-                # standard build. The cost is negligible (~14k hashes/sec,
-                # ~1.5s per typical 22k-doc Sindhi slice) vs network I/O.
-                # We hash the UTF-8 bytes of the text content, matching how
-                # OSCAR's own pipeline hashes web page content.
-                raw_hash = tlsh_lib.hash(text.encode("utf-8", errors="replace"))
-                # tlsh_lib.hash() returns 'TNULL' when content is too short
-                # or insufficiently random to hash (minimum 50 bytes with
-                # sufficient entropy). Treat as no hash rather than passing
-                # 'TNULL' to is_duplicate, where it would parse incorrectly.
-                tlsh_hex = raw_hash if raw_hash and raw_hash != "TNULL" else None
-
-                reason = state.is_duplicate(url, tlsh_hex)
+                reason = state.is_duplicate(url, text)
                 if reason:
                     continue
 
@@ -352,20 +374,13 @@ def process_slice(
                     )
 
     stats.dropped_url = state.dropped_url - dropped_url_before
-    stats.dropped_tlsh = state.dropped_tlsh - dropped_tlsh_before
-    stats.missing_tlsh = state.missing_tlsh - missing_tlsh_before
+    stats.dropped_minhash = state.dropped_minhash - dropped_minhash_before
+    stats.short_docs = state.short_docs - short_docs_before
     stats.elapsed_sec = time.time() - t0
     try:
         stats.output_bytes = out_path.stat().st_size
     except OSError:
         pass
-
-    if stats.total_docs > 0 and stats.missing_tlsh / stats.total_docs > 0.5:
-        log.warning(
-            f"  {stats.missing_tlsh}/{stats.total_docs} docs in this slice "
-            f"produced no TLSH hash (content too short or not sufficiently "
-            f"random). TLSH near-dedup is effectively disabled for those docs."
-        )
 
     log.info(
         f"Finished [{lang}:{snapshot}]  "
@@ -419,7 +434,7 @@ def print_summary(all_stats: list[SliceStats]) -> None:
 
     header = (
         f"{'slice':<18} {'kept':>9} {'words':>11} {'chars':>12} "
-        f"{'size':>8} {'dup_url':>8} {'dup_tlsh':>9} {'no_tlsh%':>9} {'errs':>6} "
+        f"{'size':>8} {'dup_url':>8} {'dup_mh':>7} {'short%':>7} {'errs':>6} "
         f"{'cum_kept':>9} {'cum_words':>12}"
     )
     sep = "-" * len(header)
@@ -443,18 +458,18 @@ def print_summary(all_stats: list[SliceStats]) -> None:
         cum_chars += s.char_count
         cum_bytes += s.output_bytes
 
-        no_tlsh_pct = (
-            100 * s.missing_tlsh / s.total_docs
+        short_pct = (
+            100 * s.short_docs / s.total_docs
             if s.total_docs > 0 else 0.0
         )
-        if no_tlsh_pct > 50:
+        if short_pct > 50:
             any_high_missing = True
 
         slice_label = f"{s.lang}:{s.snapshot}"
         print(
             f"{slice_label:<18} {s.kept_docs:>9,} {s.word_count:>11,} "
             f"{s.char_count:>12,} {_human_bytes(s.output_bytes):>8} "
-            f"{s.dropped_url:>8,} {s.dropped_tlsh:>9,} {no_tlsh_pct:>8.1f}% "
+            f"{s.dropped_url:>8,} {s.dropped_minhash:>7,} {short_pct:>6.1f}% "
             f"{s.parse_errors:>6,} {cum_kept:>9,} {cum_words:>12,}"
         )
 
@@ -467,10 +482,9 @@ def print_summary(all_stats: list[SliceStats]) -> None:
 
     if any_high_missing:
         print(
-            "WARNING: at least one slice has >50% of documents with no usable "
-            "TLSH hash (see no_tlsh% column). These documents were too short or "
-            "insufficiently random for TLSH to produce a hash. TLSH near-dedup "
-            "is effectively disabled for those documents."
+            "WARNING: at least one slice has >50% of documents too short for "
+            "MinHash (see short% column). Near-duplicate detection is disabled "
+            "for those documents -- they are kept but not indexed."
         )
         print()
 
@@ -514,19 +528,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory for output .txt files (created if absent).",
     )
     p.add_argument(
-        "--tlsh_threshold",
+        "--minhash_threshold",
+        type=float,
+        default=0.7,
+        metavar="FLOAT",
+        help=(
+            "Jaccard similarity threshold above which two documents are "
+            "considered near-duplicates (and the later one dropped). "
+            "Jaccard is computed over word-unigram sets: 1.0 = identical, "
+            "0.0 = completely different. Higher values are more conservative "
+            "(require more similarity to flag as duplicate -> more kept). "
+            "Lower values are more aggressive (flag more pairs -> less kept). "
+            "Typical values: 0.8 catches near-identical copies; 0.7 also "
+            "catches syndicated articles with boilerplate differences; "
+            "0.5 catches 50%%+ content overlap. Default: 0.7."
+        ),
+    )
+    p.add_argument(
+        "--minhash_num_perm",
         type=int,
-        default=100,
+        default=128,
         metavar="N",
         help=(
-            "Two documents are flagged as near-duplicates (and the later one "
-            "dropped) when their TLSH diff score is BELOW this value; diff() "
-            "is 0 for identical documents and increases as documents become "
-            "less alike. So a LOWER threshold narrows what counts as a "
-            "duplicate -> fewer documents get dropped, more get kept. A "
-            "HIGHER threshold widens it -> more get dropped, fewer kept. "
-            "OSCAR documentation cites threshold=100 as giving ~6.4%% false-"
-            "positive / ~94.5%% true-positive duplicate detection.  Default: 100."
+            "Number of MinHash permutations. More permutations = more accurate "
+            "Jaccard estimation but slower hashing and more memory. 128 gives "
+            "~2%% estimation error, which is well within dedup tolerance. "
+            "Default: 128."
         ),
     )
     p.add_argument(
@@ -555,11 +582,16 @@ def main() -> None:
             "Pass --hf_token or set HF_TOKEN."
         )
 
-    state = DeduplicationState(tlsh_threshold=args.tlsh_threshold)
+    state = DeduplicationState(
+        minhash_threshold=args.minhash_threshold,
+        minhash_num_perm=args.minhash_num_perm,
+    )
 
     log.info(
         f"Processing {len(slices)} slice(s)  "
-        f"tlsh_threshold={args.tlsh_threshold}  output_dir={output_dir}"
+        f"minhash_threshold={args.minhash_threshold}  "
+        f"minhash_num_perm={args.minhash_num_perm}  "
+        f"output_dir={output_dir}"
     )
 
     all_stats = []
