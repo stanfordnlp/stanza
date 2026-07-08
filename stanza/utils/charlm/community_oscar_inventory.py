@@ -367,7 +367,7 @@ def print_human(inventory: dict[str, set[str]],
                 filter_lang: Optional[str],
                 filter_snap: Optional[str],
                 show_names: bool = False) -> None:
-    snapshots = sorted(inventory)
+    snapshots = sorted(inventory, reverse=True)
     if filter_snap:
         snapshots = [s for s in snapshots if s == filter_snap]
 
@@ -379,7 +379,7 @@ def print_human(inventory: dict[str, set[str]],
         if filter_lang:
             if filter_lang not in langs:
                 continue
-            print(f"{snap}")
+            print(f"{filter_lang}:{snap}")
         else:
             lang_str = "  ".join(fmt(l) for l in langs)
             print(f"{snap}  [{len(langs)} langs]")
