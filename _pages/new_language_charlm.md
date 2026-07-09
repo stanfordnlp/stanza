@@ -48,15 +48,28 @@ We will use Prof. Attardi's
 remove the markup, and it works on the `latest-pages-meta-current`
 file, so that is what we download.
 
+Until a couple of fixes get released upstream (a template
+self-inclusion loop that could hang indefinitely on certain articles,
+plus a few output-cleanliness improvements), install from our fork
+instead of the upstream package:
+
+```bash
+pip install git+https://github.com/AngledLuffa/wikiextractor.git
+```
+
 ```bash
 wget https://dumps.wikimedia.org/bnwiki/latest/bnwiki-latest-pages-meta-current.xml.bz2
 ```
 
 You can then use the WikiExtractor to extract the text from the
-Wikipedia dump you just downloaded:
+Wikipedia dump you just downloaded. We use `--text` to skip the
+`<doc>...</doc>` XML wrapper (which is just extraction metadata, not
+Wikipedia content, and would otherwise pollute the LM training data)
+and `--discard_empty` to skip near-empty documents (redirects,
+disambiguation stubs, etc.) that don't contribute any useful text:
 
 ```bash
-python -m wikiextractor.WikiExtractor bnwiki-latest-pages-meta-current.xml.bz2
+python -m wikiextractor.WikiExtractor --text --discard_empty bnwiki-latest-pages-meta-current.xml.bz2
 ```
 
 This splits the text into multiple subdirectories full of small files
@@ -66,6 +79,10 @@ need, but we can combine them:
 ```bash
 for i in `ls text`; do echo $i; cat text/$i/* > $i.txt; xz $i.txt; done
 ```
+
+With `--text --discard_empty`, these files are already plain text with
+no `<doc>` wrapper tags and no near-empty stub documents, so this
+concatenation step needs no further cleanup.
 
 We now have an Oscar dump and a Wikipedia dump.  We can turn this raw
 data into train/dev/test splits for the charlm.  First, we organize
