@@ -13,8 +13,7 @@ For adding a new languages, we provide scripts to automate large parts of the pr
 
 * Gather a ton of tokenized text.  Ideally gigabytes.  Wikipedia is a good place to start for raw text, but in that case you will need to tokenize it.
   * One such source of text is [the conll17 shared task](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-1989)
-  * Another possibility is to gather the Common Crawl data yourself, such as from [Oscar](https://oscar-corpus.com/), and download the Wikipedia dump for the language
-  * There is a script in the dev branch, [`stanza.utils.charlm.dump_oscar`](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/charlm/dump_oscar.py), which should help exporting Oscar data from HuggingFace to the charlm
+  * Another possibility is to gather the Common Crawl data yourself, such as from [Community-OSCAR](https://huggingface.co/datasets/oscar-corpus/community-oscar), and download the Wikipedia dump for the language.  See the [Community-OSCAR section below](#gathering-community-oscar-data) for the scripts we provide to do this.
 * If the data you gathered was from the conll17 shared task, we provide a script to turn it into txt files.  Run ```python3 -m stanza.utils.charlm.conll17_to_text ~/extern_data/finnish/conll17/Finnish/```  This will convert conllu or conllu.xz files to txt and put them in the same directory.
 * Run ```python3 -m stanza.utils.charlm.make_lm_data extern_data/charlm_raw extern_data/charlm```  This will convert text files in the `charlm_raw` directory to a suitable dataset in `extern_data/charlm`.  You may need to adjust your paths.
 * Forward: ```python3 -m stanza.models.charlm --train_dir extern_data/charlm/fi/conll17/train --eval_file extern_data/charlm/fi/conll17/dev.txt.xz --direction forward --shorthand fi_conll17  --mode train```
@@ -26,18 +25,117 @@ For most languages, the current defaults are sufficient, but for some languages 
 ## Step by Step Training
 
 First, we need a large amount of text data.  For this model, we choose
-two sources: Oscar Common Crawl and Wikipedia.
-
-There is a script to copy Oscar from HuggingFace:
+two sources: Community-OSCAR Common Crawl and Wikipedia.
 
 ```bash
-python3 -m stanza.utils.charlm.dump_oscar bn --output /nlp/scr/horatio/oscar/
+export CHARLM_DIR=/u/nlp/software/stanza/charlm
+export CHARLM_RAW_DIR=/u/nlp/software/stanza/charlm_raw
+```
+
+## Gathering Community-OSCAR data
+
+[Community-OSCAR](https://huggingface.co/datasets/oscar-corpus/community-oscar)
+is a gated dataset on HuggingFace.  You will need to accept the access
+agreement on the dataset page and obtain a HuggingFace token before
+using the scripts below.  Export your token as `HF_TOKEN` or pass it
+via `--hf_token`.
+
+We provide three scripts in `stanza/utils/charlm/` for working with
+Community-OSCAR:
+
+**`community_oscar_inventory.py`** lists the snapshots and languages
+available in Community-OSCAR, which is useful for knowing which slices
+exist before you start downloading.  It requires only one API call
+regardless of how many snapshots are available, and caches the result
+locally for 24 hours.
+
+```bash
+# List all snapshots containing Bengali
+python3 stanza/utils/charlm/community_oscar_inventory.py --lang bn
+```
+
+This prints snapshots newest-first in `lang:snapshot` format, ready to
+paste directly into the `--slices` argument of the dedup script:
+
+```
+bn:2024-38
+bn:2024-33
+bn:2024-30
+...
+```
+
+**`community_oscar_dedup.py`** downloads one or more slices, deduplicates
+across all of them (by exact URL and by MinHash near-duplicate detection),
+and writes one plain-text output file per slice.  Deduplication state is
+shared across slices in the order given, so the first-listed snapshot's
+content takes priority.
+
+```bash
+pip install datasketch huggingface_hub zstandard
+```
+
+```bash
+python3 stanza/utils/charlm/community_oscar_dedup.py \
+    --slices bn:2024-38 bn:2024-33 bn:2024-30 \
+    --output_dir /nlp/scr/horatio/oscar/bn \
+    --minhash_threshold 0.7
 ```
 
 {% include alerts.html %}
 {{ note }}
-{{ "To use this script, you will need to install the HuggingFace library `datasets`." | markdownify }}
+{{ "The `--minhash_threshold` parameter controls how similar two documents must be (in terms of word-set overlap) to be considered near-duplicates. 0.7 (70% shared vocabulary) is a good default for most languages. Run `community_oscar_inspect_similarity.py` on your output to verify the threshold is well-calibrated for your language." | markdownify }}
 {{ end }}
+
+At the end of the run, the script prints a summary table showing how
+many documents and words each snapshot contributed, plus the marginal
+contribution of each slice — useful for deciding how many snapshots to
+include.
+
+**`community_oscar_inspect_similarity.py`** samples random document
+pairs from an output file and reports the Jaccard and TLSH similarity
+distributions.  Run this after deduplication to verify that the output
+is genuinely diverse and the threshold you chose has a low false-positive
+rate for your language.
+
+```bash
+pip install datasketch py-tlsh zstandard  # py-tlsh optional but recommended
+```
+
+```bash
+python3 stanza/utils/charlm/community_oscar_inspect_similarity.py \
+    /nlp/scr/horatio/oscar/bn/bn_2024-38.txt
+```
+
+The output files from the dedup script are plain `.txt` files (one
+document per line).  Before passing them to `make_lm_data`, compress
+them to `.xz` and move them to the appropriate raw data directory:
+
+```bash
+for f in /nlp/scr/horatio/oscar/bn/*.txt; do xz "$f"; done
+mkdir -p $CHARLM_RAW_DIR/bn/oscar
+mv /nlp/scr/horatio/oscar/bn/*.txt.xz $CHARLM_RAW_DIR/bn/oscar/
+```
+
+**Using OSCAR 2023 (legacy)**
+
+An older script, `dump_oscar.py`, downloads from the OSCAR 2023 dataset
+on HuggingFace rather than Community-OSCAR.  This path has two
+significant limitations as of 2026: new user access to OSCAR 2023 is
+no longer being granted, and the script requires a rollback to
+`datasets` 3.x since it is incompatible with the current package
+version.  If you already have access and are working in an older
+environment, it can still be used:
+
+```bash
+pip install "datasets<4.0"
+python3 -m stanza.utils.charlm.dump_oscar bn --output /nlp/scr/horatio/oscar/
+```
+
+This produces output files named `oscar_dump_000.txt.xz`,
+`oscar_dump_001.txt.xz`, etc., which can be passed to `make_lm_data`
+the same way as the Community-OSCAR files above.
+
+## Wikipedia Downloads
 
 We also download Wikipedia from the
 [Wikipedia dumps archive](https://dumps.wikimedia.org/backup-index-bydb.html).
@@ -84,7 +182,7 @@ With `--text --discard_empty`, these files are already plain text with
 no `<doc>` wrapper tags and no near-empty stub documents, so this
 concatenation step needs no further cleanup.
 
-We now have an Oscar dump and a Wikipedia dump.  We can turn this raw
+We now have a Community-OSCAR dump and a Wikipedia dump.  We can turn this raw
 data into train/dev/test splits for the charlm.  First, we organize
 the raw data into one directory.  Then, we run the `make_lm_data` script.
 On our cluster, we put all of our raw charlm data into
@@ -93,19 +191,12 @@ and the train/dev/test splits into `/u/nlp/software/stanza/charlm`
 You can choose different base paths, of course.
 
 ```bash
-export CHARLM_DIR=/u/nlp/software/stanza/charlm
-export CHARLM_RAW_DIR=/u/nlp/software/stanza/charlm_raw
 # move the Oscar & Wikipedia .xz files to this directory
 mkdir -p $CHARLM_RAW_DIR/bn/oscar
 
 ls $CHARLM_RAW_DIR/bn/oscar
-AA.txt.xz  oscar_dump_000.txt.xz  oscar_dump_007.txt.xz  oscar_dump_014.txt.xz  oscar_dump_021.txt.xz
-AB.txt.xz  oscar_dump_001.txt.xz  oscar_dump_008.txt.xz  oscar_dump_015.txt.xz  oscar_dump_022.txt.xz
-AC.txt.xz  oscar_dump_002.txt.xz  oscar_dump_009.txt.xz  oscar_dump_016.txt.xz  oscar_dump_023.txt.xz
-AD.txt.xz  oscar_dump_003.txt.xz  oscar_dump_010.txt.xz  oscar_dump_017.txt.xz
-AE.txt.xz  oscar_dump_004.txt.xz  oscar_dump_011.txt.xz  oscar_dump_018.txt.xz
-AF.txt.xz  oscar_dump_005.txt.xz  oscar_dump_012.txt.xz  oscar_dump_019.txt.xz
-AG.txt.xz  oscar_dump_006.txt.xz  oscar_dump_013.txt.xz  oscar_dump_020.txt.xz
+AA.txt.xz  bn_2024-30.txt.xz  bn_2024-38.txt.xz
+AB.txt.xz  bn_2024-33.txt.xz
 
 python3 -m stanza.utils.charlm.make_lm_data $CHARLM_RAW_DIR $CHARLM_DIR --langs bn --packages oscar
 ```
