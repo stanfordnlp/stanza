@@ -133,6 +133,29 @@ def test_find_missing_tags():
     assert utils.find_missing_tags([["O", "PER"], ["O", "LOC"]], [["O", "PER"], ["LOC", "ORG"]]) == ['ORG']
 
 
+def test_harmonic_mean():
+    # Unweighted harmonic mean: n / sum(1/x).
+    assert utils.harmonic_mean([1, 1]) == 1.0
+    assert utils.harmonic_mean([1, 2, 4]) == pytest.approx(3 / (1 + 0.5 + 0.25))
+    # A zero anywhere in the list short-circuits to 0.
+    assert utils.harmonic_mean([2, 0, 4]) == 0
+    # Weighted variant: sum(weights) / sum(w / x).
+    assert utils.harmonic_mean([1, 3], weights=[1, 1]) == pytest.approx(1.5)
+    # Mismatched weight length is rejected.
+    with pytest.raises(AssertionError):
+        utils.harmonic_mean([1, 2], weights=[1])
+
+
+def test_get_adaptive_eval_interval():
+    # At or below the threshold, the base interval is returned unchanged.
+    assert utils.get_adaptive_eval_interval(50, 100, 10) == 10
+    assert utils.get_adaptive_eval_interval(100, 100, 10) == 10
+    # Above it, the interval scales by round(cur / thres).
+    assert utils.get_adaptive_eval_interval(300, 100, 10) == 30
+    # round() is banker's rounding, so 2.5 rounds to 2, not 3.
+    assert utils.get_adaptive_eval_interval(250, 100, 10) == 20
+
+
 def test_open_read_text():
     """
     test that we can read either .xz or regular txt
