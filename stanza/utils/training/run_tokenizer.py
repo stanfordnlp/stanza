@@ -31,8 +31,14 @@ from stanza.utils.training.common import Mode, add_charlm_args, build_tokenizer_
 
 logger = logging.getLogger('stanza')
 
+DEFAULT_FEAT_FUNCS = {
+    "en": "space_before,capitalized,numeric,labeled_field,phone_id,date_pattern,currency,end_of_para,start_of_para",
+}
+
 def add_tokenizer_args(parser):
     add_charlm_args(parser)
+
+    parser.add_argument('--feat_funcs', default=None, type=str, help='Which feature functions to use - otherwise, will use language-specific defaults')
 
 
 def build_model_filename(paths, short_name, command_args, extra_args):
@@ -103,6 +109,13 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
                        "--max_seqlen", seqlen, "--mwt_json_file", dev_mwt] +
                       train_dev_args +
                       ["--dev_conll_gold", dev_gold, "--shorthand", short_name])
+
+        feat_funcs = command_args.feat_funcs
+        if feat_funcs is None and short_language in DEFAULT_FEAT_FUNCS:
+            feat_funcs = DEFAULT_FEAT_FUNCS[short_language]
+        if feat_funcs is not None:
+            train_args.extend(['--feat_funcs', feat_funcs])
+
         if uses_dictionary(short_language):
             train_args = train_args + ["--use_dictionary"]
         train_args = train_args + charlm_args + extra_args
