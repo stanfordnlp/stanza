@@ -262,6 +262,10 @@ class TokenizationDataset:
             if feat_func == 'end_of_para' or feat_func == 'start_of_para':
                 # skip for position-dependent features
                 continue
+            if feat_func in STRUCTURAL_FEATURES:
+                # skip here -- these are window-based, computed separately
+                # below rather than as a per-character lambda
+                continue
             if feat_func == 'space_before':
                 func = lambda x: 1 if x.startswith(' ') else 0
             elif feat_func == 'capitalized':
@@ -285,6 +289,24 @@ class TokenizationDataset:
         use_end_of_para = 'end_of_para' in self.args['feat_funcs']
         use_start_of_para = 'start_of_para' in self.args['feat_funcs']
         use_dictionary = self.args['use_dictionary']
+
+        # Structural/tabular features: computed once per paragraph
+        # as regex passes over the reconstructed raw text, rather than
+        # per character, since they need surrounding context (a phone number,
+        # date, or "Label:" span) that a single character can't see.
+        active_structural = [name for name in STRUCTURAL_FEATURES
+                              if name in self.args['feat_funcs']]
+        structural_masks = None
+        if active_structural:
+            raw_text = ''.join(c for c, _ in para)
+            structural_masks = {}
+            for name in active_structural:
+                mask = [0] * len(para)
+                for m in STRUCTURAL_FEATURES[name].finditer(raw_text):
+                    for pos in range(m.start(), m.end()):
+                        mask[pos] = 1
+                structural_masks[name] = mask
+
         current_units = []
         current_labels = []
         current_feats = []
@@ -297,6 +319,11 @@ class TokenizationDataset:
             if use_start_of_para:
                 f = 1 if i == 0 else 0
                 feats.append(f)
+
+            # structural/tabular window features
+            if structural_masks is not None:
+                for name in active_structural:
+                    feats.append(structural_masks[name][i])
 
             #if dictionary feature is selected
             if use_dictionary:
@@ -406,6 +433,82 @@ MID_SENT_AUGMENT_PAIRS = [
     (",", "\u2013"),   # comma -> en dash
     (",", "\u2014"),   # comma -> em dash
 ]
+
+# --------------------------------------------------------------------------
+# Structural / tabular text features
+#   (see https://github.com/stanfordnlp/stanza/issues/1640)
+#
+# These target the finding that gold English tokenizer training data contains
+# many genuinely-correct sentence boundaries in document-structural text
+# (news datelines, email signature blocks, tabular salary listings) that end
+# in a digit immediately followed by a capitalized word with no intervening
+# punctuation -- the exact surface pattern that was over-generalized into
+# false splits on ordinary prose ("Pope Leo X used...", "Franz Joseph I
+# ruled..."). Unlike the existing feat_funcs (space_before/capitalized/
+# numeric), these need a local window of context rather than a single
+# character, so they're computed once per paragraph as regex passes rather
+# than as per-character lambdas.
+#
+# Each regex is matched against the whole paragraph's raw text; every
+# character position falling inside a match span gets feature value 1,
+# every other position gets 0. There is deliberately no scan radius/window
+# added around a match, and no smoothing or decay -- membership in the match
+# span is all this computes.
+#
+# NOTE ON WHY THERE'S NO EXPLICIT WINDOW PARAMETER HERE:
+# This is a boolean-per-character signal, same as the existing feat_funcs,
+# and it's fed into a *bidirectional* LSTM (see model.py). A bidirectional
+# LSTM's hidden state at any position has access to both a forward pass that
+# has already seen everything up to that point and a backward pass that has
+# already seen everything from the end back to that point, so a feature
+# turned on at one character can inform the model's decision at a different
+# character on either side, as far as the LSTM's own gates choose to carry
+# it. In other words, the "window" isn't a fixed constant anywhere in this
+# code -- it's whatever the recurrence learns to propagate, the same way it
+# already has to for space_before/capitalized/numeric. This isn't free,
+# though: the model has to see enough training examples of the pattern to
+# learn how far (and whether) to project it; a hardcoded window would
+# guarantee reach regardless of training data volume, a learned one doesn't.
+# --------------------------------------------------------------------------
+
+# Capitalized word (up to 3 title-cased words) immediately followed by a
+# colon -- "Fax:", "Cell:", "Job Group:", "Notice Regarding:". Essentially
+# never occurs in narrative prose; very common in structured/tabular fields.
+STRUCTURAL_LABELED_FIELD_RE = re.compile(
+    r'\b[A-Z][a-zA-Z]*(?:\s[A-Z][a-zA-Z]*){0,2}\s*:'
+)
+
+# Phone-number-like or short ID-like digit groups: (713) 571-9571,
+# 713-654-0365, x365. Deliberately narrow (hyphen/paren/x-prefixed digit
+# groups only) to avoid firing on ordinary numeric expressions like page
+# counts or years.
+STRUCTURAL_PHONE_ID_RE = re.compile(
+    r'\(\d{3}\)\s?\d{3}-\d{4}'      # (713) 571-9571
+    r'|\b\d{3}-\d{3}-\d{4}\b'       # 713-654-0365
+    r'|\bx\d{3,5}\b'                # x365
+)
+
+# Numeric dates: 28/10/2004, 16/11/2004, or "November 5, 1999" style.
+STRUCTURAL_DATE_RE = re.compile(
+    r'\b\d{1,2}/\d{1,2}/\d{2,4}\b'
+    r'|\b(?:January|February|March|April|May|June|July|August|September'
+    r'|October|November|December)\s+\d{1,2},?\s+\d{4}\b'
+)
+
+# Currency amounts: $62,500 / $47,500.00
+STRUCTURAL_CURRENCY_RE = re.compile(
+    r'\$\s?\d[\d,]*(?:\.\d+)?'
+)
+
+# Registry mapping feat_func name (as it would appear in args['feat_funcs'])
+# to its compiled regex. Kept separate from the per-character funcs handled
+# in para_to_sentences's composite_func, since these operate on a window.
+STRUCTURAL_FEATURES = {
+    'labeled_field': STRUCTURAL_LABELED_FIELD_RE,
+    'phone_id': STRUCTURAL_PHONE_ID_RE,
+    'date_pattern': STRUCTURAL_DATE_RE,
+    'currency': STRUCTURAL_CURRENCY_RE,
+}
 
 
 class DataLoader(TokenizationDataset):
@@ -1070,4 +1173,3 @@ class SortedDataset(Dataset):
             raw_units.append(r_ + ['<PAD>'])
 
         return units, labels, features, raw_units
-

@@ -59,6 +59,7 @@ def build_argparse():
     parser.add_argument('--conv_res', type=str, default=None, help="Convolutional residual layers for the RNN")
     parser.add_argument('--rnn_layers', type=int, default=1, help="Layers of RNN in the tokenizer")
     parser.add_argument('--use_dictionary', action='store_true', help="Use dictionary feature. The lexicon is created using the training data and external dict (if any) expected to be found under the same folder of training dataset, formatted as SHORTHAND-externaldict.txt where each line in this file is a word. For example, data/tokenize/zh_gsdsimp-externaldict.txt")
+    parser.add_argument('--feat_funcs', type=str, default=None, help="Comma-separated list of feature functions to use, overriding the default set (space_before,capitalized,numeric,end_of_para,start_of_para). Leave unset to keep the existing default behavior unchanged. See #1640 for the structural features (labeled_field, phone_id, date_pattern, currency) added to help the English tokenizer distinguish tabular/header text (datelines, signatures, salary tables) from narrative prose near digit-capital boundaries.")
 
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help="Maximum gradient norm to clip to")
     parser.add_argument('--anneal', type=float, default=.999, help="Anneal the learning rate by this amount when dev performance deteriorate")
@@ -133,7 +134,13 @@ def main(args=None):
 
     logger.info("Running tokenizer in {} mode".format(args['mode']))
 
-    args['feat_funcs'] = ['space_before', 'capitalized', 'numeric', 'end_of_para', 'start_of_para']
+    DEFAULT_FEAT_FUNCS = ['space_before', 'capitalized', 'numeric', 'end_of_para', 'start_of_para']
+    if args.get('feat_funcs'):
+        # opt-in override -- see --feat_funcs help text / #1640.
+        # Every other invocation that doesn't pass --feat_funcs is unaffected.
+        args['feat_funcs'] = [f.strip() for f in args['feat_funcs'].split(',') if f.strip()]
+    else:
+        args['feat_funcs'] = DEFAULT_FEAT_FUNCS
     args['feat_dim'] = len(args['feat_funcs'])
     args['save_name'] = model_file_name(args)
     utils.ensure_dir(os.path.split(args['save_name'])[0])
@@ -273,3 +280,4 @@ def evaluate(args):
 
 if __name__ == '__main__':
     main()
+
