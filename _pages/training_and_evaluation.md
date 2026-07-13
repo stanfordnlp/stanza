@@ -69,6 +69,10 @@ For more information and other options, [see here](word_vectors.md).
 {{ "Tokenize, MWT, and lemmatize do not use word vectors. | markdownify }}
 {{ end }}
 
+## Using Transformer Embeddings
+
+As an alternative (or addition) to word vectors, the POS/morphological features tagger, dependency parser, NER tagger, constituency parser, and sentiment classifier can also be trained using contextual embeddings from a transformer model, including arbitrary models from Hugging Face. See [Training with Transformer Embeddings](training_with_transformers.md) for details on the `--use_bert` and `--bert_model` flags, as well as our PEFT finetuning integration.
+
 ## Input Files
 
 In general, we use UD datasets for tokenizer, MWT, lemmatizer, pos, and depparse.
