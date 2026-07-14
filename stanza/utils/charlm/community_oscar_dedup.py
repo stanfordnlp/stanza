@@ -46,6 +46,46 @@ controls how similar two documents must be to be considered near-duplicates:
   - 0.5 = significant overlap (50%+ shared content)
 Lower values catch more near-duplicates but increase false positives.
 
+Empirical validation
+--------------------
+The choice of dedup method has a measurable effect on downstream task
+performance.  In experiments on Urdu dependency parsing and Sindhi NER,
+MinHash at threshold 0.7 produced meaningfully better results than the
+earlier TLSH-based dedup at threshold 50, even controlling for training
+compute:
+
+Urdu dependency parsing (dev / test LAS):
+  MuRIL (large multilingual baseline):  90.12 / 91.65
+  TLSH dedup,   short training:         88.96 / 90.95
+  TLSH dedup,   long training (4x):     89.14 / 90.92
+  MinHash dedup, short training:        89.58 / 91.44  <- beats TLSH long
+  MinHash dedup, long training (4x):    89.32 / 91.01
+
+The MinHash short run (5 epochs on the larger corpus) outperforms the
+TLSH long run (80 epochs on the smaller corpus), suggesting that data
+quality was the primary bottleneck rather than training duration or
+model capacity.
+
+Sindhi NER (dev / test F1):
+  MuRIL-large (large multilingual baseline):  87.77 / 88.37
+  TLSH dedup,   6-layer model:                84.49 / 84.86
+  TLSH dedup,   12-layer model:               84.61 / 85.43
+  MinHash dedup, 6-layer model:               85.05 / 85.88
+  MinHash dedup, 8-layer model:               85.69 / 86.49  <- beats TLSH 12L
+
+Again, the smaller MinHash model outperforms the larger TLSH model,
+closing the gap to MuRIL-large from ~3.5 to ~2.0 F1 points.
+
+To calibrate the threshold for a new language, use the companion script
+community_oscar_inspect_similarity.py, which reports pairwise Jaccard
+and TLSH similarity distributions on a random sample of document pairs.
+A threshold of 0.7 has worked well for Urdu and Sindhi (validated on
+downstream dependency parsing and NER respectively), and produced
+well-diversified corpora for Pashto and Western Punjabi (verified via
+inspect_similarity.py; downstream task evaluation pending). Languages
+with very narrow web presence (few sources, heavy boilerplate) may
+benefit from a slightly higher threshold.
+
 HF access
 ---------
 You must have accepted the Community-OSCAR gating agreement on HF.
