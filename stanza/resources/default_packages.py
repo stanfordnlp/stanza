@@ -1071,6 +1071,7 @@ TRANSFORMER_NICKNAMES = {
     "KBLab/roberta-base-swedish-cased":            "kb-swedish-roberta",
     "KBLab/megatron-bert-base-swedish-cased-600k": "kb-swedish-megatron",
     "AI-Nordics/bert-large-swedish-cased":         "ai-nordics-bert-large",
+    "AI-Sweden-Models/roberta-large-1160k":        "ai-sweden-roberta-large",
 
     # ta: tamil
     "monsoon-nlp/tamillion":         "tamillion",
