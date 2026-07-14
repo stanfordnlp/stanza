@@ -259,23 +259,16 @@ class TokenizationDataset:
         res = []
         funcs = []
         for feat_func in self.args['feat_funcs']:
-            if feat_func == 'end_of_para' or feat_func == 'start_of_para':
+            if feat_func in POSITION_FEAT_FUNCS:
                 # skip for position-dependent features
                 continue
             if feat_func in STRUCTURAL_FEATURES:
                 # skip here -- these are window-based, computed separately
                 # below rather than as a per-character lambda
                 continue
-            if feat_func == 'space_before':
-                func = lambda x: 1 if x.startswith(' ') else 0
-            elif feat_func == 'capitalized':
-                func = lambda x: 1 if x[0].isupper() else 0
-            elif feat_func == 'numeric':
-                func = lambda x: 1 if (NUMERIC_RE.match(x) is not None) else 0
-            else:
+            if feat_func not in PER_CHAR_FEAT_FUNCS:
                 raise ValueError('Feature function "{}" is undefined.'.format(feat_func))
-
-            funcs.append(func)
+            funcs.append(PER_CHAR_FEAT_FUNCS[feat_func])
 
         # stacking all featurize functions
         composite_func = lambda x: [f(x) for f in funcs]
@@ -509,6 +502,28 @@ STRUCTURAL_FEATURES = {
     'date_pattern': STRUCTURAL_DATE_RE,
     'currency': STRUCTURAL_CURRENCY_RE,
 }
+
+# The three per-character feat_funcs, as a dict rather than an if/elif
+# chain, so this dict is the actual source of truth para_to_sentences
+# dispatches from -- not a second hand-typed copy of the same three names.
+PER_CHAR_FEAT_FUNCS = {
+    'space_before': lambda x: 1 if x.startswith(' ') else 0,
+    'capitalized': lambda x: 1 if x[0].isupper() else 0,
+    'numeric': lambda x: 1 if (NUMERIC_RE.match(x) is not None) else 0,
+}
+
+# The two position-dependent feat_funcs, handled separately in
+# para_to_sentences since they depend on index rather than character.
+POSITION_FEAT_FUNCS = frozenset({'end_of_para', 'start_of_para'})
+
+# Every feat_func name para_to_sentences recognizes, derived from the three
+# registries above rather than re-typed. This is what other code (eg
+# run_tokenizer.py's EXTRA_FEAT_FUNCS, and its tests) should check against.
+KNOWN_FEAT_FUNCS = (
+    frozenset(PER_CHAR_FEAT_FUNCS.keys())
+    | POSITION_FEAT_FUNCS
+    | frozenset(STRUCTURAL_FEATURES.keys())
+)
 
 
 class DataLoader(TokenizationDataset):
@@ -1173,3 +1188,4 @@ class SortedDataset(Dataset):
             raw_units.append(r_ + ['<PAD>'])
 
         return units, labels, features, raw_units
+
