@@ -127,6 +127,12 @@ def model_file_name(args):
         return save_name
     return os.path.join(args['save_dir'], save_name)
 
+# Base feat_funcs used when nothing else is specified. Kept at module level
+# (rather than local to main()) so other scripts -- eg run_tokenizer.py's
+# per-language additions -- can import and compose with it instead of
+# re-typing it, which would otherwise go stale silently if this list changes.
+DEFAULT_FEAT_FUNCS = ['space_before', 'capitalized', 'numeric', 'end_of_para', 'start_of_para']
+
 def main(args=None):
     args = parse_args(args=args)
 
@@ -134,7 +140,6 @@ def main(args=None):
 
     logger.info("Running tokenizer in {} mode".format(args['mode']))
 
-    DEFAULT_FEAT_FUNCS = ['space_before', 'capitalized', 'numeric', 'end_of_para', 'start_of_para']
     if args.get('feat_funcs'):
         # opt-in override -- see --feat_funcs help text / #1640.
         # Every other invocation that doesn't pass --feat_funcs is unaffected.
@@ -280,4 +285,3 @@ def evaluate(args):
 
 if __name__ == '__main__':
     main()
-

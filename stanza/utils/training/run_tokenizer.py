@@ -31,13 +31,30 @@ from stanza.utils.training.common import Mode, add_charlm_args, build_tokenizer_
 
 logger = logging.getLogger('stanza')
 
-DEFAULT_FEAT_FUNCS = {
-    # adds some extra feature functions specifically for English
-    # in issue https://github.com/stanfordnlp/stanza/issues/1640,
-    # this helped with the training data in EWT have addresses etc.
-    # which made it hard to distinguish true sentence separations
-    "en": "space_before,capitalized,numeric,labeled_field,phone_id,date_pattern,currency,end_of_para,start_of_para",
+# Per-language *additions* to tokenizer.DEFAULT_FEAT_FUNCS (imported, not
+# re-typed, so a change to the base list there doesn't go stale here).
+# See https://github.com/stanfordnlp/stanza/issues/1640: these structural/
+# tabular features help English distinguish document-structural text
+# (datelines, email signatures, tabular listings) from narrative prose near
+# digit-capital boundaries. The regexes are Latin-script/English-oriented
+# (month names, US-style phone/currency formatting), so this stays opt-in
+# per language rather than a blanket default -- add a language here only
+# after confirming it helps (ideally across multiple seeds, and against that
+# language's own reported bug examples, not just an aggregate dev/test bump).
+EXTRA_FEAT_FUNCS = {
+    "en": ["labeled_field", "phone_id", "date_pattern", "currency"],
 }
+
+def default_feat_funcs(short_language):
+    """
+    Returns the full feat_funcs list for short_language: tokenizer.py's base
+    defaults plus any language-specific additions, or None if there are no
+    additions (in which case tokenizer.py's own default applies as normal).
+    """
+    extra = EXTRA_FEAT_FUNCS.get(short_language)
+    if not extra:
+        return None
+    return tokenizer.DEFAULT_FEAT_FUNCS + extra
 
 def add_tokenizer_args(parser):
     add_charlm_args(parser)
@@ -115,8 +132,10 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
                       ["--dev_conll_gold", dev_gold, "--shorthand", short_name])
 
         feat_funcs = command_args.feat_funcs
-        if feat_funcs is None and short_language in DEFAULT_FEAT_FUNCS:
-            feat_funcs = DEFAULT_FEAT_FUNCS[short_language]
+        if feat_funcs is None:
+            default_funcs = default_feat_funcs(short_language)
+            if default_funcs is not None:
+                feat_funcs = ",".join(default_funcs)
         if feat_funcs is not None:
             train_args.extend(['--feat_funcs', feat_funcs])
 

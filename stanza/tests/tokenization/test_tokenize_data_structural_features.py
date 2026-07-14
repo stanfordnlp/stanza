@@ -259,3 +259,61 @@ def test_no_false_positives_on_prose(text):
         for col in STRUCTURAL_COLS:
             assert feats[:, col].sum() == 0, \
                 "structural column {} unexpectedly fired on {!r}".format(col, text)
+
+
+# ---------------------------------------------------------------------------
+# Guard tests for run_tokenizer.py's EXTRA_FEAT_FUNCS staying in sync with
+# what data.py actually recognizes and with tokenizer.py's base defaults.
+# Without these, a rename/removal in data.py or a change to
+# tokenizer.DEFAULT_FEAT_FUNCS could go stale in run_tokenizer.py silently
+# (or only surface as a ValueError deep into an actual training run).
+# ---------------------------------------------------------------------------
+
+from stanza.models import tokenizer as tokenizer_module
+from stanza.utils.training import run_tokenizer
+
+KNOWN_FEAT_FUNC_NAMES = (
+    {'space_before', 'capitalized', 'numeric', 'end_of_para', 'start_of_para'}
+    | set(STRUCTURAL_FEATURES.keys())
+)
+
+def test_extra_feat_funcs_are_recognized():
+    """
+    Every name in run_tokenizer.EXTRA_FEAT_FUNCS must be something data.py's
+    para_to_sentences dispatch actually recognizes (else it raises
+    ValueError at training time, not at test time).
+    """
+    for lang, extras in run_tokenizer.EXTRA_FEAT_FUNCS.items():
+        for name in extras:
+            assert name in KNOWN_FEAT_FUNC_NAMES, \
+                "{!r} (added for {!r}) is not a recognized feat_func name".format(name, lang)
+
+
+def test_extra_feat_funcs_do_not_duplicate_base_defaults():
+    """
+    A name listed in both tokenizer.DEFAULT_FEAT_FUNCS and
+    run_tokenizer.EXTRA_FEAT_FUNCS would silently duplicate that feature
+    column in the model's input vector.
+    """
+    base = set(tokenizer_module.DEFAULT_FEAT_FUNCS)
+    for lang, extras in run_tokenizer.EXTRA_FEAT_FUNCS.items():
+        overlap = base & set(extras)
+        assert not overlap, \
+            "{} in EXTRA_FEAT_FUNCS[{!r}] duplicates a base default".format(overlap, lang)
+
+
+def test_default_feat_funcs_composition():
+    """
+    default_feat_funcs(lang) should compose tokenizer.py's base defaults
+    with the language-specific additions -- this is the actual mechanism
+    that replaces re-typing the full list in run_tokenizer.py, so it's
+    worth pinning down directly rather than only via the two tests above.
+    """
+    # a language with no additions falls back to None, letting
+    # tokenizer.py's own default apply unchanged
+    assert run_tokenizer.default_feat_funcs("de") is None
+
+    en_funcs = run_tokenizer.default_feat_funcs("en")
+    assert en_funcs is not None
+    assert en_funcs[:len(tokenizer_module.DEFAULT_FEAT_FUNCS)] == list(tokenizer_module.DEFAULT_FEAT_FUNCS)
+    assert set(en_funcs) == set(tokenizer_module.DEFAULT_FEAT_FUNCS) | set(run_tokenizer.EXTRA_FEAT_FUNCS["en"])
