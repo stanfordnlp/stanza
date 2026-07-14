@@ -25,7 +25,7 @@ import tempfile
 import numpy as np
 
 from stanza.tests import *
-from stanza.models.tokenization.data import DataLoader, STRUCTURAL_FEATURES
+from stanza.models.tokenization.data import DataLoader, STRUCTURAL_FEATURES, KNOWN_FEAT_FUNCS
 
 pytestmark = [pytest.mark.travis]
 
@@ -272,11 +272,6 @@ def test_no_false_positives_on_prose(text):
 from stanza.models import tokenizer as tokenizer_module
 from stanza.utils.training import run_tokenizer
 
-KNOWN_FEAT_FUNC_NAMES = (
-    {'space_before', 'capitalized', 'numeric', 'end_of_para', 'start_of_para'}
-    | set(STRUCTURAL_FEATURES.keys())
-)
-
 def test_extra_feat_funcs_are_recognized():
     """
     Every name in run_tokenizer.EXTRA_FEAT_FUNCS must be something data.py's
@@ -285,7 +280,7 @@ def test_extra_feat_funcs_are_recognized():
     """
     for lang, extras in run_tokenizer.EXTRA_FEAT_FUNCS.items():
         for name in extras:
-            assert name in KNOWN_FEAT_FUNC_NAMES, \
+            assert name in KNOWN_FEAT_FUNCS, \
                 "{!r} (added for {!r}) is not a recognized feat_func name".format(name, lang)
 
 
