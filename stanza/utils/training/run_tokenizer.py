@@ -32,6 +32,10 @@ from stanza.utils.training.common import Mode, add_charlm_args, build_tokenizer_
 logger = logging.getLogger('stanza')
 
 DEFAULT_FEAT_FUNCS = {
+    # adds some extra feature functions specifically for English
+    # in issue https://github.com/stanfordnlp/stanza/issues/1640,
+    # this helped with the training data in EWT have addresses etc.
+    # which made it hard to distinguish true sentence separations
     "en": "space_before,capitalized,numeric,labeled_field,phone_id,date_pattern,currency,end_of_para,start_of_para",
 }
 
