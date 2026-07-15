@@ -13,6 +13,7 @@ imports them from here to count how often violations occur across a corpus.
 """
 
 from collections import defaultdict
+import warnings
 
 import numpy as np
 
@@ -204,5 +205,15 @@ def resolve_head_constraint_violations(scores, label_log_probs, tree, vocab, max
         for k, dep in enumerate(deps):
             if k != winning_keep_idx:
                 excluded_groups[(dep, head_idx)].add(group_name)
+    else:
+        # in practice this essentially never happens (observed multi-violation
+        # sentences top out around 2-3 simultaneous violations, well under the
+        # default cap of 5), but if max_iterations is ever exhausted with
+        # violations still present, better to know about it than to silently
+        # return a tree that still contains a head-constraint violation under
+        # the same interface as a fully-resolved one.
+        remaining = find_head_constraint_violations(tree, vocab.unmap([r + VOCAB_PREFIX_SIZE for r in raw_ids]))
+        if remaining:
+            warnings.warn("resolve_head_constraint_violations hit its max_iterations={} cap with {} violation(s) still unresolved; returning the best partial repair found.".format(max_iterations, len(remaining)), stacklevel=2)
 
     return tree, raw_ids
