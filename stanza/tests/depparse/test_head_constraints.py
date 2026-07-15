@@ -265,3 +265,59 @@ def test_resolve_two_independent_violations_dont_oscillate():
     assert labels[5] == "obj"      # fish: unaffected, unchanged
     assert fixed_tree[9] == 10     # subjB: reroute fix survives
     assert find_head_constraint_violations(fixed_tree, labels) == []
+
+def test_resolve_hits_iteration_cap_warns():
+    """
+    If a sentence somehow has more independent violations than
+    max_iterations rounds can address (each round only resolves one
+    violation), resolve_head_constraint_violations should warn rather than
+    silently return a tree that still contains a violation. This is a
+    deliberately pathological fixture -- real data essentially never shows
+    more than 2-3 simultaneous violations -- built specifically to exercise
+    the cap.
+    """
+    vocab = make_deprel_vocab(["root", "obj", "advmod"])
+    num_groups = 6  # more than the default max_iterations=5
+    n = 1 + num_groups * 3  # root, plus (head, depA, depB) per group
+    scores = np.full((n, n), -30.0)
+    scores[0, 0] = 0
+
+    for i in range(num_groups):
+        head = 1 + i * 3
+        dep_a = head + 1
+        dep_b = head + 2
+        scores[head, 0] = -1.0
+        scores[dep_a, head] = -1.0
+        scores[dep_b, head] = -1.05
+        # no good alternative heads for either dependent, so a structural
+        # reroute is never attractive here -- keeps each round's fix
+        # confined to one group at a time
+        for h in range(n):
+            if h != head:
+                scores[dep_a, h] = -20.0
+                scores[dep_b, h] = -20.0
+
+    label_log_probs = np.full((n, n, len(vocab) - VOCAB_PREFIX_SIZE), -10.0)
+    def set_label(dep, head, label, score):
+        label_log_probs[dep, head, vocab.unit2id(label) - VOCAB_PREFIX_SIZE] = score
+    for i in range(num_groups):
+        head = 1 + i * 3
+        dep_a = head + 1
+        dep_b = head + 2
+        set_label(head, 0, "root", -0.1)
+        set_label(dep_a, head, "obj", -0.1)
+        set_label(dep_b, head, "obj", -0.15)
+        set_label(dep_a, head, "advmod", -3.0)
+        set_label(dep_b, head, "advmod", -3.0)
+
+    tree = chuliu_edmonds_one_root(scores.copy())
+    initial_ids = [int(np.argmax(label_log_probs[j, tree[j]])) for j in range(1, len(tree))]
+    initial_labels = vocab.unmap([r + VOCAB_PREFIX_SIZE for r in initial_ids])
+    assert len(find_head_constraint_violations(tree, initial_labels)) == num_groups  # sanity check on the fixture
+
+    with pytest.warns(UserWarning, match="max_iterations"):
+        fixed_tree, raw_ids = resolve_head_constraint_violations(scores, label_log_probs, tree, vocab, max_iterations=5)
+
+    labels = vocab.unmap([r + VOCAB_PREFIX_SIZE for r in raw_ids])
+    remaining = find_head_constraint_violations(fixed_tree, labels)
+    assert len(remaining) >= 1  # at least one group is still unresolved when the cap is hit
