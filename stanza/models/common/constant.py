@@ -412,6 +412,39 @@ lcode2lang_raw = [
     ("zea", "Zeelandic"),
     ("za",  "Zhuang"),
     ("zu",  "Zulu"),
+
+    # Added from NLLB language pair exploration
+    ("ace", "Achinese"),
+    ("awa", "Awadhi"),
+    ("ban", "Balinese"),
+    ("bem", "Bemba"),
+    ("bjn", "Banjar"),
+    ("bug", "Buginese"),
+    ("cjk", "Chokwe"),
+    ("crh", "Crimean_Tatar"),
+    ("dik", "Southwestern_Dinka"),
+    ("dyu", "Dyula"),
+    ("fur", "Friulian"),
+    ("hne", "Chhattisgarhi"),
+    ("kac", "Kachin"),
+    ("kam", "Kamba"),
+    ("kbp", "Kabiye"),
+    ("kea", "Kabuverdianu"),
+    ("kmb", "Kimbundu"),
+    ("lua", "Luba_Lulua"),
+    ("luo", "Luo"),
+    ("mni", "Manipuri"),
+    ("nus", "Nuer"),
+    ("pag", "Pangasinan"),
+    ("sat", "Santali"),
+    ("shn", "Shan"),
+    ("szl", "Silesian"),
+    ("taq", "Tamasheq"),
+    ("tpi", "Tok_Pisin"),
+    ("tum", "Tumbuka"),
+    ("tzm", "Central_Atlas_Tamazight"),
+    ("umb", "Umbundu"),
+    ("vec", "Venetian"),
 ]
 
 # build the dictionary, checking for duplicate language codes
@@ -452,6 +485,24 @@ two_to_three_letters_raw = (
     # this is a weird case where a 2 letter code was available,
     # but UD used the 3 letter code instead
     ("se",  "sme"),
+
+    # Added from NLLB language pair exploration
+    ("af", "afr"), ("ak", "aka"), ("am", "amh"), ("as", "asm"), ("ay", "ayr"),
+    ("az", "azj"), ("ba", "bak"), ("be", "bel"), ("bn", "ben"), ("bo", "bod"),
+    ("bs", "bos"), ("cy", "cym"), ("dz", "dzo"), ("en", "eng"), ("eo", "epo"),
+    ("fo", "fao"), ("fj", "fij"), ("fr", "fra"), ("ff", "fuv"), ("gd", "gla"),
+    ("ga", "gle"), ("gl", "glg"), ("gn", "grn"), ("gu", "guj"), ("ht", "hat"),
+    ("hi", "hin"), ("hy", "hye"), ("id", "ind"), ("jv", "jav"), ("kn", "kan"),
+    ("ks", "kas"), ("ka", "kat"), ("kk", "kaz"), ("ki", "kik"), ("ky", "kir"),
+    ("kr", "knc"), ("kg", "kon"), ("lo", "lao"), ("li", "lim"), ("ln", "lin"),
+    ("lb", "ltz"), ("ml", "mal"), ("mr", "mar"), ("mt", "mlt"), ("mi", "mri"),
+    ("my", "mya"), ("ne", "npi"), ("oc", "oci"), ("or", "ory"), ("pa", "pan"),
+    ("ps", "pbt"), ("mg", "plt"), ("pt", "por"), ("rn", "run"), ("ru", "rus"),
+    ("sg", "sag"), ("sa", "san"), ("si", "sin"), ("sm", "smo"), ("sd", "snd"),
+    ("so", "som"), ("st", "sot"), ("es", "spa"), ("sc", "srd"), ("ss", "ssw"),
+    ("su", "sun"), ("ta", "tam"), ("tt", "tat"), ("te", "tel"),
+    ("tg", "tgk"), ("tl", "tgl"), ("ti", "tir"), ("ts", "tso"), ("tk", "tuk"),
+    ("ug", "uig"), ("ur", "urd"), ("uz", "uzn"), ("yi", "ydd"), ("ms", "zsm"),
 )
 
 for two, three in two_to_three_letters_raw:
@@ -487,6 +538,11 @@ lcode2lang['bgd'] = 'Bokota'   # ISO 693-3 code, although UD used sab
 lcode2lang['nb'] = 'Norwegian' # Norwegian Bokmall mapped to default norwegian
 lcode2lang['no'] = 'Norwegian'
 lcode2lang['zh'] = 'Simplified_Chinese'
+# swh (individual language Swahili) also maps to "sw", alongside the
+# existing swa (macrolanguage) alias -- added manually since "sw" already
+# has one alias and the two_to_three_letters mechanism assumes a single
+# two-to-three mapping per code
+lcode2lang['swh'] = lcode2lang['sw']
 
 # additional, less common names for languages already in lcode2lang
 # this is a list of tuples rather than a dict, since a dict keyed by
@@ -654,4 +710,3 @@ def treebank_to_langid(treebank):
     """ Convert treebank name to langid """
     short_name = treebank_to_short_name(treebank)
     return short_name.split("_")[0]
-
