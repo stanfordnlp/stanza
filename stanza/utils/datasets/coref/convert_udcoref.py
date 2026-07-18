@@ -37,12 +37,14 @@ def process_documents(docs, augment=False):
 
         # extract the entities
         # get sentence words and lengths
+        sent_speakers = [i.speaker for i in doc.sentences]
         sentences = [[j.text for j in i.all_words]
                     for i in doc.sentences]
         sentence_lens = [len(x.all_words) for x in doc.sentences]
 
         cased_words = [] 
-        for x in sentences:
+        speakers = []
+        for sent_idx, x in enumerate(sentences):
             if augment:
                 # modify case of the first word with 50% chance
                 if augment_random.random() < 0.5:
@@ -50,6 +52,8 @@ def process_documents(docs, augment=False):
 
             for y in x:
                 cased_words.append(y)
+                if sent_speakers[sent_idx]:
+                    speakers.append(sent_speakers[sent_idx])
 
         sent_id = [y for idx, sent_len in enumerate(sentence_lens) for y in [idx] * sent_len]
 
@@ -200,6 +204,7 @@ def process_documents(docs, augment=False):
             sent_id = [sent_id[i] for i in sorted(old_to_new.keys())]
             deprel = [deprel[i] for i in sorted(old_to_new.keys())]
             heads = [heads[i] for i in sorted(old_to_new.keys())]
+            speakers = [speakers[i] for i in sorted(old_to_new.keys())]
             try:
                 span_clusters = [
                     [(old_to_new[start], old_to_new[end - 1] + 1) for start, end in cluster]
@@ -231,6 +236,8 @@ def process_documents(docs, augment=False):
             "lang": lang,
             "is_zero": is_zero
         }
+        if speakers:
+            processed.update({"speaker": speakers})
         processed_section.append(processed)
     return processed_section
 
