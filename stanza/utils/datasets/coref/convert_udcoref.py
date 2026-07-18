@@ -204,7 +204,9 @@ def process_documents(docs, augment=False):
             sent_id = [sent_id[i] for i in sorted(old_to_new.keys())]
             deprel = [deprel[i] for i in sorted(old_to_new.keys())]
             heads = [heads[i] for i in sorted(old_to_new.keys())]
-            speakers = [speakers[i] for i in sorted(old_to_new.keys())]
+            speakers = [b
+                        for a,b in zip(cased_words, speakers)
+                        if a != "_"]
             try:
                 span_clusters = [
                     [(old_to_new[start], old_to_new[end - 1] + 1) for start, end in cluster]
