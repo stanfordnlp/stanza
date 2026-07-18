@@ -52,8 +52,7 @@ def process_documents(docs, augment=False):
 
             for y in x:
                 cased_words.append(y)
-                if sent_speakers[sent_idx]:
-                    speakers.append(sent_speakers[sent_idx])
+                speakers.append(sent_speakers[sent_idx])
 
         sent_id = [y for idx, sent_len in enumerate(sentence_lens) for y in [idx] * sent_len]
 
@@ -238,7 +237,7 @@ def process_documents(docs, augment=False):
             "lang": lang,
             "is_zero": is_zero
         }
-        if speakers:
+        if any(speakers):
             processed.update({"speaker": speakers})
         processed_section.append(processed)
     return processed_section
