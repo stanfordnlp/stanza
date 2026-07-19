@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from types import SimpleNamespace
 
 import torch
@@ -10,7 +9,19 @@ from stanza.utils.conll import CoNLL
 from stanza.utils.datasets.coref.convert_udcoref import process_documents
 
 
-GUM_DEV = Path("extern_data/coref/en_gum/en_gum-corefud-dev.conllu")
+SPEAKER_CONLLU = """\
+# newdoc id = speaker_test
+# sent_id = speaker_test-1
+# speaker = Alice
+# text = Hello
+1\tHello\thello\tINTJ\tUH\t_\t0\troot\t0:root\t_
+1.1\t_\t_\tPRON\tPRP\t_\t1\tdep\t1:dep\t_
+
+# sent_id = speaker_test-2
+# speaker = Bob
+# text = Hi
+1\tHi\thi\tINTJ\tUH\t_\t0\troot\t0:root\t_
+"""
 
 
 class IdentityTokenizer:
@@ -19,16 +30,14 @@ class IdentityTokenizer:
 
 
 def test_prepare_udcoref_speakers():
-    docs = CoNLL.conll2multi_docs(GUM_DEV, ignore_gapping=False)
-    doc = next(doc for doc in docs
-               if doc.sentences[0].doc_id == "GUM_conversation_grounded")
+    doc = CoNLL.conll2multi_docs(input_str=SPEAKER_CONLLU, ignore_gapping=False)[0]
 
-    prepared = process_documents([(doc, doc.sentences[0].doc_id, "en")])[0]
+    prepared = process_documents([(doc, "speaker_test", "en")])[0]
     expected = [sentence.speaker for sentence in doc.sentences
                 for word in sentence.all_words if word.text != "_"]
 
     assert prepared["speaker"] == expected
-    assert prepared["speaker"][:8] == ["Kendra"] * 6 + ["Sabrina"] * 2
+    assert prepared["speaker"] == ["Alice", "Bob"]
 
 
 def test_training_data_uses_speaker_features(tmp_path):
