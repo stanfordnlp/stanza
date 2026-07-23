@@ -2,6 +2,7 @@
 Supports for pretrained data.
 """
 import csv
+from enum import Enum
 import os
 import re
 
@@ -18,9 +19,20 @@ from stanza.resources.common import DEFAULT_MODEL_DIR
 from pickle import UnpicklingError
 import warnings
 
+from stanza.utils.languages.ota.transliterate import ota_converter
+
 logger = logging.getLogger('stanza')
 
+class TextNormalization(Enum):
+    NONE             = 1
+    OTA              = 2
+
 class PretrainedWordVocab(BaseVocab):
+    def __init__(self, data=None, text_normalization=TextNormalization.NONE):
+        super().__init__(data)
+        self._text_normalization = text_normalization
+        self.state_attrs += ['text_normalization_safe']
+
     def build_vocab(self):
         self._id2unit = VOCAB_PREFIX + self.data
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
@@ -29,17 +41,35 @@ class PretrainedWordVocab(BaseVocab):
         unit = super().normalize_unit(unit)
         if unit:
             unit = unit.replace(" ","\xa0")
+        if self._text_normalization is TextNormalization.OTA:
+            unit = ota_converter(unit)
         return unit
+
+
+    @property
+    def text_normalization_safe(self):
+        """ Return the *string* of _text_normalization for serialization """
+        return self._text_normalization.name
+
+    @text_normalization_safe.setter
+    def text_normalization_safe(self, value):
+        """ Set the text_normalization using the *string*, for convenient serialization """
+        if value not in TextNormalization.__members__:
+            # this preserves old models
+            value = "NONE"
+        self._text_normalization = TextNormalization[value]
+
 
 class Pretrain:
     """ A loader and saver for pretrained embeddings. """
 
-    def __init__(self, filename=None, vec_filename=None, max_vocab=-1, save_to_file=True, csv_filename=None):
+    def __init__(self, filename=None, vec_filename=None, max_vocab=-1, save_to_file=True, csv_filename=None, text_normalization=TextNormalization.NONE):
         self.filename = filename
         self._vec_filename = vec_filename
         self._csv_filename = csv_filename
         self._max_vocab = max_vocab
         self._save_to_file = save_to_file
+        self._text_normalization = text_normalization
 
     def __len__(self):
         return len(self.vocab)
@@ -70,6 +100,9 @@ class Pretrain:
                     raise RuntimeError("File {} exists but is not a stanza pretrain file.  A Stanza pretrain file should have 'emb' and 'vocab' fields in its state dict".format(self.filename))
                 self._vocab = PretrainedWordVocab.load_state_dict(data['vocab'])
                 self._emb = data['emb']
+                # .get() in case old models don't have the text_normalization field
+                normalization = data.get('text_normalization', "NONE")
+                self._text_normalization = TextNormalization[normalization]
                 if isinstance(self._emb, np.ndarray):
                     self._emb = torch.from_numpy(self._emb)
                 return
@@ -100,7 +133,11 @@ class Pretrain:
         if directory:
             os.makedirs(directory, exist_ok=True)
         # should not infinite loop since the load function sets _vocab and _emb before trying to save
-        data = {'vocab': self.vocab.state_dict(), 'emb': self.emb}
+        data = {
+            'vocab': self.vocab.state_dict(),
+            'emb': self.emb,
+            'text_normalization': self._text_normalization.name,
+        }
         try:
             torch.save(data, filename, _use_new_zipfile_serialization=False)
             logger.info("Saved pretrained vocab and vectors to {}".format(filename))
@@ -143,7 +180,7 @@ class Pretrain:
             words = words[:self._max_vocab - len(VOCAB_PREFIX)]
             emb = emb[:self._max_vocab]
 
-        vocab = PretrainedWordVocab(words)
+        vocab = PretrainedWordVocab(words, text_normalization=self._text_normalization)
         
         return vocab, emb
 

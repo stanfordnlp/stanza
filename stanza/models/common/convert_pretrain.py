@@ -27,15 +27,17 @@ def main():
     parser.add_argument("output_pt", default=None, help="Where to write the converted PT file")
     parser.add_argument("input_vec", default=None, help="Unconverted vectors file")
     parser.add_argument("max_vocab", type=int, default=-1, nargs="?", help="How many vectors to convert.  -1 means convert them all")
+    parser.add_argument("--text_normalization", default="NONE", help="If we need to do any text normalization, such as OTA diacritic removal")
     args = parser.parse_args()
 
     if os.path.exists(args.output_pt):
         print("Not overwriting existing pretrain file in %s" % args.output_pt)
 
+    text_normalization = pretrain.TextNormalization[args.text_normalization]
     if args.input_vec.endswith(".csv"):
-        pt = pretrain.Pretrain(args.output_pt, max_vocab=args.max_vocab, csv_filename=args.input_vec)
+        pt = pretrain.Pretrain(args.output_pt, max_vocab=args.max_vocab, csv_filename=args.input_vec, text_normalization=text_normalization)
     else:
-        pt = pretrain.Pretrain(args.output_pt, args.input_vec, max_vocab=args.max_vocab)
+        pt = pretrain.Pretrain(args.output_pt, args.input_vec, max_vocab=args.max_vocab, text_normalization=text_normalization)
     print("Pretrain is of size {}".format(len(pt.vocab)))
 
 if __name__ == '__main__':
