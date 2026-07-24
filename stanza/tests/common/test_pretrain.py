@@ -137,3 +137,105 @@ def test_unk_pretrain():
             fout.write(UNK_PRETRAIN)
         pt = pretrain.Pretrain(vec_filename=filename, save_to_file=False)
         check_embedding(pt.emb, unk=True)
+
+# OTA pretrain uses words already in normalized form, since that is what
+# the vector file contains.  the normalization is applied at lookup time
+# to map input text in either orthographic convention to the stored form.
+OTA_PRETRAIN="""
+3 4
+pâdişâh 1 2 3 4
+gazel 5 6 7 8
+kitâb 9 10 11 12
+""".strip()
+
+def write_pretrain_txt(tmpdir, content):
+    filename = os.path.join(tmpdir, "tiny.txt")
+    with open(filename, "w", encoding="utf-8") as fout:
+        fout.write(content)
+    return filename
+
+def test_normalization_defaults_to_none():
+    """
+    A pretrain loaded without specifying text_normalization should default to NONE
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdir:
+        filename = write_pretrain_txt(tmpdir, NO_HEADER_PRETRAIN)
+        pt = pretrain.Pretrain(vec_filename=filename, save_to_file=False)
+        assert pt.vocab._text_normalization is pretrain.TextNormalization.NONE
+
+def test_normalization_none_saves_and_loads():
+    """
+    TextNormalization.NONE round-trips correctly through save/load
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdir:
+        txt_file = write_pretrain_txt(tmpdir, NO_HEADER_PRETRAIN)
+        pt_file = os.path.join(tmpdir, "tiny.pt")
+        pt = pretrain.Pretrain(filename=pt_file, vec_filename=txt_file,
+                               text_normalization=pretrain.TextNormalization.NONE)
+        pt.load()
+        pt2 = pretrain.Pretrain(filename=pt_file)
+        assert pt2.vocab._text_normalization is pretrain.TextNormalization.NONE
+
+def test_normalization_ota_saves_and_loads():
+    """
+    TextNormalization.OTA round-trips correctly through save/load
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdir:
+        txt_file = write_pretrain_txt(tmpdir, OTA_PRETRAIN)
+        pt_file = os.path.join(tmpdir, "ota.pt")
+        pt = pretrain.Pretrain(filename=pt_file, vec_filename=txt_file,
+                               text_normalization=pretrain.TextNormalization.OTA)
+        pt.load()
+        pt2 = pretrain.Pretrain(filename=pt_file)
+        assert pt2.vocab._text_normalization is pretrain.TextNormalization.OTA
+
+def test_normalization_ota_lookup():
+    """
+    OTA normalization converts input text to the stored form at lookup time.
+    Words in the alternate orthographic convention (with diacritics, uppercase, etc.)
+    should resolve to the same embedding as their normalized equivalents.
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdir:
+        txt_file = write_pretrain_txt(tmpdir, OTA_PRETRAIN)
+        pt = pretrain.Pretrain(vec_filename=txt_file, save_to_file=False,
+                               text_normalization=pretrain.TextNormalization.OTA)
+
+        # words already in normalized form should be found directly
+        assert 'pâdişâh' in pt.vocab
+        assert 'gazel' in pt.vocab
+        assert 'kitâb' in pt.vocab
+
+        # words in the alternate convention should normalize to the stored form
+        assert pt.vocab.unit2id('Pādişāh') == pt.vocab.unit2id('pâdişâh')
+        assert pt.vocab.unit2id('ġazel') == pt.vocab.unit2id('gazel')
+        assert pt.vocab.unit2id('kitāb') == pt.vocab.unit2id('kitâb')
+
+def test_normalization_none_no_ota_conversion():
+    """
+    A pretrain with TextNormalization.NONE should NOT apply OTA conversion,
+    so OTA diacritic forms are treated as distinct (unknown) words.
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdir:
+        txt_file = write_pretrain_txt(tmpdir, OTA_PRETRAIN)
+        pt = pretrain.Pretrain(vec_filename=txt_file, save_to_file=False,
+                               text_normalization=pretrain.TextNormalization.NONE)
+        # ġazel should NOT map to gazel under NONE normalization
+        assert pt.vocab.unit2id('ġazel') != pt.vocab.unit2id('gazel')
+
+def test_old_model_missing_normalization_flag():
+    """
+    A .pt file saved without a text_normalization key (pre-1.13 model) should
+    load without error and default to TextNormalization.NONE
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdir:
+        txt_file = write_pretrain_txt(tmpdir, NO_HEADER_PRETRAIN)
+        pt_file = os.path.join(tmpdir, "old_model.pt")
+
+        # build a pt file the old way, without text_normalization in the dict
+        pt = pretrain.Pretrain(vec_filename=txt_file, save_to_file=False)
+        old_style_data = {'vocab': pt.vocab.state_dict(), 'emb': pt.emb}
+        torch.save(old_style_data, pt_file, _use_new_zipfile_serialization=False)
+
+        pt2 = pretrain.Pretrain(filename=pt_file)
+        assert pt2.vocab._text_normalization is pretrain.TextNormalization.NONE
+        check_embedding(pt2.emb)
