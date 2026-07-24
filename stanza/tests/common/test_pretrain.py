@@ -127,7 +127,7 @@ opal 9 10 11 12
 <unk> -1 -1 -1 -1
 """.strip()
 
-def test_no_header():
+def test_unk_pretrain():
     """
     Check loading a pretrain with <unk> at the end, like GloVe does
     """
