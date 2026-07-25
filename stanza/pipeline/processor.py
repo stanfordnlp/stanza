@@ -2,15 +2,50 @@
 Base classes for processors
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
+from typing import Callable, ClassVar, Optional, Protocol, TypeVar, Union, runtime_checkable
+
+import torch
 
 from stanza.models.common.doc import Document
+from stanza.models.common.pretrain import Pretrain
+from stanza.models.common.vocab import BaseMultiVocab, BaseVocab
 from stanza.pipeline.registry import NAME_TO_PROCESSOR_CLASS, PIPELINE_NAMES, PROCESSOR_VARIANTS
+
+_ProcessorT = TypeVar("_ProcessorT", bound="Processor")
+_ProcessorVariantT = TypeVar("_ProcessorVariantT", bound="ProcessorVariant")
+_VariantConfigT = TypeVar("_VariantConfigT")
+ProcessorDevice = Union[str, torch.device]
+ProcessorVocab = Union[BaseVocab, BaseMultiVocab]
+
+
+@runtime_checkable
+class _VariantRequirementsInitializer(Protocol):
+    def _set_up_requires(self) -> None:
+        ...
+
+
+@runtime_checkable
+class _VariantRequirements(Protocol):
+    _requires: set[str]
+
+
+@runtime_checkable
+class _VariantDefaultRequirements(Protocol):
+    REQUIRES_DEFAULT: set[str]
+
 
 class ProcessorRequirementsException(Exception):
     """ Exception indicating a processor's requirements will not be met """
 
-    def __init__(self, processors_list, err_processor, provided_reqs):
+    def __init__(
+            self,
+            processors_list: list[str],
+            err_processor: Processor,
+            provided_reqs: set[str],
+        ) -> None:
         self._err_processor = err_processor
         # mark the broken processor as inactive, drop resources
         self.err_processor.mark_inactive()
@@ -19,23 +54,23 @@ class ProcessorRequirementsException(Exception):
         self.build_message()
 
     @property
-    def err_processor(self):
+    def err_processor(self) -> Processor:
         """ The processor that raised the exception """
         return self._err_processor
 
     @property
-    def processor_type(self):
+    def processor_type(self) -> str:
         return type(self.err_processor).__name__
 
     @property
-    def processors_list(self):
+    def processors_list(self) -> list[str]:
         return self._processors_list
 
     @property
-    def provided_reqs(self):
+    def provided_reqs(self) -> set[str]:
         return self._provided_reqs
 
-    def build_message(self):
+    def build_message(self) -> None:
         self.message = (f"---\nPipeline Requirements Error!\n"
                         f"\tProcessor: {self.processor_type}\n"
                         f"\tPipeline processors list: {','.join(self.processors_list)}\n"
@@ -45,14 +80,23 @@ class ProcessorRequirementsException(Exception):
                         f"\nThe processors list provided for this pipeline is invalid.  Please make sure all "
                         f"prerequisites are met for every processor.\n\n")
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message
 
 
 class Processor(ABC):
     """ Base class for all processors """
 
-    def __init__(self, config, pipeline, device):
+    PROVIDES_DEFAULT: ClassVar[set[str]]
+    REQUIRES_DEFAULT: ClassVar[set[str]]
+    _variant: ProcessorVariant
+
+    def __init__(
+            self,
+            config,
+            pipeline,
+            device: ProcessorDevice,
+        ) -> None:
         # overall config for the processor
         self._config = config
         # pipeline building this processor (presently processors are only meant to exist in one pipeline)
@@ -70,7 +114,7 @@ class Processor(ABC):
         if hasattr(self, '_variant') and self._variant.OVERRIDE:
             self.process = self._variant.process
 
-    def __str__(self):
+    def __str__(self) -> str:
         """
         Simple description of the processor: name(model)
         """
@@ -85,11 +129,11 @@ class Processor(ABC):
 
 
     @abstractmethod
-    def process(self, doc):
+    def process(self, document: Document, /) -> Document:
         """ Process a Document.  This is the main method of a processor. """
         pass
 
-    def bulk_process(self, docs):
+    def bulk_process(self, docs: list[Document]) -> list[Document]:
         """ Process a list of Documents. This should be replaced with a more efficient implementation if possible. """
 
         if hasattr(self, '_variant'):
@@ -97,15 +141,15 @@ class Processor(ABC):
 
         return [self.process(doc) for doc in docs]
 
-    def _set_up_provides(self):
+    def _set_up_provides(self) -> None:
         """ Set up what processor requirements this processor fulfills.  Default is to use a class defined list. """
         self._provides = self.__class__.PROVIDES_DEFAULT
 
-    def _set_up_requires(self):
+    def _set_up_requires(self) -> None:
         """ Set up requirements for this processor.  Default is to use a class defined list. """
         self._requires = self.__class__.REQUIRES_DEFAULT
 
-    def _set_up_variant_requires(self):
+    def _set_up_variant_requires(self) -> bool:
         """
         If this has a variant with its own requirements, use those instead
 
@@ -113,16 +157,25 @@ class Processor(ABC):
         """
         if not hasattr(self, '_variant'):
             return False
-        if hasattr(self._variant, '_set_up_requires'):
-            self._variant._set_up_requires()
-            self._requires = self._variant._requires
+        variant = self._variant
+        if isinstance(variant, _VariantRequirementsInitializer):
+            variant._set_up_requires()
+            if not isinstance(variant, _VariantRequirements):
+                raise AttributeError(
+                    "Processor variant _set_up_requires() did not set _requires"
+                )
+            self._requires = variant._requires
             return True
-        if hasattr(self._variant.__class__, 'REQUIRES_DEFAULT'):
-            self._requires = self._variant.__class__.REQUIRES_DEFAULT
+        if isinstance(variant, _VariantDefaultRequirements):
+            self._requires = variant.REQUIRES_DEFAULT
             return True
         return False
 
-    def _set_up_variants(self, config, device):
+    def _set_up_variants(
+            self,
+            config,
+            device: ProcessorDevice,
+        ) -> None:
         processor_name = list(self.__class__.PROVIDES_DEFAULT)[0]
         if any(config.get(f'with_{variant}', False) for variant in PROCESSOR_VARIANTS[processor_name]):
             self._trainer = None
@@ -140,14 +193,14 @@ class Processor(ABC):
         return self._pipeline
 
     @property
-    def provides(self):
+    def provides(self) -> set[str]:
         return self._provides
 
     @property
-    def requires(self):
+    def requires(self) -> set[str]:
         return self._requires
 
-    def _check_requirements(self):
+    def _check_requirements(self) -> None:
         """ Given a list of fulfilled requirements, check if all of this processor's requirements are met or not. """
         if not self.config.get("check_requirements", True):
             return
@@ -156,14 +209,23 @@ class Processor(ABC):
             load_names = [item[0] for item in self.pipeline.load_list]
             raise ProcessorRequirementsException(load_names, self, provided_reqs)
 
+    def mark_inactive(self) -> None:
+        """Drop optional runtime state when retaining a failed processor."""
+
 
 class ProcessorVariant(ABC):
     """ Base class for all processor variants """
 
-    OVERRIDE = False # Set to true to override all the processing from the processor
+    OVERRIDE: ClassVar[bool] = False # Set to true to override all the processing from the processor
+
+    def __init__(self, config: Optional[_VariantConfigT] = None) -> None:
+        # Variants historically accepted their configuration in subclass
+        # constructors.  Keep the base initializer a no-op so third-party
+        # variants can call super().__init__() with or without that value.
+        pass
 
     @abstractmethod
-    def process(self, doc):
+    def process(self, doc) -> Document:
         """
         Process a document that is potentially preprocessed by the processor.
         This is the main method of a processor variant.
@@ -174,7 +236,7 @@ class ProcessorVariant(ABC):
         """
         pass
 
-    def bulk_process(self, docs):
+    def bulk_process(self, docs: list[Document]) -> list[Document]:
         """ Process a list of Documents. This should be replaced with a more efficient implementation if possible. """
 
         return [self.process(doc) for doc in docs]
@@ -182,7 +244,15 @@ class ProcessorVariant(ABC):
 class UDProcessor(Processor):
     """ Base class for the neural UD Processors (tokenize,mwt,pos,lemma,depparse,sentiment,constituency) """
 
-    def __init__(self, config, pipeline, device):
+    _pretrain: Optional[Pretrain]
+    _vocab: Optional[ProcessorVocab]
+
+    def __init__(
+            self,
+            config,
+            pipeline,
+            device: ProcessorDevice,
+        ) -> None:
         super().__init__(config, pipeline, device)
 
         # UD model resources, set up is processor specific
@@ -196,14 +266,22 @@ class UDProcessor(Processor):
         self._set_up_final_config(config)
 
     @abstractmethod
-    def _set_up_model(self, config, pipeline, device):
+    def _set_up_model(
+            self,
+            config,
+            pipeline,
+            device: Optional[ProcessorDevice],
+        ) -> None:
         pass
 
-    def _set_up_final_config(self, config):
+    def _set_up_final_config(self, config) -> None:
         """ Finalize the configurations for this processor, based off of values from a UD model. """
         # set configurations from loaded model
-        if self._trainer is not None:
-            loaded_args, self._vocab = self._trainer.args, self._trainer.vocab
+        # Concrete UD processors install different trainer implementations in
+        # _set_up_model.  Read the state after that hook has run.
+        trainer = getattr(self, "_trainer", None)
+        if trainer is not None:
+            loaded_args, self._vocab = trainer.args, trainer.vocab
             # filter out unneeded args from model
             loaded_args = {k: v for k, v in loaded_args.items() if not UDProcessor.filter_out_option(k)}
         else:
@@ -211,13 +289,13 @@ class UDProcessor(Processor):
         loaded_args.update(config)
         self._config = loaded_args
 
-    def mark_inactive(self):
+    def mark_inactive(self) -> None:
         """ Drop memory intensive resources if keeping this processor around for reasons other than running it. """
         self._trainer = None
         self._vocab = None
 
     @property
-    def pretrain(self):
+    def pretrain(self) -> Optional[Pretrain]:
         return self._pretrain
 
     @property
@@ -225,11 +303,11 @@ class UDProcessor(Processor):
         return self._trainer
 
     @property
-    def vocab(self):
+    def vocab(self) -> Optional[ProcessorVocab]:
         return self._vocab
 
     @staticmethod
-    def filter_out_option(option):
+    def filter_out_option(option: str) -> bool:
         """ Filter out non-processor configurations """
         options_to_filter = ['device', 'cpu', 'cuda', 'dev_conll_gold', 'epochs', 'lang', 'mode', 'save_name', 'shorthand']
         if option.endswith('_file') or option.endswith('_dir'):
@@ -239,7 +317,7 @@ class UDProcessor(Processor):
         else:
             return False
 
-    def bulk_process(self, docs):
+    def bulk_process(self, docs: list[Document]) -> list[Document]:
         """
         Most processors operate on the sentence level, where each sentence is processed independently and processors can benefit
         a lot from the ability to combine sentences from multiple documents for faster batched processing. This is a transparent
@@ -267,14 +345,16 @@ class ProcessorRegisterException(Exception):
         self._expected_parent = expected_parent
         self.build_message()
 
-    def build_message(self):
+    def build_message(self) -> None:
         self.message = f"Failed to register '{self._processor_class}'. It must be a subclass of '{self._expected_parent}'."
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.message
 
-def register_processor(name):
-    def wrapper(Cls):
+def register_processor(
+        name: str,
+    ) -> Callable[[type[_ProcessorT]], type[_ProcessorT]]:
+    def wrapper(Cls: type[_ProcessorT]) -> type[_ProcessorT]:
         if not issubclass(Cls, Processor):
             raise ProcessorRegisterException(Cls, Processor)
 
@@ -283,8 +363,13 @@ def register_processor(name):
         return Cls
     return wrapper
 
-def register_processor_variant(name, variant):
-    def wrapper(Cls):
+def register_processor_variant(
+        name: str,
+        variant: str,
+    ) -> Callable[[type[_ProcessorVariantT]], type[_ProcessorVariantT]]:
+    def wrapper(
+            Cls: type[_ProcessorVariantT],
+        ) -> type[_ProcessorVariantT]:
         if not issubclass(Cls, ProcessorVariant):
             raise ProcessorRegisterException(Cls, ProcessorVariant)
 

@@ -1,14 +1,17 @@
 """ Module defining constants """
 
+from typing import Final
+
+
 # string constants for processor names
-LANGID = 'langid'
-TOKENIZE = 'tokenize'
-MWT = 'mwt'
-POS = 'pos'
-LEMMA = 'lemma'
-DEPPARSE = 'depparse'
-NER = 'ner'
-SENTIMENT = 'sentiment'
-CONSTITUENCY = 'constituency'
-COREF = 'coref'
-MORPHSEG = 'morphseg'
+LANGID: Final = 'langid'
+TOKENIZE: Final = 'tokenize'
+MWT: Final = 'mwt'
+POS: Final = 'pos'
+LEMMA: Final = 'lemma'
+DEPPARSE: Final = 'depparse'
+NER: Final = 'ner'
+SENTIMENT: Final = 'sentiment'
+CONSTITUENCY: Final = 'constituency'
+COREF: Final = 'coref'
+MORPHSEG: Final = 'morphseg'

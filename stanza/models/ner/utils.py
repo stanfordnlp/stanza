@@ -3,15 +3,32 @@ Utility functions for dealing with NER tagging.
 """
 
 import logging
+from collections.abc import Sequence
+from typing import Optional, TypedDict, Union
 
 from stanza.models.common.vocab import EMPTY
 
 logger = logging.getLogger('stanza')
 
-EMPTY_TAG = ('_', '-', '', None)
-EMPTY_OR_O_TAG = tuple(list(EMPTY_TAG) + ['O'])
+EMPTY_TAG: tuple[Optional[str], ...] = ('_', '-', '', None)
+EMPTY_OR_O_TAG: tuple[Optional[str], ...] = tuple(list(EMPTY_TAG) + ['O'])
+NerTag = str
+# ``Sequence[str]`` includes a bare string, but every operation here expects
+# independent tag entries rather than individual characters.
+NerTags = Union[
+    list[Optional[NerTag]],
+    tuple[Optional[NerTag], ...],
+]
+NerTagStrings = Union[list[NerTag], tuple[NerTag, ...]]
 
-def is_basic_scheme(all_tags):
+
+class DecodedEntity(TypedDict):
+    start: int
+    end: int
+    type: str
+
+
+def is_basic_scheme(all_tags: NerTags) -> bool:
     """
     Check if a basic tagging scheme is used. Return True if so.
 
@@ -22,12 +39,14 @@ def is_basic_scheme(all_tags):
         True if the tagging scheme does not use B-, I-, etc, otherwise False
     """
     for tag in all_tags:
+        if tag is None:
+            continue
         if len(tag) > 2 and tag[:2] in ('B-', 'I-', 'S-', 'E-', 'B_', 'I_', 'S_', 'E_'):
             return False
     return True
 
 
-def is_bio_scheme(all_tags):
+def is_bio_scheme(all_tags: NerTags) -> bool:
     """
     Check if BIO tagging scheme is used. Return True if so.
 
@@ -38,7 +57,7 @@ def is_bio_scheme(all_tags):
         True if the tagging scheme is BIO, otherwise False
     """
     for tag in all_tags:
-        if tag in EMPTY_OR_O_TAG:
+        if tag is None or tag in EMPTY_OR_O_TAG:
             continue
         elif len(tag) > 2 and tag[:2] in ('B-', 'I-', 'B_', 'I_'):
             continue
@@ -46,7 +65,8 @@ def is_bio_scheme(all_tags):
             return False
     return True
 
-def to_bio2(tags):
+
+def to_bio2(tags: NerTags) -> list[Optional[NerTag]]:
     """
     Convert the original tag sequence to BIO2 format. If the input is already in BIO2 format,
     the original input is returned.
@@ -57,12 +77,15 @@ def to_bio2(tags):
     Returns:
         new_tags: a list of tags in BIO2 format
     """
-    new_tags = []
+    new_tags: list[Optional[NerTag]] = []
     for i, tag in enumerate(tags):
-        if tag in EMPTY_OR_O_TAG:
+        if tag is None or tag in EMPTY_OR_O_TAG:
             new_tags.append(tag)
         elif tag[0] == 'I':
-            if i == 0 or tags[i-1] == 'O' or tags[i-1][1:] != tag[1:]:
+            previous = tags[i-1] if i > 0 else None
+            if (previous is None
+                    or previous in EMPTY_OR_O_TAG
+                    or previous[1:] != tag[1:]):
                 new_tags.append('B' + tag[1:])
             else:
                 new_tags.append(tag)
@@ -70,7 +93,8 @@ def to_bio2(tags):
             new_tags.append(tag)
     return new_tags
 
-def basic_to_bio(tags):
+
+def basic_to_bio(tags: NerTags) -> list[Optional[NerTag]]:
     """
     Convert a basic tag sequence into a BIO sequence.
     You can compose this with bio2_to_bioes to convert to bioes
@@ -81,18 +105,18 @@ def basic_to_bio(tags):
     Returns:
         new_tags: a list of tags in BIO format
     """
-    new_tags = []
+    new_tags: list[Optional[NerTag]] = []
     for i, tag in enumerate(tags):
-        if tag in EMPTY_OR_O_TAG:
+        if tag is None or tag in EMPTY_OR_O_TAG:
             new_tags.append(tag)
-        elif i == 0 or tags[i-1] == 'O' or tags[i-1] != tag:
+        elif i == 0 or tags[i-1] in EMPTY_OR_O_TAG or tags[i-1] != tag:
             new_tags.append('B-' + tag)
         else:
             new_tags.append('I-' + tag)
     return new_tags
 
 
-def bio2_to_bioes(tags):
+def bio2_to_bioes(tags: NerTags) -> list[Optional[NerTag]]:
     """
     Convert the BIO2 tag sequence into a BIOES sequence.
 
@@ -102,21 +126,23 @@ def bio2_to_bioes(tags):
     Returns:
         new_tags: a list of tags in BIOES format
     """
-    new_tags = []
+    new_tags: list[Optional[NerTag]] = []
     for i, tag in enumerate(tags):
-        if tag in EMPTY_OR_O_TAG:
+        if tag is None or tag in EMPTY_OR_O_TAG:
             new_tags.append(tag)
         else:
             if len(tag) < 2:
                 raise Exception(f"Invalid BIO2 tag found: {tag}")
             else:
                 if tag[:2] in ('I-', 'I_'): # convert to E- if next tag is not I-
-                    if i+1 < len(tags) and tags[i+1][:2] in ('I-', 'I_'):
+                    next_tag = tags[i+1] if i+1 < len(tags) else None
+                    if next_tag is not None and next_tag[:2] in ('I-', 'I_'):
                         new_tags.append('I-' + tag[2:]) # compensate for underscores
                     else:
                         new_tags.append('E-' + tag[2:])
                 elif tag[:2] in ('B-', 'B_'): # convert to S- if next tag is not I-
-                    if i+1 < len(tags) and tags[i+1][:2] in ('I-', 'I_'):
+                    next_tag = tags[i+1] if i+1 < len(tags) else None
+                    if next_tag is not None and next_tag[:2] in ('I-', 'I_'):
                         new_tags.append('B-' + tag[2:])
                     else:
                         new_tags.append('S-' + tag[2:])
@@ -215,7 +241,7 @@ def process_tags(sentences, scheme):
     return result
 
 
-def decode_from_bioes(tags):
+def decode_from_bioes(tags: NerTags) -> list[DecodedEntity]:
     """
     Decode from a sequence of BIOES tags, assuming default tag is 'O'.
     Args:
@@ -224,12 +250,14 @@ def decode_from_bioes(tags):
     Returns:
         A list of dict with start_idx, end_idx, and type values.
     """
-    res = []
-    ent_idxs = []
-    cur_type = None
+    res: list[DecodedEntity] = []
+    ent_idxs: list[int] = []
+    cur_type: Optional[str] = None
 
-    def flush():
+    def flush() -> None:
         if len(ent_idxs) > 0:
+            if cur_type is None:
+                raise ValueError("Found an entity span without an entity type")
             res.append({
                 'start': ent_idxs[0], 
                 'end': ent_idxs[-1], 
@@ -264,14 +292,21 @@ def decode_from_bioes(tags):
     return res
 
 
-def merge_tags(*sequences):
+def merge_tags(
+        first: NerTagStrings,
+        *others: NerTagStrings,
+    ) -> list[str]:
     """
     Merge multiple sequences of NER tags into one sequence
 
     Only O is replaced, and the earlier tags have precedence
     """
-    tags = list(sequences[0])
-    for sequence in sequences[1:]:
+    tags = list(first)
+    for sequence in others:
+        if len(sequence) != len(tags):
+            raise ValueError(
+                "Cannot merge NER tag sequences with different lengths"
+            )
         idx = 0
         while idx < len(sequence):
             # skip empty tags in the later sequences

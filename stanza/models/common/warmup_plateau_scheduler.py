@@ -29,23 +29,55 @@ Because every duration is expressed in steps, the LR schedule is completely
 independent of how frequently you choose to evaluate.
 """
 
+from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Literal, Optional, TypedDict, Union
 
+import torch
 from torch.optim import Optimizer
+
+
+SchedulerPhase = Literal["freeze", "warmup", "plateau"]
+SchedulerMode = Literal["min", "max"]
+ThresholdMode = Literal["rel", "abs"]
+NumericLearningRate = Union[int, float]
+LearningRate = Union[NumericLearningRate, torch.Tensor]
+MinimumLearningRates = Sequence[NumericLearningRate]
+
+
+class SchedulerState(TypedDict):
+    num_freeze_steps: int
+    num_warmup_steps: int
+    mode: SchedulerMode
+    factor: float
+    patience: Optional[int]
+    cooldown: int
+    threshold: float
+    threshold_mode: ThresholdMode
+    min_lrs: list[NumericLearningRate]
+    eps: float
+    _total_steps: int
+    _warmup_steps_elapsed: int
+    _best: float
+    _steps_without_improvement: int
+    _cooldown_steps_remaining: int
+    _plateau_multipliers: list[float]
+    _plateau_phase_started: bool
+    _optimizer_reset_done: bool
 
 
 @dataclass
 class SchedulerStatus:
     """Snapshot of WarmupThenPlateauScheduler state, returned by status()."""
-    phase: str
+    phase: SchedulerPhase
     total_steps: int
-    lrs: list
-    warmup_progress: float | None
-    best_metric: float | None
-    steps_without_improvement: int | None
-    patience_remaining: int | None
+    lrs: list[LearningRate]
+    warmup_progress: Optional[float]
+    best_metric: Optional[float]
+    steps_without_improvement: Optional[int]
+    patience_remaining: Optional[int]
     in_cooldown: bool
-    cooldown_steps_remaining: int | None
+    cooldown_steps_remaining: Optional[int]
 
     def __str__(self) -> str:
         parts = [f"phase={self.phase}", f"total_steps={self.total_steps}"]
@@ -116,23 +148,26 @@ class WarmupThenPlateauScheduler:
         of warmup.  Has no effect when num_freeze_steps=0 (default False).
     """
 
+    mode: SchedulerMode
+    threshold_mode: ThresholdMode
+
     def __init__(
         self,
         optimizer: Optimizer,
         num_freeze_steps: int,
         num_warmup_steps: int,
         # --- plateau args ---
-        mode: str = "min",
+        mode: SchedulerMode = "min",
         factor: float = 0.1,
-        patience: int | None = 10_000,
+        patience: Optional[int] = 10_000,
         cooldown: int = 0,
         threshold: float = 1e-4,
-        threshold_mode: str = "rel",
-        min_lr: float | list[float] = 0.0,
+        threshold_mode: ThresholdMode = "rel",
+        min_lr: Union[NumericLearningRate, MinimumLearningRates] = 0.0,
         eps: float = 1e-8,
         verbose: bool = False,
         reset_optimizer_on_unfreeze: bool = False,
-    ):
+    ) -> None:
         if patience is not None and factor >= 1.0:
             raise ValueError(f"factor must be < 1.0, got {factor}")
         if mode not in ("min", "max"):
@@ -164,11 +199,11 @@ class WarmupThenPlateauScheduler:
         self.reset_optimizer_on_unfreeze = reset_optimizer_on_unfreeze
 
         # Capture base LRs from the optimizer before we touch anything
-        self._base_lrs: list[float] = [g["lr"] for g in optimizer.param_groups]
+        self._base_lrs: list[LearningRate] = [g["lr"] for g in optimizer.param_groups]
 
         # Normalise min_lr to a per-group list
         num_groups = len(optimizer.param_groups)
-        if isinstance(min_lr, (list, tuple)):
+        if isinstance(min_lr, Sequence):
             if len(min_lr) != num_groups:
                 raise ValueError(
                     f"min_lr length ({len(min_lr)}) must match "
@@ -207,7 +242,7 @@ class WarmupThenPlateauScheduler:
     def _plateau_start_step(self) -> int:
         return self.num_freeze_steps + self.num_warmup_steps
 
-    def _current_phase(self) -> str:
+    def _current_phase(self) -> SchedulerPhase:
         if self._total_steps < self._warmup_start_step:
             return "freeze"
         if self._total_steps < self._plateau_start_step:
@@ -218,7 +253,7 @@ class WarmupThenPlateauScheduler:
     # LR computation and application
     # ------------------------------------------------------------------
 
-    def _current_lrs(self) -> list[float]:
+    def _current_lrs(self) -> list[LearningRate]:
         phase = self._current_phase()
 
         if phase == "freeze":
@@ -242,7 +277,7 @@ class WarmupThenPlateauScheduler:
             )
         ]
 
-    def _apply_lr(self):
+    def _apply_lr(self) -> None:
         for group, lr in zip(self.optimizer.param_groups, self._current_lrs()):
             group["lr"] = lr
 
@@ -250,7 +285,7 @@ class WarmupThenPlateauScheduler:
     # Public step interface
     # ------------------------------------------------------------------
 
-    def step(self, num_steps: int, metrics: float | None = None):
+    def step(self, num_steps: int, metrics: Optional[float] = None) -> None:
         """
         Advance the scheduler by num_steps training steps.
 
@@ -348,7 +383,7 @@ class WarmupThenPlateauScheduler:
     # Optimizer reset
     # ------------------------------------------------------------------
 
-    def _reset_optimizer_state(self):
+    def _reset_optimizer_state(self) -> None:
         """Clear per-parameter optimizer state for all param groups.
 
         PyTorch optimizers store their running statistics (momentum buffers,
@@ -378,7 +413,7 @@ class WarmupThenPlateauScheduler:
                              else best + self.threshold)
             return current > threshold_val
 
-    def _decay_lrs(self):
+    def _decay_lrs(self) -> None:
         for i, (group, min_lr) in enumerate(
             zip(self.optimizer.param_groups, self.min_lrs)
         ):
@@ -453,7 +488,7 @@ class WarmupThenPlateauScheduler:
         )
         patience_remaining = (
             self.patience - self._steps_without_improvement
-            if in_plateau and not in_cooldown
+            if self.patience is not None and phase == "plateau" and not in_cooldown
             else None
         )
 
@@ -473,8 +508,8 @@ class WarmupThenPlateauScheduler:
     # State dict (for checkpointing)
     # ------------------------------------------------------------------
 
-    def state_dict(self) -> dict:
-        return {
+    def state_dict(self) -> SchedulerState:
+        state: SchedulerState = {
             "num_freeze_steps": self.num_freeze_steps,
             "num_warmup_steps": self.num_warmup_steps,
             "mode": self.mode,
@@ -494,15 +529,16 @@ class WarmupThenPlateauScheduler:
             "_plateau_phase_started": self._plateau_phase_started,
             "_optimizer_reset_done": self._optimizer_reset_done,
         }
+        return state
 
-    def load_state_dict(self, state_dict: dict):
-        state_dict = dict(state_dict)  # don't mutate the caller's dict
-        self._total_steps = state_dict["_total_steps"]
-        self._warmup_steps_elapsed = state_dict["_warmup_steps_elapsed"]
-        self._best = state_dict["_best"]
-        self._steps_without_improvement = state_dict["_steps_without_improvement"]
-        self._cooldown_steps_remaining = state_dict["_cooldown_steps_remaining"]
-        self._plateau_multipliers = state_dict["_plateau_multipliers"]
-        self._plateau_phase_started = state_dict["_plateau_phase_started"]
-        self._optimizer_reset_done = state_dict["_optimizer_reset_done"]
+    def load_state_dict(self, state_dict: SchedulerState) -> None:
+        state = state_dict.copy()  # don't mutate the caller's dict
+        self._total_steps = state["_total_steps"]
+        self._warmup_steps_elapsed = state["_warmup_steps_elapsed"]
+        self._best = state["_best"]
+        self._steps_without_improvement = state["_steps_without_improvement"]
+        self._cooldown_steps_remaining = state["_cooldown_steps_remaining"]
+        self._plateau_multipliers = state["_plateau_multipliers"]
+        self._plateau_phase_started = state["_plateau_phase_started"]
+        self._optimizer_reset_done = state["_optimizer_reset_done"]
         self._apply_lr()

@@ -2,15 +2,16 @@
 import re
 
 from setuptools import setup, find_packages
-# To use a consistent encoding
-from codecs import open
 from os import path
 
 here = path.abspath(path.dirname(__file__))
 
 # read the version from stanza/_version.py
 version_file_contents = open(path.join(here, 'stanza/_version.py'), encoding='utf-8').read()
-VERSION = re.compile('__version__ = \"(.*)\"').search(version_file_contents).group(1)
+version_match = re.compile('__version__ = \"(.*)\"').search(version_file_contents)
+if version_match is None:
+    raise RuntimeError("Could not find __version__ in stanza/_version.py")
+VERSION = version_match.group(1)
 
 # Get the long description from the README file
 with open(path.join(here, 'README.md'), encoding='utf-8') as f:
@@ -102,6 +103,8 @@ setup(
     extras_require={
         'dev': [
             'check-manifest',
+            'pyright',
+            'typing_extensions>=4.2.0',
         ],
         'test': [
             'coverage', 
@@ -139,6 +142,7 @@ setup(
     # installed, specify them here.  If using Python 2.6 or less, then these
     # have to be included in MANIFEST.in as well.
     package_data={
+        "stanza": ["py.typed"],
         "": ["pipeline/demo/*ttf",
              "pipeline/demo/*css",
              "pipeline/demo/*html",

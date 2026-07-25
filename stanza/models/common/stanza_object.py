@@ -1,18 +1,38 @@
-def _readonly_setter(self, name):
-    full_classname = self.__class__.__module__
-    if full_classname is None:
-        full_classname = self.__class__.__qualname__
-    else:
-        full_classname += '.' + self.__class__.__qualname__
+from typing import Callable, NoReturn, Optional, Type, TypeVar
+
+
+_StanzaObjectT = TypeVar("_StanzaObjectT", bound="StanzaObject")
+# A property's backing value, getter result, and setter input can intentionally differ.
+_PropertyDefaultT = TypeVar("_PropertyDefaultT")
+_PropertyValueT = TypeVar("_PropertyValueT")
+_PropertyInputT = TypeVar("_PropertyInputT")
+
+
+def _qualified_class_name(module: Optional[str], qualname: str) -> str:
+    return qualname if module is None else f"{module}.{qualname}"
+
+
+def _readonly_setter(instance: "StanzaObject", name: str) -> NoReturn:
+    full_classname = _qualified_class_name(
+        instance.__class__.__module__,
+        instance.__class__.__qualname__,
+    )
     raise ValueError(f'Property "{name}" of "{full_classname}" is read-only.')
 
-class StanzaObject(object):
+
+class StanzaObject:
     """
     Base class for all Stanza data objects that allows for some flexibility handling annotations
     """
 
     @classmethod
-    def add_property(cls, name, default=None, getter=None, setter=None):
+    def add_property(
+        cls: Type[_StanzaObjectT],
+        name: str,
+        default: Optional[_PropertyDefaultT] = None,
+        getter: Optional[Callable[[_StanzaObjectT], _PropertyValueT]] = None,
+        setter: Optional[Callable[[_StanzaObjectT, _PropertyInputT], None]] = None,
+    ) -> None:
         """
         Add a property accessible through self.{name} with underlying variable self._{name}.
         Optionally setup a setter as well.
@@ -28,4 +48,3 @@ class StanzaObject(object):
             setter = lambda self, value: _readonly_setter(self, name)
 
         setattr(cls, name, property(getter, setter))
-

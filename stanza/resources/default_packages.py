@@ -7,12 +7,18 @@ causing a circular import
 """
 
 import copy
+from typing import Dict, Final, List, Mapping, Optional, Set
+
+
+_StringMap = Dict[str, str]
+_NestedStringMap = Dict[str, _StringMap]
+_NestedOptionalStringMap = Dict[str, Dict[str, Optional[str]]]
 
 # all languages will have a map which represents the available packages
-PACKAGES = "packages"
+PACKAGES: Final[str] = "packages"
 
 # default treebank for languages
-default_treebanks = {
+default_treebanks: _StringMap = {
     "ab":      "abnc",
     "af":      "afribooms",
     # currently not publicly released!  sent to us from the group developing this resource
@@ -111,7 +117,7 @@ default_treebanks = {
     "multilingual": "ud"
 }
 
-no_pretrain_languages = set([
+no_pretrain_languages: Set[str] = set([
     "cop",
     "olo",
     "orv",
@@ -128,7 +134,7 @@ no_pretrain_languages = set([
 # in some cases, we give the pretrain a name other than the original
 # name for the UD dataset
 # we will eventually do this for all of the pretrains
-specific_default_pretrains = {
+specific_default_pretrains: _StringMap = {
     "ab":      "fasttextwiki",
     "af":      "fasttextwiki",
     "ang":     "nerthus",
@@ -218,7 +224,7 @@ specific_default_pretrains = {
 }
 
 
-def build_default_pretrains(default_treebanks):
+def build_default_pretrains(default_treebanks: Mapping[str, str]) -> _StringMap:
     default_pretrains = dict(default_treebanks)
     for lang in no_pretrain_languages:
         default_pretrains.pop(lang, None)
@@ -226,9 +232,9 @@ def build_default_pretrains(default_treebanks):
         default_pretrains[lang] = specific_default_pretrains[lang]
     return default_pretrains
 
-default_pretrains = build_default_pretrains(default_treebanks)
+default_pretrains: _StringMap = build_default_pretrains(default_treebanks)
 
-pos_pretrains = {
+pos_pretrains: _NestedStringMap = {
     "en": {
         "craft":            "biomed",
         "genia":            "biomed",
@@ -236,9 +242,9 @@ pos_pretrains = {
     },
 }
 
-depparse_pretrains = pos_pretrains
+depparse_pretrains: _NestedStringMap = pos_pretrains
 
-ner_pretrains = {
+ner_pretrains: _NestedStringMap = {
     "ar": {
         "aqmar": "fasttextwiki",
     },
@@ -285,7 +291,7 @@ ner_pretrains = {
 
 
 # default charlms for languages
-default_charlms = {
+default_charlms: _StringMap = {
     "af": "oscar",
     "ang": "nerthus1024",
     "ar": "ccwiki",
@@ -321,7 +327,7 @@ default_charlms = {
     "zh-hans": "gigaword"
 }
 
-pos_charlms = {
+pos_charlms: _NestedOptionalStringMap = {
     "en": {
         # none of the English charlms help with craft or genia
         "craft": None,
@@ -333,13 +339,13 @@ pos_charlms = {
     },
 }
 
-depparse_charlms = copy.deepcopy(pos_charlms)
+depparse_charlms: _NestedOptionalStringMap = copy.deepcopy(pos_charlms)
 
-lemma_charlms = copy.deepcopy(pos_charlms)
+lemma_charlms: _NestedOptionalStringMap = copy.deepcopy(pos_charlms)
 
-tokenizer_charlms = copy.deepcopy(pos_charlms)
+tokenizer_charlms: _NestedOptionalStringMap = copy.deepcopy(pos_charlms)
 
-ner_charlms = {
+ner_charlms: _NestedOptionalStringMap = {
     "en": {
         "conll03": "1billion",
         "ontonotes": "1billion",
@@ -363,7 +369,7 @@ ner_charlms = {
 }
 
 # default ner for languages
-default_ners = {
+default_ners: _StringMap = {
     "af": "nchlt",
     "ang": "oedt_charlm",
     "ar": "aqmar_charlm",
@@ -403,7 +409,7 @@ default_ners = {
 }
 
 # a few languages have sentiment classifier models
-default_sentiment = {
+default_sentiment: _StringMap = {
     "en": "sstplus_charlm",
     "de": "sb10k_charlm",
     "es": "tass2020_charlm",
@@ -413,7 +419,7 @@ default_sentiment = {
 }
 
 # also, a few languages (very few, currently) have constituency parser models
-default_constituency = {
+default_constituency: _StringMap = {
     "da": "arboretum_charlm",
     "de": "spmrl_charlm",
     "en": "ptb3-revised_charlm",
@@ -427,12 +433,12 @@ default_constituency = {
     "zh-hans": "ctb-51_charlm",
 }
 
-optional_constituency = {
+optional_constituency: _StringMap = {
     "tr": "starlang_charlm",
 }
 
 # an alternate tokenizer for languages which aren't trained from a base UD source
-default_tokenizer = {
+default_tokenizer: _StringMap = {
     "my": "alt",
 }
 
@@ -441,7 +447,7 @@ default_tokenizer = {
 #    "en": "ontonotes_roberta-large_finetuned",
 #}
 
-optional_coref = {
+optional_coref: _StringMap = {
     "ca": "udcoref_xlm-roberta-lora",
     "cs": "udcoref_xlm-roberta-lora",
     "de": "udcoref_xlm-roberta-lora",
@@ -463,7 +469,7 @@ default transformers to use for various languages
 
 we try to document why we choose a particular model in each case
 """
-TRANSFORMERS = {
+TRANSFORMERS: _StringMap = {
     # We tested three candidate AR models on POS, Depparse, and NER
     #
     # POS: padt dev set scores, AllTags
@@ -943,13 +949,13 @@ TRANSFORMERS = {
     "zh-hans": "hfl/chinese-electra-180g-large-discriminator",
 }
 
-TRANSFORMER_LAYERS = {
+TRANSFORMER_LAYERS: Dict[str, int] = {
     # not clear what the best number is without more experiments,
     # but more than 4 is working better than just 4
     "vi": 7,
 }
 
-TRANSFORMER_NICKNAMES = {
+TRANSFORMER_NICKNAMES: _StringMap = {
     # ar
     "asafaya/bert-base-arabic": "asafaya-bert",
     "aubmindlab/araelectra-base-discriminator": "aubmind-electra",
@@ -1115,13 +1121,13 @@ TRANSFORMER_NICKNAMES = {
     "FacebookAI/xlm-roberta-large": "xlm-roberta-large",
 }
 
-def known_nicknames():
+def known_nicknames() -> List[str]:
     """
     Return a list of all the transformer nicknames
 
     We return a list so that we can sort them in decreasing key length
     """
-    nicknames = list(value for key, value in TRANSFORMER_NICKNAMES.items())
+    nicknames = list(TRANSFORMER_NICKNAMES.values())
 
     # previously unspecific transformers get "transformer" as the nickname
     nicknames.append("transformer")

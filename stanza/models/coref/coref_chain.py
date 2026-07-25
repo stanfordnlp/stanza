@@ -22,6 +22,23 @@ See also:
     stanza.models.common.doc         -- attaches CorefAttachment to Word objects
 """
 
+from typing import Optional, TypedDict, Union
+
+
+CorefWordIndex = Union[int, tuple[int, int]]
+
+
+class _CorefAttachmentFlags(TypedDict, total=False):
+    is_start: bool
+    is_end: bool
+    is_representative: bool
+
+
+class CorefAttachmentJSON(_CorefAttachmentFlags):
+    index: int
+    representative_text: str
+
+
 # by not using namedtuple, we can use this object as output from the json module
 # in the doc class as long as we wrap the encoder to print these out in dict() form
 # CorefMention = namedtuple('CorefMention', ['sentence', 'start_word', 'end_word'])
@@ -50,7 +67,8 @@ class CorefMention:
             sentence.words[start_word:end_word]. For zero-anaphora nodes this
             equals start_word (a tuple).
     """
-    def __init__(self, sentence, start_word, end_word):
+    def __init__(self, sentence: int, start_word: CorefWordIndex,
+                 end_word: CorefWordIndex) -> None:
         self.sentence = sentence
         self.start_word = start_word
         self.end_word = end_word
@@ -82,7 +100,9 @@ class CorefChain:
             representative mention, or ``None`` if no suitable span was found
             (e.g. all mentions are zero nodes).
     """
-    def __init__(self, index, mentions, representative_text, representative_index):
+    def __init__(self, index: int, mentions: list[CorefMention],
+                 representative_text: str,
+                 representative_index: Optional[int]) -> None:
         self.index = index
         self.mentions = mentions
         self.representative_text = representative_text
@@ -117,28 +137,29 @@ class CorefAttachment:
         ``to_json()`` intentionally omits ``is_start``, ``is_end``, and
         ``is_representative`` when they are False, to keep JSON output compact.
     """
-    def __init__(self, chain, is_start, is_end, is_representative):
+    def __init__(self, chain: CorefChain, is_start: bool, is_end: bool,
+                 is_representative: bool) -> None:
         self.chain = chain
         self.is_start = is_start
         self.is_end = is_end
         self.is_representative = is_representative
 
-    def to_json(self):
-        j = {
+    def to_json(self) -> CorefAttachmentJSON:
+        attachment: CorefAttachmentJSON = {
             "index": self.chain.index,
             "representative_text": self.chain.representative_text
         }
         if self.is_start:
-            j['is_start'] = True
+            attachment['is_start'] = True
         if self.is_end:
-            j['is_end'] = True
+            attachment['is_end'] = True
         if self.is_representative:
-            j['is_representative'] = True
-        return j
+            attachment['is_representative'] = True
+        return attachment
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         # not eval-usable
-        flags = []
+        flags: list[str] = []
         if self.is_start:
             flags.append("start")
         if self.is_end:
@@ -152,5 +173,5 @@ class CorefAttachment:
             f"{', ' + flag_str if flag_str else ''})"
         )
 
-    def __str__(self):
+    def __str__(self) -> str:
         return repr(self)

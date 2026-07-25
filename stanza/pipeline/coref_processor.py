@@ -2,18 +2,50 @@
 Processor that attaches coref annotations to a document
 """
 
-from stanza.models.common.utils import misc_to_space_after
-from stanza.models.coref.coref_chain import CorefMention, CorefChain
-from stanza.models.common.doc import Word
+from __future__ import annotations
 
-from stanza.pipeline._constants import *
-from stanza.pipeline.processor import UDProcessor, register_processor
+from typing import ClassVar, Optional, Sequence, TYPE_CHECKING, TypedDict, Union
 
 import torch
 
-def extract_text(document, sent_id, start_word, end_word):
+from stanza.models.common.utils import misc_to_space_after
+from stanza.models.coref.coref_chain import CorefMention, CorefChain
+from stanza.models.coref.config import Config
+from stanza.models.coref.const import CorefResult
+from stanza.models.common.doc import Document, Token, TokenEntry, Word
+
+from stanza.pipeline._constants import COREF, TOKENIZE
+from stanza.pipeline.processor import UDProcessor, register_processor
+
+if TYPE_CHECKING:
+    from stanza.models.coref.model import CorefModel
+    from stanza.pipeline.core import Pipeline
+
+
+class _RequiredCorefProcessorConfig(TypedDict):
+    model_path: str
+
+
+class _CorefProcessorConfig(_RequiredCorefProcessorConfig, total=False):
+    log_norms: bool
+    batch_size: Union[int, str, None]
+    use_zeros: Union[bool, str]
+
+
+_CorefInputValue = Union[str, list[str], list[int]]
+_Device = Union[str, torch.device]
+_ZeroWordId = tuple[int, int]
+_ZeroNodeMap = dict[tuple[int, int], tuple[int, _ZeroWordId]]
+
+
+def extract_text(
+        document: Document,
+        sent_id: int,
+        start_word: int,
+        end_word: int,
+    ) -> str:
     sentence = document.sentences[sent_id]
-    tokens = []
+    tokens: list[Union[Token, Word]] = []
 
     # the coref model indexes the words from 0,
     # whereas the ids we are looking at on the tokens start from 1
@@ -30,6 +62,8 @@ def extract_text(document, sent_id, start_word, end_word):
     while next_idx < end_word:
         word = sentence.words[next_idx-1]
         parent_token = word.parent
+        if parent_token is None:
+            raise ValueError("Cannot extract coreference text from a word without a parent token")
         if isinstance(parent_token.id, int) or len(parent_token.id) == 1:
             tokens.append(parent_token)
             next_idx += 1
@@ -42,7 +76,7 @@ def extract_text(document, sent_id, start_word, end_word):
 
     # We use the SpaceAfter or SpacesAfter attribute on each Word or Token
     # we chose in the above loop to separate the text pieces
-    text = []
+    text: list[str] = []
     for token in tokens:
         text.append(token.text)
         text.append(misc_to_space_after(token.misc))
@@ -55,11 +89,19 @@ def extract_text(document, sent_id, start_word, end_word):
 @register_processor(COREF)
 class CorefProcessor(UDProcessor):
     # set of processor requirements this processor fulfills
-    PROVIDES_DEFAULT = set([COREF])
+    PROVIDES_DEFAULT: ClassVar[set[str]] = {COREF}
     # set of processor requirements for this processor
-    REQUIRES_DEFAULT = set([TOKENIZE])
+    REQUIRES_DEFAULT: ClassVar[set[str]] = {TOKENIZE}
 
-    def _set_up_model(self, config, pipeline, device):
+    _model: CorefModel
+    _use_zeros: bool
+
+    def _set_up_model(
+            self,
+            config: _CorefProcessorConfig,
+            pipeline: Pipeline,
+            device: _Device,
+        ) -> None:
         try:
             from stanza.models.coref.model import CorefModel
         except ImportError:
@@ -77,24 +119,27 @@ class CorefProcessor(UDProcessor):
                                               "bert_scheduler", "general_scheduler"},
                                       config_update=config_update,
                                       foundation_cache=pipeline.foundation_cache)
-        if config.get('batch_size', None):
-            model.config.a_scoring_batch_size = int(config['batch_size'])
+        batch_size = config.get('batch_size')
+        if batch_size:
+            model_config = model.config
+            if not isinstance(model_config, Config):
+                raise TypeError("Loaded coreference model has an invalid configuration")
+            model_config.a_scoring_batch_size = int(batch_size)
         model.training = False
 
         self._model = model
 
         # coref_use_zeros=False will turn off creating new nodes and attaching mentions to those zero nodes
-        self._use_zeros = config.get('use_zeros', True)
-        if isinstance(self._use_zeros, str):
-            self._use_zeros = self._use_zeros.lower() != 'false'
+        use_zeros = config.get('use_zeros', True)
+        self._use_zeros = use_zeros.lower() != 'false' if isinstance(use_zeros, str) else use_zeros
 
-    def process(self, document):
+    def process(self, document: Document) -> Document:
         sentences = document.sentences
 
-        cased_words = []
-        sent_ids = []
-        word_pos = []
-        speaker = []
+        cased_words: list[str] = []
+        sent_ids: list[int] = []
+        word_pos: list[int] = []
+        speaker: list[str] = []
         for sent_idx, sentence in enumerate(sentences):
             for word_idx, word in enumerate(sentence.words):
                 cased_words.append(word.text)
@@ -105,20 +150,20 @@ class CorefProcessor(UDProcessor):
                 else:
                     speaker.append("_")
 
-        coref_input = {
+        coref_input: dict[str, _CorefInputValue] = {
             "document_id": "wb_doc_1",
             "cased_words": cased_words,
             "sent_id": sent_ids,
             "speaker": speaker,
         }
-        coref_input = self._model.build_doc(coref_input)
-        results = self._model.run(coref_input)
+        built_coref_input = self._model.build_doc(coref_input)
+        results: CorefResult = self._model.run(built_coref_input)
 
         
         # Handle zero anaphora - zero_scores is always predicted
         zero_nodes_created = self._handle_zero_anaphora(document, results, sent_ids, word_pos)
         
-        clusters = []
+        clusters: list[CorefChain] = []
         for cluster_idx, span_cluster in enumerate(results.span_clusters):
             if len(span_cluster) == 0:
                 continue
@@ -138,7 +183,7 @@ class CorefProcessor(UDProcessor):
             # to the sentence, ties are broken first by maximum
             # number of UPOS and then earliest in the document
             max_len = 0
-            best_span = None
+            best_span: Optional[int] = None
             max_propn = 0
             for span_idx, span in enumerate(span_cluster):
                 word_idx = results.word_clusters[cluster_idx][span_idx]
@@ -162,7 +207,7 @@ class CorefProcessor(UDProcessor):
                     best_span = span_idx
                     max_propn = num_propn
 
-            mentions = []
+            mentions: list[CorefMention] = []
             for span_idx, span in enumerate(span_cluster):
                 word_idx = results.word_clusters[cluster_idx][span_idx]
                 is_zero = zero_nodes_created.get((cluster_idx, word_idx))
@@ -187,6 +232,9 @@ class CorefProcessor(UDProcessor):
             # is just underscore
             if best_span is not None:
                 representative = mentions[best_span]
+                if (isinstance(representative.start_word, tuple)
+                        or isinstance(representative.end_word, tuple)):
+                    raise ValueError("A zero node cannot be a representative coreference mention")
                 representative_text = extract_text(document, representative.sentence, representative.start_word, representative.end_word)
             else:
                 representative_text = "_"
@@ -197,7 +245,13 @@ class CorefProcessor(UDProcessor):
         document.coref = clusters
         return document
 
-    def _handle_zero_anaphora(self, document, results, sent_ids, word_pos):
+    def _handle_zero_anaphora(
+            self,
+            document: Document,
+            results: CorefResult,
+            sent_ids: Sequence[int],
+            word_pos: Sequence[int],
+        ) -> _ZeroNodeMap:
         """Handle zero anaphora by creating zero nodes and updating coreference clusters."""
         if results.zero_scores is None or results.word_clusters is None:
             return {}
@@ -205,11 +259,10 @@ class CorefProcessor(UDProcessor):
             return {}
 
         zero_scores = results.zero_scores.squeeze(-1) if results.zero_scores.dim() > 1 else results.zero_scores
-        is_zero = []
         
         # Flatten word_clusters to get the word indices that correspond to zero_scores
-        cluster_word_ids = []
-        cluster_mapping = {}
+        cluster_word_ids: list[int] = []
+        cluster_mapping: dict[int, int] = {}
         counter = 0
         for indx, cluster in enumerate(results.word_clusters):
             for _ in range(len(cluster)):
@@ -222,10 +275,10 @@ class CorefProcessor(UDProcessor):
 
         # this dict maps (cluster_id, word_id) to (cluster_id, start, end)
         # which overrides span_clusters
-        zero_to_coref = {}
+        zero_to_coref: _ZeroNodeMap = {}
 
         for zero_idx in zero_indices:
-            zero_idx = zero_idx.item()
+            zero_idx = int(zero_idx.item())
             if zero_idx >= len(cluster_word_ids):
                 continue
                 
@@ -235,16 +288,17 @@ class CorefProcessor(UDProcessor):
             
             # Create zero node - attach BEFORE the current word
             # This means the zero node comes after word_id-1 but before word_id
-            zero_word_id = (
+            zero_word_id: _ZeroWordId = (
                 word_id, 
-                len(document.sentences[sent_id]._empty_words)+1
+                len(document.sentences[sent_id].empty_words)+1
             )  # attach after word_id-1, before word_id
-            zero_word = Word(document.sentences[sent_id], {
+            zero_word_entry: TokenEntry = {
                 "text": "_", 
                 "lemma": "_", 
                 "id": zero_word_id
-            })
-            document.sentences[sent_id]._empty_words.append(zero_word)
+            }
+            zero_word = Word(document.sentences[sent_id], zero_word_entry)
+            document.sentences[sent_id].empty_words.append(zero_word)
             
             # Track this zero node for adding to coreference clusters
             cluster_idx = cluster_mapping[zero_idx]

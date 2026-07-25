@@ -1,4 +1,12 @@
-def make_table(header, content, column_width=None):
+from collections.abc import Sequence
+from typing import Optional
+
+
+def make_table(
+        header: Sequence[str],
+        content: Sequence[Sequence[str]],
+        column_width: Optional[int] = None,
+    ) -> str:
     '''
     Input:
     header -> List[str]: table header
@@ -9,7 +17,7 @@ def make_table(header, content, column_width=None):
     table_str -> str: well-formatted string for the table
     '''
     table_str = ''
-    len_column, len_row = len(header), len(content) + 1
+    len_column = len(header)
     if column_width is None:
         # dynamically decide column widths
         lens = [[len(str(h)) for h in header]]

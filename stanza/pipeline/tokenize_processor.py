@@ -2,20 +2,32 @@
 Processor for performing tokenization
 """
 
+from __future__ import annotations
+
+from collections.abc import Sequence
 import copy
-import io
 import logging
+import os
 import re
+from typing import Final, Optional, Protocol, TYPE_CHECKING, TypedDict, Union
 
 import torch
 
 from stanza.models.tokenization.data import TokenizationDataset
 from stanza.models.tokenization.trainer import Trainer
-from stanza.models.tokenization.utils import output_predictions
+from stanza.models.tokenization.utils import (
+    TokenizerDictionary,
+    TokenizerPostprocessor,
+    TokenizerTrainer,
+    output_predictions,
+)
+from stanza.models.tokenization.vocab import Vocab
 from stanza.pipeline._constants import *
-from stanza.pipeline.processor import UDProcessor, register_processor
-from stanza.pipeline.registry import PROCESSOR_VARIANTS
+from stanza.pipeline.processor import ProcessorDevice, UDProcessor, register_processor
 from stanza.models.common import doc
+
+if TYPE_CHECKING:
+    from stanza.pipeline.core import Pipeline
 
 # these imports trigger the "register_variant" decorations
 from stanza.pipeline.external.jieba import JiebaTokenizer
@@ -25,10 +37,70 @@ from stanza.pipeline.external.pythainlp import PyThaiNLPTokenizer
 
 logger = logging.getLogger('stanza')
 
-TOKEN_TOO_LONG_REPLACEMENT = "<UNK>"
+TOKEN_TOO_LONG_REPLACEMENT: Final[str] = "<UNK>"
+
+_SpeakerSegment = tuple[Optional[str], str, int]
+_PretokenizedInput = Union[str, list[str], doc.PretokenizedText]
+_TokenizerInput = Union[str, list[str], doc.PretokenizedText, doc.Document]
+_TokenizedData = list[list[doc.TokenEntry]]
+_OffsetUnit = Union[doc.Token, doc.Word]
+_ModelPath = Union[str, os.PathLike[str]]
 
 
-def parse_speaker_segments(text, opener, closer):
+class _TokenizeSetupConfig(TypedDict, total=False):
+    pretokenized: bool
+    forward_charlm_path: Optional[str]
+    model_path: _ModelPath
+    postprocessor: TokenizerPostprocessor
+    speaker_delim: str
+
+
+class _TokenizeRuntimeConfig(_TokenizeSetupConfig, total=False):
+    max_seqlen: int
+    no_ssplit: bool
+    num_workers: int
+
+
+class _TokenizerTrainer(TokenizerTrainer, Protocol):
+    @property
+    def dictionary(self) -> Optional[TokenizerDictionary]:
+        ...
+
+    @property
+    def vocab(self) -> Optional[Vocab]:
+        ...
+
+
+class _TokenizerVariant(Protocol):
+    def process(self, doc: _TokenizerInput) -> doc.Document:
+        ...
+
+    def bulk_process(
+            self,
+            docs: list[doc.Document],
+        ) -> list[doc.Document]:
+        ...
+
+
+def _require_offsets(unit: _OffsetUnit) -> tuple[int, int]:
+    start_char = unit.start_char
+    end_char = unit.end_char
+    if start_char is None or end_char is None:
+        raise ValueError(f"Missing character offsets for {unit!r}")
+    return start_char, end_char
+
+
+def _shift_offsets(unit: _OffsetUnit, offset_delta: int) -> None:
+    start_char, end_char = _require_offsets(unit)
+    unit._start_char = start_char + offset_delta
+    unit._end_char = end_char + offset_delta
+
+
+def parse_speaker_segments(
+        text: str,
+        opener: str,
+        closer: str,
+    ) -> list[_SpeakerSegment]:
     """
     Parse a raw text string containing inline speaker tags into a list of
     (speaker, segment_text, tag_start_in_original) tuples.
@@ -68,8 +140,8 @@ def parse_speaker_segments(text, opener, closer):
         f"{escaped_opener}([^{escaped_closer}{escaped_opener}]+){escaped_closer}"
     )
 
-    segments = []
-    prev_speaker = None
+    segments: list[_SpeakerSegment] = []
+    prev_speaker: Optional[str] = None
     prev_end = 0  # position in `text` where the current segment content started
 
     for m in tag_pattern.finditer(text):
@@ -91,7 +163,7 @@ def parse_speaker_segments(text, opener, closer):
     return segments
 
 
-def _check_empty_segments(segments):
+def _check_empty_segments(segments: Sequence[_SpeakerSegment]) -> None:
     """
     Warn if any labeled segment (i.e., after a speaker tag) has no
     non-whitespace content.  This catches consecutive tags like <A><B>text,
@@ -116,7 +188,11 @@ def _check_empty_segments(segments):
                 )
 
 
-def _apply_speaker_to_sentences(result_doc, segments, original_text):
+def _apply_speaker_to_sentences(
+        result_doc: doc.Document,
+        segments: Sequence[_SpeakerSegment],
+        original_text: str,
+    ) -> None:
     """
     Given a Document produced by tokenizing the joined (tag-stripped) text,
     and the original (speaker, segment_text, original_seg_start) segment list,
@@ -147,7 +223,7 @@ def _apply_speaker_to_sentences(result_doc, segments, original_text):
     # We join with "\n\n" (len 2), matching what the caller passed to process().
     # Skip segments that were empty (they contributed nothing to the joined text).
     non_empty_segments = [(spk, seg, orig) for (spk, seg, orig) in segments if seg]
-    stripped_seg_starts = []
+    stripped_seg_starts: list[int] = []
     cursor = 0
     for _, seg_text, _ in non_empty_segments:
         stripped_seg_starts.append(cursor)
@@ -169,8 +245,13 @@ def _apply_speaker_to_sentences(result_doc, segments, original_text):
         # stripped space) is <= stripped_seg_end.  This mirrors the logic
         # in bulk_process.
         seg_sent_start = sent_idx
-        while (sent_idx < num_sentences and
-               sentences[sent_idx].tokens[-1].end_char <= stripped_seg_end):
+        while sent_idx < num_sentences:
+            sentence_tokens = sentences[sent_idx].tokens
+            if not sentence_tokens:
+                raise ValueError("Speaker-tagged sentences cannot be empty")
+            _, sentence_end = _require_offsets(sentence_tokens[-1])
+            if sentence_end > stripped_seg_end:
+                break
             sent_idx += 1
         seg_sent_end = sent_idx
 
@@ -180,12 +261,10 @@ def _apply_speaker_to_sentences(result_doc, segments, original_text):
             sent.speaker = speaker
 
             for token in sent.tokens:
-                token._start_char += offset_delta
-                token._end_char += offset_delta
+                _shift_offsets(token, offset_delta)
                 if token.words:
                     for word in token.words:
-                        word._start_char += offset_delta
-                        word._end_char += offset_delta
+                        _shift_offsets(word, offset_delta)
 
     # Fix up spaces_after/spaces_before using the original text, now that
     # offsets are corrected.  We do the same walk that Document.mark_whitespace
@@ -214,6 +293,11 @@ def _apply_speaker_to_sentences(result_doc, segments, original_text):
 # class for running the tokenizer
 @register_processor(name=TOKENIZE)
 class TokenizeProcessor(UDProcessor):
+    _config: _TokenizeRuntimeConfig
+    _trainer: Optional[_TokenizerTrainer]
+    _postprocessor: Optional[TokenizerPostprocessor]
+    _speaker_opener: Optional[str]
+    _speaker_closer: Optional[str]
 
     # set of processor requirements this processor fulfills
     PROVIDES_DEFAULT = set([TOKENIZE])
@@ -222,13 +306,34 @@ class TokenizeProcessor(UDProcessor):
     # default max sequence length
     MAX_SEQ_LENGTH_DEFAULT = 1000
 
-    def _set_up_model(self, config, pipeline, device):
+    def _set_up_model(
+            self,
+            config: _TokenizeSetupConfig,
+            pipeline: Optional[Pipeline],
+            device: Optional[ProcessorDevice],
+        ) -> None:
         # set up trainer
         if config.get('pretokenized'):
             self._trainer = None
         else:
+            model_path = config.get('model_path')
+            if not isinstance(model_path, (str, os.PathLike)):
+                raise ValueError(
+                    "A neural tokenizer requires a string or path-like model_path"
+                )
+            normalized_model_path = os.fspath(model_path)
+            if not isinstance(normalized_model_path, str):
+                raise ValueError(
+                    "A neural tokenizer requires a text model_path"
+                )
             args = {'charlm_forward_file': config.get('forward_charlm_path', None)}
-            self._trainer = Trainer(args=args, model_file=config['model_path'], device=device, foundation_cache=pipeline.foundation_cache)
+            foundation_cache = None if pipeline is None else pipeline.foundation_cache
+            self._trainer = Trainer(
+                args=args,
+                model_file=normalized_model_path,
+                device=device,
+                foundation_cache=foundation_cache,
+            )
 
         # get and typecheck the postprocessor
         postprocessor = config.get('postprocessor')
@@ -242,6 +347,11 @@ class TokenizeProcessor(UDProcessor):
         # parse the speaker_delim option into (opener, closer) if provided
         speaker_delim = config.get('speaker_delim', None)
         if speaker_delim is not None:
+            if not isinstance(speaker_delim, str):
+                raise ValueError(
+                    "speaker_delim must be a string containing exactly two characters. "
+                    f"Got {speaker_delim!r}"
+                )
             if len(speaker_delim) != 2:
                 raise ValueError(
                     "speaker_delim must be exactly two characters (opener and closer), "
@@ -253,77 +363,212 @@ class TokenizeProcessor(UDProcessor):
             self._speaker_opener = None
             self._speaker_closer = None
 
-    def process_pre_tokenized_text(self, input_src):
+    def _runtime_config(self) -> _TokenizeRuntimeConfig:
+        return self._config
+
+    def _neural_state(self) -> tuple[_TokenizerTrainer, Vocab]:
+        trainer = self._trainer
+        vocab = self._vocab
+        if trainer is None:
+            raise RuntimeError("The neural tokenizer model has not been loaded")
+        if not isinstance(vocab, Vocab):
+            raise RuntimeError("The neural tokenizer vocabulary has not been loaded")
+        return trainer, vocab
+
+    def _tokenizer_variant(self) -> _TokenizerVariant:
+        variant: _TokenizerVariant = self._variant
+        return variant
+
+    def _speaker_delimiters(self) -> tuple[str, str]:
+        opener = self._speaker_opener
+        closer = self._speaker_closer
+        if opener is None or closer is None:
+            raise RuntimeError("Speaker delimiters have not been configured")
+        return opener, closer
+
+    def _max_sequence_length(self) -> int:
+        max_seq_len = self._runtime_config().get(
+            'max_seqlen',
+            TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT,
+        )
+        if not isinstance(max_seq_len, int) or isinstance(max_seq_len, bool):
+            raise ValueError(
+                "max_seqlen must be an integer. "
+                f"Got {max_seq_len!r}"
+            )
+        if max_seq_len <= 0:
+            raise ValueError(
+                "max_seqlen must be greater than zero. "
+                f"Got {max_seq_len}"
+            )
+        return max_seq_len
+
+    def _num_workers(self) -> int:
+        num_workers = self._runtime_config().get('num_workers', 0)
+        if not isinstance(num_workers, int) or isinstance(num_workers, bool):
+            raise ValueError(
+                "num_workers must be an integer. "
+                f"Got {num_workers!r}"
+            )
+        if num_workers < 0:
+            raise ValueError(
+                "num_workers cannot be negative. "
+                f"Got {num_workers}"
+            )
+        return num_workers
+
+    def _tokenize_neural(self, raw_text: str) -> _TokenizedData:
+        trainer, vocab = self._neural_state()
+        max_seq_len = self._max_sequence_length()
+        config = self._runtime_config()
+
+        batches = TokenizationDataset(
+            config,
+            input_text=raw_text,
+            vocab=vocab,
+            evaluation=True,
+            dictionary=trainer.dictionary,
+        )
+        token_data: _TokenizedData
+        with torch.no_grad():
+            _, _, _, token_data = output_predictions(
+                None,
+                trainer,
+                batches,
+                vocab,
+                None,
+                max_seq_len,
+                orig_text=raw_text,
+                no_ssplit=bool(config.get('no_ssplit', False)),
+                num_workers=self._num_workers(),
+                postprocessor=self._postprocessor,
+            )
+
+        # replace excessively long tokens with <UNK> to avoid downstream GPU
+        # memory issues in POS
+        for sentence in token_data:
+            for token in sentence:
+                if len(token[doc.TEXT]) > max_seq_len:
+                    token[doc.TEXT] = TOKEN_TOO_LONG_REPLACEMENT
+
+        return token_data
+
+    def process_pre_tokenized_text(
+            self,
+            input_src: _PretokenizedInput,
+        ) -> tuple[str, _TokenizedData]:
         """
         Pretokenized text can be provided in 2 manners:
 
         1.) str, tokenized by whitespace, sentence split by newline
-        2.) list of token lists, each token list represents a sentence
+        2.) a flat token list representing one sentence, or a list of token
+            lists in which each inner list represents a sentence
 
         generate dictionary data structure
         """
 
-        document = []
+        sentences: list[list[str]]
         if isinstance(input_src, str):
             sentences = [sent.strip().split() for sent in input_src.strip().split('\n') if len(sent.strip()) > 0]
         elif isinstance(input_src, list):
-            sentences = input_src
+            if not input_src:
+                sentences = []
+            elif all(isinstance(token, str) for token in input_src):
+                sentence: list[str] = []
+                for token in input_src:
+                    if not isinstance(token, str):
+                        raise ValueError("Pretokenized input cannot mix tokens and sentences")
+                    sentence.append(token)
+                sentences = [sentence]
+            else:
+                sentences = []
+                for sentence_input in input_src:
+                    if isinstance(sentence_input, str):
+                        raise ValueError("Pretokenized input cannot mix tokens and sentences")
+                    if not isinstance(sentence_input, list):
+                        raise ValueError(
+                            "Every pretokenized sentence must be a list of strings"
+                        )
+                    if not sentence_input:
+                        raise ValueError("Pretokenized input cannot contain an empty sentence")
+                    sentence = []
+                    for token in sentence_input:
+                        if not isinstance(token, str):
+                            raise ValueError("Every pretokenized token must be a string")
+                        sentence.append(token)
+                    sentences.append(sentence)
+        else:
+            raise TypeError(
+                "Pretokenized input must be a string, a token list, "
+                "or a list of token lists"
+            )
+
+        document: _TokenizedData = []
         idx = 0
         for sentence in sentences:
-            sent = []
+            sent: list[doc.TokenEntry] = []
             for token_id, token in enumerate(sentence):
-                sent.append({doc.ID: (token_id + 1, ), doc.TEXT: token, doc.MISC: f'start_char={idx}|end_char={idx + len(token)}'})
+                entry: doc.TokenEntry = {
+                    doc.ID: (token_id + 1,),
+                    doc.TEXT: token,
+                    doc.MISC: f'start_char={idx}|end_char={idx + len(token)}',
+                }
+                sent.append(entry)
                 idx += len(token) + 1
             document.append(sent)
         raw_text = ' '.join([' '.join(sentence) for sentence in sentences])
         return raw_text, document
 
-    def process(self, document):
-        if not (isinstance(document, str) or isinstance(document, doc.Document) or (self.config.get('pretokenized') or self.config.get('no_ssplit', False))):
-            raise ValueError("If neither 'pretokenized' or 'no_ssplit' option is enabled, the input to the TokenizerProcessor must be a string or a Document object.  Got %s" % str(type(document)))
+    def process(self, document: _TokenizerInput) -> doc.Document:
+        config = self._runtime_config()
+        if not (isinstance(document, str) or isinstance(document, doc.Document) or (config.get('pretokenized') or config.get('no_ssplit', False))):
+            raise ValueError("If neither 'pretokenized' or 'no_ssplit' option is enabled, the input to the TokenizerProcessor must be a string or a Document instance.  Got %s" % str(type(document)))
 
+        input_src: _PretokenizedInput
         if isinstance(document, doc.Document):
-            if self.config.get('pretokenized'):
+            if config.get('pretokenized'):
                 return document
-            document = document.text
+            document_text = document.text
+            if not isinstance(document_text, str):
+                raise TypeError(
+                    "A Document passed to the neural tokenizer must contain string text"
+                )
+            input_src = document_text
+        else:
+            input_src = document
 
-        if self.config.get('pretokenized'):
-            raw_text, document = self.process_pre_tokenized_text(document)
-            return doc.Document(document, raw_text)
+        if config.get('pretokenized'):
+            raw_text, token_data = self.process_pre_tokenized_text(input_src)
+            return doc.Document(token_data, raw_text)
 
         if hasattr(self, '_variant'):
-            return self._variant.process(document)
+            # Preserve the extension contract: variants receive the input in
+            # the same shape supplied by the caller (except Document wrappers,
+            # which historically expose their text).
+            return self._tokenizer_variant().process(input_src)
 
-        # Handle speaker-tagged input.  We do this before the normal tokenization
-        # path so that the speaker boundaries force sentence splits and the
-        # resulting sentences get .speaker annotations.
-        if self._speaker_opener is not None and isinstance(document, str):
-            return self._process_speaker_tagged_text(document)
+        if isinstance(input_src, str):
+            raw_text = input_src
+        else:
+            paragraphs: list[str] = []
+            for paragraph in input_src:
+                if not isinstance(paragraph, str):
+                    raise ValueError(
+                        "Without pretokenized=True, tokenizer list input must "
+                        "contain only strings"
+                    )
+                paragraphs.append(paragraph)
+            raw_text = '\n\n'.join(paragraphs)
 
-        raw_text = '\n\n'.join(document) if isinstance(document, list) else document
+        # Handle speaker-tagged input before the normal tokenization path so
+        # speaker boundaries force sentence splits and sentences get speakers.
+        if self._speaker_opener is not None:
+            return self._process_speaker_tagged_text(raw_text)
 
-        max_seq_len = self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT)
+        token_data = self._tokenize_neural(raw_text)
+        return doc.Document(token_data, raw_text)
 
-        # set up batches
-        batches = TokenizationDataset(self.config, input_text=raw_text, vocab=self.vocab, evaluation=True, dictionary=self.trainer.dictionary)
-        # get dict data
-        with torch.no_grad():
-            _, _, _, document = output_predictions(None, self.trainer, batches, self.vocab, None,
-                                                   max_seq_len,
-                                                   orig_text=raw_text,
-                                                   no_ssplit=self.config.get('no_ssplit', False),
-                                                   num_workers = self.config.get('num_workers', 0),
-                                                   postprocessor = self._postprocessor)
-
-        # replace excessively long tokens with <UNK> to avoid downstream GPU memory issues in POS
-        for sentence in document:
-            for token in sentence:
-                if len(token['text']) > max_seq_len:
-                    token['text'] = TOKEN_TOO_LONG_REPLACEMENT
-
-        return doc.Document(document, raw_text)
-
-    def _process_speaker_tagged_text(self, original_text):
+    def _process_speaker_tagged_text(self, original_text: str) -> doc.Document:
         """
         Tokenize a string that contains inline speaker tags such as "<A>text <B>more text".
 
@@ -336,9 +581,8 @@ class TokenizeProcessor(UDProcessor):
           5. Walk the resulting sentences in segment order, assigning .speaker
              and correcting character offsets back into the original string.
         """
-        segments = parse_speaker_segments(
-            original_text, self._speaker_opener, self._speaker_closer
-        )
+        opener, closer = self._speaker_delimiters()
+        segments = parse_speaker_segments(original_text, opener, closer)
         _check_empty_segments(segments)
 
         non_empty_segments = [(spk, seg, orig) for (spk, seg, orig) in segments if seg]
@@ -348,23 +592,7 @@ class TokenizeProcessor(UDProcessor):
 
         joined_text = '\n\n'.join(seg for _, seg, _ in non_empty_segments)
 
-        max_seq_len = self.config.get('max_seqlen', TokenizeProcessor.MAX_SEQ_LENGTH_DEFAULT)
-
-        batches = TokenizationDataset(self.config, input_text=joined_text, vocab=self.vocab, evaluation=True, dictionary=self.trainer.dictionary)
-        with torch.no_grad():
-            _, _, _, token_data = output_predictions(
-                None, self.trainer, batches, self.vocab, None,
-                max_seq_len,
-                orig_text=joined_text,
-                no_ssplit=self.config.get('no_ssplit', False),
-                num_workers=self.config.get('num_workers', 0),
-                postprocessor=self._postprocessor,
-            )
-
-        for sentence in token_data:
-            for token in sentence:
-                if len(token['text']) > max_seq_len:
-                    token['text'] = TOKEN_TOO_LONG_REPLACEMENT
+        token_data = self._tokenize_neural(joined_text)
 
         # Build the Document against the joined (stripped) text first, so that
         # the internal offset machinery in Document.__init__ / mark_whitespace
@@ -375,17 +603,20 @@ class TokenizeProcessor(UDProcessor):
 
         return result_doc
 
-    def bulk_process(self, docs):
+    def bulk_process(self, docs: list[doc.Document]) -> list[doc.Document]:
         """
         The tokenizer cannot use UDProcessor's sentence-level cross-document batching interface, and requires special handling.
         Essentially, this method concatenates the text of multiple documents with "\n\n", tokenizes it with the neural tokenizer,
         then splits the result into the original Documents and recovers the original character offsets.
         """
-        if hasattr(self, '_variant'):
-            return self._variant.bulk_process(docs)
+        if not docs:
+            return []
 
-        if self.config.get('pretokenized'):
-            res = []
+        if hasattr(self, '_variant'):
+            return self._tokenizer_variant().bulk_process(docs)
+
+        if self._runtime_config().get('pretokenized'):
+            res: list[doc.Document] = []
             for document in docs:
                 if len(document.sentences) > 0:
                     # perhaps this is a document already tokenized,
@@ -397,8 +628,13 @@ class TokenizeProcessor(UDProcessor):
                     # by making a whole deepcopy, the original Document is unchanged
                     res.append(copy.deepcopy(document))
                 else:
-                    raw_text, document = self.process_pre_tokenized_text(document.text)
-                    res.append(doc.Document(document, raw_text))
+                    input_text = document.text
+                    if input_text is None:
+                        raise TypeError(
+                            "A pretokenized Document without sentences must contain text"
+                        )
+                    raw_text, token_data = self.process_pre_tokenized_text(input_text)
+                    res.append(doc.Document(token_data, raw_text))
             return res
 
         # If speaker tagging is active we cannot use the single-pass \n\n join
@@ -409,14 +645,29 @@ class TokenizeProcessor(UDProcessor):
         if self._speaker_opener is not None:
             return [self.process(document) for document in docs]
 
-        combined_text = '\n\n'.join([thisdoc.text for thisdoc in docs])
+        texts: list[str] = []
+        for thisdoc in docs:
+            text = thisdoc.text
+            if not isinstance(text, str):
+                raise TypeError(
+                    "Every Document passed to the tokenizer must contain string text"
+                )
+            texts.append(text)
+
+        combined_text = '\n\n'.join(texts)
         processed_combined = self.process(doc.Document([], text=combined_text))
 
         # postprocess sentences and tokens to reset back pointers and char offsets
         charoffset = 0
         sentst = senten = 0
-        for thisdoc in docs:
-            while senten < len(processed_combined.sentences) and processed_combined.sentences[senten].tokens[-1].end_char - charoffset <= len(thisdoc.text):
+        for thisdoc, text in zip(docs, texts):
+            while senten < len(processed_combined.sentences):
+                sentence_tokens = processed_combined.sentences[senten].tokens
+                if not sentence_tokens:
+                    raise ValueError("Tokenized sentences cannot be empty")
+                _, sentence_end = _require_offsets(sentence_tokens[-1])
+                if sentence_end - charoffset > len(text):
+                    break
                 senten += 1
 
             sentences = processed_combined.sentences[sentst:senten]
@@ -427,12 +678,10 @@ class TokenizeProcessor(UDProcessor):
 
                 # fix char offsets for tokens and words
                 for token in sent.tokens:
-                    token._start_char -= charoffset
-                    token._end_char -= charoffset
+                    _shift_offsets(token, -charoffset)
                     if token.words:  # not-yet-processed MWT can leave empty tokens
                         for word in token.words:
-                            word._start_char -= charoffset
-                            word._end_char -= charoffset
+                            _shift_offsets(word, -charoffset)
 
             # Here we need to fix up the SpacesAfter for the very last token
             # and the SpacesBefore for the first token of the next doc
@@ -446,17 +695,19 @@ class TokenizeProcessor(UDProcessor):
             # the whitespace after its text
             if len(sentences) > 0:
                 last_token = sentences[-1].tokens[-1]
-                last_whitespace = thisdoc.text[last_token.end_char:]
+                _, last_end = _require_offsets(last_token)
+                last_whitespace = text[last_end:]
                 last_token.spaces_after = last_whitespace
 
                 first_token = sentences[0].tokens[0]
-                first_whitespace = thisdoc.text[:first_token.start_char]
+                first_start, _ = _require_offsets(first_token)
+                first_whitespace = text[:first_start]
                 first_token.spaces_before = first_whitespace
 
             thisdoc.num_tokens = sum(len(sent.tokens) for sent in sentences)
             thisdoc.num_words = sum(len(sent.words) for sent in sentences)
             sentst = senten
 
-            charoffset += len(thisdoc.text) + 2
+            charoffset += len(text) + 2
 
         return docs

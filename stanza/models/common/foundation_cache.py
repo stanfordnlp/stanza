@@ -2,21 +2,40 @@
 Keeps BERT, charlm, word embedings in a cache to save memory
 """
 
-from collections import namedtuple
-from copy import deepcopy
+from __future__ import annotations
+
 import logging
+from os import PathLike
 import threading
+from typing import Dict, NamedTuple, Optional, Tuple, TYPE_CHECKING, Union
 
 from stanza.models.common import bert_embedding
 from stanza.models.common.char_model import CharacterLanguageModel
 from stanza.models.common.pretrain import Pretrain
 
+if TYPE_CHECKING:
+    from transformers import PreTrainedModel, PreTrainedTokenizerBase
+
 logger = logging.getLogger('stanza')
 
-BertRecord = namedtuple('BertRecord', ['model', 'tokenizer', 'peft_ids'])
+ModelPath = Union[str, PathLike[str]]
+BertComponents = Union[
+    Tuple["PreTrainedModel", "PreTrainedTokenizerBase"],
+    Tuple[None, None],
+]
+BertComponentsWithPeft = Union[
+    Tuple["PreTrainedModel", "PreTrainedTokenizerBase", Optional[str]],
+    Tuple[None, None, Optional[str]],
+]
 
 
-def load_pretrain(filename, foundation_cache=None):
+class BertRecord(NamedTuple):
+    model: "PreTrainedModel"
+    tokenizer: "PreTrainedTokenizerBase"
+    peft_ids: Dict[str, int]
+
+
+def load_pretrain(filename: Optional[ModelPath], foundation_cache: Optional[FoundationCache] = None) -> Optional[Pretrain]:
     if not filename:
         return None
 
@@ -26,7 +45,12 @@ def load_pretrain(filename, foundation_cache=None):
     logger.debug("Loading pretrain from %s", filename)
     return Pretrain(filename)
 
-def load_charlm(charlm_file, foundation_cache=None, finetune=False):
+
+def load_charlm(
+    charlm_file: Optional[ModelPath],
+    foundation_cache: Optional[FoundationCache] = None,
+    finetune: bool = False,
+) -> Optional[CharacterLanguageModel]:
     if not charlm_file:
         return None
 
@@ -41,23 +65,46 @@ def load_charlm(charlm_file, foundation_cache=None, finetune=False):
     logger.debug("Loading charlm from %s", charlm_file)
     return CharacterLanguageModel.load(charlm_file, finetune=False)
 
-def load_bert(model_name, foundation_cache=None, local_files_only=None, enable_gradient_checkpointing=False):
+
+def load_bert(
+    model_name: Optional[str],
+    foundation_cache: Optional[FoundationCache] = None,
+    local_files_only: Optional[bool] = None,
+    enable_gradient_checkpointing: bool = False,
+) -> BertComponents:
     """
     Load a bert, possibly using a foundation cache, ignoring the cache if None
     """
     if foundation_cache is None:
+        if local_files_only is None:
+            local_files_only = False
         return bert_embedding.load_bert(model_name, local_files_only=local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
     else:
         return foundation_cache.load_bert(model_name, local_files_only=local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
 
-def load_bert_with_peft(model_name, peft_name, foundation_cache=None, local_files_only=None, enable_gradient_checkpointing=False):
+
+def load_bert_with_peft(
+    model_name: Optional[str],
+    peft_name: Optional[str],
+    foundation_cache: Optional[FoundationCache] = None,
+    local_files_only: Optional[bool] = None,
+    enable_gradient_checkpointing: bool = False,
+) -> BertComponentsWithPeft:
     if foundation_cache is None:
+        if local_files_only is None:
+            local_files_only = False
         m, t = bert_embedding.load_bert(model_name, local_files_only=local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
         return m, t, peft_name
     return foundation_cache.load_bert_with_peft(model_name, peft_name, local_files_only=local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
 
+
 class FoundationCache:
-    def __init__(self, other=None, local_files_only=False):
+    bert: Dict[str, BertRecord]
+    charlms: Dict[ModelPath, CharacterLanguageModel]
+    pretrains: Dict[ModelPath, Pretrain]
+    local_files_only: bool
+
+    def __init__(self, other: Optional[FoundationCache] = None, local_files_only: bool = False) -> None:
         if other is None:
             self.bert = {}
             self.charlms = {}
@@ -70,25 +117,45 @@ class FoundationCache:
             self.charlms = other.charlms
             self.pretrains = other.pretrains
             self.lock = other.lock
-        self.local_files_only=local_files_only
+        self.local_files_only = local_files_only
 
-    def load_bert(self, transformer_name, local_files_only=None, enable_gradient_checkpointing=False):
-        m, t, _ = self.load_bert_with_peft(transformer_name, None, local_files_only=local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
-        return m, t
+    def load_bert(
+        self,
+        transformer_name: Optional[str],
+        local_files_only: Optional[bool] = None,
+        enable_gradient_checkpointing: bool = False,
+    ) -> BertComponents:
+        components = self.load_bert_with_peft(
+            transformer_name,
+            None,
+            local_files_only=local_files_only,
+            enable_gradient_checkpointing=enable_gradient_checkpointing,
+        )
+        if components[0] is None:
+            return None, None
+        return components[0], components[1]
 
-    def load_bert_with_peft(self, transformer_name, peft_name, local_files_only=None, enable_gradient_checkpointing=False):
+    def load_bert_with_peft(
+        self,
+        transformer_name: Optional[str],
+        peft_name: Optional[str],
+        local_files_only: Optional[bool] = None,
+        enable_gradient_checkpointing: bool = False,
+    ) -> BertComponentsWithPeft:
         """
         Load a transformer only once
 
         Uses a lock for thread safety
         """
-        if transformer_name is None:
+        if not transformer_name:
             return None, None, None
         with self.lock:
             if transformer_name not in self.bert:
                 if local_files_only is None:
                     local_files_only = self.local_files_only
                 model, tokenizer = bert_embedding.load_bert(transformer_name, local_files_only=local_files_only)
+                assert model is not None
+                assert tokenizer is not None
                 self.bert[transformer_name] = BertRecord(model, tokenizer, {})
 
             else:
@@ -118,7 +185,7 @@ class FoundationCache:
             peft_name = "%s_%d" % (peft_name, bert_record.peft_ids[peft_name])
             return bert_record.model, bert_record.tokenizer, peft_name
 
-    def load_charlm(self, filename):
+    def load_charlm(self, filename: Optional[ModelPath]) -> Optional[CharacterLanguageModel]:
         if not filename:
             return None
 
@@ -131,7 +198,7 @@ class FoundationCache:
 
             return self.charlms[filename]
 
-    def load_pretrain(self, filename):
+    def load_pretrain(self, filename: Optional[ModelPath]) -> Optional[Pretrain]:
         """
         Load a pretrained word embedding only once
 
@@ -148,6 +215,7 @@ class FoundationCache:
 
             return self.pretrains[filename]
 
+
 class NoTransformerFoundationCache(FoundationCache):
     """
     Uses the underlying FoundationCache, but hiding the transformer.
@@ -157,8 +225,19 @@ class NoTransformerFoundationCache(FoundationCache):
     since it will then have the finetuned weights for other models
     which don't want them
     """
-    def load_bert(self, transformer_name, local_files_only=None, enable_gradient_checkpointing=False):
+    def load_bert(
+        self,
+        transformer_name: Optional[str],
+        local_files_only: Optional[bool] = None,
+        enable_gradient_checkpointing: bool = False,
+    ) -> BertComponents:
         return load_bert(transformer_name, local_files_only=self.local_files_only if local_files_only is None else local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)
 
-    def load_bert_with_peft(self, transformer_name, peft_name, local_files_only=None, enable_gradient_checkpointing=False):
+    def load_bert_with_peft(
+        self,
+        transformer_name: Optional[str],
+        peft_name: Optional[str],
+        local_files_only: Optional[bool] = None,
+        enable_gradient_checkpointing: bool = False,
+    ) -> BertComponentsWithPeft:
         return load_bert_with_peft(transformer_name, peft_name, local_files_only=self.local_files_only if local_files_only is None else local_files_only, enable_gradient_checkpointing=enable_gradient_checkpointing)

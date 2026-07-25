@@ -21,7 +21,7 @@ class UnknownLanguageError(ValueError):
 # are eventually processed
 # One source for the known languages UD may add in the future:
 #   https://universaldependencies.org/languages.html
-lcode2lang_raw = [
+lcode2lang_raw: list[tuple[str, str]] = [
     ("abq", "Abaza"),
     ("ab",  "Abkhazian"),
     ("aa",  "Afar"),
@@ -448,13 +448,13 @@ lcode2lang_raw = [
 ]
 
 # build the dictionary, checking for duplicate language codes
-lcode2lang = {}
+lcode2lang: dict[str, str] = {}
 for code, language in lcode2lang_raw:
     assert code not in lcode2lang
     lcode2lang[code] = language
 
 # invert the dictionary, checking for possible duplicate language names
-lang2lcode = {}
+lang2lcode: dict[str, str] = {}
 for code, language in lcode2lang_raw:
     assert language not in lang2lcode
     lang2lcode[language] = code
@@ -465,7 +465,7 @@ assert len(lcode2lang_raw) == len(lang2lcode)
 
 # some of the two letter langcodes get used elsewhere as three letters
 # for example, Wolof is abbreviated "wo" in UD, but "wol" in Masakhane NER
-two_to_three_letters_raw = (
+two_to_three_letters_raw: tuple[tuple[str, str], ...] = (
     ("bm",  "bam"),
     ("ee",  "ewe"),
     ("ha",  "hau"),
@@ -521,11 +521,11 @@ for two, three in two_to_three_letters_raw:
     else:
         raise AssertionError("Found a proposed alias %s -> %s when neither code was already known" % (two, three))
 
-two_to_three_letters = {
+two_to_three_letters: dict[str, str] = {
     two: three for two, three in two_to_three_letters_raw
 }
 
-three_to_two_letters = {
+three_to_two_letters: dict[str, str] = {
     three: two for two, three in two_to_three_letters_raw
 }
 
@@ -549,7 +549,7 @@ lcode2lang['swh'] = lcode2lang['sw']
 # lcode would silently clobber any language that shares an lcode with
 # another entry (eg. Divehi & Maldivian both -> dv).  each *language*
 # name still needs to be unique, which is checked below
-extra_lang_to_lcodes_raw = [
+extra_lang_to_lcodes_raw: list[tuple[str, str]] = [
     ("Abkhaz", "ab"),
     ("Alemannic", "gsw"),
     ("Bangla", "bn"),
@@ -608,19 +608,19 @@ for language, code in extra_lang_to_lcodes_raw:
     assert code in lcode2lang
     lang2lcode[language] = code
 
-extra_lang_to_lcodes = {language: code for language, code in extra_lang_to_lcodes_raw}
+extra_lang_to_lcodes: dict[str, str] = {language: code for language, code in extra_lang_to_lcodes_raw}
 assert len(extra_lang_to_lcodes) == len(extra_lang_to_lcodes_raw)
 
-extra_lcode_to_lang = defaultdict(list)
+extra_lcode_to_lang: defaultdict[str, list[str]] = defaultdict(list)
 for language, code in extra_lang_to_lcodes_raw:
     extra_lcode_to_lang[code].append(language)
 
 # build a lowercase map from language to langcode
-langlower2lcode = {}
+langlower2lcode: dict[str, str] = {}
 for k in lang2lcode:
     langlower2lcode[k.lower()] = lang2lcode[k]
 
-treebank_special_cases = {
+treebank_special_cases: dict[str, str] = {
     "UD_Chinese-Beginner": "zh-hans_beginner",
     "UD_Chinese-GSDSimp": "zh-hans_gsdsimp",
     "UD_Chinese-GSD": "zh-hant_gsd",
@@ -633,9 +633,9 @@ treebank_special_cases = {
     "UD_Norwegian-NynorskLIA": "nn_nynorsklia",
 }
 
-SHORTNAME_RE = re.compile("^[a-z-]+_[a-z0-9-_]+$")
+SHORTNAME_RE: re.Pattern[str] = re.compile("^[a-z-]+_[a-z0-9-_]+$")
 
-def langcode_to_lang(lcode):
+def langcode_to_lang(lcode: str) -> str:
     if lcode in lcode2lang:
         return lcode2lang[lcode]
     elif lcode.lower() in lcode2lang:
@@ -643,7 +643,7 @@ def langcode_to_lang(lcode):
     else:
         return lcode
 
-def pretty_langcode_to_lang(lcode):
+def pretty_langcode_to_lang(lcode: str) -> str:
     lang = langcode_to_lang(lcode)
     lang = lang.replace("_", " ")
     if lang == 'Simplified Chinese':
@@ -652,7 +652,7 @@ def pretty_langcode_to_lang(lcode):
         lang = 'Chinese (Traditional)'
     return lang
 
-def lang_to_langcode(lang):
+def lang_to_langcode(lang: str) -> str:
     if lang in lang2lcode:
         lcode = lang2lcode[lang]
     elif lang.lower() in langlower2lcode:
@@ -666,9 +666,9 @@ def lang_to_langcode(lang):
     return lcode
 
 # UG (Uyghur) has two commonly used scripts, but the UD dataset is the RtL script anyway
-RIGHT_TO_LEFT = set(["aii", "ajb", "ar", "arc", "arz", "az", "azb", "bal", "ckb", "dv", "ff", "hbo", "he", "hnd", "hno", "ku", "lrc", "mzn", "nqo", "pnb", "prs", "ps", "fa", "rhg", "sd", "sdh", "skr", "syr", "ug", "ur", "yi"])
+RIGHT_TO_LEFT: set[str] = set(["aii", "ajb", "ar", "arc", "arz", "az", "azb", "bal", "ckb", "dv", "ff", "hbo", "he", "hnd", "hno", "ku", "lrc", "mzn", "nqo", "pnb", "prs", "ps", "fa", "rhg", "sd", "sdh", "skr", "syr", "ug", "ur", "yi"])
 
-def is_right_to_left(lang):
+def is_right_to_left(lang: str) -> bool:
     """
     Covers all the RtL languages we support, as well as many we don't.
 
@@ -677,10 +677,10 @@ def is_right_to_left(lang):
     lcode = lang_to_langcode(lang)
     return lcode in RIGHT_TO_LEFT
 
-def treebank_to_short_name(treebank):
+def treebank_to_short_name(treebank: str) -> str:
     """ Convert treebank name to short code. """
     if treebank in treebank_special_cases:
-        return treebank_special_cases.get(treebank)
+        return treebank_special_cases[treebank]
     if SHORTNAME_RE.match(treebank):
         lang, corpus = treebank.split("_", 1)
         lang = lang_to_langcode(lang)
@@ -706,7 +706,7 @@ def treebank_to_short_name(treebank):
     short = "{}_{}".format(lcode, corpus.lower())
     return short
 
-def treebank_to_langid(treebank):
+def treebank_to_langid(treebank: str) -> str:
     """ Convert treebank name to langid """
     short_name = treebank_to_short_name(treebank)
     return short_name.split("_")[0]
