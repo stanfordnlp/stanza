@@ -2,11 +2,15 @@
 Basic testing of lemmatization
 """
 
+from typing import Mapping, Optional, Protocol
+
 import pytest
 import stanza
 
-from stanza.tests import *
-from stanza.models.common.doc import TEXT, UPOS, LEMMA
+from stanza.models.common.doc import Document
+from stanza.pipeline.core import Pipeline
+from stanza.pipeline.lemma_processor import LemmaProcessor
+from stanza.tests import TEST_MODELS_DIR
 
 pytestmark = pytest.mark.pipeline
 
@@ -33,42 +37,99 @@ California California
 """.strip()
 
 
-def test_identity_lemmatizer():
-    nlp = stanza.Pipeline(**{'processors': 'tokenize,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en', 'lemma_use_identity': True}, download_method=None)
-    doc = nlp(EN_DOC)
-    word_lemma_pairs = []
-    for w in doc.iter_words():
+class _TestLemmaTrainer(Protocol):
+    @property
+    def pos_dict(
+            self,
+        ) -> Mapping[Optional[str], Mapping[str, str]]:
+        ...
+
+    def has_contextual_lemmatizers(self) -> bool:
+        ...
+
+
+def _process_text(pipeline: Pipeline, text: str) -> Document:
+    document = pipeline(text)
+    if not isinstance(document, Document):
+        raise TypeError("A text pipeline must return a Document")
+    return document
+
+
+def _lemma_trainer(pipeline: Pipeline) -> _TestLemmaTrainer:
+    processor = pipeline.processors["lemma"]
+    if not isinstance(processor, LemmaProcessor):
+        raise TypeError("The pipeline did not load a LemmaProcessor")
+    return processor._require_trainer()
+
+
+def _word_annotations(
+        document: Document,
+    ) -> list[tuple[str, Optional[str], Optional[str]]]:
+    return [
+        (word.text, word.upos, word.lemma)
+        for word in document.iter_words()
+    ]
+
+
+def test_identity_lemmatizer() -> None:
+    nlp = stanza.Pipeline(
+        processors='tokenize,lemma',
+        dir=TEST_MODELS_DIR,
+        lang='en',
+        lemma_use_identity=True,
+        download_method=None,
+    )
+    document = _process_text(nlp, EN_DOC)
+    word_lemma_pairs: list[str] = []
+    for w in document.iter_words():
         word_lemma_pairs += [f"{w.text} {w.lemma}"]
     assert EN_DOC_IDENTITY_GOLD == "\n".join(word_lemma_pairs)
 
-def test_full_lemmatizer():
-    nlp = stanza.Pipeline(**{'processors': 'tokenize,pos,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en'}, download_method=None)
-    doc = nlp(EN_DOC)
-    word_lemma_pairs = []
-    for w in doc.iter_words():
+def test_full_lemmatizer() -> None:
+    nlp = stanza.Pipeline(
+        processors='tokenize,pos,lemma',
+        dir=TEST_MODELS_DIR,
+        lang='en',
+        download_method=None,
+    )
+    document = _process_text(nlp, EN_DOC)
+    word_lemma_pairs: list[str] = []
+    for w in document.iter_words():
         word_lemma_pairs += [f"{w.text} {w.lemma}"]
     assert EN_DOC_LEMMATIZER_MODEL_GOLD == "\n".join(word_lemma_pairs)
 
-def find_unknown_word(lemmatizer, base):
-    for i in range(10):
+def find_unknown_word(
+        lemmatizer: _TestLemmaTrainer,
+        base: str,
+    ) -> str:
+    for _ in range(10):
         # pos_dict: pos -> word -> lemma
         # make sure that none of the pos slices contain this word
         base = base + "z"
-        if all(base not in x for x in lemmatizer.pos_dict):
+        if all(base not in entries for entries in lemmatizer.pos_dict.values()):
             return base
     raise RuntimeError("wtf?")
 
-def test_store_results():
-    nlp = stanza.Pipeline(**{'processors': 'tokenize,pos,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en'}, lemma_store_results=True, download_method=None)
-    lemmatizer = nlp.processors["lemma"]._trainer
+def test_store_results() -> None:
+    nlp = stanza.Pipeline(
+        processors='tokenize,pos,lemma',
+        dir=TEST_MODELS_DIR,
+        lang='en',
+        lemma_store_results=True,
+        download_method=None,
+    )
+    lemmatizer = _lemma_trainer(nlp)
 
     az = find_unknown_word(lemmatizer, "a")
     bz = find_unknown_word(lemmatizer, "b")
     cz = find_unknown_word(lemmatizer, "c")
 
     # try sentences with the order long, short
-    doc = nlp("I found an " + az + " in my " + bz + ".  It was a " + cz)
-    stuff = doc.get([TEXT, UPOS, LEMMA])
+    document = _process_text(
+        nlp,
+        "I found an " + az + " in my " + bz + ".  It was a " + cz,
+    )
+    stuff = _word_annotations(document)
     assert len(stuff) == 12
     assert stuff[3][0] == az
     assert stuff[6][0] == bz
@@ -78,8 +139,11 @@ def test_store_results():
     assert lemmatizer.pos_dict[stuff[6][1]][bz] == stuff[6][2]
     assert lemmatizer.pos_dict[stuff[11][1]][cz] == stuff[11][2]
 
-    doc2 = nlp("I found an " + az + " in my " + bz + ".  It was a " + cz)
-    stuff2 = doc2.get([TEXT, UPOS, LEMMA])
+    second_document = _process_text(
+        nlp,
+        "I found an " + az + " in my " + bz + ".  It was a " + cz,
+    )
+    stuff2 = _word_annotations(second_document)
 
     assert stuff == stuff2
 
@@ -88,8 +152,11 @@ def test_store_results():
     fz = find_unknown_word(lemmatizer, "f")
 
     # try sentences with the order short, long
-    doc = nlp("It was a " + dz + ".  I found an " + ez + " in my " + fz)
-    stuff = doc.get([TEXT, UPOS, LEMMA])
+    document = _process_text(
+        nlp,
+        "It was a " + dz + ".  I found an " + ez + " in my " + fz,
+    )
+    stuff = _word_annotations(document)
     assert len(stuff) == 12
     assert stuff[3][0] == dz
     assert stuff[8][0] == ez
@@ -99,62 +166,71 @@ def test_store_results():
     assert lemmatizer.pos_dict[stuff[8][1]][ez] == stuff[8][2]
     assert lemmatizer.pos_dict[stuff[11][1]][fz] == stuff[11][2]
 
-    doc2 = nlp("It was a " + dz + ".  I found an " + ez + " in my " + fz)
-    stuff2 = doc2.get([TEXT, UPOS, LEMMA])
+    second_document = _process_text(
+        nlp,
+        "It was a " + dz + ".  I found an " + ez + " in my " + fz,
+    )
+    stuff2 = _word_annotations(second_document)
 
     assert stuff == stuff2
 
-    assert all(az not in x for x in lemmatizer.pos_dict)
+    # Runtime updates should stay in the POS-specific dictionary instead of
+    # leaking into the POS-independent fallback.
+    assert az not in lemmatizer.pos_dict.get("*", {})
 
-def test_caseless_lemmatizer():
+def test_caseless_lemmatizer() -> None:
     """
     Test that setting the lemmatizer as caseless at Pipeline time lowercases the text
     """
     nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, download_method=None)
     # the capital letter here should throw off the lemmatizer & it won't remove the plural
     # although weirdly the current English model *does* lowercase the A
-    doc = nlp("Here is an Excerpt")
-    assert doc.sentences[0].words[-1].lemma == 'excerpt'
+    document = _process_text(nlp, "Here is an Excerpt")
+    assert document.sentences[0].words[-1].lemma == 'excerpt'
 
     nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, download_method=None, lemma_caseless=True)
     # with the model set to lowercasing, the word will be treated as if it were 'antennae'
-    doc = nlp("Here is an Excerpt")
-    assert doc.sentences[0].words[-1].lemma == 'Excerpt'
+    document = _process_text(nlp, "Here is an Excerpt")
+    assert document.sentences[0].words[-1].lemma == 'Excerpt'
 
-def test_latin_caseless_lemmatizer():
+def test_latin_caseless_lemmatizer() -> None:
     """
     Test the Latin caseless lemmatizer
     """
     nlp = stanza.Pipeline('la', package='ittb', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, download_method=None)
     lemmatizer = nlp.processors['lemma']
-    assert lemmatizer.config['caseless']
+    assert isinstance(lemmatizer, LemmaProcessor)
+    assert lemmatizer.config.get('caseless')
 
-    doc = nlp("Quod Erat Demonstrandum")
+    document = _process_text(nlp, "Quod Erat Demonstrandum")
     expected_lemmas = "qui sum demonstro".split()
-    assert len(doc.sentences) == 1
-    assert len(doc.sentences[0].words) == 3
-    for word, expected in zip(doc.sentences[0].words, expected_lemmas):
+    assert len(document.sentences) == 1
+    assert len(document.sentences[0].words) == 3
+    for word, expected in zip(
+            document.sentences[0].words,
+            expected_lemmas,
+        ):
         assert word.lemma == expected
 
-def test_contextual_lemmatizer():
+def test_contextual_lemmatizer() -> None:
     nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR, package={"lemma": "default_accurate"}, download_method=None)
-    lemmatizer = nlp.processors['lemma']._trainer
+    lemmatizer = _lemma_trainer(nlp)
     # the accurate model should have a 's classifier
-    assert len(lemmatizer.contextual_lemmatizers) > 0
-    doc = nlp("He's added a contextual lemmatizer")
-    assert len(doc.sentences) == 1
-    assert doc.sentences[0].words[1].text == "'s"
-    assert doc.sentences[0].words[1].pos == "AUX"
+    assert lemmatizer.has_contextual_lemmatizers()
+    document = _process_text(nlp, "He's added a contextual lemmatizer")
+    assert len(document.sentences) == 1
+    assert document.sentences[0].words[1].text == "'s"
+    assert document.sentences[0].words[1].pos == "AUX"
     # this test should be simple enough that the
     # contextual classifier gets it right,
     # unless it gets retrained really badly
-    assert doc.sentences[0].words[1].lemma == "have"
+    assert document.sentences[0].words[1].lemma == "have"
 
-    doc = nlp("He's a little tired")
-    assert len(doc.sentences) == 1
-    assert doc.sentences[0].words[1].text == "'s"
-    assert doc.sentences[0].words[1].pos == "AUX"
+    document = _process_text(nlp, "He's a little tired")
+    assert len(document.sentences) == 1
+    assert document.sentences[0].words[1].text == "'s"
+    assert document.sentences[0].words[1].pos == "AUX"
     # this test should be simple enough that the
     # contextual classifier gets it right,
     # unless it gets retrained really badly
-    assert doc.sentences[0].words[1].lemma == "be"
+    assert document.sentences[0].words[1].lemma == "be"

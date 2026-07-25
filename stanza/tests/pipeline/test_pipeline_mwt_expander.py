@@ -5,6 +5,11 @@ Basic testing of multi-word-token expansion
 import pytest
 import stanza
 
+from stanza.models.common.doc import Document, Word
+from stanza.models.common.vocab import DeltaVocab
+from stanza.models.mwt.trainer import Trainer
+from stanza.models.mwt.vocab import Vocab
+from stanza.pipeline.mwt_processor import MWTProcessor
 from stanza.tests import *
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
@@ -71,15 +76,22 @@ word: .        		token parent:26-.
 """.strip()
 
 
+def _format_word_parent(word: Word) -> str:
+    parent = word.parent
+    assert parent is not None
+    return f'word: {word.text.ljust(9)}\t\ttoken parent:{"-".join([str(x) for x in parent.id])}-{parent.text}'
+
+
 def test_mwt():
     pipeline = stanza.Pipeline(processors='tokenize,mwt', dir=TEST_MODELS_DIR, lang='fr', download_method=None)
     doc = pipeline(FR_MWT_SENTENCE)
+    assert isinstance(doc, Document)
     token_to_words = "\n".join(
         [f'token: {token.text.ljust(9)}\t\twords: [{", ".join([word.pretty_print() for word in token.words])}]' for sent in doc.sentences for token in sent.tokens]
     ).strip()
     word_to_token = "\n".join(
-        [f'word: {word.text.ljust(9)}\t\ttoken parent:{"-".join([str(x) for x in word.parent.id])}-{word.parent.text}'
-         for sent in doc.sentences for word in sent.words]).strip()
+        [_format_word_parent(word) for sent in doc.sentences for word in sent.words]
+    ).strip()
     assert token_to_words == FR_MWT_TOKEN_TO_WORDS_GOLD
     assert word_to_token == FR_MWT_WORD_TO_TOKEN_GOLD
 
@@ -92,12 +104,17 @@ def test_unknown_character():
     pipeline = stanza.Pipeline(processors='tokenize,mwt', dir=TEST_MODELS_DIR, lang='en', download_method=None)
     text = "Björkängshallen's"
     mwt_processor = pipeline.processors["mwt"]
+    assert isinstance(mwt_processor, MWTProcessor)
     trainer = mwt_processor.trainer
+    assert isinstance(trainer, Trainer)
+    assert isinstance(trainer.vocab, Vocab)
     # verify that the test case is still valid
     # (perhaps an updated MWT model will have all of these characters in the future)
     assert not all(x in trainer.vocab._unit2id for x in text)
     doc = pipeline(text)
+    assert isinstance(doc, Document)
     batch = mwt_processor.build_batch(doc)
+    assert isinstance(batch.vocab, DeltaVocab)
     # the vocab used in this batch should have the missing characters
     assert all(x in batch.vocab._unit2id for x in text)
 
@@ -111,6 +128,7 @@ def test_unknown_word():
     """
     pipe = stanza.Pipeline(processors='tokenize,mwt', dir=TEST_MODELS_DIR, lang='en', download_method=None)
     doc = pipe("I read the newspaper's report.")
+    assert isinstance(doc, Document)
     assert len(doc.sentences) == 1
     assert len(doc.sentences[0].tokens) == 6
     assert len(doc.sentences[0].tokens[3].words) == 2
@@ -118,6 +136,8 @@ def test_unknown_word():
 
     # double check that this is something unknown to the model
     mwt_processor = pipe.processors["mwt"]
+    assert isinstance(mwt_processor, MWTProcessor)
     trainer = mwt_processor.trainer
+    assert isinstance(trainer, Trainer)
     expansion = trainer.dict_expansion("newspaper's")
     assert expansion is None

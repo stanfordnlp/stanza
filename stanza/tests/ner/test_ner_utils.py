@@ -70,7 +70,7 @@ def test_process_tags_bioes():
     check_reprocessed_tags(WORDS, BASIC_BIOES, BASIC_BIOES)
 
 def run_flattened(fn, tags):
-    return fn([x for x in y for y in tags])
+    return fn([x for sentence in tags for x in sentence])
 
 def test_check_bio():
     assert     utils.is_bio_scheme([x for y in BIO_TAGS for x in y])
@@ -90,6 +90,15 @@ def test_underscores():
     """
     assert not utils.is_basic_scheme([x for y in BIO_U_TAGS for x in y])
     check_reprocessed_tags(WORDS, BIO_U_TAGS, BIOES_TAGS)
+
+
+def test_decode_from_bioes():
+    tags = ["O", "S-ART", None, "B-PER", "I-PER", "E-PER"]
+    assert utils.decode_from_bioes(tags) == [
+        {"start": 1, "end": 1, "type": "ART"},
+        {"start": 3, "end": 5, "type": "PER"},
+    ]
+
 
 def test_merge_tags():
     """
@@ -127,3 +136,5 @@ def test_merge_tags():
     with pytest.raises(ValueError):
         result = utils.merge_tags(seq1, seq_err4)
 
+    with pytest.raises(ValueError, match="different lengths"):
+        utils.merge_tags(seq1, seq2[:-1])

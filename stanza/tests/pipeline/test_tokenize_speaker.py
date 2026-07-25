@@ -11,8 +11,11 @@ Run with:
 """
 
 import logging
+from pathlib import Path
 import pytest
 
+from stanza.models.common import doc as stanza_doc
+from stanza.pipeline import tokenize_processor
 from stanza.pipeline.tokenize_processor import (
     TokenizeProcessor,
     _apply_speaker_to_sentences,
@@ -51,7 +54,7 @@ class _FakeSentence:
         self.speaker = None
 
 
-class _FakeDocument:
+class _FakeDocument(stanza_doc.Document):
     def __init__(self, sentences):
         self.sentences = sentences
         self._text = None
@@ -350,6 +353,7 @@ def _make_processor(config):
     the speaker_delim block runs.
     """
     proc = TokenizeProcessor.__new__(TokenizeProcessor)
+    proc._config = config
     proc._set_up_model(config, pipeline=None, device="cpu")
     return proc
 
@@ -376,6 +380,10 @@ def test_speaker_delim_single_char_raises():
     with pytest.raises(ValueError):
         _make_processor({"pretokenized": True, "speaker_delim": "<"})  # 1 char
 
+def test_speaker_delim_non_string_raises():
+    with pytest.raises(ValueError):
+        _make_processor({"pretokenized": True, "speaker_delim": ["<", ">"]})
+
 def test_speaker_delim_same_opener_closer_does_not_raise_at_init():
     # The opener==closer check happens in parse_speaker_segments at process()
     # time, not at _set_up_model time.  Verify that init succeeds so that
@@ -383,3 +391,100 @@ def test_speaker_delim_same_opener_closer_does_not_raise_at_init():
     proc = _make_processor({"pretokenized": True, "speaker_delim": "||"})
     assert proc._speaker_opener == "|"
     assert proc._speaker_closer == "|"
+
+
+def test_model_path_accepts_pathlike(monkeypatch):
+    captured = {}
+
+    class FakeTrainer:
+        def __init__(self, **kwargs):
+            captured.update(kwargs)
+
+    monkeypatch.setattr(tokenize_processor, "Trainer", FakeTrainer)
+    proc = TokenizeProcessor.__new__(TokenizeProcessor)
+    proc._set_up_model(
+        {"model_path": Path("tokenizer.pt")},
+        pipeline=None,
+        device="cpu",
+    )
+
+    assert captured["model_file"] == "tokenizer.pt"
+
+
+# ---------------------------------------------------------------------------
+# Pretokenized input and postprocessor shape validation
+# ---------------------------------------------------------------------------
+
+def test_flat_pretokenized_list_is_one_sentence():
+    proc = _make_processor({"pretokenized": True})
+    raw_text, token_data = proc.process_pre_tokenized_text(["Hello", "world"])
+
+    assert raw_text == "Hello world"
+    assert [[token["text"] for token in sentence] for sentence in token_data] == [
+        ["Hello", "world"],
+    ]
+
+
+def test_flat_pretokenized_list_processes_to_document():
+    proc = _make_processor({"pretokenized": True})
+    result = proc.process(document=["Hello", "world"])
+
+    assert result.text == "Hello world"
+    assert [[token.text for token in sentence.tokens] for sentence in result.sentences] == [
+        ["Hello", "world"],
+    ]
+
+
+def test_nested_pretokenized_text_processes_in_bulk():
+    proc = _make_processor({"pretokenized": True})
+    source = stanza_doc.Document([], text=[["Hello"], ["world"]])
+
+    result = proc.bulk_process([source])
+
+    assert len(result) == 1
+    assert result[0].text == "Hello world"
+    assert [[token.text for token in sentence.tokens] for sentence in result[0].sentences] == [
+        ["Hello"],
+        ["world"],
+    ]
+
+
+def test_pretokenized_input_rejects_mixed_shapes():
+    proc = _make_processor({"pretokenized": True})
+
+    def process_invalid_shape(input_src):
+        return proc.process_pre_tokenized_text(input_src)
+
+    with pytest.raises(ValueError):
+        process_invalid_shape(["Hello", ["world"]])
+
+
+def test_pretokenized_input_rejects_empty_nested_sentence():
+    proc = _make_processor({"pretokenized": True})
+
+    with pytest.raises(ValueError):
+        proc.process_pre_tokenized_text([["Hello"], []])
+
+
+def test_pretokenized_bulk_requires_text_for_empty_document():
+    proc = _make_processor({"pretokenized": True})
+
+    with pytest.raises(TypeError):
+        proc.bulk_process([stanza_doc.Document([])])
+
+
+def test_postprocessor_is_preserved_without_wrapping():
+    def postprocessor(draft):
+        assert draft == [["can't"]]
+        return iter([[["can't", ["ca", "n't"]]]])
+
+    proc = _make_processor({
+        "pretokenized": True,
+        "postprocessor": postprocessor,
+    })
+    assert proc._postprocessor is postprocessor
+    configured_postprocessor = proc._postprocessor
+    assert configured_postprocessor is not None
+    assert [list(sentence) for sentence in configured_postprocessor([["can't"]])] == [
+        [["can't", ["ca", "n't"]]],
+    ]

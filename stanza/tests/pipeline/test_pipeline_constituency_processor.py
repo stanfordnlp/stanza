@@ -1,7 +1,10 @@
 import gc
 import pytest
 import stanza
+from stanza.models.common.doc import Document
 from stanza.models.common.foundation_cache import FoundationCache
+from stanza.models.constituency.parse_tree import Tree
+from stanza.pipeline.constituency_processor import ConstituencyProcessor
 
 from stanza.tests import *
 
@@ -20,14 +23,22 @@ def foundation_cache():
     gc.collect()
     return FoundationCache()
 
-def check_results(doc):
+def process_document(pipe: stanza.Pipeline, text: str) -> Document:
+    result = pipe(text)
+    assert isinstance(result, Document)
+    return result
+
+
+def check_results(doc: Document) -> None:
     assert len(doc.sentences) == len(TEST_TOKENS)
     for sentence, expected in zip(doc.sentences, TEST_TOKENS):
-        assert sentence.constituency.leaf_labels() == expected
+        tree = sentence.constituency
+        assert isinstance(tree, Tree)
+        assert tree.leaf_labels() == expected
 
 def test_sorted_big_batch(foundation_cache):
     pipe = stanza.Pipeline("en", model_dir=TEST_MODELS_DIR, processors="tokenize,pos,constituency", foundation_cache=foundation_cache, download_method=None)
-    doc = pipe(TEST_TEXT)
+    doc = process_document(pipe, TEST_TEXT)
     check_results(doc)
 
 def test_comments(foundation_cache):
@@ -35,7 +46,7 @@ def test_comments(foundation_cache):
     Test that the pipeline is creating constituency comments
     """
     pipe = stanza.Pipeline("en", model_dir=TEST_MODELS_DIR, processors="tokenize,pos,constituency", foundation_cache=foundation_cache, download_method=None)
-    doc = pipe(TEST_TEXT)
+    doc = process_document(pipe, TEST_TEXT)
     check_results(doc)
     for sentence in doc.sentences:
         assert any(x.startswith("# constituency = ") for x in sentence.comments)
@@ -51,14 +62,16 @@ def test_illegal_batch_size(foundation_cache):
 
 def test_sorted_one_batch(foundation_cache):
     pipe = stanza.Pipeline("en", model_dir=TEST_MODELS_DIR, processors="tokenize,pos,constituency", constituency_batch_size=1, foundation_cache=foundation_cache, download_method=None)
-    doc = pipe(TEST_TEXT)
+    doc = process_document(pipe, TEST_TEXT)
     check_results(doc)
 
 def test_sorted_two_batch(foundation_cache):
     pipe = stanza.Pipeline("en", model_dir=TEST_MODELS_DIR, processors="tokenize,pos,constituency", constituency_batch_size=2, foundation_cache=foundation_cache, download_method=None)
-    doc = pipe(TEST_TEXT)
+    doc = process_document(pipe, TEST_TEXT)
     check_results(doc)
 
 def test_get_constituents(foundation_cache):
     pipe = stanza.Pipeline("en", model_dir=TEST_MODELS_DIR, processors="tokenize,pos,constituency", foundation_cache=foundation_cache, download_method=None)
-    assert "SBAR" in pipe.processors["constituency"].get_constituents()
+    processor = pipe.processors["constituency"]
+    assert isinstance(processor, ConstituencyProcessor)
+    assert "SBAR" in processor.get_constituents()

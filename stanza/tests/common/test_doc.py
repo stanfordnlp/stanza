@@ -1,8 +1,28 @@
+import json
+
 import pytest
 
 import stanza
 from stanza.tests import *
-from stanza.models.common.doc import Document, ID, TEXT, NER, CONSTITUENCY, SENTIMENT
+from stanza.models.common.doc import (
+    CONSTITUENCY,
+    DEPREL,
+    DEPS,
+    END_CHAR,
+    HEAD,
+    ID,
+    MORPHEMES,
+    MULTI_NER,
+    NER,
+    SENTIMENT,
+    START_CHAR,
+    TEXT,
+    Document,
+    EmptyWordEntry,
+    TokenEntry,
+    _require_empty_word_entry,
+    _require_token_entry,
+)
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
@@ -30,6 +50,23 @@ def test_basic_values(doc, sentences_dict):
         assert len(sentence.tokens) == len(raw_sentence)
         for token, raw_token in zip(sentence.tokens, raw_sentence):
             assert token.text == raw_token[TEXT]
+
+
+def test_default_token_entry_validation_checks_field_types():
+    entry = {TEXT: "valid", HEAD: 0, MULTI_NER: ["O"]}
+    assert _require_token_entry(entry, "test") == entry
+
+    with pytest.raises(ValueError, match="valid default token dictionary"):
+        _require_token_entry({TEXT: "invalid", HEAD: "root"}, "test")
+
+
+def test_empty_word_entries_require_two_component_ids():
+    with pytest.raises(ValueError, match="two-component empty-word ID"):
+        _require_empty_word_entry(
+            {ID: (1,), TEXT: "not-empty"},
+            "test",
+        )
+
 
 def test_set_sentence(doc):
     """
@@ -172,3 +209,87 @@ def test_serialized(pipeline):
     assert len(doc2.ents) == 2
     assert doc.sentences[0].constituency == doc2.sentences[0].constituency
     assert doc.sentences[0].sentiment == doc2.sentences[0].sentiment
+
+
+def test_json_serialization_schema_and_round_trip():
+    sentences: list[list[TokenEntry]] = [[
+        {
+            ID: 1,
+            TEXT: "A",
+            HEAD: 0,
+            DEPREL: "root",
+            DEPS: "0:root",
+            START_CHAR: 0,
+            END_CHAR: 1,
+            MULTI_NER: ["O", "O"],
+        },
+        {
+            ID: 2,
+            TEXT: "test",
+            HEAD: 1,
+            DEPREL: "dep",
+            DEPS: [("1", "dep")],
+            START_CHAR: 2,
+            END_CHAR: 6,
+            MORPHEMES: ["test"],
+        },
+    ]]
+    empty_sentences: list[list[EmptyWordEntry]] = [[{
+        ID: (1, 1),
+        TEXT: "pro",
+        DEPS: [("1", "dep")],
+    }]]
+    doc = Document(
+        sentences,
+        text="A test",
+        comments=[["# sent_id = serialization-test"]],
+        empty_sentences=empty_sentences,
+    )
+
+    serialized = doc.to_serialized()
+    payload = json.loads(serialized)
+
+    assert set(payload) == {
+        "text",
+        "sentences",
+        "comments",
+        "empty_sentences",
+    }
+    assert payload["text"] == "A test"
+    assert payload["sentences"][0][0][ID] == 1
+    assert payload["sentences"][0][0][DEPS] == "0:root"
+    assert payload["sentences"][0][0][MULTI_NER] == ["O", "O"]
+    assert payload["sentences"][0][1][MORPHEMES] == ["test"]
+    assert payload["empty_sentences"][0][0][ID] == [1, 1]
+    assert payload["empty_sentences"][0][0][DEPS] == "1:dep"
+
+    restored = Document.from_serialized(serialized)
+    assert restored.to_dict() == doc.to_dict()
+    assert restored.sentences[0].dependencies_string() == (
+        "('A', 0, 'root')\n('test', 1, 'dep')"
+    )
+    assert restored.sentences[0].empty_words[0].deps == "1:dep"
+
+
+def test_fake_dependencies_string(doc):
+    sentence = doc.sentences[0]
+    sentence.build_fake_dependencies()
+
+    assert sentence.dependencies_string() == (
+        "('unban', 0, 'root')\n"
+        "('mox', 1, 'dep')\n"
+        "('opal', 2, 'dep')"
+    )
+
+
+def test_sequence_field_names(doc):
+    doc.set((NER,), ["O", "B-ITEM", "E-ITEM", "O", "S-CAT"], to_token=True)
+
+    assert doc.sentences[0].tokens[0].to_dict((ID,)) == [{ID: 1}]
+    assert doc.get((NER,), from_token=True) == [
+        "O",
+        "B-ITEM",
+        "E-ITEM",
+        "O",
+        "S-CAT",
+    ]

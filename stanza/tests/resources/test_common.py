@@ -2,13 +2,17 @@
 Test various resource downloading functions from resources/common.py
 """
 
+from collections import UserList
 import hashlib
 import json
 import logging
 import os
+from packaging import version
 import pytest
+import re
 import requests
 import tempfile
+from typing import Iterator, Optional
 from unittest.mock import patch
 import zipfile
 
@@ -48,22 +52,29 @@ NON_HF_URL = "http://nlp.stanford.edu/software/stanza/fake_model.pt"
 HF_URL = "https://huggingface.co/stanfordnlp/stanza-en/resolve/v1.13.0/models/ner/fake_model.pt"
 
 
-class FakeResponse:
+class FakeResponse(requests.Response):
     """
     Minimal mock of a requests.Response sufficient for download_file.
     """
-    def __init__(self, content=FILE_CONTENT, status_code=200):
+    def __init__(self, content: bytes = FILE_CONTENT, status_code: int = 200) -> None:
+        super().__init__()
         self.status_code = status_code
+        self._fake_content = content
         self._content = content
-        self.headers = {"content-length": str(len(content))}
+        self.headers["content-length"] = str(len(content))
 
-    def iter_content(self, chunk_size=131072):
-        yield self._content
+    def iter_content(
+            self,
+        chunk_size: Optional[int] = 131072,
+        decode_unicode: bool = False,
+    ) -> Iterator[bytes]:
+        yield self._fake_content
 
-    def raise_for_status(self):
+    def raise_for_status(self) -> None:
         if self.status_code >= 400:
             raise requests.exceptions.HTTPError(
-                f"{self.status_code} Client Error", response=self
+                f"{self.status_code} Client Error",
+                response=self,
             )
 
 
@@ -111,6 +122,44 @@ def test_download_file_non_hf_404():
 
             with pytest.raises(requests.exceptions.HTTPError):
                 common.download_file(NON_HF_URL, dest, proxies=None, raise_for_status=True)
+
+
+def test_download_file_hf_url_without_proxies():
+    """
+    Test that a HF URL without proxies uses hf_hub_download and copies the
+    cached file to the requested destination.
+    """
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        cached = os.path.join(test_dir, "cached_model.pt")
+        dest = os.path.join(test_dir, "fake_model.pt")
+        with open(cached, "wb") as fout:
+            fout.write(FILE_CONTENT)
+
+        with patch("stanza.resources.common.requests.get") as mock_get:
+            with patch(
+                "stanza.resources.common.huggingface_hub.hf_hub_download",
+                return_value=cached,
+            ) as mock_hf:
+                status = common.download_file(HF_URL, dest, proxies=None)
+
+        assert status == 200
+        if version.parse(common.huggingface_hub.__version__) < version.parse(
+                "1.0.0",
+            ):
+            mock_hf.assert_called_once_with(
+                repo_id="stanfordnlp/stanza-en",
+                filename="models/ner/fake_model.pt",
+                revision="v1.13.0",
+                local_dir_use_symlinks=False,
+            )
+        else:
+            mock_hf.assert_called_once_with(
+                repo_id="stanfordnlp/stanza-en",
+                filename="models/ner/fake_model.pt",
+                revision="v1.13.0",
+            )
+        mock_get.assert_not_called()
+        assert common.get_md5(dest) == FILE_CONTENT_MD5
 
 
 def test_download_file_hf_url_with_proxies():
@@ -241,6 +290,48 @@ def test_process_pipeline_parameters():
         assert processors == {"tokenize": "ewt", "pos": "ewt"}
         assert package == None
 
+
+def test_process_pipeline_parameters_accepts_general_sequences():
+    """
+    Sequence inputs should work for both processor names and package names.
+
+    UserList checks that the public type contract is not accidentally limited
+    to the concrete list and tuple implementations.
+    """
+    lang, model_dir, package, processors = common.process_pipeline_parameters(
+        "en",
+        TEST_MODELS_DIR,
+        {"tokenize": "combined", "pos": "combined"},
+        UserList(["tokenize", "pos"]),
+    )
+    assert lang == "en"
+    assert model_dir == TEST_MODELS_DIR
+    assert package is None
+    assert processors == {"tokenize": "combined", "pos": "combined"}
+
+    _, _, package, processors = common.process_pipeline_parameters(
+        "fr",
+        TEST_MODELS_DIR,
+        None,
+        {"tokenize": UserList(["gsd", "partut"])},
+    )
+    assert package is None
+    assert processors == {"tokenize": ["gsd", "partut"]}
+
+    resources = common.load_resources_json(TEST_MODELS_DIR)
+    processor_entries = common.maintain_processor_list(
+        resources,
+        "fr",
+        package,
+        processors,
+    )
+    assert common.flatten_processor_list(processor_entries) == [
+        ["tokenize", "gsd"],
+        ["tokenize", "partut"],
+        ["mwt", "gsd"],
+        ["mwt", "partut"],
+    ]
+
 def test_language_resources():
     resources = common.load_resources_json(TEST_MODELS_DIR)
 
@@ -254,18 +345,216 @@ def test_language_resources():
     # check the parameters of the test make sense
     # there should be 'zh' which is an alias of 'zh-hans'
     assert "zh" in resources
-    assert "alias" in resources["zh"]
-    assert resources["zh"]["alias"] == "zh-hans"
+    zh_alias_resources = resources["zh"]
+    assert isinstance(zh_alias_resources, dict)
+    assert zh_alias_resources.get("alias") == "zh-hans"
 
     # check that getting the resources for either 'zh' or 'zh-hans'
     # return the simplified Chinese resources
     zh_resources = common.get_language_resources(resources, "zh")
+    assert zh_resources is not None
     assert "tokenize" in zh_resources
     assert "alias" not in zh_resources
-    assert "Chinese" in zh_resources["lang_name"]
+    lang_name = zh_resources.get("lang_name")
+    assert isinstance(lang_name, str)
+    assert "Chinese" in lang_name
 
     zh_hans_resources = common.get_language_resources(resources, "zh-hans")
     assert zh_resources == zh_hans_resources
+
+
+def test_load_resources_json_preserves_extension_fields(monkeypatch):
+    """
+    The JSON boundary preserves metadata not consumed by this Stanza version.
+    """
+    payload = {
+        "url": "https://example.com/{lang}/{filename}",
+        "schema_versions": [1, 2],
+        "schema_metadata": {"license": "CC-BY-4.0"},
+        "generated_at": 3,
+        "release_notes": None,
+        "en": {
+            "lang_name": "English",
+            "default_md5": "default-md5",
+            "tokenize": {
+                "ewt": {
+                    "md5": "model-md5",
+                    "future_model_metadata": {"revision": 2},
+                },
+            },
+            "packages": {
+                "default": {
+                    "tokenize": "ewt",
+                    "license": "CC-BY-4.0",
+                    "future_package_metadata": {"revision": 2},
+                },
+            },
+            "future_language_metadata": [1, "two"],
+        },
+    }
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        resources_path = os.path.join(test_dir, "resources.json")
+        with open(resources_path, "w", encoding="utf-8") as fout:
+            json.dump(payload, fout)
+
+        resources = common.load_resources_json(test_dir)
+        assert resources == payload
+
+        processor_entries = common.maintain_processor_list(
+            resources,
+            "en",
+            package="default",
+            processors=None,
+        )
+        assert common.flatten_processor_list(processor_entries) == [
+            ["tokenize", "ewt"],
+        ]
+
+        monkeypatch.setattr(
+            common,
+            "download_resources_json",
+            lambda *args, **kwargs: None,
+        )
+        assert common.list_available_languages(model_dir=test_dir) == ["en"]
+
+
+def test_unused_language_schema_does_not_block_requested_language():
+    payload = {
+        "en": {
+            "tokenize": {
+                "ewt": {"md5": "model-md5"},
+            },
+            "packages": {
+                "default": {"tokenize": "ewt"},
+            },
+        },
+        "future-language": {
+            "tokenize": ["a future schema shape"],
+            "packages": 3,
+        },
+    }
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        resources_path = os.path.join(test_dir, "resources.json")
+        with open(resources_path, "w", encoding="utf-8") as fout:
+            json.dump(payload, fout)
+        resources = common.load_resources_json(test_dir)
+
+        processor_entries = common.maintain_processor_list(
+            resources,
+            "en",
+            package=None,
+            processors={"tokenize": "ewt"},
+        )
+        assert common.flatten_processor_list(processor_entries) == [
+            ["tokenize", "ewt"],
+        ]
+
+
+def test_resolve_language_resources_follows_alias_chains():
+    resources = common._validate_resources_json({
+        "first": {"alias": "second"},
+        "second": {"alias": "canonical"},
+        "canonical": {"lang_name": "Canonical"},
+    })
+
+    lang, language_resources = common.resolve_language_resources(
+        resources,
+        "first",
+    )
+    assert lang == "canonical"
+    assert language_resources == {"lang_name": "Canonical"}
+    assert common.resolve_language_resources(resources, "missing") == (
+        "missing",
+        None,
+    )
+
+
+def test_resolve_language_resources_rejects_alias_cycles():
+    resources = common._validate_resources_json({
+        "first": {"alias": "second"},
+        "second": {"alias": "first"},
+    })
+
+    with pytest.raises(ValueError, match="language alias cycle"):
+        common.resolve_language_resources(resources, "first")
+
+
+@pytest.mark.parametrize(
+    "payload, location",
+    (
+        (["not", "an", "object"], "resources"),
+        ({"url": 3}, "resources.url"),
+    ),
+)
+def test_load_resources_json_rejects_invalid_boundary(payload, location):
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        resources_path = os.path.join(test_dir, "resources.json")
+        with open(resources_path, "w", encoding="utf-8") as fout:
+            json.dump(payload, fout)
+
+        with pytest.raises(ValueError, match=re.escape(location)):
+            common.load_resources_json(test_dir)
+
+
+def test_maintain_processor_list_validates_model_resources_on_access():
+    payload = {
+        "en": {
+            "tokenize": {
+                "ewt": {
+                    "md5": "model-md5",
+                    "dependencies": [
+                        {"model": "pretrain", "package": 3},
+                    ],
+                },
+            },
+        },
+    }
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        resources_path = os.path.join(test_dir, "resources.json")
+        with open(resources_path, "w", encoding="utf-8") as fout:
+            json.dump(payload, fout)
+        resources = common.load_resources_json(test_dir)
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape(
+                "resources.en.tokenize.ewt.dependencies[0]",
+            ),
+        ):
+            common.maintain_processor_list(
+                resources,
+                "en",
+                package=None,
+                processors={"tokenize": "ewt"},
+            )
+
+
+def test_maintain_processor_list_validates_packages_on_access():
+    payload = {
+        "en": {
+            "packages": {
+                "default": {
+                    "optional": {"ner": ["not", "a", "package"]},
+                },
+            },
+        },
+    }
+    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as test_dir:
+        resources_path = os.path.join(test_dir, "resources.json")
+        with open(resources_path, "w", encoding="utf-8") as fout:
+            json.dump(payload, fout)
+        resources = common.load_resources_json(test_dir)
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape("resources.en.packages.default.optional.ner"),
+        ):
+            common.maintain_processor_list(
+                resources,
+                "en",
+                package="default",
+                processors=None,
+            )
 
 
 def test_download_restores_logging_level(tmp_path, monkeypatch):

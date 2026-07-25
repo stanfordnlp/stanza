@@ -3,13 +3,14 @@ Basic tests of the data conversion
 """
 
 import io
+import pickle
 import pytest
 import tempfile
 from zipfile import ZipFile
 
 import stanza
 from stanza.utils.conll import CoNLL
-from stanza.models.common.doc import Document
+from stanza.models.common.doc import Document, Span, TokenEntry
 from stanza.tests import *
 
 pytestmark = pytest.mark.pipeline
@@ -27,7 +28,7 @@ CONLL = [[['1', 'Nous', 'il', 'PRON', '_', 'Number=Plur|Person=1|PronType=Prs', 
           ['9', '.', '.', 'PUNCT', '_', '_', '3', 'punct', '_', 'start_char=36|end_char=37']]]
 
 
-DICT = [[{'id': (1,), 'text': 'Nous', 'lemma': 'il', 'upos': 'PRON', 'feats': 'Number=Plur|Person=1|PronType=Prs', 'head': 3, 'deprel': 'nsubj', 'misc': 'start_char=0|end_char=4'},
+DICT: list[list[TokenEntry]] = [[{'id': (1,), 'text': 'Nous', 'lemma': 'il', 'upos': 'PRON', 'feats': 'Number=Plur|Person=1|PronType=Prs', 'head': 3, 'deprel': 'nsubj', 'misc': 'start_char=0|end_char=4'},
          {'id': (2,), 'text': 'avons', 'lemma': 'avoir', 'upos': 'AUX', 'feats': 'Mood=Ind|Number=Plur|Person=1|Tense=Pres|VerbForm=Fin', 'head': 3, 'deprel': 'aux:tense', 'misc': 'start_char=5|end_char=10'},
          {'id': (3,), 'text': 'atteint', 'lemma': 'atteindre', 'upos': 'VERB', 'feats': 'Gender=Masc|Number=Sing|Tense=Past|VerbForm=Part', 'head': 0, 'deprel': 'root', 'misc': 'start_char=11|end_char=18'},
          {'id': (4,), 'text': 'la', 'lemma': 'le', 'upos': 'DET', 'feats': 'Definite=Def|Gender=Fem|Number=Sing|PronType=Art', 'head': 5, 'deprel': 'det', 'misc': 'start_char=19|end_char=21'},
@@ -44,11 +45,32 @@ def test_conll_to_dict():
     assert len(dicts) == len(empty)
     assert all(len(x) == 0 for x in empty)
 
+
+def test_conll_rejects_malformed_gapping_row():
+    with pytest.raises(ValueError, match="expecting 10 fields"):
+        CoNLL.load_conll(["bad.1\n"], ignore_gapping=False)
+
+
+def test_conll_ignores_malformed_gapping_row_by_default():
+    assert CoNLL.load_conll(["bad.1\n"]) == ([], [])
+
+
+def test_conll_rejects_malformed_empty_node_id():
+    malformed = [[["x.1", "bad", "_", "_", "_", "_", "_", "_", "_", "_"]]]
+    with pytest.raises(ValueError, match="Could not process sentence 0 token 0"):
+        CoNLL.convert_conll(malformed)
+
+
 def test_dict_to_conll():
     document = Document(DICT)
     # :c = no comments
     conll = [[sentence.split("\t") for sentence in doc.split("\n")] for doc in "{:c}".format(document).split("\n\n")]
     assert conll == CONLL
+
+
+def test_generator_dict_to_conll():
+    assert CoNLL.convert_dict(sentence for sentence in DICT) == CONLL
+
 
 def test_dict_to_doc_and_doc_to_dict():
     """
@@ -63,6 +85,241 @@ def test_dict_to_doc_and_doc_to_dict():
     document = Document(dicts)
     conll = [[sentence.split("\t") for sentence in doc.split("\n")] for doc in "{:c}".format(document).split("\n\n")]
     assert conll == CONLL
+
+
+def test_serialized_document_normalizes_ids():
+    """
+    JSON turns tuple IDs into lists.  Deserialization should normalize them
+    before rebuilding Tokens, Words, dependencies, and CoNLL output.
+    """
+    document = Document(DICT)
+    restored = Document.from_serialized(document.to_serialized())
+
+    assert all(isinstance(token.id, tuple) for token in restored.sentences[0].tokens)
+    assert all(isinstance(word.id, int) for word in restored.sentences[0].words)
+    assert len(restored.sentences[0].dependencies) == len(restored.sentences[0].words)
+
+    conll = [
+        [sentence.split("\t") for sentence in doc.split("\n")]
+        for doc in "{:c}".format(restored).split("\n\n")
+    ]
+    assert conll == CONLL
+
+
+def test_serialized_document_reads_legacy_inline_empty_nodes():
+    serialized = (
+        b'{"text":null,"sentences":[['
+        b'{"id":[1,2],"text":"can\\u0027t"},'
+        b'{"id":[1],"text":"ca"},'
+        b'{"id":[2],"text":"n\\u0027t"},'
+        b'{"id":[2,1],"text":"pro"},'
+        b'{"id":[3],"text":"leave"}'
+        b']],'
+        b'"comments":[[]]}'
+    )
+
+    restored = Document.from_serialized(serialized)
+
+    assert [token.id for token in restored.sentences[0].tokens] == [
+        (1, 2),
+        (3,),
+    ]
+    assert [word.id for word in restored.sentences[0].empty_words] == [(2, 1)]
+
+
+def test_serialized_document_distinguishes_late_empty_node_from_mwt():
+    serialized = (
+        b'{"text":null,"sentences":[['
+        b'{"id":[1],"text":"one"},'
+        b'{"id":[1,2],"text":"pro"},'
+        b'{"id":[2],"text":"two"}'
+        b']],'
+        b'"comments":[[]]}'
+    )
+
+    restored = Document.from_serialized(serialized)
+
+    assert [token.id for token in restored.sentences[0].tokens] == [
+        (1,),
+        (2,),
+    ]
+    assert [word.id for word in restored.sentences[0].empty_words] == [(1, 2)]
+
+
+def test_serialized_document_recognizes_zero_based_empty_node():
+    serialized = (
+        b'{"text":null,"sentences":[['
+        b'{"id":[0,1],"text":"pro"},'
+        b'{"id":[1],"text":"one"}'
+        b']],'
+        b'"comments":[[]]}'
+    )
+
+    restored = Document.from_serialized(serialized)
+
+    assert [token.id for token in restored.sentences[0].tokens] == [(1,)]
+    assert [word.id for word in restored.sentences[0].empty_words] == [(0, 1)]
+
+
+def test_document_to_dict_round_trip_preserves_empty_nodes():
+    document = Document(
+        [[{"id": 1, "text": "one"}, {"id": 2, "text": "two"}]],
+        empty_sentences=[[{"id": (1, 1), "text": "pro"}]],
+    )
+
+    restored = Document(document.to_dict())
+
+    assert [token.id for token in restored.sentences[0].tokens] == [
+        (1,),
+        (2,),
+    ]
+    assert [word.id for word in restored.sentences[0].empty_words] == [(1, 1)]
+
+
+def test_serialized_document_preserves_morphemes():
+    document = Document(DICT)
+    document.sentences[0].words[0].morphemes = ["Nou", "s"]
+
+    restored = Document.from_serialized(document.to_serialized())
+
+    assert restored.sentences[0].words[0].morphemes == ["Nou", "s"]
+
+
+def test_legacy_serialized_document_validates_text():
+    with pytest.warns(DeprecationWarning):
+        with pytest.raises(TypeError, match="Serialized Document text"):
+            Document.from_serialized(pickle.dumps((42, [])))
+
+
+def test_legacy_serialized_document_accepts_typed_payload():
+    with pytest.warns(DeprecationWarning):
+        restored = Document.from_serialized(pickle.dumps((None, DICT)))
+
+    assert restored.sentences[0].words[0].text == "Nous"
+
+
+def test_legacy_serialized_document_preserves_inline_empty_nodes():
+    sentences: list[list[TokenEntry]] = [[
+        {"id": (1, 2), "text": "can't"},
+        {"id": (1,), "text": "ca"},
+        {"id": (2,), "text": "n't"},
+        {"id": (2, 1), "text": "pro"},
+        {"id": (3,), "text": "leave"},
+    ]]
+
+    with pytest.warns(DeprecationWarning):
+        restored = Document.from_serialized(pickle.dumps((None, sentences)))
+
+    assert [token.id for token in restored.sentences[0].tokens] == [
+        (1, 2),
+        (3,),
+    ]
+    assert [word.id for word in restored.sentences[0].empty_words] == [(2, 1)]
+
+
+@pytest.mark.parametrize(
+    "serialized",
+    (
+        b'{"text":42,"sentences":[],"comments":null}',
+        b'{"text":null,"sentences":[[{"id":[1],"text":42}]],"comments":[[]]}',
+        b'{"text":null,"sentences":[[{"id":[1,2,3],"text":"bad"}]],"comments":[[]]}',
+    ),
+)
+def test_serialized_document_rejects_invalid_schema(serialized):
+    with pytest.raises(TypeError, match="Serialized"):
+        Document.from_serialized(serialized)
+
+
+def test_pretokenized_text_does_not_become_whitespace():
+    """
+    A pretokenized text list can temporarily be carried on a Document before
+    tokenization, but must never be sliced into Token whitespace attributes.
+    """
+    document = Document(DICT, text=[["This", "is", "a", "test", "."]])
+
+    assert all(
+        isinstance(token.spaces_before, str) and isinstance(token.spaces_after, str)
+        for sentence in document.sentences
+        for token in sentence.tokens
+    )
+
+
+def test_pretokenized_text_still_builds_entities():
+    entries: list[list[TokenEntry]] = [[
+        {"id": (1,), "text": "Alice", "ner": "S-PER"},
+    ]]
+
+    document = Document(entries, text=[["Alice"]])
+
+    assert [(entity.text, entity.type) for entity in document.ents] == [
+        ("Alice", "PER"),
+    ]
+
+
+def test_serialized_document_accepts_empty_comments_list():
+    serialized = (
+        b'{"text":null,"sentences":[[{"id":[1],"text":"hello"}]],'
+        b'"comments":[]}'
+    )
+
+    restored = Document.from_serialized(serialized)
+
+    assert [word.text for word in restored.sentences[0].words] == ["hello"]
+
+
+def test_serialized_document_preserves_legacy_subclass_constructor():
+    class LegacyDocument(Document):
+        def __init__(self, sentences, text=None, comments=None):
+            super().__init__(sentences, text, comments)
+
+    serialized = Document(DICT).to_serialized()
+    restored = LegacyDocument.from_serialized(serialized)
+
+    assert isinstance(restored, LegacyDocument)
+    assert restored.sentences[0].words[0].text == "Nous"
+
+
+def test_serialized_document_restores_empty_nodes_for_legacy_subclass():
+    class LegacyDocument(Document):
+        def __init__(self, sentences, text=None, comments=None):
+            super().__init__(sentences, text, comments)
+
+    document = Document(
+        [[{"id": 1, "text": "one"}, {"id": 2, "text": "two"}]],
+        empty_sentences=[[{"id": (1, 1), "text": "pro"}]],
+    )
+
+    restored = LegacyDocument.from_serialized(document.to_serialized())
+
+    assert isinstance(restored, LegacyDocument)
+    assert [word.id for word in restored.sentences[0].empty_words] == [(1, 1)]
+
+
+def test_serialized_document_preserves_two_argument_subclass_constructor():
+    class LegacyDocument(Document):
+        def __init__(self, sentences, text=None):
+            super().__init__(sentences, text)
+
+    serialized = b'{"text":null,"sentences":[[{"id":[1],"text":"hello"}]]}'
+    restored = LegacyDocument.from_serialized(serialized)
+
+    assert isinstance(restored, LegacyDocument)
+    assert restored.sentences[0].words[0].text == "hello"
+
+
+def test_span_without_document_text_uses_token_text():
+    document = Document(DICT)
+    sentence = document.sentences[0]
+
+    span = Span(
+        tokens=sentence.tokens[:2],
+        type="TEST",
+        doc=document,
+        sent=sentence,
+    )
+
+    assert span.text == "Nous avons"
+
 
 # sample is two sentences long so that the tests check multiple sentences
 RUSSIAN_SAMPLE="""
@@ -187,6 +444,17 @@ def test_write_doc2conll_append(tmp_path):
     expected = ENGLISH_SAMPLE + "\n\n" + ENGLISH_SAMPLE + "\n\n"
     assert text == expected
 
+
+def test_write_doc2conll_bytes_path(tmp_path):
+    doc = CoNLL.conll2doc(input_str=ENGLISH_SAMPLE)
+    filename = os.fsencode(tmp_path / "english-bytes.conll")
+
+    CoNLL.write_doc2conll(doc, filename)
+
+    with open(filename, encoding="utf-8") as fin:
+        assert fin.read() == ENGLISH_SAMPLE + "\n\n"
+
+
 def test_doc_with_comments():
     """
     Test that a doc with comments gets converted back with comments
@@ -235,6 +503,26 @@ def test_zip_file():
 
         doc = CoNLL.conll2doc(input_file=filename, zip_file=zip_file)
         check_russian_doc(doc)
+
+        with ZipFile(zip_file) as zin:
+            member = zin.getinfo(filename)
+        doc = CoNLL.conll2doc(input_file=member, zip_file=zip_file)
+        check_russian_doc(doc)
+
+
+def test_zip_binary_stream():
+    zip_stream = io.BytesIO()
+    with ZipFile(zip_stream, "w") as zout:
+        zout.writestr("russian.conll", RUSSIAN_SAMPLE)
+    zip_stream.seek(0)
+
+    doc = CoNLL.conll2doc(
+        input_file="russian.conll",
+        zip_file=zip_stream,
+    )
+
+    check_russian_doc(doc)
+
 
 SIMPLE_NER = """
 # text = Teferi's best friend is Karn
@@ -429,6 +717,13 @@ def check_empty_deps_conversion(input_str, expected_words):
     assert len(doc.sentences[0].words) == expected_words
     assert len(doc.sentences[0].empty_words) == 1
 
+    restored = Document.from_serialized(doc.to_serialized())
+    assert len(restored.sentences[0].tokens) == expected_words
+    assert len(restored.sentences[0].words) == expected_words
+    assert len(restored.sentences[0].empty_words) == 1
+    assert restored.sentences[0].empty_words[0].id == (5, 1)
+    assert "{:C}".format(restored) == input_str
+
     sentence = doc.sentences[0]
     conll = "{:C}".format(doc)
     assert conll == input_str
@@ -436,6 +731,7 @@ def check_empty_deps_conversion(input_str, expected_words):
     sentence_dict = doc.sentences[0].to_dict()
     assert len(sentence_dict) == expected_words + 1
     # currently this is true for both of the examples we run
+    assert 'id' in sentence_dict[5]
     assert sentence_dict[5]['id'] == (5, 1)
 
     # redo the above checks to make sure
@@ -567,6 +863,25 @@ def test_convert_dict():
                  ['4', 'test', 'test', 'NOUN', 'NN', 'Number=Sing', '0', 'root', '_', 'SpaceAfter=No|start_char=10|end_char=14']]]
 
     assert converted == expected
+
+
+def test_convert_empty_dict():
+    assert CoNLL.convert_dict([]) == []
+
+
+def test_read_multiple_docs_without_doc_id():
+    docs = CoNLL.conll2multi_docs(input_str=ENGLISH_TEST_SENTENCE)
+    assert len(docs) == 1
+    assert len(docs[0].sentences) == 1
+
+
+def test_conll_input_source_validation():
+    with pytest.raises(ValueError, match="exactly one"):
+        CoNLL.conll2dict()
+    with pytest.raises(ValueError, match="exactly one"):
+        CoNLL.conll2dict(input_file="unused", input_str=ENGLISH_TEST_SENTENCE)
+
+    assert CoNLL.conll2dict(input_str="") == ([], [], [])
 
 def test_line_numbers():
     doc = CoNLL.conll2doc(input_str=ENGLISH_TEST_SENTENCE, keep_line_numbers=True)

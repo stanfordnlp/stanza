@@ -7,6 +7,7 @@ import stanza
 
 from stanza.tests import *
 
+from stanza.models.common.doc import Document
 from stanza.pipeline import core
 from stanza.resources.common import get_md5, load_resources_json
 
@@ -340,18 +341,22 @@ def test_limited_pipeline():
     """
     pipe = stanza.Pipeline(processors="tokenize,pos,lemma,depparse,ner", dir=TEST_MODELS_DIR)
     doc = pipe("John Bauer works at Stanford")
+    assert isinstance(doc, Document)
     assert all(word.upos is not None for sentence in doc.sentences for word in sentence.words)
     assert all(token.ner is not None for sentence in doc.sentences for token in sentence.tokens)
 
     doc = pipe("John Bauer works at Stanford", processors=["tokenize","pos"])
+    assert isinstance(doc, Document)
     assert all(word.upos is not None for sentence in doc.sentences for word in sentence.words)
     assert not any(token.ner is not None for sentence in doc.sentences for token in sentence.tokens)
 
     doc = pipe("John Bauer works at Stanford", processors="tokenize")
+    assert isinstance(doc, Document)
     assert not any(word.upos is not None for sentence in doc.sentences for word in sentence.words)
     assert not any(token.ner is not None for sentence in doc.sentences for token in sentence.tokens)
 
     doc = pipe("John Bauer works at Stanford", processors="tokenize,ner")
+    assert isinstance(doc, Document)
     assert not any(word.upos is not None for sentence in doc.sentences for word in sentence.words)
     assert all(token.ner is not None for sentence in doc.sentences for token in sentence.tokens)
 
@@ -390,6 +395,7 @@ def test_unknown_language_tokenizer(unknown_language_name):
                          tokenize_model_path=tokenize_processor.config['model_path'],
                          download_method=None)
     doc = pipe("This is a test")
+    assert isinstance(doc, Document)
     words = [x.text for x in doc.sentences[0].words]
     assert words == ['This', 'is', 'a', 'test']
 

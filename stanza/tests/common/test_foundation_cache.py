@@ -68,19 +68,28 @@ class TestFoundationCacheLoadBert:
         assert model is None
         assert tokenizer is None
 
+    def test_empty_model_name_returns_none(self):
+        cache = FoundationCache()
+        model, tokenizer = cache.load_bert("")
+        assert model is None
+        assert tokenizer is None
+
     def test_gradient_checkpointing_enabled_on_cached_model(self):
         cache = FoundationCache()
         # First call without checkpointing
         model1, _ = cache.load_bert(BERT_MODEL, enable_gradient_checkpointing=False)
+        assert model1 is not None
         assert not model1.is_gradient_checkpointing
         # Second call enables it on the same (cached) object
         model2, _ = cache.load_bert(BERT_MODEL, enable_gradient_checkpointing=True)
         assert model1 is model2
+        assert model2 is not None
         assert model2.is_gradient_checkpointing
 
     def test_gradient_checkpointing_disabled_by_default(self):
         cache = FoundationCache()
         model, _ = cache.load_bert(BERT_MODEL)
+        assert model is not None
         assert not model.is_gradient_checkpointing
 
 
@@ -124,11 +133,13 @@ class TestFoundationCacheLoadBertWithPeft:
         model, _, peft_name = cache.load_bert_with_peft(
             BERT_MODEL, "depparse", enable_gradient_checkpointing=True
         )
+        assert model is not None
         assert model.is_gradient_checkpointing
 
     def test_gradient_checkpointing_disabled_by_default_with_peft(self):
         cache = FoundationCache()
         model, _, _ = cache.load_bert_with_peft(BERT_MODEL, "depparse")
+        assert model is not None
         assert not model.is_gradient_checkpointing
 
     def test_gradient_checkpointing_persists_on_cached_model(self):
@@ -142,6 +153,7 @@ class TestFoundationCacheLoadBertWithPeft:
             BERT_MODEL, "ner", enable_gradient_checkpointing=True
         )
         assert model1 is model2
+        assert model2 is not None
         assert model2.is_gradient_checkpointing
 
 class TestFoundationCacheThreadSafety:
@@ -270,5 +282,5 @@ class TestNoTransformerFoundationCache:
         model, _ = no_cache.load_bert(
             BERT_MODEL, enable_gradient_checkpointing=True
         )
+        assert model is not None
         assert model.is_gradient_checkpointing
-

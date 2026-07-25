@@ -4,16 +4,40 @@ Very simple test of the sentence slicing by <PAD> tags
 TODO: could add a bunch more simple tests for the tokenization utils
 """
 
+from collections.abc import Iterable
+
 import pytest
 import stanza
+import torch
 
 from stanza import Pipeline
 from stanza.tests import *
 from stanza.models.common import doc
 from stanza.models.tokenization import data
 from stanza.models.tokenization import utils
+from stanza.pipeline.tokenize_processor import TokenizeProcessor
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
+
+
+TokenizationBatch = tuple[
+    torch.Tensor,
+    torch.Tensor,
+    torch.Tensor,
+    list[list[str]],
+]
+
+
+class BrokenAdvanceTokenizationDataset(data.TokenizationDataset):
+    """Dataset double which proves the long-sequence advance path was used."""
+
+    def advance_old_batch(
+            self,
+            eval_offsets: list[int],
+            old_batch: TokenizationBatch,
+        ) -> TokenizationBatch:
+        raise TypeError("advance_old_batch was called")
+
 
 def test_find_spans():
     """
@@ -71,23 +95,24 @@ def test_long_paragraph():
     """
     Test the tokenizer's capacity to break text up into smaller chunks
     """
-    pipeline = Pipeline("en", dir=TEST_MODELS_DIR, processors="tokenize")
+    pipeline = Pipeline("en", dir=TEST_MODELS_DIR, processors="tokenize", download_method=None)
     tokenizer = pipeline.processors['tokenize']
+    assert isinstance(tokenizer, TokenizeProcessor)
+    trainer, vocab = tokenizer._neural_state()
 
     raw_text = "TIL not to ask a date to dress up as Smurfette on a first date.  " * 100
 
     # run a test to make sure the chunk operation is called
     # if not, the test isn't actually testing what we need to test
-    batches = data.TokenizationDataset(tokenizer.config, input_text=raw_text, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
-    batches.advance_old_batch = None
+    batches = BrokenAdvanceTokenizationDataset(tokenizer.config, input_text=raw_text, vocab=vocab, evaluation=True, dictionary=trainer.dictionary)
     with pytest.raises(TypeError):
-        _, _, _, document = utils.output_predictions(None, tokenizer.trainer, batches, tokenizer.vocab, None, 3000,
+        _, _, _, document = utils.output_predictions(None, trainer, batches, vocab, None, 3000,
                                                      orig_text=raw_text,
                                                      no_ssplit=tokenizer.config.get('no_ssplit', False))
 
     # a new DataLoader should not be crippled as the above one was
-    batches = data.TokenizationDataset(tokenizer.config, input_text=raw_text, vocab=tokenizer.vocab, evaluation=True, dictionary=tokenizer.trainer.dictionary)
-    _, _, _, document = utils.output_predictions(None, tokenizer.trainer, batches, tokenizer.vocab, None, 3000,
+    batches = data.TokenizationDataset(tokenizer.config, input_text=raw_text, vocab=vocab, evaluation=True, dictionary=trainer.dictionary)
+    _, _, _, document = utils.output_predictions(None, trainer, batches, vocab, None, 3000,
                                                  orig_text=raw_text,
                                                  no_ssplit=tokenizer.config.get('no_ssplit', False))
 
@@ -102,7 +127,7 @@ def test_postprocessor_application():
     good_tokenization = [['I', 'am', 'Joe.', '⭆⊱⇞', 'Hi', '.'], ["I'm", 'a', 'chicken', '.']]
     text = "I am Joe. ⭆⊱⇞ Hi. I'm a chicken."
 
-    target_doc = [[{'id': 1, 'text': 'I', 'start_char': 0, 'end_char': 1}, {'id': 2, 'text': 'am', 'start_char': 2, 'end_char': 4}, {'id': 3, 'text': 'Joe.', 'start_char': 5, 'end_char': 9}, {'id': 4, 'text': '⭆⊱⇞', 'start_char': 10, 'end_char': 13}, {'id': 5, 'text': 'Hi', 'start_char': 14, 'end_char': 16, 'misc': 'SpaceAfter=No'}, {'id': 6, 'text': '.', 'start_char': 16, 'end_char': 17}], [{'id': 1, 'text': "I'm", 'start_char': 18, 'end_char': 21}, {'id': 2, 'text': 'a', 'start_char': 22, 'end_char': 23}, {'id': 3, 'text': 'chicken', 'start_char': 24, 'end_char': 31, 'misc': 'SpaceAfter=No'}, {'id': 4, 'text': '.', 'start_char': 31, 'end_char': 32, 'misc': 'SpaceAfter=No'}]]
+    target_doc: utils.TokenizedDocument = [[{'id': 1, 'text': 'I', 'start_char': 0, 'end_char': 1}, {'id': 2, 'text': 'am', 'start_char': 2, 'end_char': 4}, {'id': 3, 'text': 'Joe.', 'start_char': 5, 'end_char': 9}, {'id': 4, 'text': '⭆⊱⇞', 'start_char': 10, 'end_char': 13}, {'id': 5, 'text': 'Hi', 'start_char': 14, 'end_char': 16, 'misc': 'SpaceAfter=No'}, {'id': 6, 'text': '.', 'start_char': 16, 'end_char': 17}], [{'id': 1, 'text': "I'm", 'start_char': 18, 'end_char': 21}, {'id': 2, 'text': 'a', 'start_char': 22, 'end_char': 23}, {'id': 3, 'text': 'chicken', 'start_char': 24, 'end_char': 31, 'misc': 'SpaceAfter=No'}, {'id': 4, 'text': '.', 'start_char': 31, 'end_char': 32, 'misc': 'SpaceAfter=No'}]]
 
     def postprocesor(_):
         return good_tokenization
@@ -110,6 +135,63 @@ def test_postprocessor_application():
     res = utils.postprocess_doc(target_doc, postprocesor, text)
 
     assert res == target_doc
+
+
+@pytest.mark.parametrize(
+    "malformed_token",
+    [
+        [],
+        ["word"],
+        ["word", False, "extra"],
+        (),
+        ("word",),
+        ("word", False, "extra"),
+    ],
+)
+def test_postprocessor_rejects_token_sequences_that_are_not_pairs(
+        malformed_token: utils.PostprocessorToken,
+    ) -> None:
+    target_doc: utils.TokenizedDocument = [[{
+        "id": 1,
+        "text": "word",
+        "start_char": 0,
+        "end_char": 4,
+    }]]
+
+    def malformed_postprocessor(
+            _draft: list[list[utils.PostprocessorDraftToken]],
+        ) -> list[list[utils.PostprocessorToken]]:
+        return [[malformed_token]]
+
+    with pytest.raises(ValueError):
+        utils.postprocess_doc(target_doc, malformed_postprocessor, "word")
+
+
+def test_postprocessor_preserves_iterables_and_two_item_lists() -> None:
+    target_doc: utils.TokenizedDocument = [[{
+        "id": 1,
+        "text": "can't",
+        "start_char": 0,
+        "end_char": 5,
+    }]]
+
+    def list_pair_postprocessor(
+            _draft: list[list[utils.PostprocessorDraftToken]],
+        ) -> Iterable[Iterable[utils.PostprocessorToken]]:
+        sentence: list[utils.PostprocessorToken] = [
+            ["can't", ["ca", "n't"]],
+        ]
+        return iter([iter(sentence)])
+
+    result = utils.postprocess_doc(
+        target_doc,
+        list_pair_postprocessor,
+        "can't",
+    )
+
+    assert [entry["text"] for entry in result[0]] == ["can't", "ca", "n't"]
+    assert result[0][0].get("manual_expansion") is True
+
 
 def test_reassembly_indexing():
     """
@@ -151,7 +233,7 @@ def test_reassembly_reference_failures():
         utils.reassemble_doc_from_tokens(bad_addition_tokenization, bad_addition_mwts, bad_addition_expansions, text)
 
     with pytest.raises(ValueError):
-        utils.reassemble_doc_from_tokens(bad_inline_tokenization, bad_inline_mwts, bad_inline_mwts, text)
+        utils.reassemble_doc_from_tokens(bad_inline_tokenization, bad_inline_mwts, bad_inline_expansions, text)
 
     utils.reassemble_doc_from_tokens(good_tokenization, good_mwts, good_expansions, text)
 
@@ -217,4 +299,3 @@ def test_lexicon_from_training_data(tmp_path):
     expected_lexicon = ["'d", 'announced', 'baghdad', 'being', 'busted', 'by', 'cells', 'dpa', 'in', 'interior', 'iraqi', 'ministry', 'of', 'officials', 'operating', 'run', 'terrorist', 'that', 'the', 'them', 'they', "they'd", 'three', 'two', 'up', 'were']
     assert lexicon == expected_lexicon
     assert num_dict_feat == max(len(x) for x in lexicon)
-

@@ -578,6 +578,34 @@ def test_emoji_cleaning():
     for text, expected in zip(TEXT, EXPECTED):
         assert LangIDProcessor.clean_text(text) == expected
 
+
+def test_langid_rejects_non_string_document_text():
+    processor = LangIDProcessor.__new__(LangIDProcessor)
+    processor._clean_text = False
+
+    assert processor.bulk_process([]) == []
+    with pytest.raises(TypeError, match="string text"):
+        processor.bulk_process([Document([], [["already", "tokenized"]])])
+
+
+def test_langid_preserves_keyword_api(monkeypatch):
+    processor = LangIDProcessor.__new__(LangIDProcessor)
+    processor._clean_text = False
+    monkeypatch.setattr(processor, "_text_to_tensor", lambda texts: texts)
+    monkeypatch.setattr(
+        processor,
+        "_id_langs",
+        lambda batch: ["en"] * len(batch),
+    )
+    documents = [Document([], text="hello")]
+
+    result = processor.bulk_process(documents)
+
+    assert result == documents
+    assert processor.process(doc=documents[0]) is documents[0]
+    assert documents[0].lang == "en"
+
+
 def test_lang_subset(basic_multilingual, enfr_multilingual, en_multilingual):
     """
     Basic test of restricting output to subset of languages
@@ -612,4 +640,3 @@ def test_lang_subset_unlikely_language(en_multilingual):
     en_idx = model.tag_to_idx['en']
     predictions = model(text_tensor)
     assert predictions[0, en_idx] < 0, "If this test fails, then regardless of how unlikely it was, the model is predicting the input string is possibly English.  Update the test by picking a different combination of languages & input"
-

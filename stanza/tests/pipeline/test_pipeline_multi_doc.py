@@ -50,6 +50,8 @@ def test_process_many_documents():
     assert isinstance(processed, list)
     assert len(processed) == 2
     # Order should be preserved
+    assert processed[0].sentences[0].text is not None
+    assert processed[1].sentences[0].text is not None
     assert processed[0].sentences[0].text.startswith("This")
     assert processed[1].sentences[0].text.startswith("Another")
     assert all(
@@ -57,3 +59,24 @@ def test_process_many_documents():
         for doc in processed
     )
 
+
+def test_stream_strings():
+    pipe = stanza.Pipeline(
+        lang="en",
+        dir=TEST_MODELS_DIR,
+        processors="tokenize,pos",
+        download_method=None,
+    )
+    texts = iter([
+        "This is a streamed document.",
+        "This is another streamed document.",
+    ])
+
+    processed = list(pipe.stream(texts, batch_size=1))
+
+    assert len(processed) == 2
+    assert [sentence.sent_id for doc in processed for sentence in doc.sentences] == ["0", "1"]
+    assert all(
+        all(word.upos is not None for sentence in doc.sentences for word in sentence.words)
+        for doc in processed
+    )

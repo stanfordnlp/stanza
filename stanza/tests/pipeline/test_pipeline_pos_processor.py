@@ -5,6 +5,8 @@ Basic testing of part of speech tagging
 import pytest
 import stanza
 
+from stanza.models.pos.vocab import MultiVocab, XPOSVocab
+from stanza.pipeline.pos_processor import POSProcessor
 from stanza.tests import *
 
 pytestmark = pytest.mark.pipeline
@@ -49,3 +51,26 @@ def test_get_known_feats(pos_pipeline):
     # I appreciate how self-referential the Abbr feat is
     assert 'Abbr' in feats
     assert 'Yes' in feats['Abbr']
+
+
+def test_get_known_multi_part_composite_xpos():
+    data = [[('word', 'NOUN', 'N-SG', '_')]]
+    processor = POSProcessor.__new__(POSProcessor)
+    processor._vocab = MultiVocab({
+        'xpos': XPOSVocab(data, 'test', idx=2, sep='-', keyed=False),
+    })
+
+    assert processor.get_known_xpos() == {
+        0: {'N'},
+        1: {'SG'},
+    }
+
+
+def test_get_known_one_part_composite_xpos():
+    data = [[('word', 'NOUN', 'N', '_')]]
+    processor = POSProcessor.__new__(POSProcessor)
+    processor._vocab = MultiVocab({
+        'xpos': XPOSVocab(data, 'test', idx=2, sep='-', keyed=False),
+    })
+
+    assert processor.get_known_xpos() == ['N']
