@@ -6,11 +6,8 @@ from collections import Counter
 
 import pytest
 from stanza.models import parser
-from stanza.models.common import utils
-from stanza.models.common.vocab import PAD_ID
-from stanza.models.depparse.data import data_to_batches, DataLoader, InfiniteBatch, to_int
+from stanza.models.depparse.data import data_to_batches, DataLoader, Dataset, DepparseBatchSampler, InfiniteBatch, to_int
 from stanza.utils.conll import CoNLL
-
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
@@ -111,6 +108,21 @@ def test_punct_simplification():
                               ['His', 'superior', 'officers', 'said', 'OK', '?']]
 
 
+# ---------------------------------------------------------------------------
+# Dataset / DataLoader split
+# ---------------------------------------------------------------------------
+#
+# DataLoader used to preprocess and tensorize every sentence exactly once,
+# at construction time. It is now a thin batch-retrieval wrapper around a
+# separate Dataset class (mirroring stanza.models.pos.data.Dataset), which
+# fetches each sentence fresh from Dataset.__getitem__ every time a batch
+# is materialized. The tests below check that this split preserves the
+# previous observable behavior (data_orig_idx, set_batch_size, reshuffle)
+# and that the new mechanism -- fresh per-item fetch on every access --
+# actually holds, since that is the property a future per-item augmentation
+# (comparable to the POS tagger's punctuation-drop augmentation) would
+# depend on.
+
 THREE_SENTENCE_SAMPLE = """
 # sent_id = a
 # text = Short one.
@@ -144,6 +156,43 @@ THREE_SENTENCE_SAMPLE = """
 """
 
 
+def test_dataset_getitem_called_fresh_across_epochs():
+    """
+    Dataset.__getitem__ must be invoked fresh every time a batch is
+    materialized -- not cached once and reused -- so that a future
+    per-item augmentation added there would be re-rolled every epoch,
+    the same mechanism the POS tagger's Dataset already relies on.
+
+    Pulls more batches than exist in a single epoch via InfiniteBatch
+    (which reshuffles on exhaustion), and checks Dataset.__getitem__ was
+    called more times than there are sentences in the dataset -- i.e.
+    it was genuinely re-invoked across multiple epochs, not served from
+    a cache computed once.
+    """
+    sample = CoNLL.conll2doc(input_str=THREE_SENTENCE_SAMPLE)
+    args = parser.parse_args(args=["--batch_size", "8", "--shorthand", "en_test"])
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+
+    call_count = [0]
+    orig_getitem = Dataset.__getitem__
+    def counting_getitem(self, key):
+        call_count[0] += 1
+        return orig_getitem(self, key)
+    Dataset.__getitem__ = counting_getitem
+    try:
+        infinite_batch = InfiniteBatch(train_batch)
+        for _ in range(10):
+            infinite_batch.next_batch()
+    finally:
+        Dataset.__getitem__ = orig_getitem
+
+    num_sentences = len(train_batch.dataset)
+    assert call_count[0] > num_sentences, (
+        "expected Dataset.__getitem__ to be called across multiple epochs, "
+        "not just once per sentence"
+    )
+
+
 def test_data_orig_idx_unsorts_correctly():
     """
     eval_batch.data_orig_idx, produced by the new DepparseBatchSampler,
@@ -151,6 +200,8 @@ def test_data_orig_idx_unsorts_correctly():
     order -- this is the exact mechanism stanza.models.depparse.utils.
     predict_dataset relies on.
     """
+    from stanza.models.common import utils
+
     sample = CoNLL.conll2doc(input_str=THREE_SENTENCE_SAMPLE)
     args = parser.parse_args(args=["--batch_size", "5", "--shorthand", "en_test"])
     train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
@@ -238,6 +289,16 @@ def test_to_int_invalid_ignored():
     assert to_int("_", ignore_error=True) == 0
 
 
+# ---------------------------------------------------------------------------
+# Dataset.preprocess: ROOT-token prepending
+# ---------------------------------------------------------------------------
+#
+# words, chars, upos, xpos, feats, pretrain, and lemma are each prepended
+# with a ROOT-token placeholder (so the model has an explicit ROOT input
+# position); head, deprel, and text are NOT prepended, since they are
+# per-real-word outputs.  These tests pin that structural distinction
+# down directly on Dataset.__getitem__'s raw (un-tensorized) output.
+
 TWO_WORD_SAMPLE = """
 # sent_id = a
 # text = Cats sleep.
@@ -252,6 +313,47 @@ def _build_train_loader(sample_str, batch_size=100, extra_args=None):
     if extra_args:
         args.update(extra_args)
     return DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+
+def test_preprocess_root_prepended_fields():
+    from stanza.models.common.vocab import ROOT_ID
+
+    train_batch = _build_train_loader(TWO_WORD_SAMPLE)
+    rec = train_batch.dataset[0]
+    word, char, upos, xpos, feats, pretrain, lemma, head, deprel, text = rec
+
+    num_words = 3  # Cats, sleep, .
+    # ROOT-prepended fields: length == num_words + 1, and start with ROOT_ID
+    for field, name in [(word, 'word'), (upos, 'upos'), (xpos, 'xpos'),
+                         (pretrain, 'pretrain'), (lemma, 'lemma')]:
+        assert len(field) == num_words + 1, f"{name} should be ROOT-prepended"
+        assert field[0] == ROOT_ID, f"{name}[0] should be ROOT_ID"
+    assert len(char) == num_words + 1 and char[0] == [ROOT_ID]
+    assert len(feats) == num_words + 1
+
+    # NOT ROOT-prepended: length == num_words exactly
+    assert len(head) == num_words
+    assert len(deprel) == num_words
+    assert len(text) == num_words
+    assert text == ['Cats', 'sleep', '.']
+
+def test_preprocess_head_values():
+    """head[i] should be the 1-indexed position of word i's head, 0 for the root word."""
+    train_batch = _build_train_loader(TWO_WORD_SAMPLE)
+    rec = train_batch.dataset[0]
+    head = rec[7]
+    # Cats -> sleep (position 2), sleep -> root (0), . -> sleep (position 2)
+    assert head == [2, 0, 2]
+
+def test_preprocess_no_pretrain_gives_pad_id():
+    """With no pretrain vocab, the pretrain field should be all PAD_ID (except ROOT)."""
+    from stanza.models.common.vocab import ROOT_ID, PAD_ID
+
+    train_batch = _build_train_loader(TWO_WORD_SAMPLE)
+    rec = train_batch.dataset[0]
+    pretrain_field = rec[5]
+    assert pretrain_field[0] == ROOT_ID
+    assert all(x == PAD_ID for x in pretrain_field[1:])
+
 
 # ---------------------------------------------------------------------------
 # collate(): tensor shapes and values
@@ -282,6 +384,8 @@ def test_collate_tensor_shapes():
     [0, 1] or [1, 0] from one build to the next -- that is not a bug,
     just not something a test should pin down.
     """
+    from stanza.models.common.vocab import PAD_ID
+
     sample = CoNLL.conll2doc(input_str=TWO_SENTENCE_DIFFERENT_LENGTHS)
     args = parser.parse_args(args=["--batch_size", "100", "--shorthand", "en_test"])
     train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
@@ -359,6 +463,80 @@ def test_init_vocab_requires_train_mode():
     args = parser.parse_args(args=["--batch_size", "100", "--shorthand", "en_test"])
     with pytest.raises(AssertionError):
         DataLoader(sample, args['batch_size'], args, None, vocab=None, evaluation=True)
+
+
+# ---------------------------------------------------------------------------
+# sample_train
+# ---------------------------------------------------------------------------
+
+TEN_SENTENCE_SAMPLE = "\n".join(
+    "# sent_id = s{i}\n# text = word{i}.\n1\tword{i}\tword{i}\tNOUN\tNN\t_\t0\troot\t0:root\t_\n2\t.\t.\tPUNCT\t.\t_\t1\tpunct\t1:punct\t_\n".format(i=i)
+    for i in range(10)
+)
+
+def test_sample_train_subsets_training_data():
+    train_batch = _build_train_loader(TEN_SENTENCE_SAMPLE, extra_args={'sample_train': 0.5})
+    assert len(train_batch.dataset) == 5
+
+def test_sample_train_does_not_affect_eval():
+    train_batch = _build_train_loader(TEN_SENTENCE_SAMPLE)
+    vocab = train_batch.vocab
+    sample = CoNLL.conll2doc(input_str=TEN_SENTENCE_SAMPLE)
+    args = dict(parser.parse_args(args=["--batch_size", "100", "--shorthand", "en_test"]))
+    args['sample_train'] = 0.5
+    eval_batch = DataLoader(sample, args['batch_size'], args, None, vocab=vocab, evaluation=True)
+    assert len(eval_batch.dataset) == 10
+
+
+# ---------------------------------------------------------------------------
+# DepparseBatchSampler, in isolation
+# ---------------------------------------------------------------------------
+#
+# DepparseBatchSampler only needs an object exposing .lengths, so it can be
+# tested without building a real Dataset (vocab, doc, preprocessing, etc).
+
+class _FakeLengthsDataset:
+    def __init__(self, lengths):
+        self.lengths = lengths
+
+def test_batch_sampler_matches_data_to_batches():
+    """DepparseBatchSampler's batching should agree with data_to_batches on the same lengths."""
+    fake = _FakeLengthsDataset([1, 2, 3])
+    sampler = DepparseBatchSampler(fake, batch_size=5, eval_mode=True,
+                                    sort_during_eval=True, min_length_to_batch_separately=None)
+    assert len(sampler) == 2
+    # sorted descending by length: idx2(len3), idx1(len2), idx0(len1);
+    # budget 5 fits idx2+idx1 (3+2=5), idx0 alone in the second batch
+    assert sampler.batches == [[2, 1], [0]]
+    assert sampler.data_orig_idx == [2, 1, 0]
+    # __iter__ should yield the same batches
+    assert list(sampler) == [[2, 1], [0]]
+
+def test_batch_sampler_reshuffle_changes_grouping():
+    """reshuffle() should recompute batches (train mode reshuffles + reorders every call)."""
+    fake = _FakeLengthsDataset([1, 2, 3, 4, 5])
+    sampler = DepparseBatchSampler(fake, batch_size=3, eval_mode=False,
+                                    sort_during_eval=False, min_length_to_batch_separately=None)
+    first = sampler.batches
+    seen_different = False
+    for _ in range(20):
+        sampler.reshuffle()
+        if sampler.batches != first:
+            seen_different = True
+            break
+    assert seen_different, "reshuffle() never produced a different batch grouping across 20 tries"
+    # every index should always be accounted for exactly once, regardless of grouping
+    all_indices = sorted(idx for batch in sampler.batches for idx in batch)
+    assert all_indices == [0, 1, 2, 3, 4]
+
+def test_batch_sampler_eval_mode_stable_without_reshuffle():
+    """Eval-mode batches should not change just from being iterated repeatedly."""
+    fake = _FakeLengthsDataset([1, 2, 3])
+    sampler = DepparseBatchSampler(fake, batch_size=5, eval_mode=True,
+                                    sort_during_eval=True, min_length_to_batch_separately=None)
+    first = list(sampler)
+    second = list(sampler)
+    assert first == second
 
 
 # ---------------------------------------------------------------------------
