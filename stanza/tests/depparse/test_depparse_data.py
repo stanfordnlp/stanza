@@ -1,10 +1,16 @@
 """
 Test some pieces of the depparse dataloader
 """
+import random
+from collections import Counter
+
 import pytest
 from stanza.models import parser
-from stanza.models.depparse.data import data_to_batches, DataLoader
+from stanza.models.common import utils
+from stanza.models.common.vocab import PAD_ID
+from stanza.models.depparse.data import data_to_batches, DataLoader, InfiniteBatch, to_int
 from stanza.utils.conll import CoNLL
+
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
@@ -105,6 +111,334 @@ def test_punct_simplification():
                               ['His', 'superior', 'officers', 'said', 'OK', '?']]
 
 
+THREE_SENTENCE_SAMPLE = """
+# sent_id = a
+# text = Short one.
+1	Short	short	ADJ	JJ	_	2	amod	2:amod	_
+2	one	one	NOUN	NN	_	0	root	0:root	_
+3	.	.	PUNCT	.	_	2	punct	2:punct	_
+
+# sent_id = b
+# text = This is a much longer sentence with many more words in it.
+1	This	this	PRON	DT	_	2	nsubj	2:nsubj	_
+2	is	be	AUX	VBZ	_	0	root	0:root	_
+3	a	a	DET	DT	_	7	det	7:det	_
+4	much	much	ADV	RB	_	5	advmod	5:advmod	_
+5	longer	long	ADJ	JJR	_	7	amod	7:amod	_
+6	sentence	sentence	NOUN	NN	_	7	compound	7:compound	_
+7	with	with	ADP	IN	_	2	obl	2:obl	_
+8	many	many	ADJ	JJ	_	9	amod	9:amod	_
+9	more	more	ADJ	JJR	_	10	amod	10:amod	_
+10	words	word	NOUN	NNS	_	7	obl	7:obl	_
+11	in	in	ADP	IN	_	12	case	12:case	_
+12	it	it	PRON	PRP	_	10	obl	10:obl	_
+13	.	.	PUNCT	.	_	2	punct	2:punct	_
+
+# sent_id = c
+# text = Medium length one here.
+1	Medium	medium	ADJ	JJ	_	3	amod	3:amod	_
+2	length	length	NOUN	NN	_	3	compound	3:compound	_
+3	one	one	NOUN	NN	_	0	root	0:root	_
+4	here	here	ADV	RB	_	3	advmod	3:advmod	_
+5	.	.	PUNCT	.	_	3	punct	3:punct	_
+"""
+
+
+def test_data_orig_idx_unsorts_correctly():
+    """
+    eval_batch.data_orig_idx, produced by the new DepparseBatchSampler,
+    must still correctly unsort predictions back to the original document
+    order -- this is the exact mechanism stanza.models.depparse.utils.
+    predict_dataset relies on.
+    """
+    sample = CoNLL.conll2doc(input_str=THREE_SENTENCE_SAMPLE)
+    args = parser.parse_args(args=["--batch_size", "5", "--shorthand", "en_test"])
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+    vocab = train_batch.vocab
+    eval_batch = DataLoader(sample, args['batch_size'], args, None, vocab=vocab, evaluation=True, sort_during_eval=True)
+
+    all_texts = []
+    for batch in eval_batch:
+        all_texts.extend(batch[-1])
+
+    unsorted_texts = utils.unsort(all_texts, eval_batch.data_orig_idx)
+    assert unsorted_texts == [
+        ['Short', 'one', '.'],
+        ['This', 'is', 'a', 'much', 'longer', 'sentence', 'with', 'many', 'more', 'words', 'in', 'it', '.'],
+        ['Medium', 'length', 'one', 'here', '.'],
+    ]
+
+
+def test_data_orig_idx_none_when_not_sorted():
+    """data_orig_idx should be None for train mode and for eval without sort_during_eval."""
+    sample = CoNLL.conll2doc(input_str=THREE_SENTENCE_SAMPLE)
+    args = parser.parse_args(args=["--batch_size", "5", "--shorthand", "en_test"])
+
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+    assert train_batch.data_orig_idx is None
+
+    vocab = train_batch.vocab
+    eval_batch = DataLoader(sample, args['batch_size'], args, None, vocab=vocab, evaluation=True, sort_during_eval=False)
+    assert eval_batch.data_orig_idx is None
+
+
+def test_set_batch_size_and_reshuffle():
+    """
+    set_batch_size followed by reshuffle (as done in parser.py when
+    switching to a second optimizer with a different batch size) must
+    actually take effect on the next round of batches.
+    """
+    sample = CoNLL.conll2doc(input_str=THREE_SENTENCE_SAMPLE)
+    args = parser.parse_args(args=["--batch_size", "100", "--shorthand", "en_test"])
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+    assert len(train_batch) == 1  # all 3 sentences fit in one batch at size 100
+
+    train_batch.set_batch_size(1)
+    train_batch.reshuffle()
+    assert train_batch.batch_size == 1
+    assert len(train_batch) == 3  # each sentence now forced into its own batch
+
+
+def test_min_length_to_batch_separately():
+    """A sentence longer than min_length_to_batch_separately gets its own batch."""
+    sample = CoNLL.conll2doc(input_str=THREE_SENTENCE_SAMPLE)
+    args = parser.parse_args(args=["--batch_size", "100", "--shorthand", "en_test"])
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False,
+                              min_length_to_batch_separately=8)
+    # the 13-word sentence exceeds 8 and should be isolated into its own batch,
+    # while the other two (short) sentences share a batch together
+    assert len(train_batch) == 2
+
+
+def test_reversed_sentences():
+    """The 'reversed' arg should reverse word order within each sentence."""
+    sample = CoNLL.conll2doc(input_str=THREE_SENTENCE_SAMPLE)
+    args = dict(parser.parse_args(args=["--batch_size", "100", "--shorthand", "en_test"]))
+    args['reversed'] = True
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+
+    all_texts = []
+    for batch in train_batch:
+        all_texts.extend(batch[-1])
+    assert ['.', 'one', 'Short'] in all_texts
+
+
+# ---------------------------------------------------------------------------
+# to_int
+# ---------------------------------------------------------------------------
+
+def test_to_int_valid():
+    assert to_int("5") == 5
+
+def test_to_int_invalid_raises_by_default():
+    with pytest.raises(ValueError):
+        to_int("_")
+
+def test_to_int_invalid_ignored():
+    assert to_int("_", ignore_error=True) == 0
+
+
+TWO_WORD_SAMPLE = """
+# sent_id = a
+# text = Cats sleep.
+1	Cats	cat	NOUN	NNS	Number=Plur	2	nsubj	2:nsubj	_
+2	sleep	sleep	VERB	VBZ	Mood=Ind|Tense=Pres	0	root	0:root	_
+3	.	.	PUNCT	.	_	2	punct	2:punct	_
+"""
+
+def _build_train_loader(sample_str, batch_size=100, extra_args=None):
+    sample = CoNLL.conll2doc(input_str=sample_str)
+    args = dict(parser.parse_args(args=["--batch_size", str(batch_size), "--shorthand", "en_test"]))
+    if extra_args:
+        args.update(extra_args)
+    return DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+
+# ---------------------------------------------------------------------------
+# collate(): tensor shapes and values
+# ---------------------------------------------------------------------------
+
+TWO_SENTENCE_DIFFERENT_LENGTHS = """
+# sent_id = a
+# text = Cats sleep.
+1	Cats	cat	NOUN	NNS	Number=Plur	2	nsubj	2:nsubj	_
+2	sleep	sleep	VERB	VBZ	Mood=Ind|Tense=Pres	0	root	0:root	_
+3	.	.	PUNCT	.	_	2	punct	2:punct	_
+
+# sent_id = b
+# text = Dogs run fast.
+1	Dogs	dog	NOUN	NNS	Number=Plur	2	nsubj	2:nsubj	_
+2	run	run	VERB	VBZ	Mood=Ind|Tense=Pres	0	root	0:root	_
+3	fast	fast	ADV	RB	_	2	advmod	2:advmod	_
+4	.	.	PUNCT	.	_	2	punct	2:punct	_
+"""
+
+def test_collate_tensor_shapes():
+    """
+    Built in eval mode with sort_during_eval=True, since that is the only
+    configuration where batch ordering (and therefore orig_idx) is fully
+    deterministic. In train mode, data_to_batches applies its own random
+    sort direction and collate()'s internal sort_all applies a second,
+    independent one, so orig_idx can legitimately come out as either
+    [0, 1] or [1, 0] from one build to the next -- that is not a bug,
+    just not something a test should pin down.
+    """
+    sample = CoNLL.conll2doc(input_str=TWO_SENTENCE_DIFFERENT_LENGTHS)
+    args = parser.parse_args(args=["--batch_size", "100", "--shorthand", "en_test"])
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+    vocab = train_batch.vocab
+    eval_batch = DataLoader(sample, args['batch_size'], args, None, vocab=vocab,
+                             evaluation=True, sort_during_eval=True)
+    assert len(eval_batch) == 1
+    batch = eval_batch[0]
+    (words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats,
+     pretrained, lemma, head, deprel, orig_idx, word_orig_idx,
+     sentlens, word_lens, text) = batch
+
+    # 2 sentences, longer one (4 words + ROOT = 5) sets the padded width;
+    # words/upos/xpos/pretrained/lemma all include the ROOT position
+    assert tuple(words.shape) == (2, 5)
+    assert tuple(upos.shape) == (2, 5)
+    assert tuple(xpos.shape) == (2, 5)
+    assert tuple(pretrained.shape) == (2, 5)
+    assert tuple(lemma.shape) == (2, 5)
+
+    # head/deprel exclude ROOT, so the padded width is one less
+    assert tuple(head.shape) == (2, 4)
+    assert tuple(deprel.shape) == (2, 4)
+
+    # batches are sorted longest-first: "Dogs run fast ." (4 words) before
+    # "Cats sleep ." (3 words), so the second row is padded
+    assert sentlens == [5, 4]
+    assert text[0] == ['Dogs', 'run', 'fast', '.']
+    assert text[1] == ['Cats', 'sleep', '.']
+
+    # the shorter sentence's tensors should carry PAD_ID past its real length
+    assert words[1, 4].item() == PAD_ID
+    assert words_mask[1, 4].item() is True
+    assert words_mask[0, 4].item() is False
+
+    # sort_during_eval means DepparseBatchSampler has already sorted
+    # index_list descending by length before collate() ever sees it, so
+    # collate()'s own internal sort_all (also descending) finds nothing
+    # left to reorder -- orig_idx here is relative to collate()'s own
+    # input order (index_list), not document order, so it comes out as
+    # the identity permutation. Document-order unsorting is a *separate*
+    # concept, carried on eval_batch.data_orig_idx (verified independently
+    # in test_data_orig_idx_unsorts_correctly), not on this per-batch value.
+    assert list(orig_idx) == [0, 1]
+    assert eval_batch.data_orig_idx == [1, 0]
+
+def test_collate_head_values_exclude_root_offset():
+    """head values in the collated tensor should match the raw preprocess() head list."""
+    train_batch = _build_train_loader(TWO_SENTENCE_DIFFERENT_LENGTHS)
+    batch = train_batch[0]
+    head = batch[9]
+    text = batch[-1]
+    # first row is "Dogs run fast .": Dogs->run(2), run->root(0), fast->run(2), .->run(2)
+    dogs_row_idx = text.index(['Dogs', 'run', 'fast', '.'])
+    assert list(head[dogs_row_idx]) == [2, 0, 2, 2]
+
+
+# ---------------------------------------------------------------------------
+# Vocab handling
+# ---------------------------------------------------------------------------
+
+def test_vocab_reused_when_provided():
+    """Passing vocab= explicitly should reuse that exact object, not rebuild one."""
+    train_batch = _build_train_loader(TWO_WORD_SAMPLE)
+    vocab = train_batch.vocab
+
+    sample = CoNLL.conll2doc(input_str=TWO_WORD_SAMPLE)
+    args = parser.parse_args(args=["--batch_size", "100", "--shorthand", "en_test"])
+    second_batch = DataLoader(sample, args['batch_size'], args, None, vocab=vocab, evaluation=True)
+    assert second_batch.vocab is vocab
+
+def test_init_vocab_requires_train_mode():
+    """Building a vocab from scratch (vocab=None) in eval mode should raise."""
+    sample = CoNLL.conll2doc(input_str=TWO_WORD_SAMPLE)
+    args = parser.parse_args(args=["--batch_size", "100", "--shorthand", "en_test"])
+    with pytest.raises(AssertionError):
+        DataLoader(sample, args['batch_size'], args, None, vocab=None, evaluation=True)
+
+
+# ---------------------------------------------------------------------------
+# InfiniteBatch
+# ---------------------------------------------------------------------------
+
+class _FakeBatchSet:
+    """Minimal stand-in for a DataLoader: supports iteration, reshuffle, set_batch_size."""
+    def __init__(self, name, n):
+        self.name = name
+        self.batch_size = None
+        self._order = list(range(n))
+
+    def __iter__(self):
+        return iter(["{}{}".format(self.name, i) for i in self._order])
+
+    def reshuffle(self):
+        random.shuffle(self._order)
+
+    def set_batch_size(self, batch_size):
+        self.batch_size = batch_size
+
+def test_infinite_batch_single_source_cycles():
+    a = _FakeBatchSet("A", 3)
+    ib = InfiniteBatch(a)
+    seen = [ib.next_batch() for _ in range(9)]
+    # with one source and no weights, every draw comes from it; over 9 draws
+    # (3 epochs of a 3-item source) every item should appear at least once
+    assert set(x[0] for x in seen) == {'A'}
+
+def test_infinite_batch_weighted_mixing_skews_toward_higher_weight():
+    random.seed(12345)
+    a = _FakeBatchSet("A", 3)
+    b = _FakeBatchSet("B", 3)
+    ib = InfiniteBatch(a, b, weights=[1.0, 9.0])
+    counts = Counter()
+    for _ in range(2000):
+        counts[ib.next_batch()[0]] += 1
+    # expected ~10% A / 90% B; allow a generous tolerance to avoid flakiness
+    assert counts['B'] > counts['A'] * 3, (
+        f"expected source B (weight 9) to be drawn far more often than A (weight 1), got {counts}"
+    )
+
+def test_infinite_batch_set_batch_size_propagates_to_all_sources():
+    a = _FakeBatchSet("A", 3)
+    b = _FakeBatchSet("B", 3)
+    ib = InfiniteBatch(a, b)
+    ib.set_batch_size(7)
+    assert a.batch_size == 7
+    assert b.batch_size == 7
+
+def test_infinite_batch_reshuffle_resets_iterators():
+    a = _FakeBatchSet("A", 3)
+    ib = InfiniteBatch(a)
+    # exhaust part of the current iterator
+    ib.next_batch()
+    ib.reshuffle()
+    # after an explicit reshuffle, a fresh full cycle should be available
+    # again without error
+    seen = [ib.next_batch() for _ in range(3)]
+    assert len(seen) == 3
+
+
+# ---------------------------------------------------------------------------
+# DataLoader.__getitem__ error handling
+# ---------------------------------------------------------------------------
+
+def test_dataloader_getitem_rejects_non_int_key():
+    train_batch = _build_train_loader(THREE_SENTENCE_SAMPLE)
+    with pytest.raises(TypeError):
+        train_batch["0"]
+
+def test_dataloader_getitem_rejects_out_of_range_key():
+    train_batch = _build_train_loader(THREE_SENTENCE_SAMPLE, batch_size=100)
+    assert len(train_batch) == 1
+    with pytest.raises(IndexError):
+        train_batch[1]
+    with pytest.raises(IndexError):
+        train_batch[-1]
+
+
 if __name__ == '__main__':
     test_data_to_batches()
-
