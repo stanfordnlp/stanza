@@ -3,6 +3,7 @@ import random
 import logging
 import torch
 
+from torch.utils.data import DataLoader as TorchDataLoader
 from torch.utils.data.sampler import Sampler
 
 from stanza.models.common.bert_embedding import filter_data, needs_length_filter
@@ -212,6 +213,42 @@ class Dataset:
                         data[sent_idx][tok_idx][feat_idx] = '_'
         return data
 
+    def to_loader(self, batch_size=None, sort_during_eval=True, min_length_to_batch_separately=None, sampler=None, **kwargs):
+        """
+        Wrap this Dataset in a real torch.utils.data.DataLoader, mirroring
+        stanza.models.pos.data.Dataset.to_loader. This is the single
+        place that constructs that wrapping -- DataLoader.__iter__ below
+        calls this too (passing its own already-built sampler), rather
+        than duplicating the TorchDataLoader construction inline.
+
+        This is an eval-only mechanism: batches are chunked once via
+        DepparseBatchSampler in eval mode (deterministic order, no random
+        sort direction, no augmentation), and iterating the returned
+        DataLoader repeatedly always produces the same batches in the
+        same order. For training -- where batches need to be reshuffled
+        on every epoch and, in the multi-source case, drawn according to
+        a weighted mix -- the parent DataLoader class's InfiniteBatch-based
+        mechanism is used instead, since an ordinary torch DataLoader
+        doesn't directly support that.
+
+        Pass an existing DepparseBatchSampler via sampler= to reuse
+        already-computed batches (as DataLoader.__iter__ does) instead of
+        recomputing them; otherwise a fresh one is built from batch_size /
+        sort_during_eval / min_length_to_batch_separately.
+
+        Passing num_workers>0 in **kwargs lets torch prefetch and collate
+        batches in separate worker processes while the model consumes the
+        previous batch -- likely a small win given how cheap collating a
+        single batch is here, but harmless to make available.
+        """
+        if sampler is None:
+            if batch_size is None:
+                raise ValueError("Must supply either batch_size or an existing sampler")
+            sampler = DepparseBatchSampler(self, batch_size, eval_mode=True,
+                                            sort_during_eval=sort_during_eval,
+                                            min_length_to_batch_separately=min_length_to_batch_separately)
+        return TorchDataLoader(self, batch_sampler=sampler, collate_fn=DataLoader.collate, **kwargs)
+
 
 class DepparseBatchSampler(Sampler):
     """
@@ -309,7 +346,8 @@ class DataLoader:
         batch = [self.dataset[idx] for idx in index_list]
         return self.collate(batch)
 
-    def collate(self, batch):
+    @staticmethod
+    def collate(batch):
         batch_size = len(batch)
         batch = list(zip(*batch))
         assert len(batch) == 10
@@ -344,8 +382,26 @@ class DataLoader:
         return words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, lemma, head, deprel, orig_idx, word_orig_idx, sentlens, word_lens, text
 
     def __iter__(self):
-        for i in range(self.__len__()):
-            yield self.__getitem__(i)
+        """
+        Eval mode iterates via a real torch.utils.data.DataLoader (built
+        from the same sampler and collate function used everywhere else
+        here), matching stanza.models.pos.data.Dataset.to_loader's
+        mechanism and allowing num_workers>0 to prefetch/collate batches
+        in a separate process, if a caller wants that.
+
+        Train mode keeps the previous manual loop: InfiniteBatch relies on
+        reshuffle()-on-exhaustion and (for multi-source training) weighted
+        draws across sources, neither of which an ordinary torch
+        DataLoader directly supports, so there is no equivalent win from
+        switching that path over.
+        """
+        if self.eval:
+            loader = self.dataset.to_loader(sampler=self.sampler)
+            for batch in loader:
+                yield batch
+        else:
+            for i in range(self.__len__()):
+                yield self.__getitem__(i)
 
     def set_batch_size(self, batch_size):
         self.batch_size = batch_size

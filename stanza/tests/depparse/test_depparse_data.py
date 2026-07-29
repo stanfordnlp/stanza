@@ -618,5 +618,150 @@ def test_dataloader_getitem_rejects_out_of_range_key():
         train_batch[-1]
 
 
+# ---------------------------------------------------------------------------
+# torch DataLoader-backed eval iteration
+# ---------------------------------------------------------------------------
+#
+# Eval-mode DataLoader.__iter__ is now backed by a real
+# torch.utils.data.DataLoader (built from the same sampler and collate
+# function used everywhere else), matching the mechanism
+# stanza.models.pos.data.Dataset.to_loader already uses. This never
+# applies any augmentation -- it is purely an alternate plumbing path for
+# the same deterministic eval batches, potentially allowing num_workers>0
+# to prefetch/collate in a separate process. Train mode is unaffected:
+# it keeps the previous manual loop, since InfiniteBatch's
+# reshuffle-on-exhaustion and weighted multi-source mixing aren't
+# something an ordinary torch DataLoader supports directly.
+
+def _build_eval_loader(sample_str, batch_size=5, sort_during_eval=True):
+    sample = CoNLL.conll2doc(input_str=sample_str)
+    args = parser.parse_args(args=["--batch_size", str(batch_size), "--shorthand", "en_test"])
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+    vocab = train_batch.vocab
+    return DataLoader(sample, args['batch_size'], args, None, vocab=vocab,
+                       evaluation=True, sort_during_eval=sort_during_eval)
+
+def test_eval_iter_delegates_to_dataset_to_loader():
+    """
+    DataLoader.__iter__ must delegate to Dataset.to_loader() in eval mode,
+    not duplicate the TorchDataLoader construction inline -- to_loader()
+    is meant to be the single place that wrapping happens, used both here
+    and by any standalone caller. Patching TorchDataLoader itself would
+    not distinguish an inline call from a delegated one, since both paths
+    would reference the same name; patching Dataset.to_loader directly
+    does.
+    """
+    eval_batch = _build_eval_loader(THREE_SENTENCE_SAMPLE)
+
+    call_count = [0]
+    real_to_loader = Dataset.to_loader
+    def counting_to_loader(self, *args, **kwargs):
+        call_count[0] += 1
+        return real_to_loader(self, *args, **kwargs)
+
+    Dataset.to_loader = counting_to_loader
+    try:
+        list(eval_batch)
+    finally:
+        Dataset.to_loader = real_to_loader
+    assert call_count[0] == 1, "expected eval-mode iteration to call Dataset.to_loader() exactly once"
+
+    train_batch = _build_train_loader(THREE_SENTENCE_SAMPLE)
+    call_count[0] = 0
+    Dataset.to_loader = counting_to_loader
+    try:
+        list(train_batch)
+    finally:
+        Dataset.to_loader = real_to_loader
+    assert call_count[0] == 0, "train-mode iteration should not call Dataset.to_loader() at all"
+
+def test_eval_iter_matches_direct_getitem_indexing():
+    """
+    Iterating an eval DataLoader (now torch-DataLoader-backed) must
+    produce exactly the same batches, in the same order, as indexing it
+    directly (which still uses the original manual per-batch fetch).
+    """
+    import torch as _torch
+    eval_batch = _build_eval_loader(TWO_SENTENCE_DIFFERENT_LENGTHS)
+
+    direct_batches = [eval_batch[i] for i in range(len(eval_batch))]
+    iter_batches = list(eval_batch)
+
+    assert len(direct_batches) == len(iter_batches)
+    for direct, itd in zip(direct_batches, iter_batches):
+        for d_val, i_val in zip(direct, itd):
+            if _torch.is_tensor(d_val):
+                assert _torch.equal(d_val, i_val)
+            else:
+                assert d_val == i_val
+
+def test_train_iter_still_uses_manual_loop():
+    """
+    Train-mode DataLoader.__iter__ must NOT go through the torch
+    DataLoader path -- only eval mode should. Confirmed by checking that
+    repeated iteration without an explicit reshuffle() keeps returning the
+    same batch grouping (the manual loop just re-reads self.sampler.batches
+    each time; a torch DataLoader with a fresh RandomSampler would not
+    give this guarantee, though DepparseBatchSampler itself doesn't
+    reshuffle on its own either way -- the key check is that .eval is
+    consulted and behaves identically to before this change).
+    """
+    train_batch = _build_train_loader(THREE_SENTENCE_SAMPLE, batch_size=100)
+    assert train_batch.eval is False
+    first_pass = [batch[-1] for batch in train_batch]
+    second_pass = [batch[-1] for batch in train_batch]
+    assert first_pass == second_pass
+
+def test_dataset_to_loader_standalone():
+    """
+    Dataset.to_loader() should work independently of the outer DataLoader
+    wrapper, mirroring stanza.models.pos.data.Dataset.to_loader, and
+    return a real torch.utils.data.DataLoader.
+    """
+    import torch
+    sample = CoNLL.conll2doc(input_str=THREE_SENTENCE_SAMPLE)
+    args = parser.parse_args(args=["--batch_size", "5", "--shorthand", "en_test"])
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+    vocab = train_batch.vocab
+
+    dataset = Dataset(sample, args, None, vocab=vocab, evaluation=True)
+    loader = dataset.to_loader(batch_size=5, sort_during_eval=True)
+    assert isinstance(loader, torch.utils.data.DataLoader)
+
+    batches = list(loader)
+    all_texts = [sent for batch in batches for sent in batch[-1]]
+    assert sorted(all_texts) == sorted([
+        ['Short', 'one', '.'],
+        ['This', 'is', 'a', 'much', 'longer', 'sentence', 'with', 'many', 'more', 'words', 'in', 'it', '.'],
+        ['Medium', 'length', 'one', 'here', '.'],
+    ])
+
+def test_dataset_to_loader_reuses_provided_sampler():
+    """
+    Passing sampler= should reuse that exact sampler's batches rather
+    than recomputing a fresh one from batch_size -- this is how
+    DataLoader.__iter__ avoids redundant batch computation.
+    """
+    sample = CoNLL.conll2doc(input_str=THREE_SENTENCE_SAMPLE)
+    args = parser.parse_args(args=["--batch_size", "5", "--shorthand", "en_test"])
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+    vocab = train_batch.vocab
+
+    dataset = Dataset(sample, args, None, vocab=vocab, evaluation=True)
+    sampler = DepparseBatchSampler(dataset, batch_size=5, eval_mode=True,
+                                    sort_during_eval=True, min_length_to_batch_separately=None)
+    loader = dataset.to_loader(sampler=sampler)
+    assert len(list(loader)) == len(sampler.batches)
+
+def test_dataset_to_loader_requires_batch_size_or_sampler():
+    sample = CoNLL.conll2doc(input_str=THREE_SENTENCE_SAMPLE)
+    args = parser.parse_args(args=["--batch_size", "5", "--shorthand", "en_test"])
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+    vocab = train_batch.vocab
+    dataset = Dataset(sample, args, None, vocab=vocab, evaluation=True)
+    with pytest.raises(ValueError):
+        dataset.to_loader()
+
+
 if __name__ == '__main__':
     test_data_to_batches()
