@@ -17,6 +17,7 @@ from stanza.models.lemma.trainer import (
     _POS_INDEPENDENT,
     _DICTS_VERSION_LEGACY,
     _DICTS_VERSION_POS,
+    _DICTS_VERSION_POS_PICKLE,
     _pack_pos_dict,
     _unpack_pos_dict,
     _legacy_dicts_to_pos_dict,
@@ -496,3 +497,36 @@ class TestDictLemmatizer:
         assert loaded.predict_dict([("left", "VERB")]) == ["leave"]
         # unknown word
         assert loaded.predict_dict([("xyzzy", "NOUN")]) == ["xyzzy"]
+
+    def test_v2_pickle_load_raises(self, tmp_path):
+        """
+        A checkpoint in the v2 pickle format should raise a ValueError
+        with a message directing the user to convert_lemma_dict.py.
+        The v2 format was used briefly in 1.13.0 and replaced in 1.14.0
+        due to a security concern with pickle deserialization.
+        """
+        import gzip
+        import pickle
+        from stanza.models.lemma.vocab import MultiVocab, Vocab
+
+        pos_dict = {_POS_INDEPENDENT: {"running": "run"}}
+        packed = gzip.compress(pickle.dumps(pos_dict, protocol=4))
+
+        char_vocab = Vocab("abcdefghijklmnopqrstuvwxyz", "en")
+        pos_vocab  = Vocab(["VERB"], "en")
+        vocab      = MultiVocab({'char': char_vocab, 'pos': pos_vocab})
+
+        v2_checkpoint = {
+            'model':        None,
+            'dicts':        packed,
+            'dicts_version': _DICTS_VERSION_POS_PICKLE,
+            'vocab':        vocab.state_dict(),
+            'config':       {'dict_only': True, 'caseless': False,
+                             'charlm_forward_file': None, 'charlm_backward_file': None},
+            'contextual':   [],
+        }
+        save_path = str(tmp_path / "v2_lemmatizer.pt")
+        torch.save(v2_checkpoint, save_path, _use_new_zipfile_serialization=False)
+
+        with pytest.raises(ValueError, match="convert_lemma_dict.py"):
+            trainer.Trainer(model_file=save_path, device='cpu')
