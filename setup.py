@@ -80,11 +80,12 @@ setup(
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=[
         'emoji', 
+        'networkx',
         'numpy', 
+        'orjson',
         'platformdirs',
         'protobuf>=3.15.0',
         'requests', 
-        'networkx',
         'tomli;python_version<"3.11"',
         'torch>=1.13.0',
         'tqdm',
