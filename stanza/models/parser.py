@@ -32,7 +32,6 @@ from stanza.models.depparse.utils import predict_dataset
 from stanza.models.depparse import scorer
 from stanza.models.common import utils
 from stanza.models.common import pretrain
-from stanza.models.common.data import augment_punct
 from stanza.models.common.doc import *
 from stanza.models.common.foundation_cache import FoundationCache
 from stanza.models.common.peft_config import add_peft_args, resolve_peft_args
@@ -234,7 +233,7 @@ def build_argparse():
     add_peft_args(parser)
     utils.add_device_args(parser)
 
-    parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 10%%')
+    parser.add_argument('--augment_nopunct', type=float, default=None, help='Fraction of punct-ending sentences to dynamically present without the final punct, applied fresh each epoch rather than by duplicating sentences in the training set.  Default of None will aim for roughly 10%%')
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
@@ -340,21 +339,9 @@ def train(args):
             logger.info("Limiting training data to %d entries", len(train_data))
         else:
             logger.info("Train data less than %d already, not limiting train data", args['train_size'])
-    # build the training data once, before augmentation, so that random variation
-    # (which might be different based on the random seed)
-    # doesn't have an effect on the vocab being cut off at the word limit
-    # otherwise different models will have different vocabs
-    # based on how often the words were duplicated in the augmentation
-    # TODO: put the augmentation into the dataloader,
-    # such as is done with the POS or the tokenizer
     train_doc = Document(train_data)
     train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, evaluation=False)
     vocab = train_batch.vocab
-    train_data.extend(augment_punct(train_data, args['augment_nopunct'],
-                                    keep_original_sentences=False))
-    logger.info("Augmented data size: {}".format(len(train_data)))
-    train_doc = Document(train_data)
-    train_batch = DataLoader(train_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=False)
     dev_doc = CoNLL.conll2doc(input_file=args['eval_file'])
     dev_batch = DataLoader(dev_doc, args['batch_size'], args, pretrain, vocab=vocab, evaluation=True, sort_during_eval=True)
 

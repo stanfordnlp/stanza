@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader as TorchDataLoader
 from torch.utils.data.sampler import Sampler
 
 from stanza.models.common.bert_embedding import filter_data, needs_length_filter
-from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all, get_augment_ratio
 from stanza.models.common.utils import DEFAULT_WORD_CUTOFF, simplify_punct
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab, CharVocab
 from stanza.models.pos.vocab import WordVocab, XPOSVocab, FeatureVocab, MultiVocab
@@ -64,6 +64,44 @@ def data_to_batches(data, batch_size, eval_mode, sort_during_eval, min_length_to
         res.append(current)
 
     return res, data_orig_idx
+
+
+def record_ends_with_punct(record, punct_id):
+    """
+    True if this preprocessed sentence (as produced by Dataset.preprocess)
+    currently ends with a PUNCT token.
+
+    record[2] is the ROOT-prepended upos ID field, so record[2][-1] is the
+    ID of the sentence's last real word; punct_id is whatever ID the
+    Dataset's upos vocab assigned to the string 'PUNCT'.  Requires at
+    least one real word (len(record[2]) > 1, since index 0 is ROOT).
+    """
+    upos = record[2]
+    return len(upos) > 1 and upos[-1] == punct_id
+
+
+def record_can_augment_nopunct(record, punct_id):
+    """
+    True if the sentence ends with PUNCT, has at least one other real
+    word, and no other word's head depends on that final PUNCT token --
+    removing it would otherwise leave a word's head pointing at a
+    position that no longer exists.
+
+    record[7] is the head field (no ROOT, one 1-indexed position per
+    real word), so len(record[7]) is the sentence's real word count and
+    len(record[7]) itself is the last word's own 1-indexed position.
+    """
+    if not record_ends_with_punct(record, punct_id):
+        return False
+    head = record[7]
+    if len(head) <= 1:
+        # augment_punct's original len(sentence) > 1 guard: don't reduce
+        # a sentence to zero real words
+        return False
+    last_position = len(head)
+    if any(h == last_position for h in head[:-1]):
+        return False
+    return True
 
 
 class Dataset:
@@ -125,6 +163,30 @@ class Dataset:
         # re-fetch every sentence's full content just to chunk by length
         self.lengths = [len(sent[0]) for sent in self.data]
 
+        # dynamic punctuation augmentation: some UD treebanks have every
+        # sentence end in PUNCT (eg UD_Hebrew-HTB), which teaches the
+        # tokenizer/parser to always expect a final punctuation mark and
+        # misparse sentences that don't have one. Rather than permanently
+        # duplicating a fraction of sentences with their final PUNCT
+        # removed (which bloats the training set and skews its
+        # length/content distribution), this augmentation is applied
+        # fresh, per sentence, in __getitem__ -- see record_can_augment_nopunct
+        # and __getitem__ below. The target ratio itself is still computed
+        # once here, the same way it always was.
+        self.punct_id = self.vocab['upos'].unit2id('PUNCT') if 'PUNCT' in self.vocab['upos'] else None
+        augment_nopunct_arg = args.get('augment_nopunct', None)
+        if self.eval or self.punct_id is None:
+            self.augment_nopunct_ratio = 0.0
+        elif augment_nopunct_arg is None:
+            self.augment_nopunct_ratio = get_augment_ratio(
+                self.data,
+                lambda record: record_ends_with_punct(record, self.punct_id),
+                lambda record: record_can_augment_nopunct(record, self.punct_id))
+        elif augment_nopunct_arg <= 0:
+            self.augment_nopunct_ratio = 0.0
+        else:
+            self.augment_nopunct_ratio = augment_nopunct_arg
+
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
         cutoff = self.args['word_cutoff'] if self.args.get('word_cutoff') is not None else DEFAULT_WORD_CUTOFF
@@ -174,13 +236,21 @@ class Dataset:
         Returns one preprocessed sentence's raw ID lists.
 
         Deliberately re-reads from self.data on every call (rather than,
-        say, the caller caching the result across epochs) so that a
-        per-item augmentation hook added here in the future would be
-        re-rolled fresh every access -- the same mechanism the POS
-        tagger's Dataset.__getitem__ already uses for its punctuation
-        augmentation.
+        say, the caller caching the result across epochs) so that the
+        nopunct augmentation below (and any future per-item augmentation
+        added here) is re-rolled fresh every access -- the same mechanism
+        the POS tagger's Dataset.__getitem__ already uses for its own
+        punctuation augmentation.
         """
-        return self.data[key]
+        record = self.data[key]
+        if self.augment_nopunct_ratio > 0 and record_can_augment_nopunct(record, self.punct_id):
+            if random.random() < self.augment_nopunct_ratio:
+                # drop the final (PUNCT) word from every field -- ROOT-
+                # prepended fields (word/char/upos/xpos/feats/pretrain/
+                # lemma) and non-ROOT-prepended fields (head/deprel/text)
+                # all simply lose their last entry
+                record = [field[:-1] for field in record]
+        return record
 
     def __iter__(self):
         for i in range(len(self)):
