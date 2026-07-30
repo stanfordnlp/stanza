@@ -1,18 +1,21 @@
 """
-Convert a lemmatizer .pt file from the legacy dict format to the new
-pos_direct gzip-compressed format, without loading the seq2seq model
-or any other heavyweight components.
+Convert a lemmatizer .pt file to the current dict format, without loading
+the seq2seq model or any other heavyweight components.
+
+Three dict formats have existed:
+  v1 (<=1.13): legacy (word_dict, composite_dict) tuple, plain pickle
+  v2 (1.14):   {pos: {word: lemma}}, gzip+pickle — security hole, no longer loadable
+  v3 (1.15+):  {pos: {word: lemma}}, gzip+orjson — current format
+
+This script converts v1 and v2 models to v3.  If you have a v2 model and
+try to load it without converting, Stanza will raise an error directing
+you here.
 
 Usage:
     python3 convert_lemma_dict.py path/to/model.pt [--output path/to/output.pt]
 
 If --output is not given, the input file is overwritten in place (after
 writing to a .tmp sibling first, so the original is safe until the rename).
-
-This is useful for converting lemmatizers from version 1.13.0 to 1.14.0.
-Otherwise, this script is not actually needed - the existing lemmatizer code
-is already written to load in old formats without failing and to write out
-the new format when saving.
 """
 
 import argparse
@@ -28,9 +31,12 @@ import torch
 logging.basicConfig(format="%(levelname)s: %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+import orjson
+
 _POS_INDEPENDENT  = "*"
-_DICTS_VERSION_LEGACY = 1
-_DICTS_VERSION_POS    = 2
+_DICTS_VERSION_LEGACY     = 1
+_DICTS_VERSION_POS_PICKLE = 2   # gzip+pickle, replaced by v3
+_DICTS_VERSION_POS        = 3   # gzip+json
 
 
 def _legacy_dicts_to_pos_dict(word_dict, composite_dict):
@@ -56,8 +62,8 @@ def _legacy_dicts_to_pos_dict(word_dict, composite_dict):
 
 
 def _pack_pos_dict(pos_dict):
-    """Serialize pos_dict to gzip-compressed pickle bytes."""
-    raw = pickle.dumps(pos_dict, protocol=4)
+    """Serialize pos_dict to gzip-compressed JSON bytes."""
+    raw = orjson.dumps(pos_dict)
     buf = io.BytesIO()
     with gzip.GzipFile(fileobj=buf, mode="wb", compresslevel=9) as gz:
         gz.write(raw)
@@ -70,7 +76,20 @@ def convert(input_path, output_path):
 
     dicts_version = checkpoint.get('dicts_version', _DICTS_VERSION_LEGACY)
     if dicts_version == _DICTS_VERSION_POS:
-        logger.info("Already in new format (dicts_version=%d), nothing to do.", dicts_version)
+        logger.info("Already in JSON format (dicts_version=%d), nothing to do.", dicts_version)
+        return
+    if dicts_version == _DICTS_VERSION_POS_PICKLE:
+        # pickle-encoded v2 — re-encode as JSON v3
+        logger.info("Found pickle-encoded v2 format — re-encoding as JSON (v3)...")
+        inner = gzip.decompress(checkpoint['dicts'])
+        pos_dict = pickle.loads(inner)
+        checkpoint['dicts'] = _pack_pos_dict(pos_dict)
+        checkpoint['dicts_version'] = _DICTS_VERSION_POS
+        tmp_path = output_path + ".tmp"
+        logger.info("Writing to %s ...", tmp_path)
+        torch.save(checkpoint, tmp_path, _use_new_zipfile_serialization=False)
+        os.replace(tmp_path, output_path)
+        logger.info("Saved to %s", output_path)
         return
 
     logger.info("Converting from legacy format (dicts_version=%d)...", dicts_version)

@@ -30,8 +30,12 @@ logger = logging.getLogger('stanza')
 _POS_INDEPENDENT = "*"
 
 # Version tag stored in the checkpoint to distinguish dict formats
-_DICTS_VERSION_LEGACY = 1   # old (word_dict, composite_dict) tuple
-_DICTS_VERSION_POS    = 2   # new {pos: {word: lemma}}, gzip-pickled bytes
+_DICTS_VERSION_LEGACY     = 1   # old (word_dict, composite_dict) tuple
+_DICTS_VERSION_POS_PICKLE = 2   # new {pos: {word: lemma}}, gzip+pickle bytes (security hole, replaced by v3)
+_DICTS_VERSION_POS        = 3   # new {pos: {word: lemma}}, gzip+json bytes
+
+
+import orjson
 
 
 def unpack_batch(batch, device):
@@ -43,8 +47,8 @@ def unpack_batch(batch, device):
 
 
 def _pack_pos_dict(pos_dict):
-    """Serialize pos_dict to gzip-compressed pickle bytes for storage."""
-    raw = pickle.dumps(pos_dict, protocol=4)
+    """Serialize pos_dict to gzip-compressed JSON bytes for storage."""
+    raw = orjson.dumps(pos_dict)
     buf = io.BytesIO()
     with gzip.GzipFile(fileobj=buf, mode="wb", compresslevel=9) as gz:
         gz.write(raw)
@@ -52,11 +56,12 @@ def _pack_pos_dict(pos_dict):
 
 
 def _unpack_pos_dict(data):
-    """Deserialize pos_dict from gzip-compressed pickle bytes."""
+    """Deserialize pos_dict from gzip-compressed JSON bytes (v3 format)."""
     buf = io.BytesIO(data)
     with gzip.GzipFile(fileobj=buf, mode="rb") as gz:
         raw = gz.read()
-    return pickle.loads(raw)
+    return orjson.loads(raw)
+
 
 
 def _legacy_dicts_to_pos_dict(word_dict, composite_dict):
@@ -376,6 +381,12 @@ class Trainer(object):
         dicts_version = checkpoint.get('dicts_version', _DICTS_VERSION_LEGACY)
         if dicts_version == _DICTS_VERSION_POS:
             self.pos_dict = _unpack_pos_dict(checkpoint['dicts'])
+        elif dicts_version == _DICTS_VERSION_POS_PICKLE:
+            raise ValueError(
+                f"Lemmatizer model {filename!r} uses a pickle-based dict format (v2) "
+                "that is no longer supported for security reasons. "
+                "Please re-download the model or run convert_lemma_dict.py to upgrade it to v3."
+            )
         else:
             # legacy format: (word_dict, composite_dict) tuple
             logger.debug("Loading legacy dict format (version %d), converting to pos_dict", dicts_version)
