@@ -6,7 +6,10 @@ from collections import Counter
 
 import pytest
 from stanza.models import parser
-from stanza.models.depparse.data import data_to_batches, DataLoader, Dataset, DepparseBatchSampler, InfiniteBatch, to_int
+from stanza.models.depparse.data import (
+    data_to_batches, DataLoader, Dataset, DepparseBatchSampler, InfiniteBatch, to_int,
+    record_ends_with_punct, record_can_augment_nopunct,
+)
 from stanza.utils.conll import CoNLL
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
@@ -100,7 +103,7 @@ def test_punct_simplification():
     """
     sample = CoNLL.conll2doc(input_str=EWT_PUNCT_SAMPLE)
 
-    args = parser.parse_args(args=["--batch_size", "1000", "--shorthand", "en_test"])
+    args = parser.parse_args(args=["--batch_size", "1000", "--shorthand", "en_test", "--augment_nopunct", "0"])
     data = DataLoader(sample, 5000, args, None)
 
     batches = [batch for batch in data]
@@ -266,6 +269,7 @@ def test_reversed_sentences():
     sample = CoNLL.conll2doc(input_str=THREE_SENTENCE_SAMPLE)
     args = dict(parser.parse_args(args=["--batch_size", "100", "--shorthand", "en_test"]))
     args['reversed'] = True
+    args['augment_nopunct'] = 0
     train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
 
     all_texts = []
@@ -318,7 +322,7 @@ def test_preprocess_root_prepended_fields():
     from stanza.models.common.vocab import ROOT_ID
 
     train_batch = _build_train_loader(TWO_WORD_SAMPLE)
-    rec = train_batch.dataset[0]
+    rec = train_batch.dataset.data[0]
     word, char, upos, xpos, feats, pretrain, lemma, head, deprel, text = rec
 
     num_words = 3  # Cats, sleep, .
@@ -339,7 +343,7 @@ def test_preprocess_root_prepended_fields():
 def test_preprocess_head_values():
     """head[i] should be the 1-indexed position of word i's head, 0 for the root word."""
     train_batch = _build_train_loader(TWO_WORD_SAMPLE)
-    rec = train_batch.dataset[0]
+    rec = train_batch.dataset.data[0]
     head = rec[7]
     # Cats -> sleep (position 2), sleep -> root (0), . -> sleep (position 2)
     assert head == [2, 0, 2]
@@ -349,7 +353,7 @@ def test_preprocess_no_pretrain_gives_pad_id():
     from stanza.models.common.vocab import ROOT_ID, PAD_ID
 
     train_batch = _build_train_loader(TWO_WORD_SAMPLE)
-    rec = train_batch.dataset[0]
+    rec = train_batch.dataset.data[0]
     pretrain_field = rec[5]
     assert pretrain_field[0] == ROOT_ID
     assert all(x == PAD_ID for x in pretrain_field[1:])
@@ -434,7 +438,7 @@ def test_collate_tensor_shapes():
 
 def test_collate_head_values_exclude_root_offset():
     """head values in the collated tensor should match the raw preprocess() head list."""
-    train_batch = _build_train_loader(TWO_SENTENCE_DIFFERENT_LENGTHS)
+    train_batch = _build_train_loader(TWO_SENTENCE_DIFFERENT_LENGTHS, extra_args={'augment_nopunct': 0})
     batch = train_batch[0]
     head = batch[9]
     text = batch[-1]
@@ -706,7 +710,7 @@ def test_train_iter_still_uses_manual_loop():
     reshuffle on its own either way -- the key check is that .eval is
     consulted and behaves identically to before this change).
     """
-    train_batch = _build_train_loader(THREE_SENTENCE_SAMPLE, batch_size=100)
+    train_batch = _build_train_loader(THREE_SENTENCE_SAMPLE, batch_size=100, extra_args={'augment_nopunct': 0})
     assert train_batch.eval is False
     first_pass = [batch[-1] for batch in train_batch]
     second_pass = [batch[-1] for batch in train_batch]
@@ -761,6 +765,166 @@ def test_dataset_to_loader_requires_batch_size_or_sampler():
     dataset = Dataset(sample, args, None, vocab=vocab, evaluation=True)
     with pytest.raises(ValueError):
         dataset.to_loader()
+
+
+# ---------------------------------------------------------------------------
+# Dynamic nopunct augmentation
+# ---------------------------------------------------------------------------
+#
+# Some UD treebanks have every training sentence end in PUNCT, which
+# teaches the parser to always expect a final punctuation mark and
+# misparse sentences that lack one. This used to be compensated for by
+# permanently duplicating a fraction of sentences (with their final PUNCT
+# removed) into the training set -- bloating it and skewing its
+# length/content distribution. It is now applied dynamically, per
+# sentence, inside Dataset.__getitem__, at the same target ratio computed
+# from the corpus (via the same get_augment_ratio machinery as before).
+
+NOPUNCT_ELIGIBLE_SAMPLE = """
+# sent_id = a
+# text = Cats sleep.
+1	Cats	cat	NOUN	NNS	Number=Plur	2	nsubj	2:nsubj	_
+2	sleep	sleep	VERB	VBZ	Mood=Ind|Tense=Pres	0	root	0:root	_
+3	.	.	PUNCT	.	_	2	punct	2:punct	_
+"""
+
+# 'weird' depends on the final PUNCT (head=3), so removing it would leave
+# a dangling head reference -- must never be considered eligible
+NOPUNCT_INELIGIBLE_DEPENDENCY_SAMPLE = """
+# sent_id = a
+# text = Cats weird .
+1	Cats	cat	NOUN	NNS	_	3	dep	3:dep	_
+2	weird	weird	ADJ	JJ	_	3	dep	3:dep	_
+3	.	.	PUNCT	.	_	0	root	0:root	_
+"""
+
+NOPUNCT_NOT_PUNCT_ENDING_SAMPLE = """
+# sent_id = a
+# text = Cats sleep
+1	Cats	cat	NOUN	NNS	_	2	nsubj	2:nsubj	_
+2	sleep	sleep	VERB	VBZ	_	0	root	0:root	_
+"""
+
+NOPUNCT_SINGLE_WORD_SAMPLE = """
+# sent_id = a
+# text = .
+1	.	.	PUNCT	.	_	0	root	0:root	_
+"""
+
+TEN_PUNCT_ENDING_SENTENCES = "\n".join(
+    "# sent_id = s{i}\n# text = word{i} .\n1\tword{i}\tword{i}\tNOUN\tNN\t_\t0\troot\t0:root\t_\n2\t.\t.\tPUNCT\t.\t_\t1\tpunct\t1:punct\t_\n".format(i=i)
+    for i in range(10)
+)
+
+
+def test_record_ends_with_punct():
+    train_batch = _build_train_loader(NOPUNCT_ELIGIBLE_SAMPLE, extra_args={'augment_nopunct': 1.0})
+    record = train_batch.dataset.data[0]
+    assert record_ends_with_punct(record, train_batch.dataset.punct_id) is True
+
+def test_record_ends_with_punct_false_when_not_punct():
+    train_batch = _build_train_loader(NOPUNCT_NOT_PUNCT_ENDING_SAMPLE, extra_args={'augment_nopunct': 1.0})
+    record = train_batch.dataset.data[0]
+    assert record_ends_with_punct(record, train_batch.dataset.punct_id) is False
+
+def test_can_augment_nopunct_eligible():
+    train_batch = _build_train_loader(NOPUNCT_ELIGIBLE_SAMPLE, extra_args={'augment_nopunct': 1.0})
+    record = train_batch.dataset.data[0]
+    assert record_can_augment_nopunct(record, train_batch.dataset.punct_id) is True
+
+def test_can_augment_nopunct_false_when_word_depends_on_final_punct():
+    train_batch = _build_train_loader(NOPUNCT_INELIGIBLE_DEPENDENCY_SAMPLE, extra_args={'augment_nopunct': 1.0})
+    record = train_batch.dataset.data[0]
+    assert record_can_augment_nopunct(record, train_batch.dataset.punct_id) is False
+
+def test_can_augment_nopunct_false_when_not_punct_ending():
+    train_batch = _build_train_loader(NOPUNCT_NOT_PUNCT_ENDING_SAMPLE, extra_args={'augment_nopunct': 1.0})
+    record = train_batch.dataset.data[0]
+    assert record_can_augment_nopunct(record, train_batch.dataset.punct_id) is False
+
+def test_can_augment_nopunct_false_for_single_word_sentence():
+    """A lone PUNCT token: len(sentence) > 1 guard (mirroring the original augment_punct)."""
+    train_batch = _build_train_loader(NOPUNCT_SINGLE_WORD_SAMPLE, extra_args={'augment_nopunct': 1.0})
+    record = train_batch.dataset.data[0]
+    assert record_can_augment_nopunct(record, train_batch.dataset.punct_id) is False
+
+
+def test_augment_nopunct_ratio_explicit():
+    train_batch = _build_train_loader(NOPUNCT_ELIGIBLE_SAMPLE, extra_args={'augment_nopunct': 0.37})
+    assert train_batch.dataset.augment_nopunct_ratio == 0.37
+
+def test_augment_nopunct_ratio_zero_disables():
+    train_batch = _build_train_loader(NOPUNCT_ELIGIBLE_SAMPLE, extra_args={'augment_nopunct': 0})
+    assert train_batch.dataset.augment_nopunct_ratio == 0.0
+
+def test_augment_nopunct_ratio_auto_matches_get_augment_ratio():
+    """
+    Default (augment_nopunct=None) should auto-compute the same ratio
+    get_augment_ratio would give directly: 10 sentences, all ending in
+    PUNCT and all eligible, desired_ratio=0.1 -> 10*0.1 / 10 = 0.1.
+    """
+    train_batch = _build_train_loader(TEN_PUNCT_ENDING_SENTENCES)
+    assert train_batch.dataset.augment_nopunct_ratio == pytest.approx(0.1)
+
+def test_augment_nopunct_ratio_zero_when_no_punct_in_corpus():
+    """If the vocab never saw a PUNCT tag at all, the ratio must be 0, not accidentally match UNK."""
+    train_batch = _build_train_loader(NOPUNCT_NOT_PUNCT_ENDING_SAMPLE, extra_args={'augment_nopunct': 1.0})
+    assert train_batch.dataset.punct_id is None
+    assert train_batch.dataset.augment_nopunct_ratio == 0.0
+
+def test_augment_nopunct_ratio_zero_in_eval_mode():
+    """Eval mode must never augment, regardless of what augment_nopunct is set to."""
+    sample = CoNLL.conll2doc(input_str=NOPUNCT_ELIGIBLE_SAMPLE)
+    args = parser.parse_args(args=["--batch_size", "100", "--shorthand", "en_test", "--augment_nopunct", "1.0"])
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+    vocab = train_batch.vocab
+    eval_batch = DataLoader(sample, args['batch_size'], args, None, vocab=vocab, evaluation=True)
+    assert eval_batch.dataset.augment_nopunct_ratio == 0.0
+
+
+def test_getitem_always_truncates_eligible_sentence_at_ratio_one():
+    train_batch = _build_train_loader(NOPUNCT_ELIGIBLE_SAMPLE, extra_args={'augment_nopunct': 1.0})
+    for _ in range(20):
+        fetched = train_batch.dataset[0]
+        assert fetched[9] == ['Cats', 'sleep']
+        assert fetched[7] == [2, 0]
+
+def test_getitem_truncates_all_ten_fields_consistently():
+    """Every field (ROOT-prepended or not) should lose exactly its last entry."""
+    train_batch = _build_train_loader(NOPUNCT_ELIGIBLE_SAMPLE, extra_args={'augment_nopunct': 1.0})
+    original = train_batch.dataset.data[0]
+    augmented = train_batch.dataset[0]
+    assert len(augmented) == len(original) == 10
+    for orig_field, aug_field in zip(original, augmented):
+        assert aug_field == orig_field[:-1]
+
+def test_getitem_never_truncates_ineligible_sentence_even_at_ratio_one():
+    train_batch = _build_train_loader(NOPUNCT_INELIGIBLE_DEPENDENCY_SAMPLE, extra_args={'augment_nopunct': 1.0})
+    for _ in range(20):
+        fetched = train_batch.dataset[0]
+        assert fetched[9] == ['Cats', 'weird', '.']
+
+def test_getitem_never_truncates_when_ratio_zero():
+    train_batch = _build_train_loader(NOPUNCT_ELIGIBLE_SAMPLE, extra_args={'augment_nopunct': 0})
+    for _ in range(20):
+        fetched = train_batch.dataset[0]
+        assert fetched[9] == ['Cats', 'sleep', '.']
+
+def test_getitem_dynamic_mix_across_repeated_fetches():
+    """
+    The whole point of moving this into __getitem__: the SAME sentence
+    should come back augmented some of the time and un-augmented other
+    times, rather than a fixed decision made once when the dataset was
+    built (as the old duplicate-into-the-corpus approach effectively did).
+    """
+    train_batch = _build_train_loader(NOPUNCT_ELIGIBLE_SAMPLE, extra_args={'augment_nopunct': 0.5})
+    counts = Counter()
+    for _ in range(2000):
+        fetched = train_batch.dataset[0]
+        counts['augmented' if len(fetched[9]) == 2 else 'original'] += 1
+    # expect roughly a 50/50 split; generous tolerance to avoid flakiness
+    assert 700 < counts['augmented'] < 1300, f"expected roughly half augmented, got {counts}"
+    assert 700 < counts['original'] < 1300, f"expected roughly half original, got {counts}"
 
 
 if __name__ == '__main__':
