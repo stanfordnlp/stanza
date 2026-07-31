@@ -95,8 +95,8 @@ def record_can_augment_nopunct(record, punct_id):
         return False
     head = record[7]
     if len(head) <= 1:
-        # augment_punct's original len(sentence) > 1 guard: don't reduce
-        # a sentence to zero real words
+        # len(sentence) > 1 guard:
+        # don't reduce a sentence to zero real words
         return False
     last_position = len(head)
     if any(h == last_position for h in head[:-1]):
