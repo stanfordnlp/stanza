@@ -233,6 +233,12 @@ def build_argparse():
     add_peft_args(parser)
     utils.add_device_args(parser)
 
+    # Some of the models (for example, UD_Hebrew-HTB) have the flaw that
+    # all of the training sentences end with PUNCT.  The model therefore
+    # learns to finish every sentence with punctuation, even if it is
+    # given a sentence with non-punct at the end.
+    #
+    # One simple way to fix this is to train on some fraction of training data with punct.
     parser.add_argument('--augment_nopunct', type=float, default=None, help='Fraction of punct-ending sentences to dynamically present without the final punct, applied fresh each epoch rather than by duplicating sentences in the training set.  Default of None will aim for roughly 10%%')
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
