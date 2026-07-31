@@ -502,7 +502,7 @@ class TestDictLemmatizer:
         """
         A checkpoint in the v2 pickle format should raise a ValueError
         with a message directing the user to convert_lemma_dict.py.
-        The v2 format was used briefly in 1.13.0 and replaced in 1.14.0
+        The v2 format was used briefly in 1.14.0 and replaced in 1.15.0
         due to a security concern with pickle deserialization.
         """
         import gzip
