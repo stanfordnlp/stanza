@@ -76,7 +76,21 @@ def convert(input_path, output_path):
 
     dicts_version = checkpoint.get('dicts_version', _DICTS_VERSION_LEGACY)
     if dicts_version == _DICTS_VERSION_POS:
-        logger.info("Already in JSON format (dicts_version=%d), nothing to do.", dicts_version)
+        changed = False
+        if 'charlm_forward_file' not in checkpoint['config']:
+            checkpoint['config']['charlm_forward_file'] = None
+            changed = True
+        if 'charlm_backward_file' not in checkpoint['config']:
+            checkpoint['config']['charlm_backward_file'] = None
+            changed = True
+        if changed:
+            tmp_path = output_path + ".tmp"
+            logger.info("Writing to %s ...", tmp_path)
+            torch.save(checkpoint, tmp_path, _use_new_zipfile_serialization=False)
+            os.replace(tmp_path, output_path)
+            logger.info("Updated args and saved to %s", output_path)
+        else:
+            logger.info("Already in JSON format (dicts_version=%d), nothing to do.", dicts_version)
         return
     if dicts_version == _DICTS_VERSION_POS_PICKLE:
         # pickle-encoded v2 — re-encode as JSON v3
