@@ -77,6 +77,7 @@ def build_argparse():
     parser.add_argument('--split_mwt_prob', type=float, default=0.01, help="Probability to split an MWT into its component pieces and turn it into separate words")
     parser.add_argument('--comma_typo_prob', type=float, default=0.01, help="Probability to fake a comma typo - eg 'foo, bar' -> 'foo ,bar'")
     parser.add_argument('--comma_glue_prob', type=float, default=0.01, help="Probability to fake a comma gluing - eg 'foo, bar' -> 'foo,bar'")
+    parser.add_argument('--drop_initial_punct_prob', type=float, default=0.20, help="Probability to drop a leading inverted question or exclamation mark (¿/¡) from a sentence, for languages such as Spanish and Catalan where it should be optional")
     parser.add_argument('--augment_final_punct_prob', type=float, default=0.02, help="Probability to replace a ? with a ？ or other similar augmentations")
     parser.add_argument('--augment_mid_punct_prob', type=float, default=0.02, help="Probability to replace a , with a – or other similar augmentations")
     parser.add_argument('--weight_decay', type=float, default=0.0, help="Weight decay")

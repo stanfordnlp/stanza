@@ -339,3 +339,184 @@ def test_punct_simplification():
     assert batches[0].text[1][-1] == '?'
     assert batches[0].text[0] == ['Bush', 'asked', 'for', 'permission', 'to', 'go', 'to', 'Alabama', 'to', 'work', 'on', 'a', 'Senate', 'campaign', '!']
     assert batches[0].text[1] == ['His', 'superior', 'officers', 'said', 'OK', '?']
+
+
+# ---------------------------------------------------------------------------
+# drop_initial_punct
+# ---------------------------------------------------------------------------
+#
+# Some UD treebanks (Spanish, Catalan) have every training sentence begin
+# with an inverted question mark, which the model never learns to do
+# without. This mirrors augment_initial_punct in
+# prepare_tokenizer_treebank.py, applied dynamically per sentence in
+# Dataset.__getitem__ instead of by duplicating sentences at dataset-
+# preparation time.
+
+SPANISH_QUESTION_SAMPLE = """
+# sent_id = a
+# text = ¿Cómo estás?
+1	¿	¿	PUNCT	_	_	_	_	_	_
+2	Cómo	cómo	PRON	_	_	_	_	_	_
+3	estás	estar	VERB	_	_	_	_	_	_
+4	?	?	PUNCT	_	_	_	_	_	_
+
+# sent_id = b
+# text = ¿Qué hora es?
+1	¿	¿	PUNCT	_	_	_	_	_	_
+2	Qué	qué	PRON	_	_	_	_	_	_
+3	hora	hora	NOUN	_	_	_	_	_	_
+4	es	ser	AUX	_	_	_	_	_	_
+5	?	?	PUNCT	_	_	_	_	_	_
+"""
+
+SPANISH_NO_LEADING_PUNCT_SAMPLE = """
+# sent_id = a
+# text = Cómo estás?
+1	Cómo	cómo	PRON	_	_	_	_	_	_
+2	estás	estar	VERB	_	_	_	_	_	_
+3	?	?	PUNCT	_	_	_	_	_	_
+"""
+
+SPANISH_TWO_PUNCT_SAMPLE = """
+# sent_id = a
+# text = ¿Cómo ¿estás?
+1	¿	¿	PUNCT	_	_	_	_	_	_
+2	Cómo	cómo	PRON	_	_	_	_	_	_
+3	¿	¿	PUNCT	_	_	_	_	_	_
+4	estás	estar	VERB	_	_	_	_	_	_
+5	?	?	PUNCT	_	_	_	_	_	_
+"""
+
+SPANISH_MIXED_MARKS_SAMPLE = """
+# sent_id = a
+# text = ¿Dijo "¡hola!"?
+1	¿	¿	PUNCT	_	_	_	_	_	_
+2	Dijo	decir	VERB	_	_	_	_	_	_
+3	"	"	PUNCT	_	_	_	_	_	_
+4	¡	¡	PUNCT	_	_	_	_	_	_
+5	hola	hola	INTJ	_	_	_	_	_	_
+6	!	!	PUNCT	_	_	_	_	_	_
+7	"	"	PUNCT	_	_	_	_	_	_
+8	?	?	PUNCT	_	_	_	_	_	_
+"""
+
+
+def test_drop_initial_punct_eligible():
+    """A ¿ appearing as the first word of some sentence marks the dataset as eligible."""
+    args = tagger.parse_args(args=["--shorthand", "es_test", "--augment_nopunct", "0.0"])
+    doc = CoNLL.conll2doc(input_str=SPANISH_QUESTION_SAMPLE)
+    data = Dataset(doc, args, None)
+    assert data.drop_initial_punct_eligible is True
+
+def test_drop_initial_punct_ineligible_when_no_leading_punct():
+    args = tagger.parse_args(args=["--shorthand", "es_test", "--augment_nopunct", "0.0"])
+    doc = CoNLL.conll2doc(input_str=SPANISH_NO_LEADING_PUNCT_SAMPLE)
+    data = Dataset(doc, args, None)
+    assert data.drop_initial_punct_eligible is False
+
+def test_no_drop_initial_punct():
+    """With drop_initial_punct_prob=0, every sentence always keeps its leading ¿."""
+    args = tagger.parse_args(args=["--shorthand", "es_test", "--augment_nopunct", "0.0", "--drop_initial_punct_prob", "0.0"])
+    doc = CoNLL.conll2doc(input_str=SPANISH_QUESTION_SAMPLE)
+    data = Dataset(doc, args, None)
+    loader = data.to_loader(batch_size=2)
+
+    for i in range(50):
+        for batch in loader:
+            for text in batch.text:
+                assert text[0] == '¿'
+
+def test_always_drop_initial_punct():
+    """With drop_initial_punct_prob=1, every eligible sentence always loses its leading ¿."""
+    args = tagger.parse_args(args=["--shorthand", "es_test", "--augment_nopunct", "0.0", "--drop_initial_punct_prob", "1.0"])
+    doc = CoNLL.conll2doc(input_str=SPANISH_QUESTION_SAMPLE)
+    data = Dataset(doc, args, None)
+    loader = data.to_loader(batch_size=2)
+
+    for i in range(50):
+        for batch in loader:
+            for text in batch.text:
+                assert text[0] != '¿'
+            assert batch.text[0] == ['Qué', 'hora', 'es', '?'] or batch.text[0] == ['Cómo', 'estás', '?']
+
+def test_sometimes_drop_initial_punct():
+    """
+    With 50% drop_initial_punct_prob, we should see a reasonable number of
+    epochs with the leading ¿ present and a reasonable number without.
+    """
+    args = tagger.parse_args(args=["--shorthand", "es_test", "--augment_nopunct", "0.0", "--drop_initial_punct_prob", "0.5"])
+    doc = CoNLL.conll2doc(input_str=SPANISH_QUESTION_SAMPLE)
+    data = Dataset(doc, args, None)
+    loader = data.to_loader(batch_size=2)
+
+    count_with = 0
+    count_without = 0
+    for i in range(50):
+        for batch in loader:
+            for text in batch.text:
+                if text[0] == '¿':
+                    count_with += 1
+                else:
+                    count_without += 1
+
+    assert count_with > 5
+    assert count_without > 5
+
+def test_drop_initial_punct_matches_natural_sentence():
+    """
+    The augmented sentence (¿ dropped) should be indistinguishable from a
+    naturally-written sentence that never had a leading ¿ to begin with.
+    """
+    args = tagger.parse_args(args=["--shorthand", "es_test", "--augment_nopunct", "0.0", "--drop_initial_punct_prob", "1.0"])
+    doc = CoNLL.conll2doc(input_str=SPANISH_QUESTION_SAMPLE)
+    data = Dataset(doc, args, None)
+
+    natural_doc = CoNLL.conll2doc(input_str=SPANISH_NO_LEADING_PUNCT_SAMPLE)
+    natural_data = Dataset(natural_doc, args, None, vocab=data.vocab, evaluation=True)
+    gold_sample = natural_data.data[0]
+
+    # find the augmented "Cómo estás" sentence specifically (batch order
+    # isn't guaranteed, so fetch by index rather than assume position 0)
+    for key in range(len(data)):
+        sample, _ = data[key]
+        if sample.text and sample.text[0] != '¿' and len(sample.text) == 3:
+            assert sample.word.tolist() == gold_sample.word[0]
+            assert sample.upos.tolist() == gold_sample.upos[0]
+            assert sample.text == gold_sample.text
+            break
+    else:
+        raise AssertionError("never observed the augmented 'Cómo estás?' sentence across all keys")
+
+def test_drop_initial_punct_never_touches_sentence_with_two_marks():
+    """A sentence with ¿ appearing twice must never have either one dropped."""
+    args = tagger.parse_args(args=["--shorthand", "es_test", "--augment_nopunct", "0.0", "--drop_initial_punct_prob", "1.0"])
+    doc = CoNLL.conll2doc(input_str=SPANISH_TWO_PUNCT_SAMPLE)
+    data = Dataset(doc, args, None)
+
+    for i in range(50):
+        sample, _ = data[0]
+        assert sample.text == ['¿', 'Cómo', '¿', 'estás', '?']
+
+def test_drop_initial_punct_never_touches_sentence_with_mixed_marks():
+    """
+    A leading ¿ plus a DIFFERENT mark (¡) elsewhere in the sentence must
+    also be blocked, not just a repeat of the SAME leading mark.
+    '¿Dijo "¡hola!"?' has one ¿ and one ¡ -- neither mark is individually
+    repeated, but there are still two candidate marks.
+    """
+    args = tagger.parse_args(args=["--shorthand", "es_test", "--augment_nopunct", "0.0", "--drop_initial_punct_prob", "1.0"])
+    doc = CoNLL.conll2doc(input_str=SPANISH_MIXED_MARKS_SAMPLE)
+    data = Dataset(doc, args, None)
+
+    for i in range(50):
+        sample, _ = data[0]
+        assert sample.text[0] == '¿'
+
+def test_drop_initial_punct_disabled_in_eval_mode():
+    """Eval mode must never drop the leading ¿, regardless of drop_initial_punct_prob."""
+    args = tagger.parse_args(args=["--shorthand", "es_test", "--augment_nopunct", "0.0", "--drop_initial_punct_prob", "1.0"])
+    doc = CoNLL.conll2doc(input_str=SPANISH_QUESTION_SAMPLE)
+    train_data = Dataset(doc, args, None)
+    eval_data = Dataset(doc, args, None, vocab=train_data.vocab, evaluation=True)
+    assert eval_data.drop_initial_punct_eligible is False
+    assert eval_data.drop_initial_punct_ratio == 0.0

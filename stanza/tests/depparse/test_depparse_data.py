@@ -9,6 +9,7 @@ from stanza.models import parser
 from stanza.models.depparse.data import (
     data_to_batches, DataLoader, Dataset, DepparseBatchSampler, InfiniteBatch, to_int,
     record_ends_with_punct, record_can_augment_nopunct,
+    record_starts_with_mark, record_can_drop_initial_mark,
 )
 from stanza.utils.conll import CoNLL
 
@@ -927,5 +928,232 @@ def test_getitem_dynamic_mix_across_repeated_fetches():
     assert 700 < counts['original'] < 1300, f"expected roughly half original, got {counts}"
 
 
+# ---------------------------------------------------------------------------
+# Dynamic leading-inverted-punct drop (¿ / ¡)
+# ---------------------------------------------------------------------------
+#
+# Some UD treebanks (Spanish, Catalan) have every training sentence begin
+# with an inverted question or exclamation mark, which the model never
+# learns to do without. This mirrors augment_initial_punct in
+# prepare_tokenizer_treebank.py (¿ only there), applied dynamically per
+# sentence inside Dataset.__getitem__ instead of by duplicating sentences
+# at dataset-preparation time, and extended to ¡ as well. Unlike the
+# nopunct augmentation (which only ever drops the last word), this must
+# also renumber every remaining word's head position down by one, since
+# removing the FIRST word shifts every later position back.
+
+LEADING_QUESTION_SAMPLE = """
+# sent_id = a
+# text = ¿Cómo estás?
+1	¿	¿	PUNCT	_	_	3	punct	3:punct	_
+2	Cómo	cómo	PRON	_	_	3	advmod	3:advmod	_
+3	estás	estar	VERB	_	_	0	root	0:root	_
+4	?	?	PUNCT	_	_	3	punct	3:punct	_
+"""
+
+LEADING_QUESTION_NATURAL_SAMPLE = """
+# sent_id = a
+# text = Cómo estás?
+1	Cómo	cómo	PRON	_	_	2	advmod	2:advmod	_
+2	estás	estar	VERB	_	_	0	root	0:root	_
+3	?	?	PUNCT	_	_	2	punct	2:punct	_
+"""
+
+LEADING_EXCLAMATION_SAMPLE = """
+# sent_id = a
+# text = ¡Qué bien!
+1	¡	¡	PUNCT	_	_	3	punct	3:punct	_
+2	Qué	qué	DET	_	_	3	det	3:det	_
+3	bien	bien	ADV	_	_	0	root	0:root	_
+4	!	!	PUNCT	_	_	3	punct	3:punct	_
+"""
+
+# something (the ADJ/NOUN) depends directly on the leading ¿ (head=1) --
+# must never be eligible, since removing it would leave a dangling head
+LEADING_PUNCT_DEPENDENT_SAMPLE = """
+# sent_id = a
+# text = ¿weird thing?
+1	¿	¿	PUNCT	_	_	0	root	0:root	_
+2	weird	weird	ADJ	_	_	1	dep	1:dep	_
+3	thing	thing	NOUN	_	_	1	dep	1:dep	_
+4	?	?	PUNCT	_	_	1	punct	1:punct	_
+"""
+
+# ¿ appears twice -- must never be touched
+LEADING_PUNCT_TWICE_SAMPLE = """
+# sent_id = a
+# text = ¿Cómo ¿estás?
+1	¿	¿	PUNCT	_	_	3	punct	3:punct	_
+2	Cómo	cómo	PRON	_	_	3	advmod	3:advmod	_
+3	estás	estar	VERB	_	_	0	root	0:root	_
+4	¿	¿	PUNCT	_	_	3	punct	3:punct	_
+5	?	?	PUNCT	_	_	3	punct	3:punct	_
+"""
+
+LEADING_PUNCT_NONE_SAMPLE = """
+# sent_id = a
+# text = Cómo estás?
+1	Cómo	cómo	PRON	_	_	2	advmod	2:advmod	_
+2	estás	estar	VERB	_	_	0	root	0:root	_
+3	?	?	PUNCT	_	_	2	punct	2:punct	_
+"""
+
+# a leading ¿ plus a DIFFERENT mark (¡) elsewhere -- must never be touched,
+# even though neither mark is individually repeated
+LEADING_MIXED_MARKS_SAMPLE = """
+# sent_id = a
+# text = ¿Dijo "¡hola!"?
+1	¿	¿	PUNCT	_	_	2	punct	2:punct	_
+2	Dijo	decir	VERB	_	_	0	root	0:root	_
+3	"	"	PUNCT	_	_	5	punct	5:punct	_
+4	¡	¡	PUNCT	_	_	5	punct	5:punct	_
+5	hola	hola	INTJ	_	_	2	obj	2:obj	_
+6	!	!	PUNCT	_	_	5	punct	5:punct	_
+7	"	"	PUNCT	_	_	5	punct	5:punct	_
+8	?	?	PUNCT	_	_	2	punct	2:punct	_
+"""
+
+
+
+def _build_es_train_loader(sample_str, extra_args=None):
+    sample = CoNLL.conll2doc(input_str=sample_str)
+    args = dict(parser.parse_args(args=["--batch_size", "100", "--shorthand", "es_test"]))
+    args['augment_nopunct'] = 0
+    if extra_args:
+        args.update(extra_args)
+    return DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+
+
+def test_record_starts_with_mark_question():
+    train_batch = _build_es_train_loader(LEADING_QUESTION_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    record = train_batch.dataset.data[0]
+    assert record_starts_with_mark(record) is True
+
+def test_record_starts_with_mark_exclamation():
+    train_batch = _build_es_train_loader(LEADING_EXCLAMATION_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    record = train_batch.dataset.data[0]
+    assert record_starts_with_mark(record) is True
+
+def test_record_starts_with_mark_false_when_absent():
+    train_batch = _build_es_train_loader(LEADING_PUNCT_NONE_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    record = train_batch.dataset.data[0]
+    assert record_starts_with_mark(record) is False
+
+def test_record_can_drop_initial_mark_false_when_word_depends_on_it():
+    train_batch = _build_es_train_loader(LEADING_PUNCT_DEPENDENT_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    record = train_batch.dataset.data[0]
+    assert record_starts_with_mark(record) is True
+    assert record_can_drop_initial_mark(record) is False
+
+def test_record_can_drop_initial_mark_false_when_mark_appears_twice():
+    train_batch = _build_es_train_loader(LEADING_PUNCT_TWICE_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    record = train_batch.dataset.data[0]
+    assert record_can_drop_initial_mark(record) is False
+
+
+def test_drop_initial_punct_eligible():
+    train_batch = _build_es_train_loader(LEADING_QUESTION_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    assert train_batch.dataset.drop_initial_punct_eligible is True
+
+def test_drop_initial_punct_ineligible_when_absent():
+    train_batch = _build_es_train_loader(LEADING_PUNCT_NONE_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    assert train_batch.dataset.drop_initial_punct_eligible is False
+    assert train_batch.dataset.drop_initial_punct_ratio == 0.0
+
+def test_drop_initial_punct_ratio_zero_disables():
+    train_batch = _build_es_train_loader(LEADING_QUESTION_SAMPLE, extra_args={'drop_initial_punct_prob': 0})
+    assert train_batch.dataset.drop_initial_punct_ratio == 0.0
+
+def test_drop_initial_punct_ratio_explicit():
+    train_batch = _build_es_train_loader(LEADING_QUESTION_SAMPLE, extra_args={'drop_initial_punct_prob': 0.37})
+    assert train_batch.dataset.drop_initial_punct_ratio == 0.37
+
+def test_drop_initial_punct_disabled_in_eval_mode():
+    """Eval mode must never drop the leading mark, regardless of drop_initial_punct_prob."""
+    sample = CoNLL.conll2doc(input_str=LEADING_QUESTION_SAMPLE)
+    args = dict(parser.parse_args(args=["--batch_size", "100", "--shorthand", "es_test"]))
+    args['augment_nopunct'] = 0
+    args['drop_initial_punct_prob'] = 1.0
+    train_batch = DataLoader(sample, args['batch_size'], args, None, evaluation=False)
+    eval_batch = DataLoader(sample, args['batch_size'], args, None, vocab=train_batch.vocab, evaluation=True)
+    assert eval_batch.dataset.drop_initial_punct_eligible is False
+    assert eval_batch.dataset.drop_initial_punct_ratio == 0.0
+
+
+def test_getitem_always_drops_leading_question_mark():
+    train_batch = _build_es_train_loader(LEADING_QUESTION_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    for _ in range(20):
+        fetched = train_batch.dataset[0]
+        assert fetched[9] == ['Cómo', 'estás', '?']
+
+def test_getitem_always_drops_leading_exclamation_mark():
+    train_batch = _build_es_train_loader(LEADING_EXCLAMATION_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    for _ in range(20):
+        fetched = train_batch.dataset[0]
+        assert fetched[9] == ['Qué', 'bien', '!']
+
+def test_getitem_renumbers_head_correctly():
+    """
+    Dropping the leading mark must renumber every remaining word's head
+    down by one -- verified against a naturally-written sentence (with no
+    leading ¿ to begin with) built from the same vocab, so the augmented
+    result should exactly match the gold record in every field.
+    """
+    train_batch = _build_es_train_loader(LEADING_QUESTION_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    vocab = train_batch.vocab
+
+    natural_sample = CoNLL.conll2doc(input_str=LEADING_QUESTION_NATURAL_SAMPLE)
+    natural_args = dict(parser.parse_args(args=["--batch_size", "100", "--shorthand", "es_test"]))
+    natural_args['augment_nopunct'] = 0
+    natural_batch = DataLoader(natural_sample, natural_args['batch_size'], natural_args, None,
+                                vocab=vocab, evaluation=True)
+    gold_record = natural_batch.dataset.data[0]
+
+    for _ in range(20):
+        fetched = train_batch.dataset[0]
+        assert fetched == gold_record
+
+def test_getitem_never_drops_when_word_depends_on_leading_mark():
+    train_batch = _build_es_train_loader(LEADING_PUNCT_DEPENDENT_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    for _ in range(20):
+        fetched = train_batch.dataset[0]
+        assert fetched[9] == ['¿', 'weird', 'thing', '?']
+
+def test_getitem_never_drops_when_mark_appears_twice():
+    train_batch = _build_es_train_loader(LEADING_PUNCT_TWICE_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    for _ in range(20):
+        fetched = train_batch.dataset[0]
+        assert fetched[9] == ['¿', 'Cómo', 'estás', '¿', '?']
+
+def test_getitem_never_drops_when_marks_are_mixed():
+    """
+    A leading ¿ plus a DIFFERENT mark (¡) elsewhere in the sentence must
+    also be blocked, not just a repeat of the SAME leading mark.
+    '¿Dijo "¡hola!"?' has one ¿ and one ¡ -- neither mark is individually
+    repeated, but there are still two candidate marks.
+    """
+    train_batch = _build_es_train_loader(LEADING_MIXED_MARKS_SAMPLE, extra_args={'drop_initial_punct_prob': 1.0})
+    for _ in range(20):
+        fetched = train_batch.dataset[0]
+        assert fetched[9][0] == '¿'
+
+def test_getitem_never_drops_when_ratio_zero():
+    train_batch = _build_es_train_loader(LEADING_QUESTION_SAMPLE, extra_args={'drop_initial_punct_prob': 0})
+    for _ in range(20):
+        fetched = train_batch.dataset[0]
+        assert fetched[9] == ['¿', 'Cómo', 'estás', '?']
+
+def test_getitem_dynamic_mix_for_leading_punct():
+    """Same sentence should come back with and without the leading mark across repeated fetches."""
+    train_batch = _build_es_train_loader(LEADING_QUESTION_SAMPLE, extra_args={'drop_initial_punct_prob': 0.5})
+    counts = Counter()
+    for _ in range(2000):
+        fetched = train_batch.dataset[0]
+        counts['dropped' if fetched[9][0] != '¿' else 'kept'] += 1
+    assert 700 < counts['dropped'] < 1300, f"expected roughly half dropped, got {counts}"
+    assert 700 < counts['kept'] < 1300, f"expected roughly half kept, got {counts}"
+
+
 if __name__ == '__main__':
     test_data_to_batches()
+

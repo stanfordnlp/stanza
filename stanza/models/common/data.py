@@ -83,3 +83,45 @@ def get_augment_ratio(train_data, should_augment_predicate, can_augment_predicat
     if ratio > max_ratio:
         return max_ratio
     return ratio
+
+
+# Spanish/Catalan-style inverted question and exclamation marks. Some UD
+# treebanks have every training sentence begin with one of these, which
+# teaches a model to always expect the mark and misparse/mistag/mistokenize
+# a sentence that's missing it. augment_initial_punct in
+# prepare_tokenizer_treebank.py handles this at dataset-preparation time
+# (currently for ¿ only); the POS tagger and dependency parser instead
+# apply the equivalent augmentation dynamically, per sentence, inside their
+# own Dataset.__getitem__ (see starts_with_initial_mark below). The
+# tokenizer needs its own character-level version of this same check
+# (see drop_initial_punct in stanza.models.tokenization.data), since it
+# operates on individual characters before word boundaries exist, but
+# imports this same tuple so the mark set itself is defined in one place.
+INITIAL_INVERTED_PUNCT_MARKS = ('¿', '¡')
+
+def starts_with_initial_mark(words, marks=INITIAL_INVERTED_PUNCT_MARKS):
+    """
+    True if the given list of word/token strings starts with one of the
+    given marks, and no mark from the set (of any kind, not just the
+    leading one) appears anywhere else in the list.
+
+    The restriction mirrors augment_initial_punct in
+    prepare_tokenizer_treebank.py, and exists to avoid ambiguity with
+    nested or quoted questions/exclamations -- e.g. a sentence like
+    '¿Dijo "¡hola!"?' has two candidate marks (one ¿ and one ¡) and isn't
+    a case this augmentation should touch, even though neither mark is
+    individually repeated.
+
+    Shared by the POS tagger and dependency parser, whose sentences are
+    both, at this point, plain lists of word strings -- the two models
+    diverge only in how they physically drop the first word afterward
+    (the parser also has to renumber head positions, which the tagger
+    does not need to do).
+    """
+    if len(words) <= 1:
+        return False
+    first = words[0]
+    if first not in marks:
+        return False
+    total_marks = sum(1 for w in words if w in marks)
+    return total_marks == 1
