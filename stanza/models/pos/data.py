@@ -9,7 +9,7 @@ from torch.utils.data.sampler import Sampler
 from torch.nn.utils.rnn import pad_sequence
 
 from stanza.models.common.bert_embedding import filter_data, needs_length_filter
-from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all
+from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all, starts_with_initial_mark
 from stanza.models.common.utils import DEFAULT_WORD_CUTOFF, simplify_punct
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX, CharVocab
 from stanza.models.pos.vocab import WordVocab, XPOSVocab, FeatureVocab, MultiVocab
@@ -53,6 +53,27 @@ class Dataset:
             keep = int(args['sample_train'] * len(data))
             data = random.sample(data, keep)
             logger.debug("Subsample training set with rate {:g}".format(args['sample_train']))
+
+        # dynamic leading-¿/¡ drop: some UD treebanks (Spanish, Catalan) have
+        # every training sentence with a leading inverted question or
+        # exclamation mark, which the model never learns to do without.
+        #
+        # Eligibility is checked against the raw sentence data (before
+        # self.vocab['word'] is even queried), not by asking whether ¿/¡
+        # is IN self.vocab['word']. self.vocab['word'] is built with a
+        # frequency cutoff (DEFAULT_WORD_CUTOFF, or word_cutoff if set) --
+        # a word appearing fewer times than the cutoff is left out of the
+        # vocab and maps to UNK instead. In a small treebank, ¿/¡ could
+        # easily appear only a handful of times and fall under that
+        # cutoff, which would make a vocab-containment check wrongly say
+        # "ineligible" even though the mark is genuinely present in the
+        # data. Scanning the raw sentences directly avoids that failure
+        # mode, so the augmentation still triggers correctly even on
+        # small treebanks. starts_with_initial_mark is shared with the
+        # dependency parser's equivalent eligibility check.
+        self.drop_initial_punct_eligible = not self.eval and any(
+            starts_with_initial_mark([w[0] for w in sent]) for sent in data)
+        self.drop_initial_punct_ratio = args.get('drop_initial_punct_prob', 0.20) if self.drop_initial_punct_eligible else 0.0
 
         data = self.preprocess(data, self.vocab, self.pretrain_vocab, args)
 
@@ -207,6 +228,25 @@ class Dataset:
                 pretrained[mask] = PAD_ID
                 char = char[:mask] + char[mask+1:]
                 raw_text = raw_text[:mask] + raw_text[mask+1:]
+
+        # dynamic leading-¿/¡ drop (see drop_initial_punct_eligible in
+        # __init__). Unlike the trailing-punct mask above, this can't be
+        # done by masking a position in place: removing the FIRST word
+        # has to shift every later position back by one, so every field
+        # is sliced consistently rather than one element being replaced
+        # with a placeholder while the rest stay put.
+        if (self.drop_initial_punct_ratio > 0 and starts_with_initial_mark(raw_text)
+                and random.uniform(0, 1) < self.drop_initial_punct_ratio):
+            words = words[1:]
+            if upos is not None:
+                upos = upos[1:]
+            if xpos is not None:
+                xpos = xpos[1:]
+            if ufeats is not None:
+                ufeats = ufeats[1:]
+            pretrained = pretrained[1:]
+            char = char[1:]
+            raw_text = raw_text[1:]
 
         # get each character from the input sentnece
         # chars = [w for sent in char for w in sent]

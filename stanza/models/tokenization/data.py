@@ -122,6 +122,26 @@ comma_glue  (comma_glue_prob)
     This exact example was later fixed in UD 2.8, but it should still
     potentially be useful for compensating for typos.
 
+drop_initial_punct  (drop_initial_punct_prob)
+    Removes a leading inverted question or exclamation mark (¿/¡) from the
+    start of a sentence, together with the space after it if one is
+    present (the common case is no space -- "¿Cómo" -- since these marks
+    normally have no space after them in the raw text). Teaches the
+    tokenizer to correctly handle Spanish/Catalan-style questions and
+    exclamations even when a user's input is missing the opening mark,
+    which the model would otherwise never see, since every sentence in
+    the training data legitimately has it.  Mirrors augment_initial_punct
+    in prepare_tokenizer_treebank.py (currently ¿ only there), applied
+    dynamically here instead of by duplicating sentences at dataset-
+    preparation time, and extended to ¡ as well.  Only applies when ¿ or ¡
+    is the sentence's first character, is its own token (not glued to
+    anything), and no mark from the set (¿ or ¡, of either kind, not just
+    the leading one) appears anywhere else in the sentence -- the same
+    restriction the dataset-prep version uses for ¿, to avoid ambiguity
+    with nested or quoted questions/exclamations.
+    Eligibility (whether ¿ or ¡ is used in this dataset) is checked the
+    same way as comma_typo/comma_glue.
+
 drop_last_char  (last_char_drop_prob)
     Drops the final character of a training window with some probability,
     relabelling the new final character as a sentence end.  Teaches the model
@@ -142,6 +162,7 @@ import re
 import torch
 from torch.utils.data import Dataset
 
+from stanza.models.common.data import INITIAL_INVERTED_PUNCT_MARKS
 from stanza.models.common.utils import sort_with_indices, unsort
 from stanza.models.tokenization.vocab import Vocab
 
@@ -600,6 +621,14 @@ class DataLoader(TokenizationDataset):
             else:
                 logger.debug('Based on the training data, no comma found, so comma glues will not be augmented')
 
+        drop_initial_punct_prob = 0.0 if evaluation else args.get('drop_initial_punct_prob', 0.0)
+        if drop_initial_punct_prob > 0.0:
+            self.drop_initial_punct_eligible = any(mark in self.vocab for mark in INITIAL_INVERTED_PUNCT_MARKS)
+            if self.drop_initial_punct_eligible:
+                logger.debug('Based on the training data, will augment "¿/¡..." -> "..." leading punct drops')
+            else:
+                logger.debug('Based on the training data, no ¿ or ¡ found, so leading punct will not be dropped')
+
     def __len__(self):
         return len(self.sentence_ids)
 
@@ -947,6 +976,66 @@ class DataLoader(TokenizationDataset):
             return None
         return encoded
 
+    def drop_initial_punct(self, sentence):
+        """
+        Removes a leading inverted question or exclamation mark (¿/¡),
+        and the following space if any, from the start of a sentence.
+
+        Eligible sentences are those where:
+          - the sentence has more than one character and fits under max_seqlen
+          - the sentence's first character is ¿ or ¡
+          - that mark is its own token (a non-zero label), not glued to
+            anything else -- true by construction whenever it is the
+            sentence's first character and carries a word-end label
+          - no mark from the set (of any kind, not just the leading one)
+            appears anywhere else in the sentence, mirroring the
+            restriction augment_initial_punct uses in
+            prepare_tokenizer_treebank.py, to avoid ambiguity with nested
+            or quoted questions/exclamations -- e.g. '¿Dijo "¡hola!"?'
+            has two candidate marks (one ¿ and one ¡) and isn't a case
+            this augmentation should touch, even though neither mark is
+            individually repeated
+
+        The transformation is a pure deletion: drop the mark character,
+        and also drop the following space if one is present (the common
+        case in real text is no space after it, e.g. "¿Cómo", so most of
+        the time only the mark itself is removed). Whatever character
+        becomes the new first character keeps its own original label
+        unchanged.
+        """
+        if not getattr(self, 'drop_initial_punct_eligible', False):
+            return None
+        if len(sentence[3]) <= 1 or len(sentence[3]) >= self.args['max_seqlen']:
+            return None
+        first_idx = 0
+        while sentence[3][first_idx] == ' ' and first_idx + 1 < len(sentence[3]):
+            first_idx += 1
+        first_char = sentence[3][first_idx]
+        if first_char not in INITIAL_INVERTED_PUNCT_MARKS:
+            return None
+        if sentence[1][first_idx] == 0:
+            # the mark should always be its own token when it's the first
+            # character, but guard defensively against a malformed label
+            return None
+        total_marks = sum(1 for c in sentence[3] if c in INITIAL_INVERTED_PUNCT_MARKS)
+        if total_marks != 1:
+            return None
+
+        all_units = [(x, int(y)) for x, y in zip(sentence[3], sentence[1])]
+        if len(sentence[3]) > first_idx + 1 and sentence[3][first_idx+1] == ' ':
+            new_units = all_units[first_idx+2:]
+        else:
+            new_units = all_units[first_idx+1:]
+        if not new_units:
+            return None
+        if first_idx > 0:
+            new_units = all_units[:first_idx] + new_units
+
+        encoded = self.para_to_sentences(new_units)
+        if not encoded:
+            return None
+        return encoded
+
     def next(self, eval_offsets=None, unit_dropout=0.0, feat_unit_dropout=0.0):
         ''' Get a batch of converted and padded PyTorch data from preprocessed raw text for training/prediction. '''
         feat_size = len(self.sentences[0][0][2][0])
@@ -966,6 +1055,7 @@ class DataLoader(TokenizationDataset):
             augment_final_punct_prob = 0.0 if self.eval else self.args.get('augment_final_punct_prob', 0.0)
             comma_typo_prob = 0.0 if self.eval else self.args.get('comma_typo_prob', 0.0)
             comma_glue_prob = 0.0 if self.eval else self.args.get('comma_glue_prob', 0.0)
+            drop_initial_punct_prob = 0.0 if self.eval else self.args.get('drop_initial_punct_prob', 0.0)
 
             pid, sid = id_pair if self.eval else random.choice(self.sentence_ids)
             sentences = [copy([x[offset:] for x in self.sentences[pid][sid]])]
@@ -1045,6 +1135,17 @@ class DataLoader(TokenizationDataset):
                         # comma_glue deletes a character (the space), so
                         # total_len must be adjusted, same as move_punct_back
                         new_sentence = self.comma_glue(sentence)
+                        if new_sentence is not None:
+                            total_len = total_len + len(new_sentence[0][3]) - len(sentences[sentence_idx][3])
+                            sentences[sentence_idx] = new_sentence[0]
+
+            if drop_initial_punct_prob > 0.0:
+                for sentence_idx, sentence in enumerate(sentences):
+                    if random.random() < drop_initial_punct_prob:
+                        # drop_initial_punct deletes 1-2 characters (¿ and
+                        # possibly the following space), so total_len must
+                        # be adjusted, same as comma_glue
+                        new_sentence = self.drop_initial_punct(sentence)
                         if new_sentence is not None:
                             total_len = total_len + len(new_sentence[0][3]) - len(sentences[sentence_idx][3])
                             sentences[sentence_idx] = new_sentence[0]

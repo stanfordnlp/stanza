@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader as TorchDataLoader
 from torch.utils.data.sampler import Sampler
 
 from stanza.models.common.bert_embedding import filter_data, needs_length_filter
-from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all, get_augment_ratio
+from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all, get_augment_ratio, INITIAL_INVERTED_PUNCT_MARKS, starts_with_initial_mark
 from stanza.models.common.utils import DEFAULT_WORD_CUTOFF, simplify_punct
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX, ROOT_ID, CompositeVocab, CharVocab
 from stanza.models.pos.vocab import WordVocab, XPOSVocab, FeatureVocab, MultiVocab
@@ -104,6 +104,75 @@ def record_can_augment_nopunct(record, punct_id):
     return True
 
 
+def record_starts_with_mark(record, marks=INITIAL_INVERTED_PUNCT_MARKS):
+    """
+    True if this preprocessed sentence's first real word is exactly one
+    of the given marks (by default the Spanish/Catalan inverted question
+    and exclamation marks), and no mark from the set appears anywhere
+    else in the sentence.
+
+    Thin wrapper around stanza.models.common.data.starts_with_initial_mark
+    -- record[9] is the plain-string text field (never vocab-mapped),
+    which is exactly the "list of word strings" that function expects.
+    The actual mark-matching logic (including the no-other-mark
+    restriction, mirroring augment_initial_punct in
+    prepare_tokenizer_treebank.py) lives there in one place, shared with
+    the POS tagger's equivalent eligibility check; only this record[9]
+    extraction is specific to the parser's own record shape.
+    """
+    return starts_with_initial_mark(record[9], marks)
+
+
+def record_can_drop_initial_mark(record, marks=INITIAL_INVERTED_PUNCT_MARKS):
+    """
+    True if the sentence starts with one of the given marks (see
+    record_starts_with_mark) and no other word's head depends directly
+    on that first token -- removing it would otherwise leave a word's
+    head pointing at a position that no longer exists.
+
+    record[7] is the head field (no ROOT, one 1-indexed position per
+    real word); the first real word's own 1-indexed position is always 1.
+    """
+    if not record_starts_with_mark(record, marks):
+        return False
+    head = record[7]
+    if any(h == 1 for h in head[1:]):
+        return False
+    return True
+
+
+def drop_initial_mark_from_record(record):
+    """
+    Removes the first real word from a preprocessed sentence, renumbering
+    every remaining word's head position down by one to account for it.
+
+    Unlike dropping the last word (record_can_augment_nopunct's case),
+    dropping the FIRST word shifts every later word's 1-indexed position
+    back by one, so every head value greater than 0 must be decremented;
+    a head of 0 (root) is left untouched. record_can_drop_initial_mark
+    already guarantees no remaining word's head is exactly 1 (i.e.
+    nothing depends on the word being removed), so every nonzero head
+    among the remaining words is guaranteed to be >= 2 before the shift.
+    """
+    word, char, upos, xpos, feats, pretrain, lemma, head, deprel, text = record
+    # ROOT-prepended fields: keep ROOT (index 0), drop the removed word
+    # (index 1), keep everything after it unchanged
+    new_word = [word[0]] + word[2:]
+    new_char = [char[0]] + char[2:]
+    new_upos = [upos[0]] + upos[2:]
+    new_xpos = [xpos[0]] + xpos[2:]
+    new_feats = [feats[0]] + feats[2:]
+    new_pretrain = [pretrain[0]] + pretrain[2:]
+    new_lemma = [lemma[0]] + lemma[2:]
+    # non-ROOT-prepended fields: drop the removed word's own entry, and
+    # shift every remaining head position down by one
+    new_head = [h - 1 if h > 0 else h for h in head[1:]]
+    new_deprel = deprel[1:]
+    new_text = text[1:]
+    return [new_word, new_char, new_upos, new_xpos, new_feats, new_pretrain,
+            new_lemma, new_head, new_deprel, new_text]
+
+
 class Dataset:
     """
     Sentence-level dataset for the dependency parser: owns vocab
@@ -187,6 +256,23 @@ class Dataset:
         else:
             self.augment_nopunct_ratio = augment_nopunct_arg
 
+        # dynamic leading-inverted-punct drop: some UD treebanks (Spanish,
+        # Catalan) have every training sentence begin with an inverted
+        # question or exclamation mark (¿/¡), which the model never learns
+        # to do without. Mirrors augment_initial_punct in
+        # prepare_tokenizer_treebank.py, applied per sentence in
+        # __getitem__ instead of by duplicating sentences at dataset-
+        # preparation time. Unlike augment_nopunct, this uses a flat
+        # default ratio (not an auto-detected one), matching the ratio
+        # parameter augment_initial_punct itself takes.
+        drop_initial_punct_arg = args.get('drop_initial_punct_prob', 0.20)
+        if self.eval or not drop_initial_punct_arg or drop_initial_punct_arg <= 0:
+            self.drop_initial_punct_eligible = False
+            self.drop_initial_punct_ratio = 0.0
+        else:
+            self.drop_initial_punct_eligible = any(record_starts_with_mark(record) for record in self.data)
+            self.drop_initial_punct_ratio = drop_initial_punct_arg if self.drop_initial_punct_eligible else 0.0
+
     def init_vocab(self, data):
         assert self.eval == False # for eval vocab must exist
         cutoff = self.args['word_cutoff'] if self.args.get('word_cutoff') is not None else DEFAULT_WORD_CUTOFF
@@ -250,6 +336,11 @@ class Dataset:
                 # lemma) and non-ROOT-prepended fields (head/deprel/text)
                 # all simply lose their last entry
                 record = [field[:-1] for field in record]
+        if self.drop_initial_punct_ratio > 0 and record_can_drop_initial_mark(record):
+            if random.random() < self.drop_initial_punct_ratio:
+                # drop the leading ¿/¡ and renumber every remaining word's
+                # head position down by one -- see drop_initial_mark_from_record
+                record = drop_initial_mark_from_record(record)
         return record
 
     def __iter__(self):

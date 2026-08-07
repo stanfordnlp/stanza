@@ -117,6 +117,7 @@ def build_argparse():
     utils.add_device_args(parser)
 
     parser.add_argument('--augment_nopunct', type=float, default=None, help='Augment the training data by copying this fraction of punct-ending sentences as non-punct.  Default of None will aim for roughly 50%%')
+    parser.add_argument('--drop_initial_punct_prob', type=float, default=0.20, help='Probability to drop a leading inverted question or exclamation mark (¿/¡) from a sentence, for languages such as Spanish and Catalan where it should be optional')
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
