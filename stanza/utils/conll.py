@@ -3,15 +3,119 @@ Utility functions for the loading and conversion of CoNLL-format files.
 """
 import os
 import io
+import re
+import warnings
 from zipfile import ZipFile
 
 from stanza.models.common.doc import Document
 from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, NER, START_CHAR, END_CHAR
 from stanza.models.common.doc import FIELD_TO_IDX, FIELD_NUM
 from stanza.models.common.doc import LINE_NUMBER
+from stanza.models.common.utils import misc_to_space_after, misc_to_space_before
 
 class CoNLLError(ValueError):
     pass
+
+# MISC annotations which describe whitespace.  These are consumed when
+# reconstructing the text of a document, then dropped from the MISC field
+# so that the Document can regenerate them from spaces_before / spaces_after
+# instead of emitting them twice
+SPACE_MISC_PREFIXES = ("spaceafter=", "spacesafter=", "spacesbefore=")
+
+TEXT_COMMENT_PREFIXES = ("# text =", "#text =", "# text=", "#text=")
+
+def group_sentence_units(sent_dict):
+    """Group a flat list of CoNLL-U dicts into (token, words) pairs.
+
+    For an MWT, the token is the range line and words are the lines it covers.
+    For a regular token, the token and its single word are the same dict, so
+    the words list is empty to signal there is nothing extra to annotate.
+    """
+    units = []
+    idx = 0
+    while idx < len(sent_dict):
+        token = sent_dict[idx]
+        idx += 1
+        if len(token[ID]) > 1:
+            end = token[ID][1]
+            words = []
+            while idx < len(sent_dict) and len(sent_dict[idx][ID]) == 1 and sent_dict[idx][ID][0] <= end:
+                words.append(sent_dict[idx])
+                idx += 1
+            units.append((token, words))
+        else:
+            units.append((token, []))
+    return units
+
+def unit_space_after(token, words):
+    """SpaceAfter / SpacesAfter for a token, preferring the annotation on its final word
+
+    Matches the precedence used by Token.consolidate_whitespace.  UD marks the
+    annotation on the range line of an MWT, but some treebanks put it on the
+    last word instead, so both are accepted
+    """
+    for entry in (words[-1] if words else token, token):
+        misc = entry.get(MISC)
+        if misc and any(piece.lower().startswith(("spaceafter=", "spacesafter=")) for piece in misc.split("|")):
+            return misc_to_space_after(misc)
+    return " "
+
+def unit_space_before(token, words):
+    """SpacesBefore for a token, preferring the annotation on its first word"""
+    for entry in (words[0] if words else token, token):
+        misc = entry.get(MISC)
+        if misc and any(piece.lower().startswith("spacesbefore=") for piece in misc.split("|")):
+            return misc_to_space_before(misc)
+    return ""
+
+def sentence_text_comment(comments):
+    """Return the `# text = ` value for a sentence, or None if there isn't one"""
+    for comment in comments:
+        if comment.startswith(TEXT_COMMENT_PREFIXES):
+            return comment.split("=", 1)[1].strip()
+    return None
+
+def align_units_to_text(units, text):
+    """Find each token in the sentence's `# text` comment.
+
+    Returns a list of (start, end) offsets relative to the start of the text,
+    or None if the tokens cannot be laid over the text.  We require the gaps
+    between tokens to be whitespace so that a token matching later in the
+    sentence by coincidence is treated as a failure rather than silently
+    producing wrong offsets.
+    """
+    pos = 0
+    spans = []
+    for token, _ in units:
+        form = token[TEXT]
+        idx = text.find(form, pos)
+        if idx < 0 or text[pos:idx].strip():
+            return None
+        spans.append((idx, idx + len(form)))
+        pos = idx + len(form)
+    if text[pos:].strip():
+        return None
+    return spans
+
+def annotate_mwt_words(token, words, start_char):
+    """Split a token's span across the words of an MWT, if the words line up
+
+    Same approach as Document.set_mwt_expansions: words which are not a
+    substring split of the token, such as `del` -> `de el`, are left alone
+    """
+    if not words:
+        return
+    if len(words) == 1:
+        words[0][START_CHAR] = token[START_CHAR]
+        words[0][END_CHAR] = token[END_CHAR]
+        return
+    search_string = "^%s$" % ("\\s*".join("(%s)" % re.escape(word[TEXT]) for word in words))
+    match = re.compile(search_string).match(token[TEXT])
+    if not match:
+        return
+    for word_idx, word in enumerate(words):
+        word[START_CHAR] = match.start(word_idx + 1) + start_char
+        word[END_CHAR] = match.end(word_idx + 1) + start_char
 
 class CoNLL:
 
@@ -145,9 +249,122 @@ class CoNLL:
         return doc_dict, doc_comments, doc_empty
 
     @staticmethod
-    def conll2doc(input_file=None, input_str=None, ignore_gapping=True, zip_file=None, keep_line_numbers=False):
+    def add_char_offsets(doc_dict, doc_comments=None, use_text_comments=True):
+        """Add start_char & end_char to the tokens and words of a document, and return the text they refer to.
+
+        CoNLL-U files do not record character offsets, so both the offsets and
+        the text they index into have to be rebuilt from the tokens.  Where a
+        sentence has a `# text` comment, that is the surface form the treebank
+        itself claims, so we lay the tokens over it and use the resulting
+        positions.  Otherwise, and for any sentence where the tokens cannot be
+        aligned with the comment, the text is rebuilt by concatenating the
+        tokens using their SpaceAfter / SpacesAfter annotations.
+
+        The whitespace annotations are read but left in the MISC column, and
+        spaces_before / spaces_after are deliberately not set on the tokens.
+        The Document rewrites MISC from those fields when it has them, which
+        would both duplicate the annotations and re-sort the rest of the MISC
+        column of any token which has one.
+
+        Modifies doc_dict in place.  Returns the text of the document.
+        """
+        if doc_comments is None:
+            doc_comments = [[] for _ in doc_dict]
+
+        text_pieces = []
+        offset = 0
+        previous_after = None
+        for sent_idx, (sent_dict, comments) in enumerate(zip(doc_dict, doc_comments)):
+            units = group_sentence_units(sent_dict)
+            if not units:
+                continue
+
+            spaces_before = unit_space_before(*units[0])
+            spaces_after = [unit_space_after(token, words) for token, words in units]
+
+            sent_text = sentence_text_comment(comments) if use_text_comments else None
+            spans = align_units_to_text(units, sent_text) if sent_text is not None else None
+            if sent_text is not None and spans is None:
+                warnings.warn("Could not align the tokens of sentence %d with its `# text` comment.  Rebuilding that sentence from its tokens instead" % sent_idx)
+            if spans is not None:
+                # the text comment and the SpaceAfter annotations are required to
+                # agree, but treebanks do get this wrong.  the text wins, since
+                # that is what the offsets have to index into, but it is worth
+                # saying so - the alternative is silently rewriting the MISC
+                for unit_idx, (start, end) in enumerate(spans):
+                    gap = sent_text[end:spans[unit_idx+1][0]] if unit_idx + 1 < len(spans) else None
+                    if gap is not None and gap != spaces_after[unit_idx]:
+                        warnings.warn("Sentence %d has whitespace after token %d which does not match its MISC annotation.  Using the `# text` comment" % (sent_idx, unit_idx + 1))
+                        break
+            if spans is None:
+                pieces = []
+                spans = []
+                local = 0
+                for unit_idx, (token, words) in enumerate(units):
+                    form = token[TEXT]
+                    spans.append((local, local + len(form)))
+                    pieces.append(form)
+                    local += len(form)
+                    if unit_idx < len(units) - 1:
+                        pieces.append(spaces_after[unit_idx])
+                        local += len(spaces_after[unit_idx])
+                sent_text = "".join(pieces)
+
+            # whitespace between the end of the previous sentence and this one.
+            # a treebank marks the gap on one side or the other, not both
+            if previous_after is None:
+                separator = spaces_before
+            elif previous_after != " ":
+                separator = previous_after
+            else:
+                separator = spaces_before or " "
+            text_pieces.append(separator)
+            offset += len(separator)
+
+            for (token, words), (start, end) in zip(units, spans):
+                token[START_CHAR] = offset + start
+                token[END_CHAR] = offset + end
+                annotate_mwt_words(token, words, offset + start)
+
+            text_pieces.append(sent_text)
+            offset += len(sent_text)
+            previous_after = spaces_after[-1]
+
+        # a document which explicitly annotates whitespace after its final
+        # token, such as SpacesAfter=\n, keeps that whitespace.  otherwise the
+        # text ends where the last token ends
+        if previous_after and previous_after != " ":
+            text_pieces.append(previous_after)
+
+        return "".join(text_pieces)
+
+    @staticmethod
+    def conll2doc(input_file=None, input_str=None, ignore_gapping=True, zip_file=None, keep_line_numbers=False, reconstruct_text=False):
+        """Read a CoNLL-U file or string into a Document
+
+        reconstruct_text: rebuild the text of the document from the tokens so
+          that start_char & end_char can be set.  Off by default: it costs
+          time and memory, and a document with offsets writes those offsets
+          back out in the MISC column, which a document read from a treebank
+          would not otherwise have
+        """
         doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file, keep_line_numbers=keep_line_numbers)
-        return Document(doc_dict, text=None, comments=doc_comments, empty_sentences=doc_empty)
+        if not reconstruct_text:
+            return Document(doc_dict, text=None, comments=doc_comments, empty_sentences=doc_empty)
+
+        # the offsets have to be added to the dicts before the Document is
+        # built, since that is what the Tokens and Words are built from
+        text = CoNLL.add_char_offsets(doc_dict, doc_comments)
+        # the text is attached after building the document rather than passed
+        # to the constructor.  passing it would run mark_whitespace, which
+        # rewrites the MISC column of every token with a space annotation
+        doc = Document(doc_dict, text=None, comments=doc_comments, empty_sentences=doc_empty)
+        doc.text = text
+        for sentence in doc.sentences:
+            if sentence.text is None and len(sentence.tokens) > 0:
+                sentence.text = text[sentence.tokens[0].start_char:sentence.tokens[-1].end_char]
+        doc.build_ents()
+        return doc
 
     @staticmethod
     def conll2multi_docs(input_file=None, input_str=None, ignore_gapping=True, zip_file=None):
