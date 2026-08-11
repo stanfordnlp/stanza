@@ -1250,6 +1250,15 @@ class Token(StanzaObject):
         """
         Remove whitespace misc annotations from the Words and mark the whitespace on the Tokens
         """
+        # most tokens have no whitespace annotation at all, and searching the
+        # misc strings for one is much cheaper than splitting each of them
+        # into pieces.  every prefix this method looks for - SpaceAfter,
+        # SpacesAfter, SpacesBefore - begins with "Space", and every test it
+        # makes on them is case sensitive, so this skips exactly the tokens
+        # which would have fallen through all of those tests anyway
+        if not (self._misc and "Space" in self._misc) and not any(word._misc and "Space" in word._misc for word in self.words):
+            return
+
         found_after = False
         found_before = False
         num_words = len(self.words)
@@ -1498,9 +1507,33 @@ class Word(StanzaObject):
         if self._misc is not None:
             init_from_misc(self)
 
-        # use the setter, which will go up to the sentence and set the
-        # dependencies on that graph
-        self.deps = word_entry.get(DEPS, None)
+        # a Word being constructed cannot have any existing in-edges to clear,
+        # so we skip the general setter and go straight to adding the edges
+        deps = word_entry.get(DEPS, None)
+        if deps is not None:
+            self._init_deps(deps)
+
+    def _init_deps(self, value):
+        """Add the enhanced dependencies of a freshly built Word
+
+        The deps setter has to clear the Word's existing parents first, which
+        costs a has_node and an in_edges lookup per Word.  Neither can find
+        anything during construction, so this skips them
+        """
+        graph = self._sent._enhanced_dependencies
+        if graph is None:
+            graph = nx.MultiDiGraph()
+            self._sent._enhanced_dependencies = graph
+
+        if isinstance(value, str):
+            value = value.split("|")
+        if all(isinstance(x, str) for x in value):
+            value = [x.split(":", maxsplit=1) for x in value]
+        for parent, dep in value:
+            parent = tuple(map(int, parent.split(".", maxsplit=1)))
+            if len(parent) == 1:
+                parent = parent[0]
+            graph.add_edge(parent, self.id, dep)
 
     @property
     def manual_expansion(self):
