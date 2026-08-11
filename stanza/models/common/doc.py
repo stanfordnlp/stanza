@@ -1529,11 +1529,18 @@ class Word(StanzaObject):
             value = value.split("|")
         if all(isinstance(x, str) for x in value):
             value = [x.split(":", maxsplit=1) for x in value]
+        word_id = self.id
+        add_edge = graph.add_edge
         for parent, dep in value:
-            parent = tuple(map(int, parent.split(".", maxsplit=1)))
-            if len(parent) == 1:
-                parent = parent[0]
-            graph.add_edge(parent, self.id, dep)
+            # only an empty node has a . in its id, and those are rare, so the
+            # common case skips building a tuple just to unpack it again
+            if "." in parent:
+                parent = tuple(map(int, parent.split(".", maxsplit=1)))
+                if len(parent) == 1:
+                    parent = parent[0]
+            else:
+                parent = int(parent)
+            add_edge(parent, word_id, dep)
 
     @property
     def manual_expansion(self):
