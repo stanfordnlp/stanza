@@ -305,6 +305,24 @@ def test_mwt_ner_conversion():
     conll = "{:C}".format(doc)
     assert conll == MWT_NER
 
+
+MWT_FEATS = """
+# text = don't
+# sent_id = 0
+1-2\tdon't\t_\t_\t_\tTypo=Yes\t_\t_\t_\t_
+1\tdo\tdo\tAUX\t_\t_\t0\troot\t_\t_
+2\tn't\tnot\tPART\t_\t_\t1\tadvmod\t_\t_
+""".strip()
+
+
+def test_mwt_feats_conversion():
+    """Test that morphological features on multi-word tokens survive a round trip."""
+    doc = CoNLL.conll2doc(input_str=MWT_FEATS)
+
+    assert doc.sentences[0].tokens[0].feats == "Typo=Yes"
+    assert format(doc, "C") == MWT_FEATS
+
+
 ALL_OFFSETS_CONLLU = """
 # text = This makes John's headache worse
 # sent_id = 0
