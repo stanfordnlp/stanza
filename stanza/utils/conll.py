@@ -16,6 +16,12 @@ from stanza.models.common.utils import misc_to_space_after, misc_to_space_before
 class CoNLLError(ValueError):
     pass
 
+# the field -> column mapping never changes, so unpack it once rather than
+# calling .items() on every token in the corpus
+FIELD_ITEMS = tuple(FIELD_TO_IDX.items())
+TEXT_IDX = FIELD_TO_IDX[TEXT]
+LEMMA_IDX = FIELD_TO_IDX[LEMMA]
+
 # MISC annotations which describe whitespace.  These are consumed when
 # reconstructing the text of a document, then dropped from the MISC field
 # so that the Document can regenerate them from spaces_before / spaces_after
@@ -130,17 +136,19 @@ class CoNLL:
         # f is open() or io.StringIO()
         doc, sent = [], []
         doc_comments, sent_comments = [], []
+        append_token = sent.append
         for line_idx, line in enumerate(f):
             # leave whitespace such as NBSP, in case it is meaningful in the conll-u doc
             line = line.lstrip().rstrip(' \n\r\t')
-            if len(line) == 0:
-                if len(sent) > 0:
+            if not line:
+                if sent:
                     doc.append(sent)
                     sent = []
+                    append_token = sent.append
                     doc_comments.append(sent_comments)
                     sent_comments = []
             else:
-                if line.startswith('#'): # read comment line
+                if line[0] == '#': # read comment line
                     sent_comments.append(line)
                     continue
                 array = line.split('\t')
@@ -153,7 +161,7 @@ class CoNLL:
                         array[-1] = "%s=%d" % (LINE_NUMBER, line_idx)
                     else:
                         array[-1] = "%s|%s=%d" % (array[-1], LINE_NUMBER, line_idx)
-                sent += [array]
+                append_token(array)
         if len(sent) > 0:
             doc.append(sent)
             doc_comments.append(sent_comments)
@@ -175,14 +183,20 @@ class CoNLL:
                     token_dict = CoNLL.convert_conll_token(token_conll)
                 except ValueError as e:
                     raise CoNLLError("Could not process sentence %d token %d:\n%s\n%s" % (sent_idx, token_idx, token_conll, str(e))) from e
-                if '.' in token_dict[ID]:
-                    token_dict[ID] = tuple(int(x) for x in token_dict[ID].split(".", maxsplit=1))
+                token_id = token_dict[ID]
+                if '.' in token_id:
+                    token_dict[ID] = tuple(int(x) for x in token_id.split(".", maxsplit=1))
                     sent_empty.append(token_dict)
                 else:
                     try:
-                        token_dict[ID] = tuple(int(x) for x in token_dict[ID].split("-", maxsplit=1))
+                        # the overwhelming majority of ids are a plain integer,
+                        # which does not need a split or a generator to convert
+                        if '-' in token_id:
+                            token_dict[ID] = tuple(int(x) for x in token_id.split("-", maxsplit=1))
+                        else:
+                            token_dict[ID] = (int(token_id),)
                     except ValueError as e:
-                        raise CoNLLError("Could not process ID %s at sent_idx %d, token_idx %d\nEntire token dict:\n%s" % (token_dict[ID], sent_idx, token_idx, token_dict)) from e
+                        raise CoNLLError("Could not process ID %s at sent_idx %d, token_idx %d\nEntire token dict:\n%s" % (token_id, sent_idx, token_idx, token_dict)) from e
                     sent_dict.append(token_dict)
             doc_dict.append(sent_dict)
             doc_empty.append(sent_empty)
@@ -212,7 +226,7 @@ class CoNLL:
         Output: a dictionary that maps from field name to value.
         """
         token_dict = {}
-        for field, field_idx in FIELD_TO_IDX.items():
+        for field, field_idx in FIELD_ITEMS:
             value = token_conll[field_idx]
             if value == '' and field is FEATS:
                 continue
@@ -222,9 +236,9 @@ class CoNLL:
                 else:
                     token_dict[field] = value
         # special case if text is '_'
-        if token_conll[FIELD_TO_IDX[TEXT]] == '_':
-            token_dict[TEXT] = token_conll[FIELD_TO_IDX[TEXT]]
-            token_dict[LEMMA] = token_conll[FIELD_TO_IDX[LEMMA]]
+        if token_conll[TEXT_IDX] == '_':
+            token_dict[TEXT] = token_conll[TEXT_IDX]
+            token_dict[LEMMA] = token_conll[LEMMA_IDX]
         return token_dict
 
     @staticmethod
