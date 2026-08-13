@@ -644,6 +644,12 @@ class Sentence(StanzaObject):
                 entry[ID] = (i+1, )
             if isinstance(entry[ID], int):
                 entry[ID] = (entry[ID], )
+            elif isinstance(entry[ID], list):
+                # json has no tuple type, so an id written by to_dict() as
+                # (3, 4) reads back as [3, 4].  the rest of the Document
+                # code tests the id for tuple, so restore it here, which
+                # covers every path that builds a Document from dicts
+                entry[ID] = tuple(entry[ID])
             if len(entry.get(ID)) > 1: # if this token is a multi-word token
                 st, en = entry[ID]
                 self.tokens.append(Token(self, entry))
