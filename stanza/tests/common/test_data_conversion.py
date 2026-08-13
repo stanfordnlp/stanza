@@ -3,6 +3,7 @@ Basic tests of the data conversion
 """
 
 import io
+import json
 import pytest
 import tempfile
 from zipfile import ZipFile
@@ -636,3 +637,56 @@ def test_coref_chains_misc_key():
     # NER and coref must remain distinct keys when both are present
     misc = dict_to_conll_text({ID: (1,), TEXT: "Joe", NER: "S-PERSON", COREF_CHAINS: [attachment]}).split("\t")[-1]
     assert misc == "ner=S-PERSON|coref_chains=unit-repr-id3"
+
+# "du" is the contraction of "de" and "le", so it is a multi word token
+FRENCH_MWT = """
+# text = On parle du chien
+# sent_id = 0
+1	On	on	PRON	_	_	2	nsubj	_	_
+2	parle	parler	VERB	_	_	0	root	_	_
+3-4	du	_	_	_	_	_	_	_	_
+3	de	de	ADP	_	_	5	case	_	_
+4	le	le	DET	_	_	5	det	_	_
+5	chien	chien	NOUN	_	_	2	obl	_	_
+""".strip()
+
+def test_serialized_mwt_id():
+    """
+    A multi word token id must survive to_serialized() and back
+
+    to_dict() writes the id of the "du" token as the tuple (3, 4), and json
+    has no tuple type, so it is read back as a list unless it is converted.
+    A list id is written to the ID column as "[3, 4]" instead of "3-4"
+    """
+    doc = CoNLL.conll2doc(input_str=FRENCH_MWT)
+    doc = Document.from_serialized(doc.to_serialized())
+    assert "{:C}".format(doc) == FRENCH_MWT
+
+    token = doc.sentences[0].tokens[2]
+    assert isinstance(token.id, tuple)
+    assert token.id == (3, 4)
+
+def test_list_mwt_id():
+    """
+    A Document built from dicts whose ids are lists must behave the same
+
+    json.loads of a to_dict() payload gives lists rather than tuples, so a
+    Document can be handed list ids without going through from_serialized
+    """
+    from stanza.models.common.doc import ID
+
+    doc = CoNLL.conll2doc(input_str=FRENCH_MWT)
+    as_lists = json.loads(json.dumps(doc.to_dict()))
+    assert as_lists[0][2][ID] == [3, 4]
+
+    rebuilt = Document(as_lists, doc.text)
+
+    # the comments are not part of this construction path, so compare the
+    # token lines rather than the whole document
+    conll = "{:C}".format(rebuilt)
+    assert "3-4\tdu" in conll
+    assert "[3, 4]" not in conll
+
+    token = rebuilt.sentences[0].tokens[2]
+    assert isinstance(token.id, tuple)
+    assert token.id == (3, 4)
