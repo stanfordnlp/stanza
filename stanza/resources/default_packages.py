@@ -1120,6 +1120,8 @@ TRANSFORMER_NICKNAMES = {
     "ai4bharat/indic-bert": "indic-bert",
     "google/muril-base-cased": "muril-base-cased",
     "google/muril-large-cased": "muril-large-cased",
+    "ibm-research/ia-multilingual-original-script-roberta": "ibm-ia-original",
+    "ibm-research/ia-multilingual-transliterated-roberta": "ibm-ia-transliterated",
 
     # multi-lingual
     "FacebookAI/xlm-roberta-large": "xlm-roberta-large",
