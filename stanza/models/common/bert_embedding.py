@@ -34,7 +34,9 @@ def update_max_length(model_name, tokenizer):
                       'hfl/chinese-macbert-large',
                       'rmihaylov/bert-base-bg',
                       'rmihaylov/bert-base-theseus-bg',
-                      'NYTK/electra-small-discriminator-hungarian'):
+                      'NYTK/electra-small-discriminator-hungarian',
+                      'ibm-research/ia-multilingual-original-script-roberta',
+                      'ibm-research/ia-multilingual-transliterated-roberta'):
         tokenizer.model_max_length = 512
 
 
