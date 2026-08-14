@@ -629,16 +629,28 @@ class Sentence(StanzaObject):
         # with edges from the parent to the dependent
         # however, we set it to None until needed, as it is somewhat slow
         self._enhanced_dependencies = None
+        # _process_tokens appends here for any empty node it finds inline in
+        # the token list, which is how Sentence.to_dict() writes them
+        self._empty_words = []
         self._process_tokens(tokens)
 
         if empty_words is not None:
-            self._empty_words = [Word(self, entry) for entry in empty_words]
-        else:
-            self._empty_words = []
+            given = [Word(self, entry) for entry in empty_words]
+            if self._empty_words:
+                # both sources in play, so put them in index order.  the key
+                # tolerates an id that is not a tuple, since an explicitly
+                # supplied entry is not normalized the way _process_tokens
+                # normalizes the ones it finds inline
+                self._empty_words = sorted(
+                    given + self._empty_words,
+                    key=lambda x: tuple(x.id) if isinstance(x.id, (tuple, list)) else (x.id,))
+            else:
+                self._empty_words = given
 
     def _process_tokens(self, tokens):
         st, en = -1, -1
         self.tokens, self.words = [], []
+        word_ids = set()
         for i, entry in enumerate(tokens):
             if ID not in entry: # manually set a 1-based id for word if not exist
                 entry[ID] = (i+1, )
@@ -650,7 +662,15 @@ class Sentence(StanzaObject):
                 # code tests the id for tuple, so restore it here, which
                 # covers every path that builds a Document from dicts
                 entry[ID] = tuple(entry[ID])
-            if len(entry.get(ID)) > 1: # if this token is a multi-word token
+            if len(entry.get(ID)) > 1 and (entry[ID][0] == 0 or entry[ID][0] in word_ids):
+                # an empty node, not a range.  a range token comes before the
+                # words it spans, so its first index has not been seen yet,
+                # and no range can start at 0, so a 0 first index is always an
+                # empty node.  Sentence.to_dict() writes empty nodes inline in
+                # the token list, and this is what tells them apart on the way
+                # back in
+                self._empty_words.append(Word(self, entry))
+            elif len(entry.get(ID)) > 1: # if this token is a multi-word token
                 st, en = entry[ID]
                 self.tokens.append(Token(self, entry))
             else: # else this token is a word
@@ -668,6 +688,7 @@ class Sentence(StanzaObject):
                     continue
                 self.words.append(new_word)
                 idx = entry.get(ID)[0]
+                word_ids.add(idx)
                 if idx <= en:
                     self.tokens[-1].words.append(new_word)
                 else:
