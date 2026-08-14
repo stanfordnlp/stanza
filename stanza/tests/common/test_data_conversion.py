@@ -423,6 +423,96 @@ def test_empty_deps_at_end_conversion():
     """
     check_empty_deps_conversion(ESTONIAN_EMPTY_END_DEPS, 5)
 
+EMPTY_AT_ZERO = """
+# text = likes cats
+0.1	likes	like	VERB	_	_	_	_	0:root	_
+1	likes	like	VERB	_	_	0	root	_	_
+2	cats	cat	NOUN	_	_	1	obj	_	_
+""".strip()
+
+# an empty node numbered 1.2 and a multi word token spanning 1-2 produce the
+# same id in the dict, so the only thing separating them is where they sit
+EMPTY_COLLIDES_WITH_MWT = """
+# text = He likes
+1	He	he	PRON	_	_	2	nsubj	_	_
+1.2	likes	like	VERB	_	_	_	_	0:root	_
+2	likes	like	VERB	_	_	0	root	_	_
+""".strip()
+
+MWT_1_2 = """
+# text = du chien
+1-2	du	_	_	_	_	_	_	_	_
+1	de	de	ADP	_	_	3	case	_	_
+2	le	le	DET	_	_	3	det	_	_
+3	chien	chien	NOUN	_	_	0	root	_	_
+""".strip()
+
+@pytest.mark.parametrize("input_str", [ESTONIAN_EMPTY_DEPS, ESTONIAN_EMPTY_END_DEPS,
+                                       EMPTY_AT_ZERO, EMPTY_COLLIDES_WITH_MWT, MWT_1_2],
+                         ids=["estonian", "estonian_at_end", "empty_at_zero",
+                              "empty_collides_with_mwt", "mwt_only"])
+def test_empty_words_survive_rebuild(input_str):
+    """
+    Empty words must survive a rebuild from the dicts to_dict() writes
+
+    to_dict() writes an empty word inline in the token list, and its id is a
+    2-tuple, the same shape a multi word token range has.  What separates them
+    is position: a range comes before the words it spans, an empty word comes
+    after the word it hangs off, and no range can start at 0
+    """
+    doc = CoNLL.conll2doc(input_str=input_str, ignore_gapping=False)
+    original = doc.sentences[0]
+
+    rebuilt = Document(doc.to_dict(), doc.text)
+    sentence = rebuilt.sentences[0]
+
+    assert len(sentence.tokens) == len(original.tokens)
+    assert len(sentence.words) == len(original.words)
+    assert len(sentence.empty_words) == len(original.empty_words)
+    assert [w.id for w in sentence.empty_words] == [w.id for w in original.empty_words]
+
+    lines = [x for x in "{:C}".format(rebuilt).split("\n") if not x.startswith("#")]
+    assert lines == [x for x in input_str.split("\n") if not x.startswith("#")]
+
+@pytest.mark.parametrize("input_str", [ESTONIAN_EMPTY_DEPS, EMPTY_AT_ZERO,
+                                       EMPTY_COLLIDES_WITH_MWT, MWT_1_2],
+                         ids=["estonian", "empty_at_zero",
+                              "empty_collides_with_mwt", "mwt_only"])
+def test_empty_words_survive_serialization(input_str):
+    """
+    The same must hold through to_serialized() and back
+    """
+    doc = CoNLL.conll2doc(input_str=input_str, ignore_gapping=False)
+    original = doc.sentences[0]
+
+    rebuilt = Document.from_serialized(doc.to_serialized())
+    sentence = rebuilt.sentences[0]
+
+    assert len(sentence.tokens) == len(original.tokens)
+    assert len(sentence.empty_words) == len(original.empty_words)
+
+    lines = [x for x in "{:C}".format(rebuilt).split("\n") if not x.startswith("#")]
+    assert lines == [x for x in input_str.split("\n") if not x.startswith("#")]
+
+@pytest.mark.parametrize("bad_id", [1, [1, 2]])
+def test_explicit_empty_words_with_unnormalized_ids(bad_id):
+    """
+    An explicitly supplied empty word keeps working when its id is not a tuple
+
+    _process_tokens normalizes the ids it finds inline in the token list, and
+    an explicit empty_words entry is not normalized, so the two lists can hold
+    different id types when both are in play
+    """
+    from stanza.models.common.doc import ID, TEXT
+
+    doc = CoNLL.conll2doc(input_str=EMPTY_COLLIDES_WITH_MWT, ignore_gapping=False)
+    sentences = doc.to_dict()
+    explicit = [[{ID: bad_id, TEXT: "zzz"}]]
+
+    rebuilt = Document(sentences, doc.text, empty_sentences=explicit)
+
+    assert len(rebuilt.sentences[0].empty_words) == 2
+
 def check_empty_deps_conversion(input_str, expected_words):
     doc = CoNLL.conll2doc(input_str=input_str, ignore_gapping=False)
     assert len(doc.sentences) == 1
