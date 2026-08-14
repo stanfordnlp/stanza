@@ -604,6 +604,19 @@ class Document(StanzaObject):
         return cls(sentences, text, comments)
 
 
+def _empty_word_sort_key(word):
+    """Sort empty words by index, tolerating an id that is not a tuple.
+
+    An empty word built by _process_tokens carries a normalized tuple id, and
+    one supplied through the empty_words argument is whatever the caller put
+    there.
+    """
+    word_id = word.id
+    if isinstance(word_id, (tuple, list)):
+        return tuple(word_id)
+    return (word_id, )
+
+
 class Sentence(StanzaObject):
     """ A sentence class that stores attributes of a sentence and carries a list of tokens.
     """
@@ -641,9 +654,8 @@ class Sentence(StanzaObject):
                 # tolerates an id that is not a tuple, since an explicitly
                 # supplied entry is not normalized the way _process_tokens
                 # normalizes the ones it finds inline
-                self._empty_words = sorted(
-                    given + self._empty_words,
-                    key=lambda x: tuple(x.id) if isinstance(x.id, (tuple, list)) else (x.id,))
+                self._empty_words = sorted(given + self._empty_words,
+                                           key=_empty_word_sort_key)
             else:
                 self._empty_words = given
 
@@ -1065,19 +1077,61 @@ class Sentence(StanzaObject):
         self.print_words(file=wrds_string)
         return wrds_string.getvalue().strip()
 
+    def _ordered_dicts(self, fields=DEFAULT_OUTPUT_FIELDS):
+        """ Yield (dict, is_empty_word) for this sentence in CoNLL-U order.
+
+        An empty word i.j goes immediately after the word with index i.  That
+        word can sit inside a multiword token, so the interleaving has to
+        happen per word rather than per token: for 8-9 8 8.1 9 the empty word
+        belongs between the two words of the range.  An empty word with index
+        0 goes before everything, including a range line that starts at 1.
+
+        to_dict() and __format__() both read from here so that the two cannot
+        drift apart.
+        """
+        if not self._empty_words:
+            # the common case, and the only one that ignore_gapping=True can
+            # produce.  keep it on the old path so nothing pays for the
+            # interleaving that has nothing to interleave
+            for token in self.tokens:
+                for entry in token.to_dict(fields):
+                    yield entry, False
+            return
+
+        # a caller can append to empty_words without keeping it in order, so
+        # do not rely on it: coref_processor builds its zero anaphora nodes
+        # cluster by cluster rather than in word order
+        empties = sorted(self._empty_words, key=_empty_word_sort_key)
+        empty_idx = 0
+        while empty_idx < len(empties) and empties[empty_idx].id[0] == 0:
+            yield empties[empty_idx].to_dict(fields), True
+            empty_idx += 1
+        for token in self.tokens:
+            token_dicts = token.to_dict(fields)
+            offset = 1 if len(token.id) > 1 else 0
+            if offset:
+                yield token_dicts[0], False
+            for word, word_dict in zip(token.words, token_dicts[offset:]):
+                yield word_dict, False
+                while empty_idx < len(empties) and empties[empty_idx].id[0] == word.id:
+                    yield empties[empty_idx].to_dict(fields), True
+                    empty_idx += 1
+        while empty_idx < len(empties):
+            yield empties[empty_idx].to_dict(fields), True
+            empty_idx += 1
+
     def to_dict(self):
         """ Dumps the sentence into a list of dictionary for each token in the sentence.
         """
-        ret = []
-        empty_idx = 0
-        for token_idx, token in enumerate(self.tokens):
-            while empty_idx < len(self._empty_words) and self._empty_words[empty_idx].id[0] < token.id[0]:
-                ret.append(self._empty_words[empty_idx].to_dict())
-                empty_idx += 1
-            ret += token.to_dict()
-        for empty_word in self._empty_words[empty_idx:]:
-            ret.append(empty_word.to_dict())
-        return ret
+        if not self._empty_words:
+            # _ordered_dicts guards this case as well, so the two agree either
+            # way.  the guard is here so that the common path does not go
+            # through the generator to reach the same answer
+            ret = []
+            for token in self.tokens:
+                ret += token.to_dict()
+            return ret
+        return [entry for entry, _ in self._ordered_dicts()]
 
     def __repr__(self):
         return json.dumps(self.to_dict(), indent=2, ensure_ascii=False, cls=DocJSONEncoder)
@@ -1092,15 +1146,8 @@ class Sentence(StanzaObject):
         else:
             fields = DEFAULT_OUTPUT_FIELDS
 
-        pieces = []
-        empty_idx = 0
-        for token_idx, token in enumerate(self.tokens):
-            while empty_idx < len(self._empty_words) and self._empty_words[empty_idx].id[0] < token.id[0]:
-                pieces.append(self._empty_words[empty_idx].to_conll_text(fields))
-                empty_idx += 1
-            pieces.append(token.to_conll_text(fields))
-        for empty_word in self._empty_words[empty_idx:]:
-            pieces.append(empty_word.to_conll_text(fields))
+        pieces = [dict_to_conll_text(entry, "." if is_empty else "-")
+                  for entry, is_empty in self._ordered_dicts(fields)]
 
         if spec[0] == 'c':
             return "\n".join(pieces)
