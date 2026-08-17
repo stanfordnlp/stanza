@@ -285,6 +285,9 @@ ner_pretrains = {
         "conll02": "fasttextwiki",
         "wikiner": "fasttextwiki",
     },
+    "pa": {
+        "shahmukhi": "fasttext157shah",
+    },
     "ru": {
         "wikiner": "fasttextwiki",
     },

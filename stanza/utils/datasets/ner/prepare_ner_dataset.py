@@ -490,6 +490,25 @@ Universal NER has a set of languages which are originally UD datasets,
   - python3 stanza/utils/datasets/ner/prepare_ner_dataset.py sl_uner-ssj
   Currently the only dataset known to work with this is in fact sl_uner-ssj
   If others don't work, please feel free to file an issue on our github
+
+Punjabi-Shahmukhi-Named-Entity-Recognition
+  Punjabi comes in two scripts, Shahmukhi (Pakistan) and Gurmukhi (India)
+  This dataset is NER specifically in Shahmukhi.
+  - It is based on a previous work:
+    Ahmad, M. T., Malik, M. K., Shahzad, K., Aslam, F., Iqbal, A., Nawaz, Z., & Bukhari, F. (2020). 
+    Named Entity Recognition and Classification for Punjabi Shahmukhi.
+  but this version reports being cleaned, and has POS tags included, although we currently do not use them.
+    https://www.researchgate.net/publication/370924715_Shahmukhi_Named_Entity_Recognition_by_using_Contextualized_Word_Embeddings
+    https://github.com/toqeerehsan/Punjabi-Shahmukhi-Named-Entity-Recognition
+    Shahmukhi Named Entity Recognition by using Contextualized Word Embeddings
+    Amina Tehseen, Toqeer Ehsan, Hannan Bin Liaqat, Xiangjie Kong, Amjad Ali, Ala Al-Fuqaha
+  - Prepare the dataset as follows:
+    cd $NERBASE
+    mkdir -p punjabi
+    cd punjabi
+    git clone https://github.com/toqeerehsan/Punjabi-Shahmukhi-Named-Entity-Recognition.git
+    cd ~/stanza
+    python3 stanza/utils/datasets/ner/prepare_ner_dataset.py pa_shahmukhi
 """
 
 import glob
@@ -526,6 +545,7 @@ import stanza.utils.datasets.ner.convert_my_ucsy as convert_my_ucsy
 import stanza.utils.datasets.ner.convert_ontonotes as convert_ontonotes
 import stanza.utils.datasets.ner.convert_rgai as convert_rgai
 import stanza.utils.datasets.ner.convert_nytk as convert_nytk
+import stanza.utils.datasets.ner.convert_shahmukhi_ner as convert_shahmukhi_ner
 import stanza.utils.datasets.ner.convert_starlang_ner as convert_starlang_ner
 import stanza.utils.datasets.ner.convert_nkjp as convert_nkjp
 import stanza.utils.datasets.ner.prepare_ner_file as prepare_ner_file
@@ -1497,6 +1517,12 @@ def process_ang_ewt(paths, short_name):
     base_input_path = os.path.join(paths["NERBASE"], "ang", "Old_English-OEDT")
     convert_bio_to_json(base_input_path, paths["NER_DATA_DIR"], short_name)
 
+def process_shahmukhi(paths, short_name):
+    assert short_name == 'pa_shahmukhi'
+    base_input_path = os.path.join(paths["NERBASE"], "punjabi", "Punjabi-Shahmukhi-Named-Entity-Recognition", "Data", "cleaned")
+    base_output_path = paths["NER_DATA_DIR"]
+    convert_shahmukhi_ner.convert(short_name, base_input_path, base_output_path)
+
 UNER_RE = re.compile("([-a-z]+)_uner-(.+)")
 
 def process_uner(paths, short_name):
@@ -1556,6 +1582,7 @@ DATASET_MAPPING = {
     "kk_kazNERD":        process_kk_kazNERD,
     "mr_l3cube":         process_mr_l3cube,
     "my_ucsy":           process_my_ucsy,
+    "pa_shahmukhi":      process_shahmukhi,
     "pl_nkjp":           process_pl_nkjp,
     "sd_siner":          process_sd_siner,
     "sv_suc3licensed":   process_sv_suc3licensed,
