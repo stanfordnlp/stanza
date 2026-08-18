@@ -44,6 +44,8 @@ def parse_args():
 allowed_empty_languages = [
     # only tokenize and NER for Myanmar right now (soon...)
     "my",
+    # put the PA model out there even though nothing else is ready
+    "pa",
 ]
 
 # map processor name to file ending
