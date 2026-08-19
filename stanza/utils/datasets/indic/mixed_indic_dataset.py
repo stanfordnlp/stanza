@@ -30,19 +30,19 @@ https://aclanthology.org/2025.udw-1.11/
 Usage examples:
 
   # POS tagging dataset (default), mixing in Hindi, Urdu, and Sindhi
-  python mixed_odia_dataset.py \\
+  python mixed_indic_dataset.py \\
       --donors hindi urdu sindhi \\
       --hindi_size 1000 --urdu_size 1000 --sindhi_size 1000
 
   # Dependency parsing dataset
-  python mixed_odia_dataset.py --mode depparse --use_all_languages
+  python mixed_indic_dataset.py --mode depparse --use_all_languages
 
   # All languages, both modes
-  python mixed_odia_dataset.py --mode pos      --use_all_languages
-  python mixed_odia_dataset.py --mode depparse --use_all_languages
+  python mixed_indic_dataset.py --mode pos      --use_all_languages
+  python mixed_indic_dataset.py --mode depparse --use_all_languages
 
   # A different target language
-  python mixed_odia_dataset.py --target_file path/to/bho_bhtb-ud-test.conllu \\
+  python mixed_indic_dataset.py --target_file path/to/bho_bhtb-ud-test.conllu \\
       --target_shortname bho_bhtb --donors hindi
 
 Adapted from the Sindhi build script in UD_Sindhi-Isra by the original authors.
