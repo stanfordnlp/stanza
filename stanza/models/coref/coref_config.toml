@@ -24,8 +24,9 @@ test_data = "data/coref/corefud_concat_v1_0_langid.dev.json"
 #dev_data = "data/coref/english_development_head.jsonlines"
 #test_data = "data/coref/english_test_head.jsonlines"
 
-# do not use the full pairwise encoding scheme
-full_pairwise = false
+# include speaker embeddings alongside distance in pairwise word embeddings
+# turning this on enables speaker recognition
+full_pairwise = true
 
 # The device where everything is to be placed. "cuda:N"/"cpu" are supported.
 device = "cuda:0"
