@@ -172,7 +172,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
                         "--shorthand", short_name,
                         "--mode", "predict"]
             if command_args.save_output:
-                train_args.extend(["--output_file", dev_pred_file])
+                dev_args.extend(["--output_file", dev_pred_file])
             dev_args = dev_args + charlm_args + extra_args
             logger.info("Running dev lemmatizer for {} with args {}".format(treebank, dev_args))
             lemmatizer.main(dev_args)
@@ -182,7 +182,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
                          "--shorthand", short_name,
                          "--mode", "predict"]
             if command_args.save_output:
-                train_args.extend(["--output_file", test_pred_file])
+                test_args.extend(["--output_file", test_pred_file])
             test_args = test_args + charlm_args + extra_args
             logger.info("Running test lemmatizer for {} with args {}".format(treebank, test_args))
             lemmatizer.main(test_args)
