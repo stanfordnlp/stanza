@@ -530,3 +530,42 @@ class TestDictLemmatizer:
 
         with pytest.raises(ValueError, match="convert_lemma_dict.py"):
             trainer.Trainer(model_file=save_path, device='cpu')
+
+    def test_load_without_charlm_keys(self, tmp_path):
+        """
+        A checkpoint missing charlm_forward_file and charlm_backward_file keys
+        should load successfully (simulates mimic_nocharlm model checkpoints).
+        """
+        from stanza.models.lemma.vocab import MultiVocab, Vocab
+
+        word_dict      = {"running": "run", "left": "leave"}
+        composite_dict = {("left", "ADJ"): "left"}
+
+        char_vocab = Vocab("abcdefghijklmnopqrstuvwxyz", "en")
+        pos_vocab  = Vocab(["VERB", "ADJ"], "en")
+        vocab      = MultiVocab({'char': char_vocab, 'pos': pos_vocab})
+
+        # Config without charlm_forward_file and charlm_backward_file keys
+        legacy_checkpoint = {
+            'model':    None,
+            'dicts':    (word_dict, composite_dict),
+            # no 'dicts_version' key — simulates an old checkpoint
+            'vocab':    vocab.state_dict(),
+            'config':   {'dict_only': True, 'caseless': False},  # missing charlm keys
+            'contextual': [],
+        }
+        save_path = str(tmp_path / "no_charlm_keys_lemmatizer.pt")
+        torch.save(legacy_checkpoint, save_path, _use_new_zipfile_serialization=False)
+
+        # This should not raise KeyError
+        loaded = trainer.Trainer(model_file=save_path, device='cpu')
+
+        # Verify predictions still work
+        assert loaded.predict_dict([("running", "NOUN")]) == ["run"]
+        assert loaded.predict_dict([("left", "ADJ")])  == ["left"]
+        assert loaded.predict_dict([("left", "VERB")]) == ["leave"]
+        assert loaded.predict_dict([("xyzzy", "NOUN")]) == ["xyzzy"]
+
+        # Verify the args dict has None for the missing keys
+        assert loaded.args.get('charlm_forward_file') is None
+        assert loaded.args.get('charlm_backward_file') is None
