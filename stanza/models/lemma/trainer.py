@@ -370,8 +370,8 @@ class Trainer(object):
             raise
         self.args = checkpoint['config']
         if args is not None:
-            self.args['charlm_forward_file'] = args.get('charlm_forward_file', self.args['charlm_forward_file'])
-            self.args['charlm_backward_file'] = args.get('charlm_backward_file', self.args['charlm_backward_file'])
+            self.args['charlm_forward_file'] = args.get('charlm_forward_file', self.args.get('charlm_forward_file'))
+            self.args['charlm_backward_file'] = args.get('charlm_backward_file', self.args.get('charlm_backward_file'))
 
         dicts_version = checkpoint.get('dicts_version', _DICTS_VERSION_LEGACY)
         if dicts_version == _DICTS_VERSION_POS:
