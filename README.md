@@ -1,4 +1,4 @@
-<div align="center"><img src="https://github.com/stanfordnlp/stanza/raw/dev/images/stanza-logo.png" height="100px"/></div>
+<div align="center"><img src="stanza/pipeline/demo/stanza-logo.png" height="100px"/></div>
 
 <h2 align="center">Stanza: A Python NLP Library for Many Human Languages</h2>
 
