@@ -119,7 +119,6 @@ lcode2lang_raw = [
     ("fsl", "French_Sign_Language"),
     ("qfn", "Frisian_Dutch"),
     ("ff",  "Fulah"),
-    ("gqa", "Ga"),
     ("gl",  "Galician"),
     ("lg",  "Ganda"),
     ("drs", "Gedeo"),
