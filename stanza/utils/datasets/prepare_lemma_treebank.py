@@ -57,7 +57,7 @@ def process_treebank(treebank, model_type, paths, args):
             input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
         augment = check_lemmas(input_conllu)
         if not augment:
-            print("No lemma information found in %s.  Not augmenting the dataset" % train_conllu)
+            print("No lemma information found in %s.  Not augmenting the dataset" % input_conllu)
     else:
         # TODO: check the data to see if there are lemmas or not
         augment = True
