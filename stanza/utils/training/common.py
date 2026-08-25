@@ -155,7 +155,7 @@ def main(run_treebank, model_dir, model_name, add_specific_args=None, sub_argpar
             logger.info("=========================================")
 
         short_name = treebank_to_short_name(treebank)
-        logger.debug("%s: %s" % (treebank, short_name))
+        logger.debug("Short name for %s: %s" % (treebank, short_name))
 
         save_name_args = []
         if model_name != 'ete':
