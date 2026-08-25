@@ -8,6 +8,7 @@ import pytest
 
 import stanza
 from stanza.models.common.constant import treebank_to_short_name, lang_to_langcode, is_right_to_left, two_to_three_letters, langlower2lcode
+from stanza.models.common.constant import lcode2lang
 from stanza.tests import *
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
@@ -65,3 +66,9 @@ def test_langlower():
 
     assert "soj" == langlower2lcode["soi"]
     assert "soj" == langlower2lcode["sohi"]
+
+def test_round_trip():
+    for code in lcode2lang:
+        resolved = lang_to_langcode(code)
+        assert lcode2lang[resolved] == lcode2lang[code], \
+            "%s (%s) resolves to %s (%s)" % (code, lcode2lang[code], resolved, lcode2lang[resolved])
