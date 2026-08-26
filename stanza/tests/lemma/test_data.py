@@ -69,6 +69,30 @@ CORRECT_FORM_DATA = """
 4	ambulances	ambulance	NOUN	NNS	Number=Plur	3	obj	3:obj	SpaceAfter=No
 """
 
+# a CorrectForm where the words differ in case from their lowercased version.
+# the CorrectForm rows need to be mutable for the caseless path to work
+CASED_CORRECT_FORM_DATA = """
+# sent_id = weblog-juancole.com_juancole_20051126063000_ENG_20051126_063000-0021
+# text = Guerrillas came from Tikritt
+1	Guerrillas	guerrilla	NOUN	NNS	Number=Plur	2	nsubj	2:nsubj	_
+2	came	come	VERB	VBD	Mood=Ind|Number=Plur|Person=3|Tense=Past|VerbForm=Fin	0	root	0:root	_
+3	from	from	ADP	IN	_	4	case	4:case	_
+4	Tikritt	Tikrit	PROPN	NNP	Number=Sing|Typo=Yes	2	obl	2:obl:from	CorrectForm=Tikrit
+
+""".lstrip()
+
+# the same, but with a blank lemma on the word with the CorrectForm,
+# so that resolve_none also has to write to the row it produced
+BLANK_CORRECT_FORM_DATA = """
+# sent_id = weblog-juancole.com_juancole_20051126063000_ENG_20051126_063000-0022
+# text = Guerrillas came from Tikritt
+1	Guerrillas	guerrilla	NOUN	NNS	Number=Plur	2	nsubj	2:nsubj	_
+2	came	come	VERB	VBD	Mood=Ind|Number=Plur|Person=3|Tense=Past|VerbForm=Fin	0	root	0:root	_
+3	from	from	ADP	IN	_	4	case	4:case	_
+4	Tikritt	_	PROPN	NNP	Number=Sing|Typo=Yes	2	obl	2:obl:from	CorrectForm=Tikrit
+
+""".lstrip()
+
 BLANKS_DATA = """
 # sent_id = weblog-juancole.com_juancole_20051126063000_ENG_20051126_063000-0018
 # text = Guerrillas killed an engineer, Asi Ali, from Tikrit.
@@ -114,6 +138,52 @@ def test_correct_form():
     assert len(data) == 38 # the same, but with an extra row so the model learns both 'targetting' and 'targeting'
     assert any(x[0] == 'targeting' for x in data)
     assert any(x[0] == 'targetting' for x in data)
+    assert all(isinstance(x, list) for x in data)
+
+def test_correct_form_caseless():
+    """
+    The rows built by extract_correct_forms must survive lowercase_data
+
+    Previously the CorrectForm rows were tuples, whereas every other row
+    was a list, so lowercasing the dataset threw a TypeError on datasets
+    which had both CorrectForm annotations and caseless=True
+    """
+    raw_data = TRAIN_DATA + CASED_CORRECT_FORM_DATA
+    train_doc = CoNLL.conll2doc(input_str=raw_data)
+
+    data = DataLoader.load_doc(train_doc, caseless=False, skip_blank_lemmas=False, evaluation=False)
+    assert len(data) == 38 # the 33 from test_load_document, 4 new words, and the 'Tikritt' typo kept as an extra
+    assert all(isinstance(x, list) for x in data), "Rows must be mutable, including the ones built from a CorrectForm"
+    assert ['Tikrit', 'PROPN', 'Tikrit'] in data
+    assert ['Tikritt', 'PROPN', 'Tikrit'] in data
+
+    data = DataLoader.load_doc(train_doc, caseless=True, skip_blank_lemmas=False, evaluation=False)
+    assert len(data) == 38 # lowercasing doesn't add or remove anything
+    assert all(len(x) == 3 for x in data)
+    # only the text is lowercased, not the lemma
+    assert all(x[0] == x[0].lower() for x in data)
+    assert ['tikrit', 'PROPN', 'Tikrit'] in data
+    assert ['tikritt', 'PROPN', 'Tikrit'] in data
+
+def test_correct_form_blank_lemma():
+    """
+    Same idea as test_correct_form_caseless, but for resolve_none and skip_blank_lemmas
+
+    A word with both a CorrectForm and a blank lemma means resolve_none has
+    to write '_' into a row which extract_correct_forms created
+    """
+    raw_data = TRAIN_DATA + BLANK_CORRECT_FORM_DATA
+    train_doc = CoNLL.conll2doc(input_str=raw_data)
+
+    data = DataLoader.load_doc(train_doc, caseless=True, skip_blank_lemmas=False, evaluation=False)
+    assert len(data) == 38 # same counts as test_correct_form_caseless
+    assert all(len(x) == 3 for x in data)
+    assert ['tikrit', 'PROPN', '_'] in data
+    assert ['tikritt', 'PROPN', '_'] in data
+
+    data = DataLoader.load_doc(train_doc, caseless=True, skip_blank_lemmas=True, evaluation=False)
+    assert len(data) == 36 # both of the blank lemma 'Tikrit' rows are dropped
+    assert not any(x[0].startswith('tikrit') for x in data)
 
 def test_load_blank():
     raw_data = TRAIN_DATA + BLANKS_DATA
@@ -125,4 +195,3 @@ def test_load_blank():
     data = DataLoader.load_doc(train_doc, caseless=False, skip_blank_lemmas=True, evaluation=False)
     assert len(data) == 34 # will be the same as in test_load_document, but one extra word is added.  others were blank
     assert all(len(x) == 3 for x in data)
-
