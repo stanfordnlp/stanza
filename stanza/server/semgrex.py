@@ -146,9 +146,9 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
                 else:
                     var_values = ["%s=%s" % (v.name, v.value) for v in match.varstring]
                     var_values = "  " + " ".join(var_values)
-                sentence.add_comment("# semgrex pattern |%s| matched at %s%s%s" % (pattern_text, match_word, node_matches, var_values))
+                sentence.add_comment("# semgrex pattern = |%s| matched at %s%s%s" % (pattern_text, match_word, node_matches, var_values))
                 for comment in semgrex_pattern.comments:
-                    sentence.add_comment("# semgrex comment: %s" % comment)
+                    sentence.add_comment("# semgrex comment = %s" % comment)
                 highlight_tokens.append(match.matchIndex)
                 for edge in match.edge:
                     highlight_edges.append(edge.target)
@@ -160,7 +160,7 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
         if sentence_matched and not matches_only:
             for semgrex_idx, pattern_text in enumerate(pattern_texts):
                 if semgrex_idx not in matched_semgrex_ids:
-                    sentence.add_comment("# semgrex pattern |%s| did not match!" % pattern_text)
+                    sentence.add_comment("# semgrex pattern = |%s| did not match!" % pattern_text)
 
         if sentence_matched:
             matching_sentences.append(sentence)
@@ -168,7 +168,7 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
     nonmatching_sentences = [sentence for sentence_idx, sentence in enumerate(doc.sentences) if sentence_idx not in matched_ids]
     for sentence in nonmatching_sentences:
         for semgrex_idx, pattern_text in enumerate(pattern_texts):
-            sentence.add_comment("# semgrex pattern |%s| did not match!" % pattern_text)
+            sentence.add_comment("# semgrex pattern = |%s| did not match!" % pattern_text)
 
     if matches_only:
         doc.sentences = matching_sentences
