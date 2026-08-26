@@ -49,12 +49,330 @@ COREF_CHAINS = 'coref_chains'
 LINE_NUMBER = 'line_number'
 MORPHEMES = 'morphemes'
 
+# keys of the CoNLL-U comments which are also attributes of a Sentence.
+# TEXT, SENTIMENT, and CONSTITUENCY are comment keys as well
+SENT_ID = 'sent_id'
+DOC_ID = 'doc_id'
+SPEAKER = 'speaker'
+
 # field indices when converting the document to conll
 FIELD_TO_IDX = {ID: 0, TEXT: 1, LEMMA: 2, UPOS: 3, XPOS: 4, FEATS: 5, HEAD: 6, DEPREL: 7, DEPS: 8, MISC: 9}
 FIELD_NUM = len(FIELD_TO_IDX)
 
 DEFAULT_OUTPUT_FIELDS = [ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, START_CHAR, END_CHAR, NER, MULTI_NER, MEXP, COREF_CHAINS, MORPHEMES]
 NO_OFFSETS_OUTPUT_FIELDS = [ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, NER, MULTI_NER, MEXP, COREF_CHAINS, MORPHEMES]
+
+# ---------------------------------------------------------------------------
+# CoNLL-U comments
+#
+# A sentence in a CoNLL-U file can be preceded by comment lines, most of which
+# are `# key = value` annotations.  A few of those keys are also attributes of
+# a Sentence: `# sent_id = 3` is sentence.sent_id, `# sentiment = 2` is
+# sentence.sentiment, and so on.
+#
+# The comments are the only copy of that data.  The attributes read and write
+# them through the CommentList below, which is what keeps a sentence and its
+# comments from disagreeing about the sentence's sent_id.
+# ---------------------------------------------------------------------------
+
+# `# key = value`, allowing for the spellings treebanks actually use, such as
+# `#text=...`, and for keys with a space in them, such as `# newdoc id`
+COMMENT_KEY_RE = re.compile(r"^#\s*([^=]+?)\s*=\s*(.*?)\s*$")
+
+# a newline would end the comment, so it is escaped in a value which can
+# contain one, such as a constituency tree
+NEWLINE_ESCAPE = "*NL*"
+
+def split_comment(line):
+    """Split a comment line into (key, value)
+
+    Returns (None, None) for a comment with no key, such as `# newpar`, or for
+    a line which is not a comment at all.
+    """
+    match = COMMENT_KEY_RE.match(line)
+    if match is None:
+        return None, None
+    return match.group(1), match.group(2)
+
+def _parse_constituency(text):
+    trees = tree_reader.read_trees(text.replace(NEWLINE_ESCAPE, "\n"))
+    if len(trees) > 1:
+        raise ValueError("Multiple constituency trees for one sentence: %s" % text)
+    return trees[0]
+
+def _format_constituency(tree):
+    return str(tree).replace("\n", NEWLINE_ESCAPE).replace("\r", "")
+
+class CommentField:
+    """A comment key which is also an attribute of a Sentence
+
+    parse turns the text of a comment into the value the attribute returns,
+    and format turns a value assigned to the attribute back into comment text.
+    A key with neither is passed through as the text of the comment.
+
+    remove_if_falsy means assigning a falsy value drops the comment instead of
+    writing `# speaker = None`.
+    """
+    def __init__(self, key, parse=None, format=None, remove_if_falsy=False):
+        self.key = key
+        self.parse = parse
+        self.format = format
+        self.remove_if_falsy = remove_if_falsy
+
+    def parse_value(self, text):
+        return text if self.parse is None else self.parse(text)
+
+    def format_value(self, value):
+        return str(value) if self.format is None else self.format(value)
+
+COMMENT_FIELDS = {field.key: field for field in [
+    CommentField(TEXT),
+    CommentField(SENT_ID),
+    CommentField(DOC_ID),
+    CommentField(SPEAKER, remove_if_falsy=True),
+    CommentField(SENTIMENT, parse=int),
+    CommentField(CONSTITUENCY, parse=_parse_constituency, format=_format_constituency),
+]}
+
+class Comment:
+    """A single CoNLL-U comment line
+
+    A comment read from a file keeps the text it had, so that reading and
+    writing a treebank does not reformat its comments.  A comment built from a
+    value, which is what assigning to sentence.sent_id and friends does, is
+    written in the canonical `# key = value` form.
+    """
+    __slots__ = ('_line', '_key', '_text', '_value')
+
+    def __init__(self, line, key, text, value):
+        self._line = line
+        self._key = key
+        self._text = text
+        self._value = value
+
+    @classmethod
+    def from_line(cls, line):
+        """Build a Comment from a comment line, adding the leading # if it is missing"""
+        if isinstance(line, cls):
+            return line
+        line = line.strip()
+        if not line.startswith("#"):
+            line = "# " + line
+        key, text = split_comment(line)
+        field = COMMENT_FIELDS.get(key)
+        # parsed now rather than on demand so that a broken annotation, such
+        # as a constituency tree with unbalanced brackets, is reported when
+        # the document is read rather than much later
+        value = text if field is None else field.parse_value(text)
+        return cls(line, key, text, value)
+
+    @classmethod
+    def from_value(cls, key, value):
+        """Build the canonical comment for a key and an already typed value"""
+        field = COMMENT_FIELDS.get(key)
+        text = str(value) if field is None else field.format_value(value)
+        return cls("# %s = %s" % (key, text), key, text, value)
+
+    @property
+    def key(self):
+        """The key of this comment, or None for a comment such as `# newpar`"""
+        return self._key
+
+    @property
+    def text(self):
+        """The text after the = of this comment, unparsed"""
+        return self._text
+
+    @property
+    def value(self):
+        """The parsed value of this comment: an int sentiment, a Tree constituency, ..."""
+        return self._value
+
+    def __str__(self):
+        return self._line
+
+    def __repr__(self):
+        return repr(self._line)
+
+    def __eq__(self, other):
+        if isinstance(other, Comment):
+            return self._line == other._line
+        return self._line == other
+
+    def __hash__(self):
+        return hash(self._line)
+
+class CommentList:
+    """The CoNLL-U comments attached to a Sentence
+
+    Reads like a list of strings, so iterating, len(), indexing, and joining
+    the comments into a block of text all work as they did when this was a
+    plain list.
+
+    Writes go through add / set / remove, which keep at most one comment per
+    key.  Setting sentence.sent_id twice therefore leaves one `# sent_id`
+    line, in the position the first one had.
+    """
+    __slots__ = ('_comments',)
+
+    def __init__(self, comments=None):
+        self._comments = []
+        if comments is not None:
+            self.extend(comments)
+
+    def add(self, comment):
+        """Add a comment
+
+        Accepts a string, with or without the leading #, or a Comment.
+
+        A comment whose key is a CommentField replaces the existing comment
+        with that key, since a sentence can only have one sent_id.  Any other
+        key is appended as it stands, so that a treebank which uses a key
+        more than once doesn't lose a line just by being read.
+        """
+        comment = Comment.from_line(comment)
+        if comment.key in COMMENT_FIELDS:
+            self._replace(comment)
+        else:
+            self._comments.append(comment)
+
+    # so that code which treated this as a list keeps working
+    append = add
+
+    def extend(self, comments):
+        for comment in comments:
+            self.add(comment)
+
+    def set(self, key, value):
+        """Set the comment for a key from a value, replacing any existing comment with that key
+
+        A value of None removes the comment instead.
+        """
+        field = COMMENT_FIELDS.get(key)
+        if value is None or (field is not None and field.remove_if_falsy and not value):
+            self.remove(key)
+        else:
+            self._replace(Comment.from_value(key, value))
+
+    def _replace(self, comment):
+        """Put a comment where the existing comment with its key was, dropping any others"""
+        replaced = False
+        keep = []
+        for existing in self._comments:
+            if existing.key != comment.key:
+                keep.append(existing)
+            elif not replaced:
+                keep.append(comment)
+                replaced = True
+        if not replaced:
+            keep.append(comment)
+        self._comments = keep
+
+    def remove(self, comment):
+        """Remove comments, by key or by exact text.  Returns how many were removed
+
+        `remove("speaker")`, `remove("# speaker")` and `remove("# speaker =
+        Bob")` all drop the speaker comment, whatever its value.  A comment
+        with no key, such as `# newpar`, is matched on its text instead.
+
+        Unlike list.remove, removing something which is not there is not an
+        error.  The result is 0.
+        """
+        key, line = self._target(comment)
+        if key is not None:
+            keep = [x for x in self._comments if x.key != key]
+        else:
+            keep = [x for x in self._comments if x != line]
+        removed = len(self._comments) - len(keep)
+        self._comments = keep
+        return removed
+
+    def _target(self, comment):
+        """Work out whether a remove() argument names a key or a whole comment
+
+        Returns (key, None) or (None, line).
+        """
+        if isinstance(comment, Comment):
+            return comment.key, str(comment)
+        line = comment.strip()
+        if not line.startswith("#"):
+            line = "# " + line
+        key, _ = split_comment(line)
+        if key is not None:
+            return key, None
+        # no = in the argument, so it is either a bare key, such as
+        # remove("speaker"), or a keyless comment, such as remove("# newpar")
+        bare = line[1:].strip()
+        if any(x.key == bare for x in self._comments):
+            return bare, None
+        return None, line
+
+    def get(self, key, default=None):
+        """The value of the comment with this key: an int sentiment, a Tree constituency, ..."""
+        for comment in self._comments:
+            if comment.key == key:
+                return comment.value
+        return default
+
+    def get_line(self, key, default=None):
+        """The comment with this key, as the line which will be written out"""
+        for comment in self._comments:
+            if comment.key == key:
+                return str(comment)
+        return default
+
+    def has(self, key):
+        """Whether there is a comment with this key"""
+        return any(comment.key == key for comment in self._comments)
+
+    def keys(self):
+        """The keys of the comments which have one, in order"""
+        return [comment.key for comment in self._comments if comment.key is not None]
+
+    def clear(self):
+        self._comments = []
+
+    def copy(self):
+        new_comments = CommentList()
+        # Comment is immutable, so the copy can share them
+        new_comments._comments = list(self._comments)
+        return new_comments
+
+    def __len__(self):
+        return len(self._comments)
+
+    def __iter__(self):
+        return (str(comment) for comment in self._comments)
+
+    def __getitem__(self, idx):
+        if isinstance(idx, slice):
+            return [str(comment) for comment in self._comments[idx]]
+        return str(self._comments[idx])
+
+    def __setitem__(self, idx, comment):
+        self._comments[idx] = Comment.from_line(comment)
+
+    def __delitem__(self, idx):
+        del self._comments[idx]
+
+    def __contains__(self, comment):
+        return any(existing == comment for existing in self._comments)
+
+    def __eq__(self, other):
+        if isinstance(other, CommentList):
+            return self._comments == other._comments
+        if isinstance(other, (list, tuple)):
+            return list(self) == list(other)
+        return NotImplemented
+
+    def __bool__(self):
+        return bool(self._comments)
+
+    def __repr__(self):
+        # prints as the list of strings this used to be, rather than as the
+        # block of comment lines, which is what "\n".join(comments) is for
+        return repr(list(self))
+
 
 class DocJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -216,44 +534,25 @@ class Document(StanzaObject):
 
         self._count_words()
 
-        # Add a #text comment to each sentence in a doc if it doesn't already exist
+        # the comments carry sent_id, speaker, sentiment, and the rest of the
+        # sentence level annotations, so they go on the sentences first and
+        # everything else is read back out of them
         if not comments:
-            comments = [[] for x in self.sentences]
-        else:
-            comments = [list(x) for x in comments]
+            comments = repeat(())
         for sentence, sentence_comments in zip(self.sentences, comments):
-            # the space after text can occur in treebanks such as the Naija-NSC treebank,
-            # which extensively uses `# text_en =` and `# text_ortho`
-            if sentence.text and not any(comment.startswith("# text ") or comment.startswith("#text ") or comment.startswith("# text=") or comment.startswith("#text=") for comment in sentence_comments):
-                # split/join to handle weird whitespace, especially newlines
-                sentence_comments.append("# text = " + ' '.join(sentence.text.split()))
-            elif not sentence.text:
-                for comment in sentence_comments:
-                    if comment.startswith("# text ") or comment.startswith("#text ") or comment.startswith("# text=") or comment.startswith("#text="):
-                        sentence.text = comment.split("=", 1)[-1].strip()
-                        break
-
-            for comment in sentence_comments:
-                sentence.add_comment(comment)
-
-            # look for sent_id in the comments
-            # if it's there, overwrite the sent_idx id from above
-            for comment in sentence_comments:
-                if comment.startswith("# sent_id"):
-                    sentence.sent_id = comment.split("=", 1)[-1].strip()
-                    break
+            sentence.comments = sentence_comments
+            if sentence.text:
+                if not sentence.has_comment(TEXT):
+                    # split/join to handle weird whitespace, especially newlines
+                    sentence.add_comment("# text = " + ' '.join(sentence.text.split()))
             else:
-                # no sent_id found.  add a comment with our enumerated id
-                # setting the sent_id on the sentence will automatically add the comment
+                # note that this only matches `# text`, not the `# text_en` and
+                # `# text_ortho` of treebanks such as Naija-NSC
+                sentence.text = sentence.get_comment(TEXT)
+            if sentence.sent_id is None:
+                # no sent_id in the comments, so use our enumerated id.
+                # setting the sent_id on the sentence adds the comment
                 sentence.sent_id = str(sentence.index)
-
-            # look for speaker in the comments
-            for comment in sentence_comments:
-                if comment.startswith("# speaker"):
-                    sentence.speaker = comment.split("=", 1)[-1].strip()
-                    break
-            else:
-                sentence.speaker = None
 
     def _count_words(self):
         """
@@ -494,7 +793,22 @@ class Document(StanzaObject):
 
     def sentence_comments(self):
         """ Returns a list of list of comments for the sentences """
-        return [[comment for comment in sentence.comments] for sentence in self.sentences]
+        return [list(sentence.comments) for sentence in self.sentences]
+
+    def remove_comments(self, comment):
+        """ Remove a comment from every sentence in this document.  Returns how many were removed
+
+        Takes a key, such as "speaker", or a whole comment line.  Removing a
+        comment which is also an attribute of the sentences, such as
+        `doc.remove_comments("sentiment")`, clears that attribute as well,
+        since the comment is where the value lives.
+        """
+        return sum(sentence.remove_comment(comment) for sentence in self.sentences)
+
+    def set_comments(self, key, value):
+        """ Set a comment on every sentence in this document.  A value of None removes it """
+        for sentence in self.sentences:
+            sentence.set_comment(key, value)
 
     @property
     def coref(self):
@@ -630,12 +944,10 @@ class Sentence(StanzaObject):
         self._text = None
         self._ents = []
         self._doc = doc
-        self._constituency = None
-        self._sentiment = None
-        # comments are a list of comment lines occurring before the
-        # sentence in a CoNLL-U file.  Can be empty
-        self._comments = []
-        self._doc_id = None
+        # the comment lines occurring before the sentence in a CoNLL-U file.
+        # can be empty.  this is also where sent_id, doc_id, speaker,
+        # sentiment, and the constituency tree are stored
+        self._comments = CommentList()
 
         # enhanced_dependencies represents the DEPS column
         # this is a networkx MultiDiGraph
@@ -765,60 +1077,33 @@ class Sentence(StanzaObject):
 
     @property
     def sent_id(self):
-        """ conll-style sent_id  Will be set from index if unknown """
-        return self._sent_id
+        """ conll-style sent_id  Document sets this from the index if the comments don't have one """
+        return self._comments.get(SENT_ID)
 
     @sent_id.setter
     def sent_id(self, value):
-        """ Set the sentence's sent_id value. """
-        self._sent_id = value
-        sent_id_comment = "# sent_id = " + str(value)
-        for comment_idx, comment in enumerate(self._comments):
-            if comment.startswith("# sent_id = "):
-                self._comments[comment_idx] = sent_id_comment
-                break
-        else: # this is intended to be a for/else loop
-            self._comments.append(sent_id_comment)
+        """ Set the sentence's sent_id value, updating the `# sent_id` comment """
+        self._comments.set(SENT_ID, value)
 
     @property
     def speaker(self):
         """ conll-style speaker - adopt the EN GUM formatting """
-        return self._speaker
+        return self._comments.get(SPEAKER)
 
     @speaker.setter
     def speaker(self, value):
-        """ Set the sentence's speaker value. """
-        self._speaker = value
-        speaker_comment = "# speaker = " + str(value)
-        if not value:
-            for comment_idx, comment in enumerate(self._comments):
-                if comment.startswith("# speaker = "):
-                    self._comments.pop(comment_idx)
-                    break
-        else:
-            for comment_idx, comment in enumerate(self._comments):
-                if comment.startswith("# speaker = "):
-                    self._comments[comment_idx] = speaker_comment
-                    break
-            else: # this is intended to be a for/else loop
-                self._comments.append(speaker_comment)
+        """ Set the sentence's speaker value.  A blank speaker removes the comment """
+        self._comments.set(SPEAKER, value)
 
     @property
     def doc_id(self):
         """ conll-style doc_id  Can be left blank if unknown """
-        return self._doc_id
+        return self._comments.get(DOC_ID)
 
     @doc_id.setter
     def doc_id(self, value):
-        """ Set the sentence's doc_id value. """
-        self._doc_id = value
-        doc_id_comment = "# doc_id = " + str(value)
-        for comment_idx, comment in enumerate(self._comments):
-            if comment.startswith("# doc_id = "):
-                self._comments[comment_idx] = doc_id_comment
-                break
-        else: # this is intended to be a for/else loop
-            self._comments.append(doc_id_comment)
+        """ Set the sentence's doc_id value, updating the `# doc_id` comment """
+        self._comments.set(DOC_ID, value)
 
     @property
     def doc(self):
@@ -928,24 +1213,17 @@ class Sentence(StanzaObject):
     @property
     def sentiment(self):
         """ Returns the sentiment value for this sentence """
-        return self._sentiment
+        return self._comments.get(SENTIMENT)
 
     @sentiment.setter
     def sentiment(self, value):
-        """ Set the sentiment value """
-        self._sentiment = value
-        sentiment_comment = "# sentiment = " + str(value)
-        for comment_idx, comment in enumerate(self._comments):
-            if comment.startswith("# sentiment = "):
-                self._comments[comment_idx] = sentiment_comment
-                break
-        else: # this is intended to be a for/else loop
-            self._comments.append(sentiment_comment)
+        """ Set the sentiment value, updating the `# sentiment` comment """
+        self._comments.set(SENTIMENT, value)
 
     @property
     def constituency(self):
         """ Returns the constituency tree for this sentence """
-        return self._constituency
+        return self._comments.get(CONSTITUENCY)
 
     @constituency.setter
     def constituency(self, value):
@@ -954,53 +1232,54 @@ class Sentence(StanzaObject):
 
         This incidentally updates the #constituency comment if it already exists,
         or otherwise creates a new comment # constituency = ...
+        Setting it to None removes the comment.
         """
-        self._constituency = value
-        constituency_comment = "# constituency = " + str(value)
-        constituency_comment = constituency_comment.replace("\n", "*NL*").replace("\r", "")
-        for comment_idx, comment in enumerate(self._comments):
-            if comment.startswith("# constituency = "):
-                self._comments[comment_idx] = constituency_comment
-                break
-        else: # this is intended to be a for/else loop
-            self._comments.append(constituency_comment)
-
+        self._comments.set(CONSTITUENCY, value)
 
     @property
     def comments(self):
-        """ Returns CoNLL-style comments for this sentence """
+        """ Returns the CoNLL-style comments for this sentence, as a CommentList """
         return self._comments
+
+    @comments.setter
+    def comments(self, value):
+        """ Replace all of the comments on this sentence """
+        self._comments = CommentList(value)
 
     def add_comment(self, comment):
         """ Adds a single comment to this sentence.
 
         If the comment does not already have # at the start, it will be added.
+
+        A comment which repeats a key already on this sentence, such as a
+        second `# sent_id`, replaces the existing one where it stands.
         """
-        if not comment.startswith("#"):
-            comment = "# " + comment
-        if comment.startswith("# constituency ="):
-            _, tree_text = comment.split("=", 1)
-            tree = tree_reader.read_trees(tree_text)
-            if len(tree) > 1:
-                raise ValueError("Multiple constituency trees for one sentence: %s" % tree_text)
-            self._constituency = tree[0]
-            self._comments = [x for x in self._comments if not x.startswith("# constituency =")]
-        elif comment.startswith("# sentiment ="):
-            _, sentiment = comment.split("=", 1)
-            sentiment = int(sentiment.strip())
-            self._sentiment = sentiment
-            self._comments = [x for x in self._comments if not x.startswith("# sentiment =")]
-        elif comment.startswith("# sent_id ="):
-            _, sent_id = comment.split("=", 1)
-            sent_id = sent_id.strip()
-            self._sent_id = sent_id
-            self._comments = [x for x in self._comments if not x.startswith("# sent_id =")]
-        elif comment.startswith("# doc_id ="):
-            _, doc_id = comment.split("=", 1)
-            doc_id = doc_id.strip()
-            self._doc_id = doc_id
-            self._comments = [x for x in self._comments if not x.startswith("# doc_id =")]
-        self._comments.append(comment)
+        self._comments.add(comment)
+
+    def remove_comment(self, comment):
+        """ Removes comments from this sentence.  Returns how many were removed
+
+        Takes a key, such as "speaker", or a whole comment line.  Removing a
+        comment which is also an attribute of the sentence clears the
+        attribute as well, since the comment is where the value lives:
+        `sentence.remove_comment("constituency")` leaves
+        sentence.constituency as None.
+
+        Removing a comment which isn't there is not an error.  The result is 0.
+        """
+        return self._comments.remove(comment)
+
+    def get_comment(self, key, default=None):
+        """ The value of the comment with this key, or default if there is no such comment """
+        return self._comments.get(key, default)
+
+    def set_comment(self, key, value):
+        """ Set the comment for a key, replacing any existing one.  A value of None removes it """
+        self._comments.set(key, value)
+
+    def has_comment(self, key):
+        """ Whether this sentence has a comment with this key """
+        return self._comments.has(key)
 
     def rebuild_dependencies(self):
         # rebuild dependencies if there is dependency info

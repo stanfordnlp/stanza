@@ -10,7 +10,7 @@ from zipfile import ZipFile
 from stanza.models.common.doc import Document
 from stanza.models.common.doc import ID, TEXT, LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS, MISC, NER, START_CHAR, END_CHAR
 from stanza.models.common.doc import FIELD_TO_IDX, FIELD_NUM
-from stanza.models.common.doc import LINE_NUMBER
+from stanza.models.common.doc import LINE_NUMBER, DOC_ID, split_comment
 from stanza.models.common.utils import misc_to_space_after, misc_to_space_before
 
 class CoNLLError(ValueError):
@@ -28,7 +28,8 @@ LEMMA_IDX = FIELD_TO_IDX[LEMMA]
 # instead of emitting them twice
 SPACE_MISC_PREFIXES = ("spaceafter=", "spacesafter=", "spacesbefore=")
 
-TEXT_COMMENT_PREFIXES = ("# text =", "#text =", "# text=", "#text=")
+# the key UD uses to start a new document, alongside `# doc_id`
+NEWDOC_ID = "newdoc id"
 
 def group_sentence_units(sent_dict):
     """Group a flat list of CoNLL-U dicts into (token, words) pairs.
@@ -77,8 +78,9 @@ def unit_space_before(token, words):
 def sentence_text_comment(comments):
     """Return the `# text = ` value for a sentence, or None if there isn't one"""
     for comment in comments:
-        if comment.startswith(TEXT_COMMENT_PREFIXES):
-            return comment.split("=", 1)[1].strip()
+        key, text = split_comment(comment)
+        if key == TEXT:
+            return text
     return None
 
 def align_units_to_text(units, text):
@@ -391,15 +393,15 @@ class CoNLL:
         current_doc_id = None
         for doc, comments, empty in zip(doc_dict, doc_comments, doc_empty):
             for comment in comments:
-                if comment.startswith("# doc_id =") or comment.startswith("# newdoc id ="):
-                    doc_id = comment.split("=", maxsplit=1)[1]
+                key, doc_id = split_comment(comment)
+                if key in (DOC_ID, NEWDOC_ID):
                     if len(current_doc) == 0:
                         current_doc_id = doc_id
                     elif doc_id != current_doc_id:
                         new_doc = Document(current_doc, text=None, comments=current_comments, empty_sentences=current_empty)
-                        if current_doc_id != None:
+                        if current_doc_id is not None:
                             for i in new_doc.sentences:
-                                i.doc_id = current_doc_id.strip()
+                                i.doc_id = current_doc_id
                         docs.append(new_doc)
                         current_doc_id = doc_id
                     else:
@@ -414,11 +416,10 @@ class CoNLL:
                 current_empty.append(empty)
         if len(current_doc) > 0:
             new_doc = Document(current_doc, text=None, comments=current_comments, empty_sentences=current_empty)
-            if current_doc_id != None:
+            if current_doc_id is not None:
                 for i in new_doc.sentences:
-                    i.doc_id = current_doc_id.strip()
+                    i.doc_id = current_doc_id
             docs.append(new_doc)
-            current_doc_id = doc_id
 
         return docs
 
