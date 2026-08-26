@@ -163,7 +163,7 @@ class DataLoader:
                 if piece.startswith("CorrectForm="):
                     cf = piece.split("=", maxsplit=1)[1]
                     # treat the CorrectForm as the desired word
-                    new_data.append((cf, word[1], word[2]))
+                    new_data.append([cf, word[1], word[2]])
                     # and save the broken one for later in case it wasn't used anywhere else
                     incorrect_forms.append((cf, word))
                     break
