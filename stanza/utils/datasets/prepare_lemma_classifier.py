@@ -193,7 +193,6 @@ DATASET_MAPPING = {
 
     "sl_combined":       process_sl,
     "sl_ssj":            process_sl,
-    "sl_sst":            process_sl,
 }
 
 DATASET_TARGETS = {
