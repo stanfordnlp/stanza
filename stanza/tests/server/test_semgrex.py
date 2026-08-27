@@ -288,7 +288,7 @@ def test_blank_dependency():
 EXPECTED_ONE_SENTENCE_MATCH = """
 # text = Unban Mox Opal!
 # sent_id = 0
-# semgrex pattern |{cpos:PROPN}=source <=zzz {ner:GEM}=target| matched at 2:Mox  source=2:Mox target=3:Opal
+# semgrex pattern = |{cpos:PROPN}=source <=zzz {ner:GEM}=target| matched at 2:Mox  source=2:Mox target=3:Opal
 # highlight tokens = 2
 # highlight deprels = 2
 1	Unban	unban	VERB	VB	Mood=Imp|VerbForm=Fin	0	root	_	start_char=0|end_char=5
@@ -309,7 +309,7 @@ def test_ner_annotated():
 EXPECTED_ONE_SENTENCE_NO_MATCH = """
 # text = Unban Mox Opal!
 # sent_id = 0
-# semgrex pattern |{cpos:ZZZZ}| did not match!
+# semgrex pattern = |{cpos:ZZZZ}| did not match!
 1	Unban	unban	VERB	VB	Mood=Imp|VerbForm=Fin	0	root	_	start_char=0|end_char=5
 2	Mox	Mox	PROPN	NNP	Number=Sing	3	compound	_	start_char=6|end_char=9
 3	Opal	Opal	PROPN	NNP	Number=Sing	1	obj	_	SpaceAfter=No|start_char=10|end_char=14|ner=GEM
