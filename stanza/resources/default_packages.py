@@ -112,14 +112,21 @@ default_treebanks = {
 }
 
 no_pretrain_languages = set([
+    "bor",
     "cop",
+    "egy",
+    "frm",
+    "naq",
     "olo",
     "orv",
     "pcm",
+    "pro",
     "qaf",   # the QAF treebank is code switched and Romanized, so not easy to reuse existing resources
     "qpm",   # have talked about deriving this from a language neighborinig to Pomak, but that hasn't happened yet
     "qtd",
+    "say",
     "swl",
+    "wuu",   # could try Mandarin
 
     "multilingual", # special case so that all languages with a default treebank are represented somewhere
 ])
