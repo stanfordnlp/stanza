@@ -125,8 +125,10 @@ no_pretrain_languages = set([
     "qpm",   # have talked about deriving this from a language neighborinig to Pomak, but that hasn't happened yet
     "qtd",
     "say",
+    "sdh",   # experiment with Central Kurdish?
     "swl",
     "wuu",   # could try Mandarin
+    "yrl",
 
     "multilingual", # special case so that all languages with a default treebank are represented somewhere
 ])
