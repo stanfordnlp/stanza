@@ -830,6 +830,23 @@ FRENCH_MWT = """
 5	chien	chien	NOUN	_	_	2	obl	_	_
 """.strip()
 
+MWT_FEATS = """
+# text = au chien
+1-2\tau\t_\t_\t_\tTypo=Yes\t_\t_\t_\t_
+1\ta\t_\tADP\t_\t_\t3\tcase\t_\t_
+2\tle\t_\tDET\t_\t_\t3\tdet\t_\t_
+3\tchien\tchien\tNOUN\t_\t_\t0\troot\t_\t_
+""".strip()
+
+def test_mwt_feats_survive_serialization():
+    """Morphological features on a multi-word token must survive serialization."""
+    doc = CoNLL.conll2doc(input_str=MWT_FEATS)
+    assert doc.sentences[0].tokens[0].feats == "Typo=Yes"
+
+    rebuilt = Document.from_serialized(doc.to_serialized())
+    assert rebuilt.sentences[0].tokens[0].feats == "Typo=Yes"
+    assert "1-2\tau\t_\t_\t_\tTypo=Yes\t_\t_\t_\t_" in "{:C}".format(rebuilt)
+
 def test_serialized_mwt_id():
     """
     A multi word token id must survive to_serialized() and back

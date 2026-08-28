@@ -1544,6 +1544,7 @@ class Token(StanzaObject):
             raise ValueError('id not included for the token')
         if not self._text:
             raise ValueError('text not included for the token')
+        self._feats = token_entry.get(FEATS, None)
         self._misc = token_entry.get(MISC, None)
         self._ner = token_entry.get(NER, None)
         self._multi_ner = token_entry.get(MULTI_NER, None)
@@ -1588,6 +1589,16 @@ class Token(StanzaObject):
     def text(self, value):
         """ Set the token's text value. Example: 'The' """
         self._text = value
+
+    @property
+    def feats(self):
+        """ Access the morphological features of this token. Example: 'Gender=Fem'"""
+        return self._feats
+
+    @feats.setter
+    def feats(self, value):
+        """ Set this token's morphological features. Example: 'Gender=Fem'"""
+        self._feats = value if self._is_null(value) == False else None
 
     @property
     def misc(self):
