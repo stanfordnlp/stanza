@@ -28,7 +28,7 @@ def get_default_paths():
 
         # TODO: not sure what other people actually have
         # TODO: also, could make this automatically update to the latest
-        "UDBASE": "extern_data/ud2/ud-treebanks-v2.11",
+        "UDBASE": "extern_data/ud2/ud-treebanks-v2.18",
         "UDBASE_GIT": "extern_data/ud2/git",
 
         "NERBASE": "extern_data/ner",
