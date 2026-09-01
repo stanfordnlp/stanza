@@ -20,6 +20,7 @@ import torch
 from torch import nn, optim
 
 from stanza.models.pos.data import Dataset, ShuffledDataset
+from stanza.models.pos.tag_columns import build_tag_columns, tag_columns_from_args
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos import scorer
 from stanza.models.common import utils
@@ -42,6 +43,8 @@ def build_argparse():
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for scoring.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
     parser.add_argument('--no_gold_labels', dest='gold_labels', action='store_false', help="Don't score the eval file - perhaps it has no gold labels, for example.  Cannot be used at training time")
+    parser.add_argument('--train_ratios', type=str, default=None, help='How much of each training file to use per epoch, semicolon separated, one per entry in --train_file.  1.0 is a full pass.  Use this when one training file is much larger than the others, so that it does not supply most of the batches.  A file which expands to several files (a zip) gives its ratio to each of them.')
+    parser.add_argument('--extra_tag_columns', type=str, default=None, help='Additional tag columns to predict, beyond upos/xpos/feats.  Semicolon separated, each "name" or "name=MISC_KEY", read from the MISC field of the training files.  Example: "bis=BIS" to train a fourth head on a corpus tagged with a different POS scheme.')
     parser.add_argument('--upos_word_regex', type=str, default=None, help='Regex to use to build a confusion matrix specifically for those words.  Example use case, to test whether adding "como" as a VERB to the Spanish dataset caused errors on ADV or SCONJ usages.  Uses "search", so an example regex for that test would be "^(?i:como)$"')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
@@ -138,6 +141,7 @@ def parse_args(args=None):
         raise ValueError("Cannot have tag_emb_dim==0 with share_hid==False, as the tags will be embedded for the next layer")
 
     args = vars(args)
+    args['tag_columns'] = build_tag_columns(args['extra_tag_columns'])
     return args
 
 def main(args=None):
@@ -171,22 +175,54 @@ def load_pretrain(args):
         pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
 
+def output_fields(trainer):
+    """
+    Which Document fields the trainer's predictions line up with, in order
+
+    Trainer.predict only returns the columns which have somewhere in
+    the document to go, so this is the matching list of fields.
+    """
+    return [column.field for column in trainer.model.tag_columns if column.output]
+
+# the columns the UD scorer knows how to score on their own
+SCORER_NAMES = {"upos": "UPOS", "xpos": "XPOS", "feats": "UFeats"}
+
 def get_eval_type(dev_batch):
     """
     If there is only one column to score in the dev set, use that instead of AllTags
+
+    Only the three native columns are considered.  An extra tagset is
+    not written to the output conllu, so it can't be scored here, and
+    letting it into the dev score would mean choosing the model which
+    is best at the auxiliary task.
     """
-    if dev_batch.has_xpos and not dev_batch.has_upos and not dev_batch.has_feats:
-        return "XPOS"
-    elif dev_batch.has_upos and not dev_batch.has_xpos and not dev_batch.has_feats:
-        return "UPOS"
-    else:
-        return "AllTags"
+    scoreable = [name for name in SCORER_NAMES if dev_batch.has_tags.get(name)]
+    if len(scoreable) == 1:
+        return SCORER_NAMES[scoreable[0]]
+    return "AllTags"
+
+def parse_train_ratios(spec, train_files):
+    """
+    One ratio per entry in --train_file, defaulting to a full pass each
+    """
+    if not spec:
+        return [1.0] * len(train_files)
+    ratios = [float(x) for x in spec.split(";")]
+    if len(ratios) != len(train_files):
+        raise ValueError("Got %d --train_ratios for %d files in --train_file" % (len(ratios), len(train_files)))
+    if any(x < 0 for x in ratios):
+        raise ValueError("--train_ratios cannot be negative: %s" % spec)
+    if all(x == 0 for x in ratios):
+        raise ValueError("--train_ratios cannot all be zero: %s" % spec)
+    return ratios
 
 def load_training_data(args, pretrain):
     train_docs = []
     raw_train_files = args['train_file'].split(";")
+    train_ratios = parse_train_ratios(args.get('train_ratios'), raw_train_files)
+    doc_ratios = []
     train_files = []
-    for train_file in raw_train_files:
+    for train_file, file_ratio in zip(raw_train_files, train_ratios):
         if zipfile.is_zipfile(train_file):
             logger.info("Decompressing %s" % train_file)
             with zipfile.ZipFile(train_file) as zin:
@@ -198,6 +234,7 @@ def load_training_data(args, pretrain):
                         train_file_data, _, _ = CoNLL.conll2dict(input_str=train_str)
                         logger.info("Train File {} from {}, Data Size: {}".format(zipped_train_file, train_file, len(train_file_data)))
                         train_docs.append(Document(train_file_data))
+                        doc_ratios.append(file_ratio)
                         train_files.append("%s %s" % (train_file, zipped_train_file))
         else:
             logger.info("Reading %s" % train_file)
@@ -206,6 +243,7 @@ def load_training_data(args, pretrain):
             train_file_data, _, _ = CoNLL.conll2dict(input_file=train_file)
             logger.info("Train File {}, Data Size: {}".format(train_file, len(train_file_data)))
             train_docs.append(Document(train_file_data))
+            doc_ratios.append(file_ratio)
             train_files.append(train_file)
     if sum(len(x.sentences) for x in train_docs) == 0:
         raise RuntimeError("Training data for the tagger is empty: %s" % args['train_file'])
@@ -214,16 +252,14 @@ def load_training_data(args, pretrain):
     # therefore, we create separate datasets and loaders for each input training file,
     # which will ensure the system be able to see batches with both upos available
     # and upos unavailable depending on what the availability in the file is.
-    vocab = Dataset.init_vocab(train_docs, args)
-    train_data = [Dataset(i, args, pretrain, vocab=vocab, evaluation=False)
+    tag_columns = tag_columns_from_args(args)
+    vocab = Dataset.init_vocab(train_docs, args, tag_columns)
+    train_data = [Dataset(i, args, pretrain, vocab=vocab, evaluation=False, tag_columns=tag_columns)
                   for i in train_docs]
     for train_file, td in zip(train_files, train_data):
-        if not td.has_upos:
-            logger.info("No UPOS in %s" % train_file)
-        if not td.has_xpos:
-            logger.info("No XPOS in %s" % train_file)
-        if not td.has_feats:
-            logger.info("No feats in %s" % train_file)
+        for name in td.tag_names:
+            if not td.has_tags[name]:
+                logger.info("No %s in %s" % (name, train_file))
 
     # reject partially tagged upos or xpos documents
     # otherwise, the model will learn to output blanks for some words,
@@ -240,20 +276,16 @@ def load_training_data(args, pretrain):
                         raise RuntimeError("Found a blank tag in the UPOS at sentence %d word %d of %s.\n%s" % ((sentence_idx+1), (word_idx+1), train_files[td_idx], conll))
 
     # here we make sure the model will learn to output _ for empty columns
-    # if *any* dataset has data for the upos, xpos, or feature column,
+    # if *any* dataset has data for a column,
     # we consider that data enough to train the model on that column
     # otherwise, we want to train the model to always output blanks
-    if not any(td.has_upos for td in train_data):
-        for td in train_data:
-            td.has_upos = True
-    if not any(td.has_xpos for td in train_data):
-        for td in train_data:
-            td.has_xpos = True
-    if not any(td.has_feats for td in train_data):
-        for td in train_data:
-            td.has_feats = True
+    for column in tag_columns:
+        if not any(td.has_tags[column.name] for td in train_data):
+            logger.info("No %s in any training file: training the model to always output blanks for it" % column.name)
+            for td in train_data:
+                td.has_tags[column.name] = True
     # calculate the batches
-    train_batches = ShuffledDataset(train_data, args["batch_size"])
+    train_batches = ShuffledDataset(train_data, args["batch_size"], ratios=doc_ratios)
     return vocab, train_data, train_batches
 
 def train(args):
@@ -350,9 +382,9 @@ def train(args):
                 for batch in dev_batch:
                     preds = trainer.predict(batch)
                     dev_preds += preds
-                    indices.extend(batch[-1])
+                    indices.extend(batch.idx)
                 dev_preds = utils.unsort(dev_preds, indices)
-                dev_data.doc.set([UPOS, XPOS, FEATS], [y for x in dev_preds for y in x])
+                dev_data.doc.set(output_fields(trainer), [y for x in dev_preds for y in x])
 
                 system_pred_file = "{:C}\n\n".format(dev_data.doc)
                 system_pred_file = io.StringIO(system_pred_file)
@@ -456,7 +488,7 @@ def evaluate_trainer(args, trainer, pretrain):
         with torch.no_grad():
             for b in dev_batch:
                 preds += trainer.predict(b)
-                indices.extend(b[-1])
+                indices.extend(b.idx)
     else:
         # skip eval if dev data does not exist
         preds = []
@@ -471,7 +503,7 @@ def evaluate_trainer(args, trainer, pretrain):
         gold_upos = doc.get([UPOS], as_sentences=True)
         word_texts = doc.get([TEXT], as_sentences=True)
 
-    dev_data.doc.set([UPOS, XPOS, FEATS], [y for x in preds for y in x])
+    dev_data.doc.set(output_fields(trainer), [y for x in preds for y in x])
 
     if args.get('upos_word_regex'):
         pred_upos = dev_data.doc.get([UPOS], as_sentences=True)
