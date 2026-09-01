@@ -12,33 +12,63 @@ from stanza.models.common.bert_embedding import filter_data, needs_length_filter
 from stanza.models.common.data import map_to_ids, get_long_tensor, get_float_tensor, sort_all, starts_with_initial_mark
 from stanza.models.common.utils import DEFAULT_WORD_CUTOFF, simplify_punct
 from stanza.models.common.vocab import PAD_ID, VOCAB_PREFIX, CharVocab
+from stanza.models.pos.tag_columns import DEFAULT_TAG_COLUMNS, TagKind, extract_misc_value, tag_columns_from_args
 from stanza.models.pos.vocab import WordVocab, XPOSVocab, FeatureVocab, MultiVocab
 from stanza.models.pos.xpos_vocab_factory import xpos_vocab_factory
 from stanza.models.common.doc import *
 
 logger = logging.getLogger('stanza')
 
-DataSample = namedtuple("DataSample", "word char upos xpos feats pretrain text")
-DataBatch = namedtuple("DataBatch", "words words_mask wordchars wordchars_mask upos xpos ufeats pretrained orig_idx word_orig_idx lens word_lens text idx")
+# tags is a list with one entry per TagColumn, in column order.  An
+# entry is None when this dataset has no annotation for that column at
+# all - the loss for that head is then skipped for the whole batch,
+# which is why ShuffledDataset keeps each batch to a single dataset.
+DataSample = namedtuple("DataSample", "word char tags pretrain text")
+DataBatch = namedtuple("DataBatch", "words words_mask wordchars wordchars_mask tags pretrained orig_idx word_orig_idx lens word_lens text idx")
+
+def build_tag_vocab(column, data, idx, shorthand):
+    """Build the vocab for one tag column, at position idx of the per-word lists"""
+    if column.kind is TagKind.WORD:
+        return WordVocab(data, shorthand, idx=idx)
+    if column.kind is TagKind.FEATURES:
+        try:
+            return FeatureVocab(data, shorthand, idx=idx)
+        except ValueError as e:
+            raise ValueError("Unable to build the '%s' vocab.  Please check that column of your data for an error which may match the following description." % column.name) from e
+    if column.kind is TagKind.AUTO:
+        return xpos_vocab_factory(data, shorthand, idx=idx, column_name=column.name)
+    raise ValueError("Unhandled tag column kind %s for column %s" % (column.kind, column.name))
 
 class Dataset:
-    def __init__(self, doc, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False, bert_tokenizer=None, **kwargs):
+    def __init__(self, doc, args, pretrain, vocab=None, evaluation=False, sort_during_eval=False, bert_tokenizer=None, tag_columns=None, **kwargs):
         self.args = args
         self.eval = evaluation
         self.shuffled = not self.eval
         self.sort_during_eval = sort_during_eval
         self.doc = doc
 
+        if tag_columns is None:
+            tag_columns = tag_columns_from_args(args)
+        self.tag_columns = tuple(tag_columns)
+        self.tag_names = [x.name for x in self.tag_columns]
+
         if vocab is None:
-            self.vocab = Dataset.init_vocab([doc], args)
+            self.vocab = Dataset.init_vocab([doc], args, self.tag_columns)
         else:
             self.vocab = vocab
 
-        self.has_upos = not all(x is None or x == '_' for x in doc.get(UPOS, as_sentences=False))
-        self.has_xpos = not all(x is None or x == '_' for x in doc.get(XPOS, as_sentences=False))
-        self.has_feats = not all(x is None or x == '_' for x in doc.get(FEATS, as_sentences=False))
+        # has_tags[name] is False when the column is entirely absent
+        # from this document, in which case the head is not trained on
+        # this dataset's batches
+        raw = self.load_doc(self.doc, self.tag_columns)
+        self.has_tags = {name: False for name in self.tag_names}
+        for sentence in raw:
+            for word in sentence:
+                for idx, name in enumerate(self.tag_names, 1):
+                    if not self.has_tags[name] and word[idx] is not None and word[idx] != '_':
+                        self.has_tags[name] = True
 
-        data = self.load_doc(self.doc)
+        data = raw
         # filter out the long sentences if bert is used
         if self.args.get('bert_model', None) and needs_length_filter(self.args['bert_model']):
             data = filter_data(self.args['bert_model'], data, bert_tokenizer)
@@ -60,16 +90,16 @@ class Dataset:
         #
         # Eligibility is checked against the raw sentence data (before
         # self.vocab['word'] is even queried), not by asking whether ¿/¡
-        # is IN self.vocab['word']. self.vocab['word'] is built with a
+        # is IN self.vocab['word'].  self.vocab['word'] is built with a
         # frequency cutoff (DEFAULT_WORD_CUTOFF, or word_cutoff if set) --
         # a word appearing fewer times than the cutoff is left out of the
-        # vocab and maps to UNK instead. In a small treebank, ¿/¡ could
+        # vocab and maps to UNK instead.  In a small treebank, ¿/¡ could
         # easily appear only a handful of times and fall under that
         # cutoff, which would make a vocab-containment check wrongly say
         # "ineligible" even though the mark is genuinely present in the
-        # data. Scanning the raw sentences directly avoids that failure
+        # data.  Scanning the raw sentences directly avoids that failure
         # mode, so the augmentation still triggers correctly even on
-        # small treebanks. starts_with_initial_mark is shared with the
+        # small treebanks.  starts_with_initial_mark is shared with the
         # dependency parser's equivalent eligibility check.
         self.drop_initial_punct_eligible = not self.eval and any(
             starts_with_initial_mark([w[0] for w in sent]) for sent in data)
@@ -83,24 +113,52 @@ class Dataset:
         self.__punct_tags = self.vocab["upos"].map(["PUNCT"])
         self.augment_nopunct = self.args.get("augment_nopunct", 0.0)
 
+    # The three native columns are addressed by name often enough,
+    # both here and in tagger.py, that it is worth keeping the old
+    # attribute names working.  Anything beyond them goes through
+    # has_tags directly.
+    @property
+    def has_upos(self):
+        return self.has_tags['upos']
+
+    @has_upos.setter
+    def has_upos(self, value):
+        self.has_tags['upos'] = value
+
+    @property
+    def has_xpos(self):
+        return self.has_tags['xpos']
+
+    @has_xpos.setter
+    def has_xpos(self, value):
+        self.has_tags['xpos'] = value
+
+    @property
+    def has_feats(self):
+        return self.has_tags['feats']
+
+    @has_feats.setter
+    def has_feats(self, value):
+        self.has_tags['feats'] = value
+
     @staticmethod
-    def init_vocab(docs, args):
+    def init_vocab(docs, args, tag_columns=None):
+        if tag_columns is None:
+            tag_columns = tag_columns_from_args(args)
         cutoff = args['word_cutoff'] if args.get('word_cutoff') is not None else DEFAULT_WORD_CUTOFF
-        data = [x for doc in docs for x in Dataset.load_doc(doc)]
+        data = [x for doc in docs for x in Dataset.load_doc(doc, tag_columns)]
         charvocab = CharVocab(data, args['shorthand'])
         wordvocab = WordVocab(data, args['shorthand'], cutoff=cutoff, lower=True)
-        uposvocab = WordVocab(data, args['shorthand'], idx=1)
-        xposvocab = xpos_vocab_factory(data, args['shorthand'])
-        try:
-            featsvocab = FeatureVocab(data, args['shorthand'], idx=3)
-        except ValueError as e:
-            raise ValueError("Unable to build features vocab.  Please check the Features column of your data for an error which may match the following description.") from e
-        vocab = MultiVocab({'char': charvocab,
-                            'word': wordvocab,
-                            'upos': uposvocab,
-                            'xpos': xposvocab,
-                            'feats': featsvocab})
-        return vocab
+        vocabs = {'char': charvocab,
+                  'word': wordvocab}
+        for idx, column in enumerate(tag_columns, 1):
+            # a column named 'char' or 'word', or two columns with the
+            # same name, would otherwise replace an entry already in
+            # here and leave the model looking words up in a tagset
+            if column.name in vocabs:
+                raise ValueError("Cannot build a vocab for the tag column '%s': that name is already used by another vocab" % column.name)
+            vocabs[column.name] = build_tag_vocab(column, data, idx, args['shorthand'])
+        return MultiVocab(vocabs)
 
     def preprocess(self, data, vocab, pretrain_vocab, args):
         processed = []
@@ -108,9 +166,8 @@ class Dataset:
             processed_sent = DataSample(
                 word = [vocab['word'].map([w[0] for w in sent])],
                 char = [[vocab['char'].map([x for x in w[0]]) for w in sent]],
-                upos = [vocab['upos'].map([w[1] for w in sent])],
-                xpos = [vocab['xpos'].map([w[2] for w in sent])],
-                feats = [vocab['feats'].map([w[3] for w in sent])],
+                tags = [vocab[name].map([w[idx] for w in sent])
+                        for idx, name in enumerate(self.tag_names, 1)],
                 pretrain = ([pretrain_vocab.map([w[0].lower() for w in sent])]
                             if pretrain_vocab is not None
                            else [[PAD_ID] * len(sent)]),
@@ -192,10 +249,12 @@ class Dataset:
         # convert to tensors
         # TODO: only store single lists per data entry?
         words = torch.tensor(sample.word[0])
-        # convert the rest to tensors
-        upos = torch.tensor(sample.upos[0]) if self.has_upos else None
-        xpos = torch.tensor(sample.xpos[0]) if self.has_xpos else None
-        ufeats = torch.tensor(sample.feats[0]) if self.has_feats else None
+        # convert the rest to tensors.  a column this dataset has no
+        # annotation for stays None the whole way through, so that
+        # collate can turn the whole batch's entry into None and the
+        # model can skip that head
+        tags = [torch.tensor(tag) if self.has_tags[name] else None
+                for name, tag in zip(self.tag_names, sample.tags)]
         pretrained = torch.tensor(sample.pretrain[0])
 
         # and deal with char & raw_text
@@ -205,7 +264,8 @@ class Dataset:
         # some data augmentation requires constructing a mask based on
         # which upos. For instance, sometimes we'd like to mask out ending
         # sentence punctuation. The mask is True if we want to remove the element
-        if self.has_upos and upos is not None and not self.eval:
+        upos = tags[0]
+        if self.has_tags['upos'] and upos is not None and not self.eval:
             # perform actual masking
             mask = self.__mask(upos)
         else:
@@ -218,19 +278,17 @@ class Dataset:
             for mask in mask_index:
                 mask = mask.item()
                 words[mask] = PAD_ID
-                if upos is not None:
-                    upos[mask] = PAD_ID
-                if xpos is not None:
-                    # TODO: test the multi-dimension xpos
-                    xpos[mask, ...] = PAD_ID
-                if ufeats is not None:
-                    ufeats[mask, ...] = PAD_ID
+                for tag in tags:
+                    if tag is not None:
+                        # works for a flat column and for a composite
+                        # one, where the tensor has a second dimension
+                        tag[mask, ...] = PAD_ID
                 pretrained[mask] = PAD_ID
                 char = char[:mask] + char[mask+1:]
                 raw_text = raw_text[:mask] + raw_text[mask+1:]
 
         # dynamic leading-¿/¡ drop (see drop_initial_punct_eligible in
-        # __init__). Unlike the trailing-punct mask above, this can't be
+        # __init__).  Unlike the trailing-punct mask above, this can't be
         # done by masking a position in place: removing the FIRST word
         # has to shift every later position back by one, so every field
         # is sliced consistently rather than one element being replaced
@@ -238,12 +296,7 @@ class Dataset:
         if (self.drop_initial_punct_ratio > 0 and starts_with_initial_mark(raw_text)
                 and random.uniform(0, 1) < self.drop_initial_punct_ratio):
             words = words[1:]
-            if upos is not None:
-                upos = upos[1:]
-            if xpos is not None:
-                xpos = xpos[1:]
-            if ufeats is not None:
-                ufeats = ufeats[1:]
+            tags = [tag[1:] if tag is not None else None for tag in tags]
             pretrained = pretrained[1:]
             char = char[1:]
             raw_text = raw_text[1:]
@@ -251,7 +304,7 @@ class Dataset:
         # get each character from the input sentnece
         # chars = [w for sent in char for w in sent]
 
-        return DataSample(words, char, upos, xpos, ufeats, pretrained, raw_text), key
+        return DataSample(words, char, tags, pretrained, raw_text), key
 
     def __iter__(self):
         for i in range(self.__len__()):
@@ -261,29 +314,38 @@ class Dataset:
         """Converts self to a DataLoader """
 
         return DL(self,
-                  collate_fn=Dataset.__collate_fn,
+                  collate_fn=self.collate_fn,
                   **kwargs)
 
     def to_length_limited_loader(self, batch_size, maximum_tokens):
         sampler = LengthLimitedBatchSampler(self, batch_size, maximum_tokens)
         return DL(self,
-                  collate_fn=Dataset.__collate_fn,
+                  collate_fn=self.collate_fn,
                   batch_sampler = sampler)
 
-    @staticmethod
-    def __collate_fn(data):
-        """Function used by DataLoader to pack data"""
+    def collate_fn(self, data):
+        """Function used by DataLoader to pack data
+
+        An instance method, as the collation needs to know how many
+        entries to expect in each sample's tags.
+        """
         (data, idx) = zip(*data)
-        (words, wordchars, upos, xpos, ufeats, pretrained, text) = zip(*data)
+        (words, wordchars, tags, pretrained, text) = zip(*data)
+
+        # tags arrives as one tuple per sample; flip it to one tuple
+        # per column, which is the shape everything downstream wants
+        tags = list(zip(*tags)) if len(self.tag_names) > 0 else []
 
         # collate_fn is given a list of length batch size
         batch_size = len(data)
 
         # sort sentences by lens for easy RNN operations
         lens = [torch.sum(x != PAD_ID) for x in words]
-        (words, wordchars, upos, xpos,
-         ufeats, pretrained, text), orig_idx = sort_all((words, wordchars, upos, xpos,
-                                                         ufeats, pretrained, text), lens)
+        to_sort = [words, wordchars] + list(tags) + [pretrained, text]
+        sorted_all, orig_idx = sort_all(to_sort, lens)
+        words, wordchars = sorted_all[0], sorted_all[1]
+        tags = sorted_all[2:2+len(tags)]
+        pretrained, text = sorted_all[-2], sorted_all[-1]
         lens = [torch.sum(x != PAD_ID) for x in words] # we need to reinterpret lengths for the RNN
 
         # combine all words into one large list, and sort for easy charRNN ops
@@ -294,18 +356,8 @@ class Dataset:
 
         # We now pad everything
         words = pad_sequence(words, True, PAD_ID)
-        if None not in upos:
-            upos = pad_sequence(upos, True, PAD_ID)
-        else:
-            upos = None
-        if None not in xpos:
-            xpos = pad_sequence(xpos, True, PAD_ID)
-        else:
-            xpos = None
-        if None not in ufeats:
-            ufeats = pad_sequence(ufeats, True, PAD_ID)
-        else:
-            ufeats = None
+        tags = [pad_sequence(tag, True, PAD_ID) if None not in tag else None
+                for tag in tags]
         pretrained = pad_sequence(pretrained, True, PAD_ID)
         wordchars = get_long_tensor(wordchars, len(word_lens))
 
@@ -313,12 +365,29 @@ class Dataset:
         words_mask = torch.eq(words, PAD_ID)
         wordchars_mask = torch.eq(wordchars, PAD_ID)
 
-        return DataBatch(words, words_mask, wordchars, wordchars_mask, upos, xpos, ufeats,
+        return DataBatch(words, words_mask, wordchars, wordchars_mask, tags,
                          pretrained, orig_idx, word_orig_idx, lens, word_lens, text, idx)
 
     @staticmethod
-    def load_doc(doc):
-        data = doc.get([TEXT, UPOS, XPOS, FEATS], as_sentences=True)
+    def load_doc(doc, tag_columns=DEFAULT_TAG_COLUMNS):
+        """
+        Read the text and each tag column out of a Document
+
+        The result is one list per word, with the text at index 0 and
+        the columns following in order, so a column's index is its
+        position in tag_columns plus one.  That is the number every
+        vocab builder wants.
+        """
+        # a column which lives in MISC asks for MISC and then picks its
+        # key back out.  asking for MISC more than once is harmless
+        fields = [TEXT] + [MISC if column.misc_key else column.field for column in tag_columns]
+        data = doc.get(fields, as_sentences=True)
+        for idx, column in enumerate(tag_columns, 1):
+            if not column.misc_key:
+                continue
+            for sentence in data:
+                for word in sentence:
+                    word[idx] = extract_misc_value(word[idx], column.misc_key)
         data = Dataset.resolve_none(data)
         data = simplify_punct(data)
         return data
@@ -411,20 +480,62 @@ class ShuffledDataset:
     but the overhead is small enough that it probably isn't worth
     special casing the one dataset version.
     """
-    def __init__(self, datasets, batch_size):
+    def __init__(self, datasets, batch_size, ratios=None):
         self.batch_size = batch_size
         self.datasets = datasets
         self.loaders = [x.to_loader(batch_size=self.batch_size, shuffle=True) for x in self.datasets]
 
+        if ratios is None:
+            ratios = [1.0] * len(self.datasets)
+        if len(ratios) != len(self.datasets):
+            raise ValueError("Got %d ratios for %d datasets" % (len(ratios), len(self.datasets)))
+        if any(x < 0 for x in ratios):
+            raise ValueError("Dataset ratios cannot be negative: %s" % (ratios,))
+        self.ratios = list(ratios)
+
+        # how many batches an epoch takes from each dataset.  A ratio
+        # of 1.0 is one pass.  The point of a smaller ratio is that a
+        # dataset which is much larger than the others would otherwise
+        # supply most of the batches, and the heads which only that
+        # dataset trains would dominate the shared layers.
+        #
+        # A dataset asked for more batches than it has is iterated
+        # again, reshuffled, rather than repeating the same batches.
+        #
+        # A loss weight is not a substitute for this.  The batches
+        # here are each entirely from one dataset, so a per-dataset
+        # loss weight scales a whole batch's gradient uniformly, and
+        # Adam's second moment normalization then removes most of that
+        # scaling again.  Changing how often a dataset is sampled is
+        # the knob that actually moves.
+        # max(1, ...) so that a small dataset with a small ratio still
+        # appears, but not for an empty dataset: there would be no
+        # batch to hand out.  A dataset can be empty here even though
+        # the tagger checks the total, for example if it was the
+        # shorter half of a bert length filter
+        self.batch_counts = [0 if ratio == 0 or len(loader) == 0 else max(1, round(ratio * len(loader)))
+                             for ratio, loader in zip(self.ratios, self.loaders)]
+        if any(x != 1.0 for x in self.ratios):
+            logger.info("Batches per epoch, after ratios %s: %s (was %s)",
+                        self.ratios, self.batch_counts, [len(x) for x in self.loaders])
+
     def __iter__(self):
         iterators = [iter(x) for x in self.loaders]
-        lengths = [len(x) for x in self.loaders]
-        indices = [[x] * y for x, y in enumerate(lengths)]
-        indices = [idx for inner in indices for idx in inner]
+        indices = [idx for idx, count in enumerate(self.batch_counts) for _ in range(count)]
         random.shuffle(indices)
 
         for idx in indices:
-            yield(next(iterators[idx]))
+            try:
+                yield next(iterators[idx])
+            except StopIteration:
+                # asked for more batches than this dataset has, so go
+                # around again with a fresh shuffle
+                iterators[idx] = iter(self.loaders[idx])
+                yield next(iterators[idx])
+
+    def num_batches(self):
+        """How many batches one pass of __iter__ yields"""
+        return sum(self.batch_counts)
 
     def __len__(self):
         return sum(len(x) for x in self.datasets)
