@@ -8,6 +8,7 @@ import pytest
 from stanza.models.common.doc import *
 from stanza.models import tagger
 from stanza.models.pos.data import Dataset, ShuffledDataset
+from stanza.models.pos.tag_columns import DEFAULT_TAG_COLUMNS, TagColumn, TagKind
 from stanza.utils.conll import CoNLL
 
 from stanza.tests.pos.test_tagger import TRAIN_DATA, TRAIN_DATA_NO_XPOS, TRAIN_DATA_NO_UPOS, TRAIN_DATA_NO_FEATS
@@ -158,10 +159,12 @@ def test_shuffle(tmp_path):
 
     assert sum(1 for _ in shuffled) == 200
 
+    xpos_idx = no_data.tag_names.index('xpos')
+
     num_with = 0
     num_without = 0
     for batch in shuffled:
-        if batch.xpos is not None:
+        if batch.tags[xpos_idx] is not None:
             num_with += 1
         else:
             num_without += 1
@@ -174,6 +177,59 @@ def test_shuffle(tmp_path):
 
     assert num_with == 100
     assert num_without == 100
+
+
+def test_colliding_tag_column_name():
+    """
+    A tag column may not take a name another vocab is already using
+
+    parse_extra_tag_columns rejects these on the command line, but the
+    columns can also be built directly, and silently replacing the word
+    vocab with a tagset would leave every word mapping to UNK.
+    """
+    args = tagger.parse_args(args=["--shorthand", "en_test", "--augment_nopunct", "0.0"])
+    doc = CoNLL.conll2doc(input_str=TRAIN_DATA)
+
+    for name in ('word', 'char', 'upos'):
+        columns = DEFAULT_TAG_COLUMNS + (TagColumn(name, MISC, "BIS", TagKind.AUTO, False),)
+        with pytest.raises(ValueError):
+            Dataset.init_vocab([doc], args, columns)
+
+
+def test_shuffle_ratios(tmp_path):
+    """A dataset can be sampled less (or more) than once per epoch"""
+    args = tagger.parse_args(args=["--batch_size", "10", "--shorthand", "en_test", "--augment_nopunct", "0.0"])
+
+    no_xpos = [NO_XPOS_TEMPLATE.format(index=idx, indexp=idx+1) for idx in range(1000)]
+    no_data = Dataset(CoNLL.conll2doc(input_str="\n\n".join(no_xpos)), args, None)
+
+    yes_xpos = [YES_XPOS_TEMPLATE.format(index=idx, indexp=idx+101) for idx in range(1000)]
+    yes_data = Dataset(CoNLL.conll2doc(input_str="\n\n".join(yes_xpos)), args, None)
+
+    xpos_idx = no_data.tag_names.index('xpos')
+
+    # each dataset is 100 batches of 10
+    shuffled = ShuffledDataset([no_data, yes_data], 10, ratios=[1.0, 0.2])
+    assert shuffled.batch_counts == [100, 20]
+    assert shuffled.num_batches() == 120
+
+    num_with = sum(1 for batch in shuffled if batch.tags[xpos_idx] is not None)
+    assert num_with == 20
+
+    # a ratio above 1 iterates that dataset more than once
+    shuffled = ShuffledDataset([no_data, yes_data], 10, ratios=[1.0, 2.5])
+    assert shuffled.batch_counts == [100, 250]
+    num_with = sum(1 for batch in shuffled if batch.tags[xpos_idx] is not None)
+    assert num_with == 250
+
+    # a dataset can be turned off entirely
+    shuffled = ShuffledDataset([no_data, yes_data], 10, ratios=[1.0, 0.0])
+    assert sum(1 for _ in shuffled) == 100
+
+    with pytest.raises(ValueError):
+        ShuffledDataset([no_data, yes_data], 10, ratios=[1.0])
+    with pytest.raises(ValueError):
+        ShuffledDataset([no_data, yes_data], 10, ratios=[1.0, -1.0])
 
 
 EWT_SAMPLE = """
@@ -480,8 +536,9 @@ def test_drop_initial_punct_matches_natural_sentence():
     for key in range(len(data)):
         sample, _ = data[key]
         if sample.text and sample.text[0] != '¿' and len(sample.text) == 3:
+            upos_idx = data.tag_names.index('upos')
             assert sample.word.tolist() == gold_sample.word[0]
-            assert sample.upos.tolist() == gold_sample.upos[0]
+            assert sample.tags[upos_idx].tolist() == gold_sample.tags[upos_idx]
             assert sample.text == gold_sample.text
             break
     else:
