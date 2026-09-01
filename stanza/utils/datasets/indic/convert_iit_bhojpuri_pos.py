@@ -33,6 +33,8 @@ import argparse
 import os
 import re
 
+from stanza.utils.default_paths import get_default_paths
+
 SENTENCE_RE = re.compile(r"<Sentence [^>]*>")
 
 
@@ -120,27 +122,30 @@ def convert(path, out_path):
 
 
 def main():
+    paths = get_default_paths()
+    output_dir = paths["POS_DATA_DIR"]
+    default_output_filename = "bhojpuri_iit_pos.txt"
+    default_input_path = os.path.join(paths["STANZA_EXTERN_DIR"], "bhojpuri", "Bhojpuri-Magahi-and-Maithili-Linguistic-Resources", "bhojpuri", "pos-tagged", "bhojpuri-pos-tagged-ver-1.3.txt")
+
     parser = argparse.ArgumentParser(
-        description="Convert the IIT Bhojpuri POS corpus to flat word/tag "
-                    "format for Stanza training"
+        description="Convert the IIT Bhojpuri POS corpus to flat word/tag format for Stanza training",
+        formatter_class=argparse.RawTextHelpFormatter,  # for the long filenames
     )
     parser.add_argument(
-        "--input",
-        help="Path to bhojpuri-pos-tagged-ver-1.3.txt."
+        "--input", default=default_input_path,
+        help="Path to bhojpuri-pos-tagged-ver-1.3.txt - defaults to %s" % default_input_path
     )
     parser.add_argument(
-        "--output", default=None,
-        help="Output path.  Defaults to data/pos/bhojpuri_iit_pos.txt "
-             "under the stanza repo root."
+        "--output", default=default_output_filename,
+        help="Output filename.  Defaults to %s" % default_output_filename
+    )
+    parser.add_argument(
+        "--output_dir", default=output_dir,
+        help="Output dir.  Defaults to %s" % output_dir
     )
     args = parser.parse_args()
 
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    stanza_root = os.path.normpath(os.path.join(script_dir, "..", "..", ".."))
-
-    if args.output is None:
-        args.output = os.path.join(stanza_root, "data", "pos",
-                                   "bhojpuri_iit_pos.txt")
+    args.output = os.path.join(args.output_dir, args.output)
 
     print("Input:  %s" % args.input)
     print("Output: %s" % args.output)
