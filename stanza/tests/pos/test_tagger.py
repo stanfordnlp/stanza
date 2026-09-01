@@ -112,6 +112,17 @@ TRAIN_DATA_NO_FEATS = """
 
 """.lstrip()
 
+TRAIN_DATA_EXTRA_COLUMN = """
+# sent_id = 12
+# text = It's all hers!
+1	It	it	_	_	_	4	nsubj	_	SpaceAfter=No|BIS=PRP
+2	's	be	_	_	_	4	cop	_	BIS=VAUX
+3	all	all	_	_	_	4	det:predet	_	BIS=DEM
+4	hers	hers	_	_	_	0	root	_	SpaceAfter=No|BIS=PRP
+5	!	!	_	_	_	4	punct	_	BIS=SYM
+
+""".lstrip()
+
 DEV_DATA = """
 1	From	from	ADP	IN	_	3	case	3:case	_
 2	the	the	DET	DT	Definite=Def|PronType=Art	3	det	3:det	_
@@ -265,12 +276,70 @@ class TestTagger:
         ufeats_unchanged = 0
         for t1, t2 in zip(saved_trainers[:-1], saved_trainers[1:]):
             upos_unchanged += torch.allclose(t1.model.upos_clf.weight, t2.model.upos_clf.weight)
-            xpos_unchanged += torch.allclose(t1.model.xpos_clf.W_bilin.weight, t2.model.xpos_clf.W_bilin.weight)
-            ufeats_unchanged += all(torch.allclose(f1.W_bilin.weight, f2.W_bilin.weight) for f1, f2 in zip(t1.model.ufeats_clf, t2.model.ufeats_clf))
+            xpos_unchanged += torch.allclose(t1.model.tag_clf['xpos'].W_bilin.weight, t2.model.tag_clf['xpos'].W_bilin.weight)
+            ufeats_unchanged += all(torch.allclose(f1.W_bilin.weight, f2.W_bilin.weight) for f1, f2 in zip(t1.model.tag_clf['feats'], t2.model.tag_clf['feats']))
         upos_norms = [torch.linalg.norm(t.model.upos_clf.weight) for t in saved_trainers]
         assert upos_unchanged == 1, "Unchanged: {} {} {} {}".format(upos_unchanged, xpos_unchanged, ufeats_unchanged, upos_norms)
         assert xpos_unchanged == 1, "Unchanged: %d %d %d" % (upos_unchanged, xpos_unchanged, ufeats_unchanged)
         assert ufeats_unchanged == 1, "Unchanged: %d %d %d" % (upos_unchanged, xpos_unchanged, ufeats_unchanged)
+
+    def test_extra_tag_column(self, tmp_path, wordvec_pretrain_file):
+        """
+        Train a fourth output layer on a tagset which only one of the training files has
+
+        The extra column is read from MISC, alongside whatever else is
+        already in MISC, and is not written to the output conllu, as
+        there is no column in the format for it to go to.
+        """
+        extra_args = ['--extra_tag_columns', 'bis=BIS', '--train_ratios', '1.0;0.5']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                    [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                    extra_args=extra_args)
+
+        assert trainer.model.tag_names == ['upos', 'xpos', 'feats', 'bis']
+        assert 'bis' in trainer.vocab
+        for tag in ('PRP', 'VAUX', 'DEM', 'SYM'):
+            assert tag in trainer.vocab['bis'], "Expected %s in the bis vocab" % tag
+        # SpaceAfter should not have been mistaken for part of the tag
+        assert 'No' not in trainer.vocab['bis']
+
+        # the three native columns are still the ones written out
+        assert [x.name for x in trainer.model.tag_columns if x.output] == ['upos', 'xpos', 'feats']
+
+    def test_extra_tag_column_reload(self, tmp_path, wordvec_pretrain_file):
+        """The extra columns have to survive a round trip through the model file"""
+        extra_args = ['--extra_tag_columns', 'bis=BIS']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                    [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                    extra_args=extra_args)
+        save_file = str(tmp_path / trainer.args['save_name'])
+        pt = pretrain.Pretrain(wordvec_pretrain_file)
+        reloaded = Trainer(pretrain=pt, model_file=save_file)
+        assert reloaded.model.tag_names == ['upos', 'xpos', 'feats', 'bis']
+        assert reloaded.model.tag_columns == trainer.model.tag_columns
+
+    def test_mismatched_tag_columns(self, tmp_path, wordvec_pretrain_file):
+        """
+        A model whose config disagrees with its parameters is an error, not a warning
+
+        Loading such a model would otherwise leave a head at its random
+        initialization and silently produce nonsense for that column.
+        """
+        extra_args = ['--extra_tag_columns', 'bis=BIS']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                    [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                    extra_args=extra_args)
+        save_file = str(tmp_path / trainer.args['save_name'])
+        pt = pretrain.Pretrain(wordvec_pretrain_file)
+
+        # drop the extra column from the config, leaving its parameters in the file
+        checkpoint = torch.load(save_file, lambda storage, loc: storage, weights_only=True)
+        checkpoint['config']['tag_columns'] = checkpoint['config']['tag_columns'][:3]
+        broken_file = str(tmp_path / "broken.pt")
+        torch.save(checkpoint, broken_file, _use_new_zipfile_serialization=False)
+
+        with pytest.raises(ValueError):
+            Trainer(pretrain=pt, model_file=broken_file)
 
     def test_save_each(self, tmp_path, wordvec_pretrain_file):
         extra_args = ['--save_each']

@@ -13,6 +13,11 @@ class XPOSType(Enum):
 XPOSDescription = namedtuple('XPOSDescription', ['xpos_type', 'sep'])
 DEFAULT_KEY = XPOSDescription(XPOSType.WORD, None)
 
+# where the xpos column lands in the per-word lists built by
+# Dataset.load_doc for a model with the default three columns.
+# Any other column passes its own idx.
+DEFAULT_XPOS_IDX = 2
+
 logger = logging.getLogger('stanza')
 
 def filter_data(data, idx):
@@ -25,24 +30,24 @@ def filter_data(data, idx):
         if flag: data_filtered.append(sentence)
     return data_filtered
 
-def choose_simplest_factory(data, shorthand):
+def choose_simplest_factory(data, shorthand, idx=DEFAULT_XPOS_IDX):
     logger.info(f'Original length = {len(data)}')
-    data = filter_data(data, idx=2)
+    data = filter_data(data, idx=idx)
     logger.info(f'Filtered length = {len(data)}')
-    vocab = WordVocab(data, shorthand, idx=2, ignore=["_"])
+    vocab = WordVocab(data, shorthand, idx=idx, ignore=["_"])
     key = DEFAULT_KEY
     best_size = len(vocab) - len(VOCAB_PREFIX)
     if best_size > 20:
         for sep in ['', '-', '+', '|', ',', ':']: # separators
-            vocab = XPOSVocab(data, shorthand, idx=2, sep=sep)
+            vocab = XPOSVocab(data, shorthand, idx=idx, sep=sep)
             length = sum(len(x) - len(VOCAB_PREFIX) for x in vocab._id2unit.values())
             if length < best_size:
                 key = XPOSDescription(XPOSType.XPOS, sep)
                 best_size = length
     return key
 
-def build_xpos_vocab(description, data, shorthand):
+def build_xpos_vocab(description, data, shorthand, idx=DEFAULT_XPOS_IDX):
     if description.xpos_type is XPOSType.WORD:
-        return WordVocab(data, shorthand, idx=2, ignore=["_"])
+        return WordVocab(data, shorthand, idx=idx, ignore=["_"])
 
-    return XPOSVocab(data, shorthand, idx=2, sep=description.sep)
+    return XPOSVocab(data, shorthand, idx=idx, sep=description.sep)
