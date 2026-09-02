@@ -20,7 +20,7 @@ import torch
 from torch import nn, optim
 
 from stanza.models.pos.data import Dataset, ShuffledDataset
-from stanza.models.pos.tag_columns import build_tag_columns, tag_columns_from_args
+from stanza.models.pos.tag_columns import TAG_LINK_EMB, TAG_LINKS, build_tag_columns, set_misc_value, tag_columns_from_args
 from stanza.models.pos.trainer import Trainer
 from stanza.models.pos import scorer
 from stanza.models.common import utils
@@ -45,6 +45,10 @@ def build_argparse():
     parser.add_argument('--no_gold_labels', dest='gold_labels', action='store_false', help="Don't score the eval file - perhaps it has no gold labels, for example.  Cannot be used at training time")
     parser.add_argument('--train_ratios', type=str, default=None, help='How much of each training file to use per epoch, semicolon separated, one per entry in --train_file.  1.0 is a full pass.  Use this when one training file is much larger than the others, so that it does not supply most of the batches.  A file which expands to several files (a zip) gives its ratio to each of them.')
     parser.add_argument('--extra_tag_columns', type=str, default=None, help='Additional tag columns to predict, beyond upos/xpos/feats.  Semicolon separated, each "name" or "name=MISC_KEY", read from the MISC field of the training files.  Example: "bis=BIS" to train a fourth head on a corpus tagged with a different POS scheme.')
+    parser.add_argument('--write_extra_tag_columns', action='store_true', default=False, help='Write the extra tag columns into the MISC field of the output file.  There is no conllu column for them, so they are dropped otherwise.')
+    parser.add_argument('--tag_column_parents', type=str, default=None, help='Which columns each output layer is conditioned on.  Semicolon separated "child=parent" or "child=parent,parent".  Everything hangs off upos by default.  Example: "bis=upos;xpos=bis" to feed upos into the bis layer and bis into the xpos layer.')
+    parser.add_argument('--tag_column_link', type=str, default=TAG_LINK_EMB, choices=TAG_LINKS, help='What a parent column hands to its children.  "tag_emb" embeds the parent tag, gold while training when the batch has it and predicted otherwise.  "hidden" hands over the parent hidden layer, which is wider and needs no tag at all.')
+    parser.add_argument('--detach_parent_tags', action='store_true', default=False, help='Stop the gradient at the parent, so a child column does not train the layers it is conditioned on.  Only meaningful with --tag_column_link hidden.')
     parser.add_argument('--upos_word_regex', type=str, default=None, help='Regex to use to build a confusion matrix specifically for those words.  Example use case, to test whether adding "como" as a VERB to the Spanish dataset caused errors on ADV or SCONJ usages.  Uses "search", so an example regex for that test would be "^(?i:como)$"')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
@@ -141,7 +145,7 @@ def parse_args(args=None):
         raise ValueError("Cannot have tag_emb_dim==0 with share_hid==False, as the tags will be embedded for the next layer")
 
     args = vars(args)
-    args['tag_columns'] = build_tag_columns(args['extra_tag_columns'])
+    args['tag_columns'] = build_tag_columns(args['extra_tag_columns'], args['tag_column_parents'])
     return args
 
 def main(args=None):
@@ -174,6 +178,33 @@ def load_pretrain(args):
             vec_file = args['wordvec_file'] if args['wordvec_file'] else utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
         pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
     return pt
+
+def set_predictions(doc, trainer, preds, extra_preds=None):
+    """
+    Put the predictions back on the document
+
+    The three native columns go to their own conllu fields.  An extra
+    tagset has no field of its own, so it goes into MISC under the key
+    it was read from, leaving whatever else is in MISC alone.
+    """
+    doc.set(output_fields(trainer), [y for x in preds for y in x])
+    if not extra_preds:
+        return
+
+    extra_columns = [x for x in trainer.model.tag_columns if not x.output]
+    if not extra_columns:
+        return
+
+    values = [y for x in extra_preds for y in x]
+    misc = doc.get(MISC)
+    if len(misc) != len(values):
+        raise ValueError("Predicted %d words but the document has %d" % (len(values), len(misc)))
+    updated = []
+    for old_misc, tags in zip(misc, values):
+        for column, tag in zip(extra_columns, tags):
+            old_misc = set_misc_value(old_misc, column.misc_key, tag)
+        updated.append(old_misc)
+    doc.set([MISC], updated)
 
 def output_fields(trainer):
     """
@@ -378,13 +409,17 @@ def train(args):
                 # eval on dev
                 logger.info("Evaluating on dev set...")
                 dev_preds = []
+                dev_extra = []
                 indices = []
                 for batch in dev_batch:
-                    preds = trainer.predict(batch)
+                    preds, extra = trainer.predict(batch, extra_columns=True)
                     dev_preds += preds
+                    dev_extra += extra
                     indices.extend(batch.idx)
                 dev_preds = utils.unsort(dev_preds, indices)
-                dev_data.doc.set(output_fields(trainer), [y for x in dev_preds for y in x])
+                dev_extra = utils.unsort(dev_extra, indices)
+                set_predictions(dev_data.doc, trainer, dev_preds,
+                                dev_extra if args.get('write_extra_tag_columns') else None)
 
                 system_pred_file = "{:C}\n\n".format(dev_data.doc)
                 system_pred_file = io.StringIO(system_pred_file)
@@ -484,16 +519,21 @@ def evaluate_trainer(args, trainer, pretrain):
     if len(dev_batch) > 0:
         logger.info("Start evaluation...")
         preds = []
+        extra_preds = []
         indices = []
         with torch.no_grad():
             for b in dev_batch:
-                preds += trainer.predict(b)
+                batch_preds, batch_extra = trainer.predict(b, extra_columns=True)
+                preds += batch_preds
+                extra_preds += batch_extra
                 indices.extend(b.idx)
     else:
         # skip eval if dev data does not exist
         preds = []
+        extra_preds = []
 
     preds = utils.unsort(preds, indices)
+    extra_preds = utils.unsort(extra_preds, indices) if extra_preds else []
 
     # write to file and score
     # If a upos_word_regex was supplied, collect gold UPOS tags before the .set()
@@ -503,7 +543,8 @@ def evaluate_trainer(args, trainer, pretrain):
         gold_upos = doc.get([UPOS], as_sentences=True)
         word_texts = doc.get([TEXT], as_sentences=True)
 
-    dev_data.doc.set(output_fields(trainer), [y for x in preds for y in x])
+    set_predictions(dev_data.doc, trainer, preds,
+                    extra_preds if args.get('write_extra_tag_columns') else None)
 
     if args.get('upos_word_regex'):
         pred_upos = dev_data.doc.get([UPOS], as_sentences=True)
