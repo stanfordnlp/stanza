@@ -94,7 +94,7 @@ class Trainer(BaseTrainer):
             scheduler.step()
         return loss_val
 
-    def predict(self, batch, unsort=True):
+    def predict(self, batch, unsort=True, extra_columns=False):
         device = next(self.model.parameters()).device
         inputs, orig_idx, word_orig_idx, sentlens, wordlens, text = unpack_batch(batch, device)
         word, word_mask, wordchars, wordchars_mask, tags, pretrained = inputs
@@ -103,17 +103,26 @@ class Trainer(BaseTrainer):
         batch_size = word.size(0)
         _, preds = self.model(word, word_mask, wordchars, wordchars_mask, tags, pretrained, word_orig_idx, sentlens, wordlens, text)
 
-        # one sequence per output column, in column order.  Columns
-        # which aren't written back to the document (an extra tagset
-        # has nowhere in CoNLL-U to go) are predicted but dropped here
-        seqs = [[self.vocab[column.name].unmap(sent) for sent in pred.tolist()]
-                for column, pred in zip(self.model.tag_columns, preds)
-                if column.output]
+        # one sequence per column, in column order.  The columns which
+        # go back to the document are returned on their own, as that is
+        # what the caller sets the native conllu fields from; an extra
+        # tagset has no column of its own and is only returned when
+        # asked for, to be written into MISC
+        def sequences(output):
+            return [[self.vocab[column.name].unmap(sent) for sent in pred.tolist()]
+                    for column, pred in zip(self.model.tag_columns, preds)
+                    if column.output == output]
 
-        pred_tokens = [[[seq[i][j] for seq in seqs] for j in range(sentlens[i])] for i in range(batch_size)]
-        if unsort:
-            pred_tokens = utils.unsort(pred_tokens, orig_idx)
-        return pred_tokens
+        def tokens(seqs):
+            if not seqs:
+                return [[] for _ in range(batch_size)]
+            result = [[[seq[i][j] for seq in seqs] for j in range(sentlens[i])] for i in range(batch_size)]
+            return utils.unsort(result, orig_idx) if unsort else result
+
+        pred_tokens = tokens(sequences(True))
+        if not extra_columns:
+            return pred_tokens
+        return pred_tokens, tokens(sequences(False))
 
     def save(self, filename, skip_modules=True):
         model_state = self.model.state_dict()

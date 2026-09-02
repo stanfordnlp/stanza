@@ -318,6 +318,71 @@ class TestTagger:
         assert reloaded.model.tag_names == ['upos', 'xpos', 'feats', 'bis']
         assert reloaded.model.tag_columns == trainer.model.tag_columns
 
+    def test_tag_column_parents(self, tmp_path, wordvec_pretrain_file):
+        """
+        Condition one output layer on another, in either direction
+
+        xpos is declared before bis but conditioned on it, so the heads
+        are computed in an order other than the one they are declared in.
+        """
+        for link in ('tag_emb', 'hidden'):
+            extra_args = ['--extra_tag_columns', 'bis=BIS',
+                          '--tag_column_parents', 'bis=upos;xpos=bis',
+                          '--tag_column_link', link]
+            trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                        [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                        extra_args=extra_args)
+            assert trainer.model.column_parents['xpos'] == ('bis',)
+            assert trainer.model.column_parents['bis'] == ('upos',)
+            assert trainer.model.eval_order.index('bis') < trainer.model.eval_order.index('xpos')
+
+            # the parent feeds the classifier, so its width shows up there
+            parent_width = trainer.model.tag_clf['xpos'].W_bilin.weight.shape[-1] - 1
+            expected = (trainer.args['tag_emb_dim'] if link == 'tag_emb'
+                        else trainer.args['deep_biaff_hidden_dim'])
+            assert parent_width == expected
+
+    def test_tag_column_multiple_parents(self, tmp_path, wordvec_pretrain_file):
+        """A column can be conditioned on more than one other column"""
+        extra_args = ['--extra_tag_columns', 'bis=BIS', '--tag_column_parents', 'xpos=upos,bis']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                    [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                    extra_args=extra_args)
+        assert trainer.model.column_parents['xpos'] == ('upos', 'bis')
+        parent_width = trainer.model.tag_clf['xpos'].W_bilin.weight.shape[-1] - 1
+        assert parent_width == trainer.args['tag_emb_dim'] * 2
+
+    def test_write_extra_tag_columns(self, tmp_path, wordvec_pretrain_file):
+        """
+        An extra tagset can be written to MISC, and is dropped otherwise
+
+        There is no conllu column for it, so MISC is the only place it
+        can go, and it should not disturb anything already there.
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                    [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                    extra_args=['--extra_tag_columns', 'bis=BIS'])
+        dev_file = str(tmp_path / "dev.conllu")
+
+        def predict(output_file, extra_args):
+            args = ['--mode', 'predict',
+                    '--wordvec_pretrain_file', wordvec_pretrain_file,
+                    '--eval_file', dev_file,
+                    '--output_file', output_file,
+                    '--shorthand', 'en_test',
+                    '--lang', 'en',
+                    '--save_dir', str(tmp_path),
+                    '--save_name', trainer.args['save_name']]
+            tagger.main(args + extra_args)
+            with open(output_file, encoding="utf-8") as fin:
+                return fin.read()
+
+        without = predict(str(tmp_path / "plain.conllu"), [])
+        assert 'BIS=' not in without
+
+        with_extra = predict(str(tmp_path / "extra.conllu"), ['--write_extra_tag_columns'])
+        assert 'BIS=' in with_extra
+
     def test_mismatched_tag_columns(self, tmp_path, wordvec_pretrain_file):
         """
         A model whose config disagrees with its parameters is an error, not a warning
