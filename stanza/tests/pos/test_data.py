@@ -191,7 +191,7 @@ def test_colliding_tag_column_name():
     doc = CoNLL.conll2doc(input_str=TRAIN_DATA)
 
     for name in ('word', 'char', 'upos'):
-        columns = DEFAULT_TAG_COLUMNS + (TagColumn(name, MISC, "BIS", TagKind.AUTO, False),)
+        columns = DEFAULT_TAG_COLUMNS + (TagColumn(name, MISC, "BIS", TagKind.AUTO, False, ("upos",)),)
         with pytest.raises(ValueError):
             Dataset.init_vocab([doc], args, columns)
 

@@ -54,13 +54,23 @@ class TagKind(Enum):
 #           the Document and scored.  Only the three native CoNLL-U
 #           columns have a place to be written to, so extra columns
 #           are trained but not emitted.
-TagColumn = namedtuple("TagColumn", ["name", "field", "misc_key", "kind", "output"])
+# parents:  which columns this one is conditioned on.  upos has none,
+#           as it is the root; everything else defaults to upos.
+TagColumn = namedtuple("TagColumn", ["name", "field", "misc_key", "kind", "output", "parents"])
 
-UPOS_COLUMN  = TagColumn("upos",  UPOS,  None, TagKind.WORD,     True)
-XPOS_COLUMN  = TagColumn("xpos",  XPOS,  None, TagKind.AUTO,     True)
-FEATS_COLUMN = TagColumn("feats", FEATS, None, TagKind.FEATURES, True)
+UPOS_COLUMN  = TagColumn("upos",  UPOS,  None, TagKind.WORD,     True,  ())
+XPOS_COLUMN  = TagColumn("xpos",  XPOS,  None, TagKind.AUTO,     True,  ("upos",))
+FEATS_COLUMN = TagColumn("feats", FEATS, None, TagKind.FEATURES, True,  ("upos",))
 
 DEFAULT_TAG_COLUMNS = (UPOS_COLUMN, XPOS_COLUMN, FEATS_COLUMN)
+
+# how a column is told about its parents.  TAG_EMB embeds the parent's
+# predicted (or gold, while training) tag; HIDDEN feeds the parent's
+# hidden layer, which is wider and carries a gradient back into the
+# parent's head.
+TAG_LINK_EMB = "tag_emb"
+TAG_LINK_HIDDEN = "hidden"
+TAG_LINKS = (TAG_LINK_EMB, TAG_LINK_HIDDEN)
 
 RESERVED_NAMES = frozenset(["char", "word"] + [x.name for x in DEFAULT_TAG_COLUMNS])
 
@@ -89,12 +99,99 @@ def parse_extra_tag_columns(spec):
         if name in seen:
             raise ValueError("Tag column '%s' listed twice in --extra_tag_columns" % spec)
         seen.add(name)
-        columns.append(TagColumn(name, MISC, misc_key, TagKind.AUTO, False))
+        columns.append(TagColumn(name, MISC, misc_key, TagKind.AUTO, False, ("upos",)))
     return tuple(columns)
 
-def build_tag_columns(extra_spec=None):
+def parse_tag_column_parents(spec, columns):
+    """
+    Apply a "child=parent,parent;child=parent" spec to a list of columns
+
+    Every column is conditioned on upos unless it says otherwise.  A
+    column may be conditioned on any other column instead, or on
+    several, as long as the result is acyclic - see model.py for what
+    the conditioning actually feeds forward.
+    """
+    if not spec:
+        return tuple(columns)
+
+    by_name = {x.name: x for x in columns}
+    parents = {}
+    for piece in spec.split(";"):
+        piece = piece.strip()
+        if not piece:
+            continue
+        child, sep, names = piece.partition("=")
+        child = child.strip()
+        if not sep:
+            raise ValueError("--tag_column_parents needs child=parent, got '%s'" % piece)
+        if child not in by_name:
+            raise ValueError("Unknown tag column '%s' in --tag_column_parents" % child)
+        if child in parents:
+            raise ValueError("Tag column '%s' listed twice in --tag_column_parents" % child)
+        if child == UPOS_COLUMN.name:
+            raise ValueError("Cannot give '%s' a parent: it is the root of the tag columns" % child)
+        parents[child] = tuple(x.strip() for x in names.split(",") if x.strip())
+
+    columns = tuple(x._replace(parents=parents.get(x.name, x.parents)) for x in columns)
+    validate_tag_columns(columns)
+    return columns
+
+def validate_tag_columns(columns):
+    """Check that the columns name a sensible acyclic set of connections"""
+    names = [x.name for x in columns]
+    if not names or names[0] != UPOS_COLUMN.name:
+        raise ValueError("The first tag column must be %s, got %s" % (UPOS_COLUMN.name, names))
+    known = set(names)
+    for column in columns:
+        if column.name == UPOS_COLUMN.name:
+            if column.parents:
+                raise ValueError("'%s' is the root and cannot have parents" % column.name)
+            continue
+        if not column.parents:
+            raise ValueError("Tag column '%s' has no parents.  Use %s to hang it off the root" %
+                             (column.name, UPOS_COLUMN.name))
+        for parent in column.parents:
+            if parent not in known:
+                raise ValueError("Tag column '%s' has an unknown parent '%s'" % (column.name, parent))
+            if parent == column.name:
+                raise ValueError("Tag column '%s' cannot be its own parent" % column.name)
+    # a cycle shows up here as a name which can never be emitted
+    tag_column_eval_order(columns)
+    return columns
+
+def tag_column_eval_order(columns):
+    """
+    The order the heads have to be computed in, so a parent is always ready
+
+    The declared order of the columns is what lines the tags and the
+    predictions up with each other; this is only about computation, so
+    a column may be conditioned on one declared after it.
+    """
+    parents = {x.name: x.parents for x in columns}
+    order = []
+    done = set()
+    visiting = set()
+
+    def visit(name, path):
+        if name in done:
+            return
+        if name in visiting:
+            raise ValueError("Tag columns have a cycle in their parents: %s" % " -> ".join(path + [name]))
+        visiting.add(name)
+        for parent in parents[name]:
+            visit(parent, path + [name])
+        visiting.discard(name)
+        done.add(name)
+        order.append(name)
+
+    for column in columns:
+        visit(column.name, [])
+    return order
+
+def build_tag_columns(extra_spec=None, parent_spec=None):
     """The three native columns, plus whatever extras were asked for"""
-    return DEFAULT_TAG_COLUMNS + parse_extra_tag_columns(extra_spec)
+    columns = DEFAULT_TAG_COLUMNS + parse_extra_tag_columns(extra_spec)
+    return parse_tag_column_parents(parent_spec, columns)
 
 def tag_columns_to_config(columns):
     """
@@ -104,7 +201,7 @@ def tag_columns_to_config(columns):
     Models are loaded with weights_only=True, which will not unpickle a
     namedtuple or an Enum, so the config can only hold builtins.
     """
-    return [[x.name, x.field, x.misc_key, x.kind.name, x.output] for x in columns]
+    return [[x.name, x.field, x.misc_key, x.kind.name, x.output, list(x.parents)] for x in columns]
 
 def tag_columns_from_config(config):
     """
@@ -119,14 +216,31 @@ def tag_columns_from_config(config):
         return DEFAULT_TAG_COLUMNS
     if isinstance(config[0], TagColumn):
         return tuple(config)
-    return tuple(TagColumn(name, field, misc_key, TagKind[kind], output)
-                 for name, field, misc_key, kind, output in config)
+    columns = []
+    for row in config:
+        name, field, misc_key, kind, output = row[:5]
+        parents = tuple(row[5]) if len(row) > 5 else (() if name == UPOS_COLUMN.name else (UPOS_COLUMN.name,))
+        columns.append(TagColumn(name, field, misc_key, TagKind[kind], output, parents))
+    return tuple(columns)
 
 def tag_columns_from_args(args):
     """Pull the columns out of an args dict, defaulting to the native three"""
     if args is None:
         return DEFAULT_TAG_COLUMNS
     return tag_columns_from_config(args.get('tag_columns'))
+
+def set_misc_value(misc, key, value):
+    """
+    Put key=value into a MISC field, leaving everything else in it alone
+
+    An existing entry for the key is replaced rather than repeated, and
+    a value of '_' means there is nothing to say, so the key is left out.
+    """
+    pieces = [] if not misc or misc == '_' else misc.split("|")
+    pieces = [x for x in pieces if not x.startswith(key + "=")]
+    if value and value != '_':
+        pieces.append("%s=%s" % (key, value))
+    return "|".join(pieces) if pieces else "_"
 
 def extract_misc_value(misc, key):
     """
