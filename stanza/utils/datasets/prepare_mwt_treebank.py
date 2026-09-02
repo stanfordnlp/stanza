@@ -24,7 +24,7 @@ from stanza.utils.datasets.contract_mwt import contract_mwt
 # languages where the MWTs are always a composition of the words themselves
 KNOWN_COMPOSABLE_MWTS = {"en"}
 # ... but partut is not put together that way
-MWT_EXCEPTIONS = {"en_partut"}
+MWT_EXCEPTIONS = {"en_partut", "en_lines"}
 
 def copy_conllu(tokenizer_dir, mwt_dir, short_name, dataset, particle):
     input_conllu_tokenizer = f"{tokenizer_dir}/{short_name}.{dataset}.gold.conllu"
