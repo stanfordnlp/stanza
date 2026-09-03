@@ -516,7 +516,7 @@ def write_augmented_dataset(input_conllu, output_conllu, augment_function):
 
     write_sentences_to_conllu(output_conllu, new_sents)
 
-def build_combined_italian_dataset(paths, model_type, dataset):
+def build_combined_italian_dataset(paths, model_type, dataset, args):
     udbase_dir = paths["UDBASE"]
     if dataset == 'train':
         # could maybe add ParTUT, but that dataset has a slightly different xpos set
@@ -548,7 +548,7 @@ def check_gum_ready(udbase_dir):
     if common.mostly_underscores(gum_conllu):
         raise ValueError("Cannot process UD_English-GUMReddit in its current form.  There should be a download script available in the directory which will help integrate the missing proprietary values.  Please run that script to update the data, then try again.")
 
-def build_combined_english_dataset(paths, model_type, dataset):
+def build_combined_english_dataset(paths, model_type, dataset, args):
     """
     en_combined is currently EWT, GUM, PUD, Pronouns, and handparsed
     """
@@ -562,17 +562,37 @@ def build_combined_english_dataset(paths, model_type, dataset):
         # NOTE: in order to get the best results, make sure each of these treebanks have the latest edits applied
         train_treebanks = ["UD_English-EWT", "UD_English-GUM", "UD_English-GUMReddit"]
         test_treebanks = ["UD_English-PUD", "UD_English-Pronouns"]
-        sents = []
+        other_treebanks = ["UD_English-ParTUT", "UD_English-LinES"]
+        docs = []
         for treebank in train_treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
             new_sents = read_sentences_from_conllu(conllu_file)
             print("Read %d sentences from %s" % (len(new_sents), conllu_file))
-            sents.extend(new_sents)
+            docs.append(new_sents)
         for treebank in test_treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
             new_sents = read_sentences_from_conllu(conllu_file)
             print("Read %d sentences from %s" % (len(new_sents), conllu_file))
-            sents.extend(new_sents)
+            docs.append(new_sents)
+
+        sents = [sent for doc in docs for sent in doc]
+        if model_type != common.ModelType.POS:
+            return sents
+        if not args.english_additional:
+            return sents
+
+        docs = {"ptb_xpos": sents}
+        for treebank in other_treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
+            short_name = treebank_to_short_name(treebank)
+            short_name = short_name.split("_")[1]
+            new_sents = read_sentences_from_conllu(conllu_file)
+            print("Read %d sentences from %s" % (len(new_sents), conllu_file))
+            xpos_short_name = "xpos_%s" % short_name
+            new_sents = xpos_to_misc(new_sents, xpos_short_name)
+            print("  Converted xpos to misc column %s" % xpos_short_name)
+            docs[short_name] = new_sents
+        return docs
     else:
         ewt_conllu = common.find_treebank_dataset_file("UD_English-EWT", udbase_dir, dataset, "conllu")
         sents = read_sentences_from_conllu(ewt_conllu)
@@ -795,7 +815,25 @@ def strip_feats(sents):
     """
     return strip_column(sents, 5)
 
-def build_combined_japanese_dataset(paths, model_type, dataset):
+def xpos_to_misc(sents, xpos_name):
+    new_sents = []
+    for sentence in sents:
+        new_sent = []
+        for word in sentence:
+            if word.startswith("#"):
+                new_sent.append(word)
+                continue
+            pieces = word.split("\t")
+            if pieces[9] == '_':
+                pieces[9] = "%s=%s" % (xpos_name, pieces[4])
+            else:
+                pieces[9] += "|%s=%s" % (xpos_name, pieces[4])
+            pieces[4] = "_"
+            new_sent.append("\t".join(pieces))
+        new_sents.append(new_sent)
+    return new_sents
+
+def build_combined_japanese_dataset(paths, model_type, dataset, args):
     """
     GSD with a handparsed dataset of some short verb phrases
     """
@@ -826,7 +864,7 @@ def build_combined_japanese_dataset(paths, model_type, dataset):
         return gsd_sents
 
 
-def build_combined_albanian_dataset(paths, model_type, dataset):
+def build_combined_albanian_dataset(paths, model_type, dataset, args):
     """
     sq_combined is STAF as the base, with TSA added for some things
     """
@@ -871,7 +909,7 @@ def build_combined_albanian_dataset(paths, model_type, dataset):
     sents = read_sentences_from_conllu(conllu_file)
     return sents
 
-def build_combined_german_dataset(paths, model_type, dataset):
+def build_combined_german_dataset(paths, model_type, dataset, args):
     """
     de_combined is currently GSD, with lemma information from Wiktionary
 
@@ -890,7 +928,7 @@ def build_combined_german_dataset(paths, model_type, dataset):
     return sents
 
 
-def build_combined_spanish_dataset(paths, model_type, dataset):
+def build_combined_spanish_dataset(paths, model_type, dataset, args):
     """
     es_combined is AnCora and GSD put together
 
@@ -942,7 +980,7 @@ def build_combined_spanish_dataset(paths, model_type, dataset):
 
     return sents
 
-def build_combined_french_dataset(paths, model_type, dataset):
+def build_combined_french_dataset(paths, model_type, dataset, args):
     udbase_dir = paths["UDBASE"]
     handparsed_dir = paths["HANDPARSED_DIR"]
     if dataset == 'train':
@@ -966,7 +1004,7 @@ def build_combined_french_dataset(paths, model_type, dataset):
 
     return sents
 
-def build_combined_slovenian_dataset(paths, model_type, dataset):
+def build_combined_slovenian_dataset(paths, model_type, dataset, args):
     # According to Kaja Dobrovoljc (and Claude), the annotation schemes for these two datasets are very compatible
     udbase_dir = paths["UDBASE"]
     if dataset == 'train':
@@ -1004,7 +1042,7 @@ def build_extra_combined_slovenian_dataset(paths, model_type, dataset, args):
     return all_sents
 
 
-def build_combined_finnish_dataset(paths, model_type, dataset):
+def build_combined_finnish_dataset(paths, model_type, dataset, args):
     """
     Combine the TDT dataset with a small file of tokenization fixes
 
@@ -1054,7 +1092,7 @@ def build_extra_combined_finnish_dataset(paths, model_type, dataset, args):
             return extra_sents
     return []
 
-def build_combined_hebrew_dataset(paths, model_type, dataset):
+def build_combined_hebrew_dataset(paths, model_type, dataset, args):
     """
     Combines the IAHLT treebank with an updated form of HTB where the annotation style more closes matches IAHLT
 
@@ -1141,7 +1179,7 @@ def build_combined_dataset(paths, short_name, model_type, args):
     extra_fn = COMBINED_EXTRA_FNS.get(short_name, None)
     for dataset in ("train", "dev", "test"):
         output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
-        sents = build_fn(paths, model_type, dataset)
+        sents = build_fn(paths, model_type, dataset, args)
         if isinstance(sents, dict):
             if dataset == 'train' and args.augment:
                 for filename in list(sents.keys()):
