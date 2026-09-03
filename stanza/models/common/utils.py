@@ -880,7 +880,7 @@ def build_save_each_filename(base_filename):
         base_filename % 1
     except TypeError:
         # so models.pt -> models_0001.pt, etc
-        pieces = os.path.splitext(model_save_each_file)
+        pieces = os.path.splitext(base_filename)
         base_filename = pieces[0] + "_%04d" + pieces[1]
     return base_filename
 
