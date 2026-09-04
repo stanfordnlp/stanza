@@ -55,6 +55,7 @@ def process_treebank(treebank, model_type, paths, args):
         tokenizer_args = argparse.Namespace()
         tokenizer_args.augment = False
         tokenizer_args.prepare_labels = True
+        tokenizer_args.small_dataset_threshold = args.small_dataset_threshold
         tokenizer_args.use_spanish_future = args.use_spanish_future
         tokenizer_args.split_ratio = args.split_ratio
         prepare_tokenizer_treebank.process_treebank(treebank, model_type, paths, tokenizer_args)
