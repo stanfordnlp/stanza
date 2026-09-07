@@ -75,7 +75,9 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, args, postproces
         args = copy.deepcopy(args)
         args.augment = augment
         args.prepare_labels = False
-        process_treebank(treebank, model_type, paths, args)
+        success = process_treebank(treebank, model_type, paths, args)
+        if not success:
+            return False
 
         os.makedirs(dest_dir, exist_ok=True)
 
