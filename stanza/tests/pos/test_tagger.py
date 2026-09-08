@@ -383,6 +383,30 @@ class TestTagger:
         with_extra = predict(str(tmp_path / "extra.conllu"), ['--write_extra_tag_columns'])
         assert 'BIS=' in with_extra
 
+    def test_train_ratios_by_name(self, tmp_path, wordvec_pretrain_file):
+        """A ratio can name a training file, including one inside a zip"""
+        positional, named, default = tagger.parse_train_ratios("1.0;0.3")
+        assert positional == [1.0, 0.3] and named == {} and default == 1.0
+
+        positional, named, default = tagger.parse_train_ratios("1.0;second.conllu=0.3")
+        assert positional == [] and named == {"second.conllu": 0.3} and default == 1.0
+
+        positional, named, default = tagger.parse_train_ratios("0.5;second.conllu=0.3")
+        assert named == {"second.conllu": 0.3} and default == 0.5
+
+        # a named ratio wins over the default, whatever the file is called
+        for names, expected in [(["second.conllu"], 0.3),
+                                (["some/dir/second.conllu"], 0.3),
+                                (["other.conllu"], 0.5)]:
+            assert tagger.train_file_ratio([], named, default, 0, names) == expected
+
+        with pytest.raises(ValueError):
+            tagger.parse_train_ratios("1.0;-0.5")
+        with pytest.raises(ValueError):
+            tagger.parse_train_ratios("a=0.5;a=0.3")
+        with pytest.raises(ValueError):
+            tagger.parse_train_ratios("not_a_number")
+
     def test_mismatched_tag_columns(self, tmp_path, wordvec_pretrain_file):
         """
         A model whose config disagrees with its parameters is an error, not a warning
