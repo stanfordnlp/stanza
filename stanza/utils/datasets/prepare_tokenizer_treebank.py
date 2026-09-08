@@ -39,6 +39,8 @@ from stanza.models.common.short_name_to_treebank import canonical_treebank_name
 from stanza.resources.default_packages import default_treebanks
 import stanza.utils.datasets.common as common
 from stanza.utils.datasets.common import read_sentences_from_conllu, write_sentences_to_conllu, write_sentences_to_file, INT_RE, MWT_RE, MWT_OR_COPY_RE
+from stanza.utils.datasets.indic.bho_bis_mapping import XPOS_TO_BIS
+import stanza.utils.datasets.indic.convert_iit_bhojpuri_pos as convert_iit_bhojpuri_pos
 import stanza.utils.datasets.tokenization.convert_ml_cochin as convert_ml_cochin
 import stanza.utils.datasets.tokenization.convert_my_alt as convert_my_alt
 import stanza.utils.datasets.tokenization.convert_vi_vlsp as convert_vi_vlsp
@@ -56,7 +58,7 @@ def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_n
     sents = read_sentences_from_conllu(original)
     write_sentences_to_conllu(copied, sents)
 
-def copy_conllu_treebank(treebank, model_type, paths, dest_dir, args, postprocess=None, augment=True):
+def copy_conllu_treebank(treebank, model_type, paths, dest_dir, args, postprocess=None, augment=None):
     """
     This utility method copies only the conllu files to the given destination directory.
 
@@ -73,7 +75,10 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, args, postproces
 
         # first we process the tokenization data
         args = copy.deepcopy(args)
-        args.augment = augment
+        if augment is None:
+            args.augment = args.augment
+        else:
+            args.augment = augment
         args.prepare_labels = False
         success = process_treebank(treebank, model_type, paths, args)
         if not success:
@@ -817,6 +822,47 @@ def strip_feats(sents):
     """
     return strip_column(sents, 5)
 
+def remap_xpos_to_misc(sents, mapping):
+    new_sents = []
+    xpos_name = "bis"
+    for sentence in sents:
+        new_sent = []
+        for word in sentence:
+            if word.startswith("#"):
+                new_sent.append(word)
+                continue
+            pieces = word.split("\t")
+            xpos = mapping(pieces[4])
+            if pieces[9] == '_':
+                pieces[9] = "%s=%s" % (xpos_name, xpos)
+            else:
+                pieces[9] += "|%s=%s" % (xpos_name, xpos)
+            new_sent.append("\t".join(pieces))
+        new_sents.append(new_sent)
+    return new_sents
+
+def read_tagged_sentences(input_file):
+    """
+    Reads a file of "word tag" from input_file, fakes a conllu file
+    """
+    sentences = []
+    current_sentence = []
+    with open(input_file, encoding="utf-8") as fin:
+        for line in fin:
+            line = line.strip()
+            if not line:
+                if current_sentence:
+                    sentences.append(current_sentence)
+                current_sentence = []
+                continue
+            pieces = line.split()
+            fake_head = "1" if current_sentence else "0"
+            fake_dep = "dep" if current_sentence else "root"
+            current_sentence.append("%d\t%s\t_\t_\t_\t_\t%s\t%s\t_\tbis=%s" % (len(current_sentence)+1, pieces[0], fake_head, fake_dep, pieces[1]))
+    if current_sentence:
+        sentences.append(current_sentence)
+    return sentences
+
 def xpos_to_misc(sents, xpos_name):
     new_sents = []
     for sentence in sents:
@@ -1131,7 +1177,44 @@ def build_combined_hebrew_dataset(paths, model_type, dataset, args):
 
     return sents
 
+def build_combined_bhojpuri_dataset(paths, model_type, dataset, args):
+    # always split, even though the input dataset is too small as of UD 2.18
+    # TODO: this method is awkward.  it is resplitting the one piece three times
+    #   instead of splitting it once and using the three results
+    args = copy.deepcopy(args)
+    args.small_dataset_threshold = 0
+    treebank = "UD_Bhojpuri-BHTB"
+    udbase_dir = paths["UDBASE"]
+    with tempfile.TemporaryDirectory() as output_dir:
+        conllu_files = process_test_only_ud_treebank(treebank, udbase_dir, output_dir, "bho_bthb", "bho", args)
+        if not conllu_files:
+            raise FileNotFoundError("Could not process %s" % treebank)
+        train_conllu, dev_conllu, test_conllu = conllu_files
+        if dataset == 'train':
+            input_conllu = train_conllu
+        elif dataset == 'dev':
+            input_conllu = dev_conllu
+        elif dataset == 'test':
+            input_conllu = test_conllu
+        else:
+            raise ValueError("Unexpected dataset value: %s" % dataset)
+        sents = read_sentences_from_conllu(input_conllu)
+        if dataset == 'train' and model_type is common.ModelType.POS:
+            sents = remap_xpos_to_misc(sents, lambda x: XPOS_TO_BIS[x])
+            sents = {"bhtb": sents}
+            bho_input_path = os.path.join(paths["STANZA_EXTERN_DIR"], "bhojpuri", "Bhojpuri-Magahi-and-Maithili-Linguistic-Resources", "bhojpuri", "pos-tagged", "bhojpuri-pos-tagged-ver-1.3.txt")
+            if not os.path.exists(bho_input_path):
+                raise FileNotFoundError("Could not find the IIT tagged BHO dataset at %s" % bho_input_path)
+            bho_output_path = os.path.join(output_dir, "iit.conllu")
+            convert_iit_bhojpuri_pos.convert(bho_input_path, bho_output_path)
+            iit_sents = read_tagged_sentences(bho_output_path)
+            print("Read %s sentences from the IIT dataset" % len(iit_sents))
+            sents["iit"] = iit_sents
+    return sents
+
+
 COMBINED_FNS = {
+    "bho_combined":build_combined_bhojpuri_dataset,
     "de_combined": build_combined_german_dataset,
     "en_combined": build_combined_english_dataset,
     "es_combined": build_combined_spanish_dataset,
@@ -1304,13 +1387,13 @@ def process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_nam
     """
     Process a large UD treebank with only a test
 
-    Return False if the treebank is too small
+    Return [] if the treebank is too small, returns the created files otherwise.
     """
     train_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
     dev_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
-    test_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu")
+    test_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
     if train_input_conllu or dev_input_conllu:
-        return False
+        return []
 
     train_output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, "train")
     dev_output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, "dev")
@@ -1319,7 +1402,7 @@ def process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_nam
     num_words = common.num_words_in_file(test_input_conllu)
     if num_words < args.small_dataset_threshold:
         print("Only had %d words, threshold was %d" % (num_words, args.small_dataset_threshold))
-        return False
+        return []
 
     if not split_conllu_file(treebank=treebank,
                              input_conllu=test_input_conllu,
@@ -1327,9 +1410,9 @@ def process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_nam
                              dev_output_conllu=dev_output_conllu,
                              test_output_conllu=test_output_conllu,
                              xv_ratio=args.split_ratio):
-        return False
+        return []
 
-    return True
+    return [train_output_conllu, dev_output_conllu, test_output_conllu]
 
 
 def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args):
@@ -1377,8 +1460,6 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
     return True
 
 def add_specific_args(parser):
-    parser.add_argument('--no_augment', action='store_false', dest='augment', default=True,
-                        help='Augment the dataset in various ways')
     parser.add_argument('--no_prepare_labels', action='store_false', dest='prepare_labels', default=True,
                         help='Prepare tokenizer and MWT labels.  Expensive, but obviously necessary for training those models.')
     convert_th_lst20.add_lst20_args(parser)
