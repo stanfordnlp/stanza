@@ -43,7 +43,7 @@ def build_argparse():
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for scoring.')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
     parser.add_argument('--no_gold_labels', dest='gold_labels', action='store_false', help="Don't score the eval file - perhaps it has no gold labels, for example.  Cannot be used at training time")
-    parser.add_argument('--train_ratios', type=str, default=None, help='How much of each training file to use per epoch, semicolon separated, one per entry in --train_file.  1.0 is a full pass.  Use this when one training file is much larger than the others, so that it does not supply most of the batches.  A file which expands to several files (a zip) gives its ratio to each of them.')
+    parser.add_argument('--train_ratios', type=str, default=None, help='How much of each training file to use per epoch, semicolon separated.  1.0 is a full pass.  Plain numbers are one per entry in --train_file, and a zip gives its ratio to each file inside it.  Alternatively, "name=ratio" entries match a file by name, including a file inside a zip, with any bare number in the same spec as the ratio for everything else.  Example: "1.0;bho_iit.conllu=0.3".')
     parser.add_argument('--extra_tag_columns', type=str, default=None, help='Additional tag columns to predict, beyond upos/xpos/feats.  Semicolon separated, each "name" or "name=MISC_KEY", read from the MISC field of the training files.  Example: "bis=BIS" to train a fourth head on a corpus tagged with a different POS scheme.  See extra_tag_columns.md for some English results')
     parser.add_argument('--write_extra_tag_columns', action='store_true', default=False, help='Write the extra tag columns into the MISC field of the output file.  There is no conllu column for them, so they are dropped otherwise.')
     parser.add_argument('--tag_column_parents', type=str, default=None, help='Which columns each output layer is conditioned on.  Semicolon separated "child=parent" or "child=parent,parent".  Everything hangs off upos by default.  Example: "bis=upos;xpos=bis" to feed upos into the bis layer and bis into the xpos layer.')
@@ -232,28 +232,83 @@ def get_eval_type(dev_batch):
         return SCORER_NAMES[scoreable[0]]
     return "AllTags"
 
-def parse_train_ratios(spec, train_files):
+def parse_train_ratios(spec):
     """
-    One ratio per entry in --train_file, defaulting to a full pass each
+    Read --train_ratios into a list of positional ratios and a table of named ones
+
+    A spec of plain numbers is positional, one per entry in --train_file.
+    A spec with any "name=ratio" entry is by name instead, matching the
+    name of a file or of a file inside a zip, with a bare number in the
+    same spec as the ratio for anything not named.
     """
     if not spec:
-        return [1.0] * len(train_files)
-    ratios = [float(x) for x in spec.split(";")]
-    if len(ratios) != len(train_files):
-        raise ValueError("Got %d --train_ratios for %d files in --train_file" % (len(ratios), len(train_files)))
-    if any(x < 0 for x in ratios):
-        raise ValueError("--train_ratios cannot be negative: %s" % spec)
-    if all(x == 0 for x in ratios):
-        raise ValueError("--train_ratios cannot all be zero: %s" % spec)
-    return ratios
+        return [], {}, 1.0
+
+    positional = []
+    named = {}
+    default = None
+    for piece in spec.split(";"):
+        piece = piece.strip()
+        if not piece:
+            continue
+        name, sep, value = piece.rpartition("=")
+        try:
+            ratio = float(value)
+        except ValueError:
+            raise ValueError("Could not read '%s' in --train_ratios as a number" % value)
+        if ratio < 0:
+            raise ValueError("--train_ratios cannot be negative: %s" % spec)
+        if sep:
+            if name in named:
+                raise ValueError("'%s' listed twice in --train_ratios" % name)
+            named[name] = ratio
+        elif named or default is not None:
+            if default is not None:
+                raise ValueError("--train_ratios has more than one unnamed ratio to use as the default: %s" % spec)
+            default = ratio
+        else:
+            positional.append(ratio)
+
+    if named:
+        # a spec which names anything is entirely by name, and any
+        # numbers in it are the default rather than positions
+        if len(positional) > 1:
+            raise ValueError("--train_ratios mixes named ratios with more than one positional ratio: %s" % spec)
+        if positional:
+            if default is not None:
+                raise ValueError("--train_ratios has more than one unnamed ratio to use as the default: %s" % spec)
+            default = positional.pop()
+    return positional, named, 1.0 if default is None else default
+
+def train_file_ratio(positional, named, default, index, names):
+    """
+    The ratio for one training file, which may be inside a zip
+
+    names are the ways this file can be referred to, most specific
+    first: for a file in a zip, the name inside the zip and then the zip
+    itself.
+    """
+    if named:
+        for name in names:
+            if name in named:
+                return named[name]
+            if os.path.basename(name) in named:
+                return named[os.path.basename(name)]
+        return default
+    if not positional:
+        return default
+    return positional[index]
 
 def load_training_data(args, pretrain):
     train_docs = []
     raw_train_files = args['train_file'].split(";")
-    train_ratios = parse_train_ratios(args.get('train_ratios'), raw_train_files)
+    positional, named, default_ratio = parse_train_ratios(args.get('train_ratios'))
+    if positional and len(positional) != len(raw_train_files):
+        raise ValueError("Got %d --train_ratios for %d files in --train_file" % (len(positional), len(raw_train_files)))
     doc_ratios = []
     train_files = []
-    for train_file, file_ratio in zip(raw_train_files, train_ratios):
+    for file_index, train_file in enumerate(raw_train_files):
+        file_ratio = train_file_ratio(positional, named, default_ratio, file_index, [train_file])
         if zipfile.is_zipfile(train_file):
             logger.info("Decompressing %s" % train_file)
             with zipfile.ZipFile(train_file) as zin:
@@ -265,7 +320,8 @@ def load_training_data(args, pretrain):
                         train_file_data, _, _ = CoNLL.conll2dict(input_str=train_str)
                         logger.info("Train File {} from {}, Data Size: {}".format(zipped_train_file, train_file, len(train_file_data)))
                         train_docs.append(Document(train_file_data))
-                        doc_ratios.append(file_ratio)
+                        doc_ratios.append(train_file_ratio(positional, named, file_ratio,
+                                                           file_index, [zipped_train_file, train_file]))
                         train_files.append("%s %s" % (train_file, zipped_train_file))
         else:
             logger.info("Reading %s" % train_file)
@@ -276,6 +332,15 @@ def load_training_data(args, pretrain):
             train_docs.append(Document(train_file_data))
             doc_ratios.append(file_ratio)
             train_files.append(train_file)
+    if named:
+        matched = set()
+        for train_file in train_files:
+            for piece in train_file.split(" "):
+                matched.add(piece)
+                matched.add(os.path.basename(piece))
+        unmatched = sorted(set(named) - matched)
+        if unmatched:
+            raise ValueError("--train_ratios names files which are not in the training data: %s" % ", ".join(unmatched))
     if sum(len(x.sentences) for x in train_docs) == 0:
         raise RuntimeError("Training data for the tagger is empty: %s" % args['train_file'])
     # we want to ensure that the model is able te output _ for empty columns,
