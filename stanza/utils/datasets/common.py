@@ -313,6 +313,7 @@ def build_argparse():
     parser.add_argument('--small_dataset_threshold', type=int, default=10_000, help="How many words we need in a test set before declaring it too small")
     parser.add_argument('--split_ratio', type=float, default=0.2, help="How large to split the dev/test chunks when splitting a single file into train/dev/test")
     parser.add_argument('--additional_files', type=str, default=[], nargs='+', help="Any additional files to include in the training data")
+    parser.add_argument('--no_augment', action='store_false', dest='augment', default=True, help='Augment the dataset in various ways')
 
     return parser
 
