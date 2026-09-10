@@ -364,7 +364,10 @@ class CoNLL:
           back out in the MISC column, which a document read from a treebank
           would not otherwise have
         """
-        doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file, keep_line_numbers=keep_line_numbers)
+        try:
+            doc_dict, doc_comments, doc_empty = CoNLL.conll2dict(input_file, input_str, ignore_gapping, zip_file=zip_file, keep_line_numbers=keep_line_numbers)
+        except CoNLLError as e:
+            raise CoNLLError("Could not read %s" % input_file) from e
         if not reconstruct_text:
             return Document(doc_dict, text=None, comments=doc_comments, empty_sentences=doc_empty)
 
