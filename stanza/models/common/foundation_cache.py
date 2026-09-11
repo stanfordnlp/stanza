@@ -62,8 +62,12 @@ class FoundationCache:
             self.bert = {}
             self.charlms = {}
             self.pretrains = {}
-            # future proof the module by using a lock for the glorious day
-            # when the GIL is finally gone
+            # Single lock shared across bert/charlm/pretrain dicts.
+            # Purpose: coalesce concurrent loads of the *same* key so two
+            # threads do not both download/construct the same large model
+            # and then discard one of the results. Heavy IO stays inside
+            # the lock for that reason (see discussion on issue #1677).
+            # Future-proofs dict mutation for when the GIL is finally gone.
             self.lock = threading.Lock()
         else:
             self.bert = other.bert
@@ -78,12 +82,25 @@ class FoundationCache:
 
     def load_bert_with_peft(self, transformer_name, peft_name, local_files_only=None, enable_gradient_checkpointing=False):
         """
-        Load a transformer only once
+        Load a transformer only once.
 
-        Uses a lock for thread safety
+        Fast path: if the transformer is already cached, return without
+        acquiring the lock. The lock is still held across a cache-miss load
+        so concurrent first-time loads of the same name coalesce instead of
+        racing duplicate downloads.
         """
         if transformer_name is None:
             return None, None, None
+        # Already-cached read-only hit: skip the lock so unrelated loaders
+        # are not blocked. Mutations (peft id bookkeeping, gradient
+        # checkpointing) still take the lock below.
+        if (
+            transformer_name in self.bert
+            and peft_name is None
+            and not enable_gradient_checkpointing
+        ):
+            bert_record = self.bert[transformer_name]
+            return bert_record.model, bert_record.tokenizer, None
         with self.lock:
             if transformer_name not in self.bert:
                 if local_files_only is None:
@@ -119,8 +136,18 @@ class FoundationCache:
             return bert_record.model, bert_record.tokenizer, peft_name
 
     def load_charlm(self, filename):
+        """
+        Load a character language model only once.
+
+        Fast already-cached check runs outside the lock. Cache-miss loads
+        still run under the lock so duplicate concurrent loads coalesce.
+        """
         if not filename:
             return None
+
+        if filename in self.charlms:
+            logger.debug("Reusing charlm from %s", filename)
+            return self.charlms[filename]
 
         with self.lock:
             if filename not in self.charlms:
@@ -133,12 +160,18 @@ class FoundationCache:
 
     def load_pretrain(self, filename):
         """
-        Load a pretrained word embedding only once
+        Load a pretrained word embedding only once.
 
-        Uses a lock for thread safety
+        Fast already-cached check runs outside the lock. Cache-miss loads
+        still run under the lock so duplicate concurrent loads coalesce.
         """
         if filename is None:
             return None
+
+        if filename in self.pretrains:
+            logger.debug("Reusing pretrain %s", filename)
+            return self.pretrains[filename]
+
         with self.lock:
             if filename not in self.pretrains:
                 logger.debug("Loading pretrain %s", filename)
