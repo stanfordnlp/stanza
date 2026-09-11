@@ -636,3 +636,21 @@ def test_coref_chains_misc_key():
     # NER and coref must remain distinct keys when both are present
     misc = dict_to_conll_text({ID: (1,), TEXT: "Joe", NER: "S-PERSON", COREF_CHAINS: [attachment]}).split("\t")[-1]
     assert misc == "ner=S-PERSON|coref_chains=unit-repr-id3"
+
+
+MWT_FEATS = """
+# text = au chien
+1-2	au	_	_	_	Typo=Yes	_	_	_	_
+1	a	_	ADP	_	_	3	case	_	_
+2	le	_	DET	_	_	3	det	_	_
+3	chien	chien	NOUN	_	_	0	root	_	_
+""".strip()
+
+def test_mwt_feats_survive_serialization():
+    """Morphological features on a multi-word token must survive serialization."""
+    doc = CoNLL.conll2doc(input_str=MWT_FEATS)
+    assert doc.sentences[0].tokens[0].feats == "Typo=Yes"
+
+    rebuilt = Document.from_serialized(doc.to_serialized())
+    assert rebuilt.sentences[0].tokens[0].feats == "Typo=Yes"
+    assert '1-2\tau\t_\t_\t_\tTypo=Yes\t_\t_\t_\t_' in "{:C}".format(rebuilt)
