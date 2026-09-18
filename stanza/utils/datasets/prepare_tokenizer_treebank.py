@@ -33,12 +33,15 @@ import tempfile
 import zipfile
 
 from collections import Counter
+from contextlib import contextmanager, nullcontext
 
 from stanza.models.common.constant import treebank_to_short_name
 from stanza.models.common.short_name_to_treebank import canonical_treebank_name
 from stanza.resources.default_packages import default_treebanks
 import stanza.utils.datasets.common as common
 from stanza.utils.datasets.common import read_sentences_from_conllu, write_sentences_to_conllu, write_sentences_to_file, INT_RE, MWT_RE, MWT_OR_COPY_RE
+from stanza.utils.datasets.indic.bho_bis_mapping import XPOS_TO_BIS
+import stanza.utils.datasets.indic.convert_iit_bhojpuri_pos as convert_iit_bhojpuri_pos
 import stanza.utils.datasets.tokenization.convert_ml_cochin as convert_ml_cochin
 import stanza.utils.datasets.tokenization.convert_my_alt as convert_my_alt
 import stanza.utils.datasets.tokenization.convert_vi_vlsp as convert_vi_vlsp
@@ -56,7 +59,7 @@ def copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_n
     sents = read_sentences_from_conllu(original)
     write_sentences_to_conllu(copied, sents)
 
-def copy_conllu_treebank(treebank, model_type, paths, dest_dir, args, postprocess=None, augment=True):
+def copy_conllu_treebank(treebank, model_type, paths, dest_dir, args, postprocess=None, augment=None):
     """
     This utility method copies only the conllu files to the given destination directory.
 
@@ -73,7 +76,10 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, args, postproces
 
         # first we process the tokenization data
         args = copy.deepcopy(args)
-        args.augment = augment
+        if augment is None:
+            args.augment = args.augment
+        else:
+            args.augment = augment
         args.prepare_labels = False
         success = process_treebank(treebank, model_type, paths, args)
         if not success:
@@ -89,6 +95,14 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, args, postproces
         postprocess(tokenizer_dir, "dev.gold", dest_dir, "dev.in", short_name)
         postprocess(tokenizer_dir, "test.gold", dest_dir, "test.in", short_name)
 
+def get_text_from_sent(sent):
+    # extract the #text line from the sentence, if it exists
+    for line in sent:
+        if line.startswith("# text"):
+            text = line.split("=", maxsplit=1)[1]
+            return text
+    return None
+
 def split_conllu_file(treebank, input_conllu, train_output_conllu, dev_output_conllu, test_output_conllu, xv_ratio):
     # set the seed for each data file so that the results are the same
     # regardless of how many treebanks are processed at once
@@ -96,7 +110,23 @@ def split_conllu_file(treebank, input_conllu, train_output_conllu, dev_output_co
 
     # read and shuffle conllu data
     sents = read_sentences_from_conllu(input_conllu)
+
+    # BHO in particular has an issue where 1/4 of the treebank is actually just duplicates
+    # so here we drop those duplicates so that the models aren't just memorizing sentences
+    known_text = set()
+    new_sents = []
+    for sent in sents:
+        text = get_text_from_sent(sent)
+        assert text
+        if text not in known_text:
+            new_sents.append(sent)
+            known_text.add(text)
+
+    print("Train/dev/test split not present.  Randomly splitting file from %s to %s, %s, %s" % (input_conllu, train_output_conllu, dev_output_conllu, test_output_conllu))
+    print("Found %d unique sentences out of %d in %s" % (len(new_sents), len(sents), input_conllu))
+    sents = new_sents
     random.shuffle(sents)
+
     n_dev = int(len(sents) * xv_ratio)
     assert n_dev >= 1, "Dev sentence number less than one."
     n_test = int(len(sents) * xv_ratio)
@@ -107,7 +137,6 @@ def split_conllu_file(treebank, input_conllu, train_output_conllu, dev_output_co
     dev_sents = sents[:n_dev]
     test_sents = sents[n_dev:n_dev+n_test]
     train_sents = sents[n_dev+n_test:]
-    print("Train/dev/test split not present.  Randomly splitting file from %s to %s, %s, %s" % (input_conllu, train_output_conllu, dev_output_conllu, test_output_conllu))
     print(f"{len(sents)} total sentences found: {n_train} in train, {n_dev} in dev, {n_test} in test")
 
     # write conllu
@@ -518,7 +547,7 @@ def write_augmented_dataset(input_conllu, output_conllu, augment_function):
 
     write_sentences_to_conllu(output_conllu, new_sents)
 
-def build_combined_italian_dataset(paths, model_type, dataset):
+def build_combined_italian_dataset(paths, model_type, dataset, args, context):
     udbase_dir = paths["UDBASE"]
     if dataset == 'train':
         # could maybe add ParTUT, but that dataset has a slightly different xpos set
@@ -550,7 +579,7 @@ def check_gum_ready(udbase_dir):
     if common.mostly_underscores(gum_conllu):
         raise ValueError("Cannot process UD_English-GUMReddit in its current form.  There should be a download script available in the directory which will help integrate the missing proprietary values.  Please run that script to update the data, then try again.")
 
-def build_combined_english_dataset(paths, model_type, dataset):
+def build_combined_english_dataset(paths, model_type, dataset, args, context):
     """
     en_combined is currently EWT, GUM, PUD, Pronouns, and handparsed
     """
@@ -564,17 +593,37 @@ def build_combined_english_dataset(paths, model_type, dataset):
         # NOTE: in order to get the best results, make sure each of these treebanks have the latest edits applied
         train_treebanks = ["UD_English-EWT", "UD_English-GUM", "UD_English-GUMReddit"]
         test_treebanks = ["UD_English-PUD", "UD_English-Pronouns"]
-        sents = []
+        other_treebanks = ["UD_English-ParTUT", "UD_English-LinES"]
+        docs = []
         for treebank in train_treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu", fail=True)
             new_sents = read_sentences_from_conllu(conllu_file)
             print("Read %d sentences from %s" % (len(new_sents), conllu_file))
-            sents.extend(new_sents)
+            docs.append(new_sents)
         for treebank in test_treebanks:
             conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
             new_sents = read_sentences_from_conllu(conllu_file)
             print("Read %d sentences from %s" % (len(new_sents), conllu_file))
-            sents.extend(new_sents)
+            docs.append(new_sents)
+
+        sents = [sent for doc in docs for sent in doc]
+        if model_type != common.ModelType.POS:
+            return sents
+        if not args.english_additional:
+            return sents
+
+        docs = {"ptb_xpos": sents}
+        for treebank in other_treebanks:
+            conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
+            short_name = treebank_to_short_name(treebank)
+            short_name = short_name.split("_")[1]
+            new_sents = read_sentences_from_conllu(conllu_file)
+            print("Read %d sentences from %s" % (len(new_sents), conllu_file))
+            xpos_short_name = "xpos_%s" % short_name
+            new_sents = xpos_to_misc(new_sents, xpos_short_name)
+            print("  Converted xpos to misc column %s" % xpos_short_name)
+            docs[short_name] = new_sents
+        return docs
     else:
         ewt_conllu = common.find_treebank_dataset_file("UD_English-EWT", udbase_dir, dataset, "conllu")
         sents = read_sentences_from_conllu(ewt_conllu)
@@ -797,7 +846,66 @@ def strip_feats(sents):
     """
     return strip_column(sents, 5)
 
-def build_combined_japanese_dataset(paths, model_type, dataset):
+def remap_xpos_to_misc(sents, mapping):
+    new_sents = []
+    xpos_name = "bis"
+    for sentence in sents:
+        new_sent = []
+        for word in sentence:
+            if word.startswith("#"):
+                new_sent.append(word)
+                continue
+            pieces = word.split("\t")
+            xpos = mapping(pieces[4])
+            if pieces[9] == '_':
+                pieces[9] = "%s=%s" % (xpos_name, xpos)
+            else:
+                pieces[9] += "|%s=%s" % (xpos_name, xpos)
+            new_sent.append("\t".join(pieces))
+        new_sents.append(new_sent)
+    return new_sents
+
+def read_tagged_sentences(input_file):
+    """
+    Reads a file of "word tag" from input_file, fakes a conllu file
+    """
+    sentences = []
+    current_sentence = []
+    with open(input_file, encoding="utf-8") as fin:
+        for line in fin:
+            line = line.strip()
+            if not line:
+                if current_sentence:
+                    sentences.append(current_sentence)
+                current_sentence = []
+                continue
+            pieces = line.split()
+            fake_head = "1" if current_sentence else "0"
+            fake_dep = "dep" if current_sentence else "root"
+            current_sentence.append("%d\t%s\t_\t_\t_\t_\t%s\t%s\t_\tbis=%s" % (len(current_sentence)+1, pieces[0], fake_head, fake_dep, pieces[1]))
+    if current_sentence:
+        sentences.append(current_sentence)
+    return sentences
+
+def xpos_to_misc(sents, xpos_name):
+    new_sents = []
+    for sentence in sents:
+        new_sent = []
+        for word in sentence:
+            if word.startswith("#"):
+                new_sent.append(word)
+                continue
+            pieces = word.split("\t")
+            if pieces[9] == '_':
+                pieces[9] = "%s=%s" % (xpos_name, pieces[4])
+            else:
+                pieces[9] += "|%s=%s" % (xpos_name, pieces[4])
+            pieces[4] = "_"
+            new_sent.append("\t".join(pieces))
+        new_sents.append(new_sent)
+    return new_sents
+
+def build_combined_japanese_dataset(paths, model_type, dataset, args, context):
     """
     GSD with a handparsed dataset of some short verb phrases
     """
@@ -828,7 +936,7 @@ def build_combined_japanese_dataset(paths, model_type, dataset):
         return gsd_sents
 
 
-def build_combined_albanian_dataset(paths, model_type, dataset):
+def build_combined_albanian_dataset(paths, model_type, dataset, args, context):
     """
     sq_combined is STAF as the base, with TSA added for some things
     """
@@ -873,7 +981,7 @@ def build_combined_albanian_dataset(paths, model_type, dataset):
     sents = read_sentences_from_conllu(conllu_file)
     return sents
 
-def build_combined_german_dataset(paths, model_type, dataset):
+def build_combined_german_dataset(paths, model_type, dataset, args, context):
     """
     de_combined is currently GSD, with lemma information from Wiktionary
 
@@ -892,7 +1000,7 @@ def build_combined_german_dataset(paths, model_type, dataset):
     return sents
 
 
-def build_combined_spanish_dataset(paths, model_type, dataset):
+def build_combined_spanish_dataset(paths, model_type, dataset, args, context):
     """
     es_combined is AnCora and GSD put together
 
@@ -944,7 +1052,7 @@ def build_combined_spanish_dataset(paths, model_type, dataset):
 
     return sents
 
-def build_combined_french_dataset(paths, model_type, dataset):
+def build_combined_french_dataset(paths, model_type, dataset, args, context):
     udbase_dir = paths["UDBASE"]
     handparsed_dir = paths["HANDPARSED_DIR"]
     if dataset == 'train':
@@ -968,7 +1076,7 @@ def build_combined_french_dataset(paths, model_type, dataset):
 
     return sents
 
-def build_combined_slovenian_dataset(paths, model_type, dataset):
+def build_combined_slovenian_dataset(paths, model_type, dataset, args, context):
     # According to Kaja Dobrovoljc (and Claude), the annotation schemes for these two datasets are very compatible
     udbase_dir = paths["UDBASE"]
     if dataset == 'train':
@@ -1006,7 +1114,7 @@ def build_extra_combined_slovenian_dataset(paths, model_type, dataset, args):
     return all_sents
 
 
-def build_combined_finnish_dataset(paths, model_type, dataset):
+def build_combined_finnish_dataset(paths, model_type, dataset, args, context):
     """
     Combine the TDT dataset with a small file of tokenization fixes
 
@@ -1056,7 +1164,7 @@ def build_extra_combined_finnish_dataset(paths, model_type, dataset, args):
             return extra_sents
     return []
 
-def build_combined_hebrew_dataset(paths, model_type, dataset):
+def build_combined_hebrew_dataset(paths, model_type, dataset, args, context):
     """
     Combines the IAHLT treebank with an updated form of HTB where the annotation style more closes matches IAHLT
 
@@ -1093,7 +1201,34 @@ def build_combined_hebrew_dataset(paths, model_type, dataset):
 
     return sents
 
+def build_combined_bhojpuri_dataset(paths, model_type, dataset, args, context):
+    output_dir, conllu_files = context
+    train_conllu, dev_conllu, test_conllu = conllu_files
+    if dataset == 'train':
+        input_conllu = train_conllu
+    elif dataset == 'dev':
+        input_conllu = dev_conllu
+    elif dataset == 'test':
+        input_conllu = test_conllu
+    else:
+        raise ValueError("Unexpected dataset value: %s" % dataset)
+    sents = read_sentences_from_conllu(input_conllu)
+    if dataset == 'train' and model_type is common.ModelType.POS:
+        sents = remap_xpos_to_misc(sents, lambda x: XPOS_TO_BIS[x])
+        sents = {"bhtb": sents}
+        bho_input_path = os.path.join(paths["STANZA_EXTERN_DIR"], "bhojpuri", "Bhojpuri-Magahi-and-Maithili-Linguistic-Resources", "bhojpuri", "pos-tagged", "bhojpuri-pos-tagged-ver-1.3.txt")
+        if not os.path.exists(bho_input_path):
+            raise FileNotFoundError("Could not find the IIT tagged BHO dataset at %s" % bho_input_path)
+        bho_output_path = os.path.join(output_dir, "iit.conllu")
+        convert_iit_bhojpuri_pos.convert(bho_input_path, bho_output_path)
+        iit_sents = read_tagged_sentences(bho_output_path)
+        print("Read %s sentences from the IIT dataset" % len(iit_sents))
+        sents["iit"] = iit_sents
+    return sents
+
+
 COMBINED_FNS = {
+    "bho_combined":build_combined_bhojpuri_dataset,
     "de_combined": build_combined_german_dataset,
     "en_combined": build_combined_english_dataset,
     "es_combined": build_combined_spanish_dataset,
@@ -1115,6 +1250,26 @@ COMBINED_EXTRA_FNS = {
     "it_combined": build_extra_combined_italian_dataset,
     "sl_combined": build_extra_combined_slovenian_dataset,
     "es_combined": build_extra_combined_spanish_dataset,
+}
+
+@contextmanager
+def build_combined_bhojpuri_context(paths, short_name, model_type, args):
+    # always split, even though the input dataset is too small as of UD 2.18
+    args = copy.deepcopy(args)
+    args.small_dataset_threshold = 0
+    treebank = "UD_Bhojpuri-BHTB"
+    udbase_dir = paths["UDBASE"]
+
+    with tempfile.TemporaryDirectory() as output_dir:
+        conllu_files = process_test_only_ud_treebank(treebank, udbase_dir, output_dir, "bho_bthb", "bho", args)
+        if not conllu_files:
+            raise FileNotFoundError("Could not process %s" % treebank)
+        # sanity check that it's three entries, as expected
+        train_conllu, dev_conllu, test_conllu = conllu_files
+        yield output_dir, conllu_files
+
+CONTEXT_FNS = {
+    "bho_combined": build_combined_bhojpuri_context,
 }
 
 def build_combined_other_dataset(language, paths, model_type, dataset):
@@ -1141,43 +1296,45 @@ def build_combined_dataset(paths, short_name, model_type, args):
     else:
         build_fn = COMBINED_FNS[short_name]
     extra_fn = COMBINED_EXTRA_FNS.get(short_name, None)
-    for dataset in ("train", "dev", "test"):
-        output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
-        sents = build_fn(paths, model_type, dataset)
-        if isinstance(sents, dict):
-            if dataset == 'train' and args.augment:
-                for filename in list(sents.keys()):
-                    sents[filename] = augment_punct(sents[filename])
-            if extra_fn is not None:
-                extra_sents = extra_fn(paths, model_type, dataset, args)
-                if extra_sents:
-                    sents['extra'] = extra_sents
-            if dataset == 'train':
-                for additional_filename in args.additional_files:
-                    additional_sentences = read_sentences_from_conllu(additional_filename)
-                    print("Loaded %d additional sentences from %s" % (len(additional_sentences), additional_filename))
-                    if additional_filename not in sents:
-                        sents[additional_filename] = []
-                    sents[additional_filename].extend(additional_sentences)
-            output_zip = os.path.splitext(output_conllu)[0] + ".zip"
-            with zipfile.ZipFile(output_zip, "w") as zout:
-                for filename in list(sents.keys()):
-                    with zout.open(filename + ".conllu", "w") as zfout:
-                        with io.TextIOWrapper(zfout, encoding='utf-8', newline='') as fout:
-                            write_sentences_to_file(fout, sents[filename])
-        else:
-            if dataset == 'train' and args.augment:
-                sents = augment_punct(sents)
-            if extra_fn is not None:
-                extra_sents = extra_fn(paths, model_type, dataset, args)
-                if extra_sents:
-                    sents.extend(extra_sents)
-            if dataset == 'train':
-                for additional_filename in args.additional_files:
-                    additional_sentences = read_sentences_from_conllu(additional_filename)
-                    print("Loaded %d additional sentences from %s" % (len(additional_sentences), additional_filename))
-                    sents.extend(additional_sentences)
-            write_sentences_to_conllu(output_conllu, sents)
+    context_fn = CONTEXT_FNS.get(short_name, nullcontext)
+    with context_fn(paths, short_name, model_type, args) as context:
+        for dataset in ("train", "dev", "test"):
+            output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
+            sents = build_fn(paths, model_type, dataset, args, context)
+            if isinstance(sents, dict):
+                if dataset == 'train' and args.augment:
+                    for filename in list(sents.keys()):
+                        sents[filename] = augment_punct(sents[filename])
+                if extra_fn is not None:
+                    extra_sents = extra_fn(paths, model_type, dataset, args)
+                    if extra_sents:
+                        sents['extra'] = extra_sents
+                if dataset == 'train':
+                    for additional_filename in args.additional_files:
+                        additional_sentences = read_sentences_from_conllu(additional_filename)
+                        print("Loaded %d additional sentences from %s" % (len(additional_sentences), additional_filename))
+                        if additional_filename not in sents:
+                            sents[additional_filename] = []
+                        sents[additional_filename].extend(additional_sentences)
+                output_zip = os.path.splitext(output_conllu)[0] + ".zip"
+                with zipfile.ZipFile(output_zip, "w") as zout:
+                    for filename in list(sents.keys()):
+                        with zout.open(filename + ".conllu", "w") as zfout:
+                            with io.TextIOWrapper(zfout, encoding='utf-8', newline='') as fout:
+                                write_sentences_to_file(fout, sents[filename])
+            else:
+                if dataset == 'train' and args.augment:
+                    sents = augment_punct(sents)
+                if extra_fn is not None:
+                    extra_sents = extra_fn(paths, model_type, dataset, args)
+                    if extra_sents:
+                        sents.extend(extra_sents)
+                if dataset == 'train':
+                    for additional_filename in args.additional_files:
+                        additional_sentences = read_sentences_from_conllu(additional_filename)
+                        print("Loaded %d additional sentences from %s" % (len(additional_sentences), additional_filename))
+                        sents.extend(additional_sentences)
+                write_sentences_to_conllu(output_conllu, sents)
 
 BIO_DATASETS = ("en_craft", "en_genia", "en_mimic")
 
@@ -1266,13 +1423,13 @@ def process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_nam
     """
     Process a large UD treebank with only a test
 
-    Return False if the treebank is too small
+    Return [] if the treebank is too small, returns the created files otherwise.
     """
     train_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
     dev_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "train", "conllu")
-    test_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu")
+    test_input_conllu = common.find_treebank_dataset_file(treebank, udbase_dir, "test", "conllu", fail=True)
     if train_input_conllu or dev_input_conllu:
-        return False
+        return []
 
     train_output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, "train")
     dev_output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, "dev")
@@ -1281,7 +1438,7 @@ def process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_nam
     num_words = common.num_words_in_file(test_input_conllu)
     if num_words < args.small_dataset_threshold:
         print("Only had %d words, threshold was %d" % (num_words, args.small_dataset_threshold))
-        return False
+        return []
 
     if not split_conllu_file(treebank=treebank,
                              input_conllu=test_input_conllu,
@@ -1289,9 +1446,9 @@ def process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_nam
                              dev_output_conllu=dev_output_conllu,
                              test_output_conllu=test_output_conllu,
                              xv_ratio=args.split_ratio):
-        return False
+        return []
 
-    return True
+    return [train_output_conllu, dev_output_conllu, test_output_conllu]
 
 
 def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args):
@@ -1339,8 +1496,6 @@ def process_partial_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name,
     return True
 
 def add_specific_args(parser):
-    parser.add_argument('--no_augment', action='store_false', dest='augment', default=True,
-                        help='Augment the dataset in various ways')
     parser.add_argument('--no_prepare_labels', action='store_false', dest='prepare_labels', default=True,
                         help='Prepare tokenizer and MWT labels.  Expensive, but obviously necessary for training those models.')
     convert_th_lst20.add_lst20_args(parser)

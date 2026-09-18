@@ -103,7 +103,7 @@ def main():
 import logging
 
 from stanza.models.pos.vocab import WordVocab, XPOSVocab
-from stanza.models.pos.xpos_vocab_utils import XPOSDescription, XPOSType, build_xpos_vocab, choose_simplest_factory
+from stanza.models.pos.xpos_vocab_utils import DEFAULT_XPOS_IDX, XPOSDescription, XPOSType, build_xpos_vocab, choose_simplest_factory
 
 # using a sublogger makes it easier to test in the unittests
 logger = logging.getLogger('stanza.models.pos.xpos_vocab_factory')
@@ -124,10 +124,23 @@ XPOS_DESCRIPTIONS = {''', file=f)
 
         print('''}
 
-def xpos_vocab_factory(data, shorthand):
+def xpos_vocab_factory(data, shorthand, idx=DEFAULT_XPOS_IDX, column_name='xpos'):
+    """
+    Build a vocab for a column of xpos-like tags.
+
+    idx is the position of the column in the per-word lists built by
+    Dataset.load_doc.  column_name says which column this is; only the
+    real xpos column is checked against the table above, since the
+    table is keyed by treebank and an extra tagset has no entry there.
+    """
+    if column_name != 'xpos':
+        desc = choose_simplest_factory(data, shorthand, idx=idx)
+        logger.info("Chose %s for the '%s' tag column of %s", desc, column_name, shorthand)
+        return build_xpos_vocab(desc, data, shorthand, idx=idx)
+
     if shorthand not in XPOS_DESCRIPTIONS:
         logger.warning("%s is not a known dataset.  Examining the data to choose which xpos vocab to use", shorthand)
-    desc = choose_simplest_factory(data, shorthand)
+    desc = choose_simplest_factory(data, shorthand, idx=idx)
     if shorthand in XPOS_DESCRIPTIONS:
         if XPOS_DESCRIPTIONS[shorthand] != desc:
             # log instead of throw
@@ -135,7 +148,7 @@ def xpos_vocab_factory(data, shorthand):
             logger.error("XPOS tagset in %s has apparently changed!  Was %s, is now %s", shorthand, XPOS_DESCRIPTIONS[shorthand], desc)
     else:
         logger.warning("Chose %s for the xpos factory for %s", desc, shorthand)
-    return build_xpos_vocab(desc, data, shorthand)
+    return build_xpos_vocab(desc, data, shorthand, idx=idx)
 ''', file=f)
 
     logger.info('Done!')

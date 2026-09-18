@@ -16,8 +16,39 @@ from stanza.models.common.utils import attach_bert_model
 from stanza.models.common.vocab import CompositeVocab
 from stanza.models.common.char_model import CharacterModel
 from stanza.models.common import utils
+from stanza.models.pos.tag_columns import (TAG_LINK_EMB, TAG_LINK_HIDDEN, TAG_LINKS,
+                                            tag_column_eval_order, tag_columns_from_args,
+                                            validate_tag_columns)
 
 logger = logging.getLogger('stanza')
+
+# Older model files predate the tag_columns config entry and name the
+# xpos and feats heads directly.  Map them onto the ModuleDict names so
+# a released model still loads.
+LEGACY_STATE_DICT_PREFIXES = (("xpos_hid.",    "tag_hid.xpos."),
+                              ("xpos_clf.",    "tag_clf.xpos."),
+                              ("ufeats_hid.",  "tag_hid.feats."),
+                              ("ufeats_clf.",  "tag_clf.feats."))
+
+def remap_legacy_state_dict(state_dict):
+    """
+    Rename the pre-ModuleDict head parameters, leaving anything else alone
+
+    Returns the state dict unchanged if it has no legacy names, so this
+    is safe to call on every load.
+    """
+    if not any(key.startswith(old) for key in state_dict for old, _ in LEGACY_STATE_DICT_PREFIXES):
+        return state_dict
+
+    logger.debug("Remapping legacy POS tagger head names in the saved model")
+    remapped = type(state_dict)()
+    for key, value in state_dict.items():
+        for old, new in LEGACY_STATE_DICT_PREFIXES:
+            if key.startswith(old):
+                key = new + key[len(old):]
+                break
+        remapped[key] = value
+    return remapped
 
 class Tagger(nn.Module):
     def __init__(self, args, vocab, emb_matrix=None, share_hid=False, foundation_cache=None, bert_model=None, bert_tokenizer=None, force_bert_saved=False, peft_name=None):
@@ -27,6 +58,25 @@ class Tagger(nn.Module):
         self.args = args
         self.share_hid = share_hid
         self.unsaved_modules = []
+
+        # UPOS is the root of the tag columns: every other column is
+        # conditioned on it, or on something which is
+        self.tag_columns = validate_tag_columns(tag_columns_from_args(args))
+        self.tag_names = [x.name for x in self.tag_columns]
+        self.tag_index = {name: idx for idx, name in enumerate(self.tag_names)}
+        self.column_parents = {x.name: x.parents for x in self.tag_columns}
+        # the order the heads are computed in, which is not the order
+        # they are declared in when a column is conditioned on one
+        # declared after it
+        self.eval_order = [x for x in tag_column_eval_order(self.tag_columns) if x != 'upos']
+
+        self.link_mode = args.get('tag_column_link', TAG_LINK_EMB)
+        if self.link_mode not in TAG_LINKS:
+            raise ValueError("Unknown tag column link '%s', expected one of %s" % (self.link_mode, TAG_LINKS))
+        self.detach_parents = args.get('detach_parent_tags', False)
+
+        if share_hid and any(x.parents not in ((), ('upos',)) for x in self.tag_columns):
+            raise ValueError("share_hid has no per-column hidden layers and no tag embeddings, so it cannot condition a column on anything but upos")
 
         # input layers
         input_size = 0
@@ -100,30 +150,69 @@ class Tagger(nn.Module):
         self.upos_clf.bias.data.zero_()
 
         if share_hid:
-            clf_constructor = lambda insize, outsize: nn.Linear(insize, outsize)
+            clf_constructor = lambda insize, parent_size, outsize: nn.Linear(insize, outsize)
         else:
-            self.xpos_hid = nn.Linear(self.args['hidden_dim'] * 2, self.args['deep_biaff_hidden_dim'] if not isinstance(vocab['xpos'], CompositeVocab) else self.args['composite_deep_biaff_hidden_dim'])
-            self.ufeats_hid = nn.Linear(self.args['hidden_dim'] * 2, self.args['composite_deep_biaff_hidden_dim'])
-            clf_constructor = lambda insize, outsize: BiaffineScorer(insize, self.args['tag_emb_dim'], outsize)
+            clf_constructor = lambda insize, parent_size, outsize: BiaffineScorer(insize, parent_size, outsize)
 
-        if isinstance(vocab['xpos'], CompositeVocab):
-            self.xpos_clf = nn.ModuleList()
-            for l in vocab['xpos'].lens():
-                self.xpos_clf.append(clf_constructor(self.args['composite_deep_biaff_hidden_dim'], l))
-        else:
-            self.xpos_clf = clf_constructor(self.args['deep_biaff_hidden_dim'], len(vocab['xpos']))
-            if share_hid:
-                self.xpos_clf.weight.data.zero_()
-                self.xpos_clf.bias.data.zero_()
+        def hidden_size(name):
+            """the width of a column's hidden layer, which is also what it offers a child in HIDDEN mode"""
+            if name == 'upos':
+                return self.args['deep_biaff_hidden_dim']
+            if isinstance(vocab[name], CompositeVocab):
+                return self.args['composite_deep_biaff_hidden_dim']
+            return self.args['deep_biaff_hidden_dim']
 
-        self.ufeats_clf = nn.ModuleList()
-        for l in vocab['feats'].lens():
+        # in TAG_EMB mode a parent is represented by an embedding of its
+        # tag, so anything used as a parent needs an embedding table.
+        # upos already has one above
+        self.tag_emb = nn.ModuleDict()
+        if not share_hid and self.link_mode == TAG_LINK_EMB:
+            for column in self.tag_columns:
+                for parent in column.parents:
+                    if parent == 'upos' or parent in self.tag_emb:
+                        continue
+                    if isinstance(vocab[parent], CompositeVocab):
+                        raise ValueError("Tag column '%s' cannot be a parent with the %s link, as it has more than one tag per word.  Use the %s link instead" %
+                                         (parent, TAG_LINK_EMB, TAG_LINK_HIDDEN))
+                    self.tag_emb[parent] = nn.Embedding(len(vocab[parent]), self.args['tag_emb_dim'], padding_idx=0)
+
+        def parent_size(name):
+            if self.link_mode == TAG_LINK_EMB:
+                return self.args['tag_emb_dim'] * len(self.column_parents[name])
+            return sum(hidden_size(x) for x in self.column_parents[name])
+
+        # every column after upos gets its own hidden layer and its own
+        # classifier, keyed by name.  A ModuleDict rather than a list so
+        # that the saved parameter names are tied to the column names -
+        # tag_clf.xpos rather than tag_clf.0 - and a column's weights
+        # can only ever be loaded back into that same column.  With a
+        # list, two models whose columns are declared in a different
+        # order would load each other's heads into the wrong place,
+        # silently when the two tagsets happen to be the same size.
+        self.tag_hid = nn.ModuleDict()
+        self.tag_clf = nn.ModuleDict()
+        for name in self.tag_names[1:]:
+            composite = isinstance(vocab[name], CompositeVocab)
             if share_hid:
-                self.ufeats_clf.append(clf_constructor(self.args['deep_biaff_hidden_dim'], l))
-                self.ufeats_clf[-1].weight.data.zero_()
-                self.ufeats_clf[-1].bias.data.zero_()
+                # there is no hidden layer of its own: everything hangs
+                # off upos_hid, so that is the input size
+                insize = self.args['deep_biaff_hidden_dim']
             else:
-                self.ufeats_clf.append(clf_constructor(self.args['composite_deep_biaff_hidden_dim'], l))
+                insize = self.args['composite_deep_biaff_hidden_dim'] if composite else self.args['deep_biaff_hidden_dim']
+                self.tag_hid[name] = nn.Linear(self.args['hidden_dim'] * 2, insize)
+
+            psize = parent_size(name)
+            if composite:
+                clf = nn.ModuleList([clf_constructor(insize, psize, l) for l in vocab[name].lens()])
+                sub_clfs = clf
+            else:
+                clf = clf_constructor(insize, psize, len(vocab[name]))
+                sub_clfs = [clf]
+            if share_hid:
+                for sub_clf in sub_clfs:
+                    sub_clf.weight.data.zero_()
+                    sub_clf.bias.data.zero_()
+            self.tag_clf[name] = clf
 
         # criterion
         self.crit = nn.CrossEntropyLoss(ignore_index=0) # ignore padding
@@ -138,8 +227,19 @@ class Tagger(nn.Module):
     def log_norms(self):
         utils.log_norms(self)
 
-    def forward(self, word, word_mask, wordchars, wordchars_mask, upos, xpos, ufeats, pretrained, word_orig_idx, sentlens, wordlens, text):
-        
+    def forward(self, word, word_mask, wordchars, wordchars_mask, tags, pretrained, word_orig_idx, sentlens, wordlens, text):
+        """
+        tags is one entry per tag column, in the order of self.tag_names
+
+        An entry is None when the batch has no gold labels for that
+        column, in which case that head still predicts but contributes
+        nothing to the loss.  A short list (or None) is treated as all
+        None, which is what prediction time looks like.
+        """
+        if tags is None:
+            tags = []
+        tags = list(tags) + [None] * (len(self.tag_names) - len(tags))
+
         def pack(x):
             return pack_padded_sequence(x, sentlens, batch_first=True)
 
@@ -198,52 +298,82 @@ class Tagger(nn.Module):
         upos_hid = F.relu(self.upos_hid(self.drop(lstm_outputs)))
         upos_pred = self.upos_clf(self.drop(upos_hid))
 
-        preds = [pad(upos_pred).max(2)[1]]
-
+        upos = tags[0]
         if upos is not None:
             upos = pack(upos).data
             loss = self.crit(upos_pred.view(-1, upos_pred.size(-1)), upos.view(-1))
         else:
             loss = 0.0
 
-        if self.share_hid:
-            xpos_hid = upos_hid
-            ufeats_hid = upos_hid
+        # what each column leaves behind for the ones conditioned on it:
+        # its hidden layer, and, for a column with one tag per word, the
+        # scores it predicted.  The scores are only ever read to pick the
+        # most likely tag to embed, for a batch which has no gold tag to
+        # embed instead; they are not themselves fed to a child
+        hids = {'upos': upos_hid}
+        tag_scores = {'upos': upos_pred}
+        gold = {'upos': upos}
+        predictions = {'upos': pad(upos_pred).max(2)[1]}
 
-            clffunc = lambda clf, hid: clf(self.drop(hid))
-        else:
-            xpos_hid = F.relu(self.xpos_hid(self.drop(lstm_outputs)))
-            ufeats_hid = F.relu(self.ufeats_hid(self.drop(lstm_outputs)))
+        for name in self.eval_order:
+            tag = tags[self.tag_index[name]]
+            if tag is not None:
+                tag = pack(tag).data
+            gold[name] = tag
 
-            if self.training and upos is not None:
-                upos_emb = self.upos_emb(upos)
+            hid = upos_hid if self.share_hid else F.relu(self.tag_hid[name](self.drop(lstm_outputs)))
+            hids[name] = hid
+
+            if self.share_hid:
+                clffunc = lambda clf, hid: clf(self.drop(hid))
             else:
-                upos_emb = self.upos_emb(upos_pred.max(1)[1])
+                parent = self.parent_representation(name, hids, tag_scores, gold)
+                clffunc = lambda clf, hid: clf(self.drop(hid), self.drop(parent))
 
-            clffunc = lambda clf, hid: clf(self.drop(hid), self.drop(upos_emb))
+            if isinstance(self.vocab[name], CompositeVocab):
+                tag_preds = []
+                for i in range(len(self.vocab[name])):
+                    tag_pred = clffunc(self.tag_clf[name][i], hid)
+                    if tag is not None:
+                        loss += self.crit(tag_pred.view(-1, tag_pred.size(-1)), tag[:, i].view(-1))
+                    tag_preds.append(pad(tag_pred).max(2, keepdim=True)[1])
+                predictions[name] = torch.cat(tag_preds, 2)
+            else:
+                tag_pred = clffunc(self.tag_clf[name], hid)
+                tag_scores[name] = tag_pred
+                if tag is not None:
+                    loss += self.crit(tag_pred.view(-1, tag_pred.size(-1)), tag.view(-1))
+                predictions[name] = pad(tag_pred).max(2)[1]
 
-        if xpos is not None: xpos = pack(xpos).data
-        if isinstance(self.vocab['xpos'], CompositeVocab):
-            xpos_preds = []
-            for i in range(len(self.vocab['xpos'])):
-                xpos_pred = clffunc(self.xpos_clf[i], xpos_hid)
-                if xpos is not None:
-                    loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos[:, i].view(-1))
-                xpos_preds.append(pad(xpos_pred).max(2, keepdim=True)[1])
-            preds.append(torch.cat(xpos_preds, 2))
-        else:
-            xpos_pred = clffunc(self.xpos_clf, xpos_hid)
-            if xpos is not None:
-                loss += self.crit(xpos_pred.view(-1, xpos_pred.size(-1)), xpos.view(-1))
-            preds.append(pad(xpos_pred).max(2)[1])
-
-        ufeats_preds = []
-        if ufeats is not None: ufeats = pack(ufeats).data
-        for i in range(len(self.vocab['feats'])):
-            ufeats_pred = clffunc(self.ufeats_clf[i], ufeats_hid)
-            if ufeats is not None:
-                loss += self.crit(ufeats_pred.view(-1, ufeats_pred.size(-1)), ufeats[:, i].view(-1))
-            ufeats_preds.append(pad(ufeats_pred).max(2, keepdim=True)[1])
-        preds.append(torch.cat(ufeats_preds, 2))
+        # back into the declared order, which is the order the tags came
+        # in and the order the caller unmaps them in
+        preds = [predictions[name] for name in self.tag_names]
 
         return loss, preds
+
+    def parent_representation(self, name, hids, tag_scores, gold):
+        """
+        Build what a column is conditioned on, from the columns it hangs off
+
+        With the hidden link, a parent hands over its hidden layer, and
+        the gradient from this column travels back into that parent's
+        head unless detach_parent_tags is set.  With the tag embedding
+        link, a parent hands over an embedding of its tag - the gold one
+        while training, when this batch has it, and otherwise the one it
+        just predicted.
+        """
+        reps = []
+        for parent in self.column_parents[name]:
+            if self.link_mode == TAG_LINK_HIDDEN:
+                rep = hids[parent]
+                if self.detach_parents:
+                    rep = rep.detach()
+            else:
+                tag = gold.get(parent)
+                if self.training and tag is not None:
+                    tag_ids = tag
+                else:
+                    tag_ids = tag_scores[parent].max(1)[1]
+                rep = self.upos_emb(tag_ids) if parent == 'upos' else self.tag_emb[parent](tag_ids)
+            reps.append(rep)
+        return reps[0] if len(reps) == 1 else torch.cat(reps, 1)

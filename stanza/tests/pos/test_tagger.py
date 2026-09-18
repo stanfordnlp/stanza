@@ -112,6 +112,17 @@ TRAIN_DATA_NO_FEATS = """
 
 """.lstrip()
 
+TRAIN_DATA_EXTRA_COLUMN = """
+# sent_id = 12
+# text = It's all hers!
+1	It	it	_	_	_	4	nsubj	_	SpaceAfter=No|BIS=PRP
+2	's	be	_	_	_	4	cop	_	BIS=VAUX
+3	all	all	_	_	_	4	det:predet	_	BIS=DEM
+4	hers	hers	_	_	_	0	root	_	SpaceAfter=No|BIS=PRP
+5	!	!	_	_	_	4	punct	_	BIS=SYM
+
+""".lstrip()
+
 DEV_DATA = """
 1	From	from	ADP	IN	_	3	case	3:case	_
 2	the	the	DET	DT	Definite=Def|PronType=Art	3	det	3:det	_
@@ -265,12 +276,159 @@ class TestTagger:
         ufeats_unchanged = 0
         for t1, t2 in zip(saved_trainers[:-1], saved_trainers[1:]):
             upos_unchanged += torch.allclose(t1.model.upos_clf.weight, t2.model.upos_clf.weight)
-            xpos_unchanged += torch.allclose(t1.model.xpos_clf.W_bilin.weight, t2.model.xpos_clf.W_bilin.weight)
-            ufeats_unchanged += all(torch.allclose(f1.W_bilin.weight, f2.W_bilin.weight) for f1, f2 in zip(t1.model.ufeats_clf, t2.model.ufeats_clf))
+            xpos_unchanged += torch.allclose(t1.model.tag_clf['xpos'].W_bilin.weight, t2.model.tag_clf['xpos'].W_bilin.weight)
+            ufeats_unchanged += all(torch.allclose(f1.W_bilin.weight, f2.W_bilin.weight) for f1, f2 in zip(t1.model.tag_clf['feats'], t2.model.tag_clf['feats']))
         upos_norms = [torch.linalg.norm(t.model.upos_clf.weight) for t in saved_trainers]
         assert upos_unchanged == 1, "Unchanged: {} {} {} {}".format(upos_unchanged, xpos_unchanged, ufeats_unchanged, upos_norms)
         assert xpos_unchanged == 1, "Unchanged: %d %d %d" % (upos_unchanged, xpos_unchanged, ufeats_unchanged)
         assert ufeats_unchanged == 1, "Unchanged: %d %d %d" % (upos_unchanged, xpos_unchanged, ufeats_unchanged)
+
+    def test_extra_tag_column(self, tmp_path, wordvec_pretrain_file):
+        """
+        Train a fourth output layer on a tagset which only one of the training files has
+
+        The extra column is read from MISC, alongside whatever else is
+        already in MISC, and is not written to the output conllu, as
+        there is no column in the format for it to go to.
+        """
+        extra_args = ['--extra_tag_columns', 'bis=BIS', '--train_ratios', '1.0;0.5']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                    [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                    extra_args=extra_args)
+
+        assert trainer.model.tag_names == ['upos', 'xpos', 'feats', 'bis']
+        assert 'bis' in trainer.vocab
+        for tag in ('PRP', 'VAUX', 'DEM', 'SYM'):
+            assert tag in trainer.vocab['bis'], "Expected %s in the bis vocab" % tag
+        # SpaceAfter should not have been mistaken for part of the tag
+        assert 'No' not in trainer.vocab['bis']
+
+        # the three native columns are still the ones written out
+        assert [x.name for x in trainer.model.tag_columns if x.output] == ['upos', 'xpos', 'feats']
+
+    def test_extra_tag_column_reload(self, tmp_path, wordvec_pretrain_file):
+        """The extra columns have to survive a round trip through the model file"""
+        extra_args = ['--extra_tag_columns', 'bis=BIS']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                    [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                    extra_args=extra_args)
+        save_file = str(tmp_path / trainer.args['save_name'])
+        pt = pretrain.Pretrain(wordvec_pretrain_file)
+        reloaded = Trainer(pretrain=pt, model_file=save_file)
+        assert reloaded.model.tag_names == ['upos', 'xpos', 'feats', 'bis']
+        assert reloaded.model.tag_columns == trainer.model.tag_columns
+
+    def test_tag_column_parents(self, tmp_path, wordvec_pretrain_file):
+        """
+        Condition one output layer on another, in either direction
+
+        xpos is declared before bis but conditioned on it, so the heads
+        are computed in an order other than the one they are declared in.
+        """
+        for link in ('tag_emb', 'hidden'):
+            extra_args = ['--extra_tag_columns', 'bis=BIS',
+                          '--tag_column_parents', 'bis=upos;xpos=bis',
+                          '--tag_column_link', link]
+            trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                        [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                        extra_args=extra_args)
+            assert trainer.model.column_parents['xpos'] == ('bis',)
+            assert trainer.model.column_parents['bis'] == ('upos',)
+            assert trainer.model.eval_order.index('bis') < trainer.model.eval_order.index('xpos')
+
+            # the parent feeds the classifier, so its width shows up there
+            parent_width = trainer.model.tag_clf['xpos'].W_bilin.weight.shape[-1] - 1
+            expected = (trainer.args['tag_emb_dim'] if link == 'tag_emb'
+                        else trainer.args['deep_biaff_hidden_dim'])
+            assert parent_width == expected
+
+    def test_tag_column_multiple_parents(self, tmp_path, wordvec_pretrain_file):
+        """A column can be conditioned on more than one other column"""
+        extra_args = ['--extra_tag_columns', 'bis=BIS', '--tag_column_parents', 'xpos=upos,bis']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                    [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                    extra_args=extra_args)
+        assert trainer.model.column_parents['xpos'] == ('upos', 'bis')
+        parent_width = trainer.model.tag_clf['xpos'].W_bilin.weight.shape[-1] - 1
+        assert parent_width == trainer.args['tag_emb_dim'] * 2
+
+    def test_write_extra_tag_columns(self, tmp_path, wordvec_pretrain_file):
+        """
+        An extra tagset can be written to MISC, and is dropped otherwise
+
+        There is no conllu column for it, so MISC is the only place it
+        can go, and it should not disturb anything already there.
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                    [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                    extra_args=['--extra_tag_columns', 'bis=BIS'])
+        dev_file = str(tmp_path / "dev.conllu")
+
+        def predict(output_file, extra_args):
+            args = ['--mode', 'predict',
+                    '--wordvec_pretrain_file', wordvec_pretrain_file,
+                    '--eval_file', dev_file,
+                    '--output_file', output_file,
+                    '--shorthand', 'en_test',
+                    '--lang', 'en',
+                    '--save_dir', str(tmp_path),
+                    '--save_name', trainer.args['save_name']]
+            tagger.main(args + extra_args)
+            with open(output_file, encoding="utf-8") as fin:
+                return fin.read()
+
+        without = predict(str(tmp_path / "plain.conllu"), [])
+        assert 'BIS=' not in without
+
+        with_extra = predict(str(tmp_path / "extra.conllu"), ['--write_extra_tag_columns'])
+        assert 'BIS=' in with_extra
+
+    def test_train_ratios_by_name(self, tmp_path, wordvec_pretrain_file):
+        """A ratio can name a training file, including one inside a zip"""
+        positional, named, default = tagger.parse_train_ratios("1.0;0.3")
+        assert positional == [1.0, 0.3] and named == {} and default == 1.0
+
+        positional, named, default = tagger.parse_train_ratios("1.0;second.conllu=0.3")
+        assert positional == [] and named == {"second.conllu": 0.3} and default == 1.0
+
+        positional, named, default = tagger.parse_train_ratios("0.5;second.conllu=0.3")
+        assert named == {"second.conllu": 0.3} and default == 0.5
+
+        # a named ratio wins over the default, whatever the file is called
+        for names, expected in [(["second.conllu"], 0.3),
+                                (["some/dir/second.conllu"], 0.3),
+                                (["other.conllu"], 0.5)]:
+            assert tagger.train_file_ratio([], named, default, 0, names) == expected
+
+        with pytest.raises(ValueError):
+            tagger.parse_train_ratios("1.0;-0.5")
+        with pytest.raises(ValueError):
+            tagger.parse_train_ratios("a=0.5;a=0.3")
+        with pytest.raises(ValueError):
+            tagger.parse_train_ratios("not_a_number")
+
+    def test_mismatched_tag_columns(self, tmp_path, wordvec_pretrain_file):
+        """
+        A model whose config disagrees with its parameters is an error, not a warning
+
+        Loading such a model would otherwise leave a head at its random
+        initialization and silently produce nonsense for that column.
+        """
+        extra_args = ['--extra_tag_columns', 'bis=BIS']
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                    [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                    extra_args=extra_args)
+        save_file = str(tmp_path / trainer.args['save_name'])
+        pt = pretrain.Pretrain(wordvec_pretrain_file)
+
+        # drop the extra column from the config, leaving its parameters in the file
+        checkpoint = torch.load(save_file, lambda storage, loc: storage, weights_only=True)
+        checkpoint['config']['tag_columns'] = checkpoint['config']['tag_columns'][:3]
+        broken_file = str(tmp_path / "broken.pt")
+        torch.save(checkpoint, broken_file, _use_new_zipfile_serialization=False)
+
+        with pytest.raises(ValueError):
+            Trainer(pretrain=pt, model_file=broken_file)
 
     def test_save_each(self, tmp_path, wordvec_pretrain_file):
         extra_args = ['--save_each']
