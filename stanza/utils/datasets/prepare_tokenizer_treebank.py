@@ -95,6 +95,14 @@ def copy_conllu_treebank(treebank, model_type, paths, dest_dir, args, postproces
         postprocess(tokenizer_dir, "dev.gold", dest_dir, "dev.in", short_name)
         postprocess(tokenizer_dir, "test.gold", dest_dir, "test.in", short_name)
 
+def get_text_from_sent(sent):
+    # extract the #text line from the sentence, if it exists
+    for line in sent:
+        if line.startswith("# text"):
+            text = line.split("=", maxsplit=1)[1]
+            return text
+    return None
+
 def split_conllu_file(treebank, input_conllu, train_output_conllu, dev_output_conllu, test_output_conllu, xv_ratio):
     # set the seed for each data file so that the results are the same
     # regardless of how many treebanks are processed at once
@@ -102,7 +110,23 @@ def split_conllu_file(treebank, input_conllu, train_output_conllu, dev_output_co
 
     # read and shuffle conllu data
     sents = read_sentences_from_conllu(input_conllu)
+
+    # BHO in particular has an issue where 1/4 of the treebank is actually just duplicates
+    # so here we drop those duplicates so that the models aren't just memorizing sentences
+    known_text = set()
+    new_sents = []
+    for sent in sents:
+        text = get_text_from_sent(sent)
+        assert text
+        if text not in known_text:
+            new_sents.append(sent)
+            known_text.add(text)
+
+    print("Train/dev/test split not present.  Randomly splitting file from %s to %s, %s, %s" % (input_conllu, train_output_conllu, dev_output_conllu, test_output_conllu))
+    print("Found %d unique sentences out of %d in %s" % (len(new_sents), len(sents), input_conllu))
+    sents = new_sents
     random.shuffle(sents)
+
     n_dev = int(len(sents) * xv_ratio)
     assert n_dev >= 1, "Dev sentence number less than one."
     n_test = int(len(sents) * xv_ratio)
@@ -113,7 +137,6 @@ def split_conllu_file(treebank, input_conllu, train_output_conllu, dev_output_co
     dev_sents = sents[:n_dev]
     test_sents = sents[n_dev:n_dev+n_test]
     train_sents = sents[n_dev+n_test:]
-    print("Train/dev/test split not present.  Randomly splitting file from %s to %s, %s, %s" % (input_conllu, train_output_conllu, dev_output_conllu, test_output_conllu))
     print(f"{len(sents)} total sentences found: {n_train} in train, {n_dev} in dev, {n_test} in test")
 
     # write conllu
