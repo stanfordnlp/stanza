@@ -150,12 +150,14 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
                 for comment in semgrex_pattern.comments:
                     sentence.add_comment("# semgrex comment = %s" % comment)
                 highlight_tokens.append(match.matchIndex)
+                for node in match.node:
+                    highlight_tokens.append(node.matchIndex)
                 for edge in match.edge:
                     highlight_edges.append(edge.target)
             if len(highlight_tokens) > 0:
-                sentence.add_comment("# highlight tokens = %s" % (" ".join("%d" % x for x in highlight_tokens)))
+                sentence.add_comment("# highlight tokens = %s" % (" ".join("%d" % x for x in sorted(highlight_tokens))))
             if len(highlight_edges) > 0:
-                sentence.add_comment("# highlight deprels = %s" % (" ".join("%d" % x for x in highlight_edges)))
+                sentence.add_comment("# highlight deprels = %s" % (" ".join("%d" % x for x in sorted(highlight_edges))))
 
         if sentence_matched and not matches_only:
             for semgrex_idx, pattern_text in enumerate(pattern_texts):
