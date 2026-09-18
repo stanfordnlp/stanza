@@ -6,6 +6,7 @@ XPOS_TO_BIS = {
     "N_NST":   "NST",
 
     "V_VM":    "VM",
+    "V_VMP":   "VM",
     "V_VAUX":  "VAUX",
 
     "PR_PRP":  "PRP",
@@ -14,31 +15,30 @@ XPOS_TO_BIS = {
     "PR_PRL":  "PRP",
     "PR_PRQ":  "WQ",
 
-    "DM_DMQ":  "WQ",
     "DM_DMD":  "DEM",
     "DM_DMR":  "DEM",
     "DM_DMI":  "DEM",
+    "DM_DMQ":  "WQ",
 
     "CC_CCD":  "CC",
     "CC_CCS":  "CC",
 
+    # IIT has no QT category, so these BIS tags do not appear in that data
     "QT_QTC":  "QC",
     "QT_QTF":  "QF",
     "QT_QTO":  "QO",
 
+    "RP_RPD":  "RP",
     "RP_NEG":  "NEG",
-    "RP_RPD":  "RDP",
     "RP_INTF": "INTF",
-    "RP_CL":   "CL",
     "RP_INJ":  "INJ",
+    "RP_CL":   "CL",
 
-    "RD_ECH":  "ECH",
     "RD_PUNC": "SYM",
     "RD_SYM":  "SYM",
+    "RD_ECH":  "ECH",
 
-    "JJ":      "JJ",
     "PSP":     "PSP",
+    "JJ":      "JJ",
     "RB":      "RB",
-    "RP":      "RP",
 }
-
