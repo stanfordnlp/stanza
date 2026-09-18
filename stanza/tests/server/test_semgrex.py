@@ -289,7 +289,7 @@ EXPECTED_ONE_SENTENCE_MATCH = """
 # text = Unban Mox Opal!
 # sent_id = 0
 # semgrex pattern = |{cpos:PROPN}=source <=zzz {ner:GEM}=target| matched at 2:Mox  source=2:Mox target=3:Opal
-# highlight tokens = 2
+# highlight tokens = 2 3
 # highlight deprels = 2
 1	Unban	unban	VERB	VB	Mood=Imp|VerbForm=Fin	0	root	_	start_char=0|end_char=5
 2	Mox	Mox	PROPN	NNP	Number=Sing	3	compound	_	start_char=6|end_char=9
