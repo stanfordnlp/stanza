@@ -33,7 +33,7 @@ import tempfile
 import zipfile
 
 from collections import Counter
-from contextlib import contextmanager, nullcontext
+from contextlib import contextmanager
 
 from stanza.models.common.constant import treebank_to_short_name
 from stanza.models.common.short_name_to_treebank import canonical_treebank_name
@@ -1268,6 +1268,12 @@ def build_combined_bhojpuri_context(paths, short_name, model_type, args):
         train_conllu, dev_conllu, test_conllu = conllu_files
         yield output_dir, conllu_files
 
+@contextmanager
+def build_null_context(*args, **kwargs):
+    """ used for any combined treebank which needs no setup """
+    yield None
+
+
 CONTEXT_FNS = {
     "bho_combined": build_combined_bhojpuri_context,
 }
@@ -1296,7 +1302,7 @@ def build_combined_dataset(paths, short_name, model_type, args):
     else:
         build_fn = COMBINED_FNS[short_name]
     extra_fn = COMBINED_EXTRA_FNS.get(short_name, None)
-    context_fn = CONTEXT_FNS.get(short_name, nullcontext)
+    context_fn = CONTEXT_FNS.get(short_name, build_null_context)
     with context_fn(paths, short_name, model_type, args) as context:
         for dataset in ("train", "dev", "test"):
             output_conllu = common.tokenizer_conllu_name(tokenizer_dir, short_name, dataset)
