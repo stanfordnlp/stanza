@@ -426,8 +426,10 @@ class TestTagger:
             tagger.parse_train_ratios("1.0;-0.5")
         with pytest.raises(ValueError):
             tagger.parse_train_ratios("a=0.5;a=0.3")
-        with pytest.raises(ValueError):
-            tagger.parse_train_ratios("not_a_number")
+        with pytest.raises(ValueError, match="write it as"):
+            tagger.parse_train_ratios("iit.conllu")
+        with pytest.raises(ValueError, match="is not a number"):
+            tagger.parse_train_ratios("iit.conllu=banana")
 
     def test_mismatched_tag_columns(self, tmp_path, wordvec_pretrain_file):
         """

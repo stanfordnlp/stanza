@@ -255,7 +255,11 @@ def parse_train_ratios(spec):
         try:
             ratio = float(value)
         except ValueError:
-            raise ValueError("Could not read '%s' in --train_ratios as a number" % value)
+            # raise from None, as the float error underneath says less
+            # than the message here and only buries it
+            if not sep:
+                raise ValueError("Could not read '%s' in --train_ratios as a number.  To give a ratio to one file by name, write it as %s=<ratio>" % (piece, piece)) from None
+            raise ValueError("Could not read the ratio for '%s' in --train_ratios: '%s' is not a number" % (name, value)) from None
         if ratio < 0:
             raise ValueError("--train_ratios cannot be negative: %s" % spec)
         if sep:
