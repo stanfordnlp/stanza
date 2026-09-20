@@ -18,7 +18,7 @@ summary, so the numbers can be re-analyzed later.
 
 ## Bhojpuri: a BIS-tagged corpus as an extra column
 
-TODO: date, commit, treebank release
+2026-09-20, commit 7dc4361b17c1f26b9e3ab6d8207bc74ad9c8e383, UD 2.18
 
 ### Question
 
@@ -126,7 +126,7 @@ additional corpus for a language where the treebank is small.
 
 ## English: ParTUT and LinES XPOS as extra columns
 
-TODO: date, commit, treebank release
+2026-09-20, commit 7dc4361b17c1f26b9e3ab6d8207bc74ad9c8e383, UD 2.18
 
 ### Question
 
