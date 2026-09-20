@@ -10,6 +10,12 @@ from stanza.utils.training.common import Mode, add_charlm_args, build_pos_charlm
 
 logger = logging.getLogger('stanza')
 
+DATASET_SPECIFIC_ARGS = {
+    "bho_combined": ["--train_ratios", "iit.conllu=0.05",
+                     "--extra_tag_columns", "bis",
+                     "--tag_column_parents", "bis=xpos,upos"],
+}
+
 def add_pos_args(parser):
     add_charlm_args(parser)
 
@@ -78,6 +84,9 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
                       "--lang", short_language,
                       "--shorthand", short_name,
                       "--mode", "train"]
+        if short_name in DATASET_SPECIFIC_ARGS:
+            logger.info("Using dataset specific args (can be overridden): %s", DATASET_SPECIFIC_ARGS[short_name])
+            train_args.extend(DATASET_SPECIFIC_ARGS[short_name])
         if eval_file is None:
             train_args += ['--eval_file', dev_in_file]
         train_args = train_args + build_pos_wordvec_args(short_language, dataset, extra_args) + charlm_args + bert_args
