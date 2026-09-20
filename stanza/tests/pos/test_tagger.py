@@ -12,6 +12,7 @@ import torch
 import stanza
 from stanza.models import tagger
 from stanza.models.common import pretrain
+from stanza.models.common.vocab import CompositeVocab
 from stanza.models.pos.trainer import Trainer
 from stanza.tests import TEST_WORKING_DIR, TEST_MODELS_DIR
 from stanza.utils.training.common import choose_pos_charlm, build_charlm_args
@@ -133,6 +134,27 @@ DEV_DATA = """
 7	:	:	PUNCT	:	_	4	punct	4:punct	_
 
 """.lstrip()
+
+def composite_xpos_data():
+    """
+    A treebank whose XPOS tags decompose into two pieces
+
+    36 tags built from two 6 value parts, which is enough for
+    xpos_vocab_factory to prefer an XPOSVocab over a flat WordVocab.
+    Needed to exercise the paths which treat the xpos layer as a set of
+    classifiers rather than one.
+    """
+    lines = []
+    index = 0
+    for first in "ABCDEF":
+        for second in "123456":
+            index += 1
+            lines.append("# sent_id = comp-%d" % index)
+            lines.append("# text = word%d follows" % index)
+            lines.append("1\tword%d\tword%d\tNOUN\t%s-%s\tNumber=Sing\t0\troot\t_\t_" % (index, index, first, second))
+            lines.append("2\tfollows\tfollow\tVERB\tZ-9\tNumber=Sing\t1\tdep\t_\t_")
+            lines.append("")
+    return "\n".join(lines) + "\n"
 
 class TestTagger:
     @pytest.fixture(scope="class")
@@ -429,6 +451,62 @@ class TestTagger:
 
         with pytest.raises(ValueError):
             Trainer(pretrain=pt, model_file=broken_file)
+
+    def test_share_hid(self, tmp_path, wordvec_pretrain_file):
+        """
+        Train with share_hid, where every layer hangs off the upos hidden layer
+
+        There are then no per column hidden layers and no tag
+        embeddings, so the classifiers read upos_hid directly.
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA,
+                                    extra_args=['--share_hid'])
+        assert trainer.model.share_hid
+        assert len(trainer.model.tag_hid) == 0
+        assert len(trainer.model.tag_emb) == 0
+        # a plain Linear rather than a BiaffineScorer, as there is no
+        # second input to score against
+        assert isinstance(trainer.model.tag_clf['xpos'], torch.nn.Linear)
+        assert trainer.model.tag_clf['xpos'].in_features == trainer.args['deep_biaff_hidden_dim']
+
+    def test_share_hid_composite_xpos(self, tmp_path, wordvec_pretrain_file):
+        """
+        share_hid with an xpos tagset which decomposes
+
+        Every classifier reads upos_hid, so each of the xpos
+        classifiers takes deep_biaff_hidden_dim, the same as the feats
+        classifiers do.
+        """
+        data = composite_xpos_data()
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, data, data,
+                                    extra_args=['--share_hid'])
+        assert isinstance(trainer.vocab['xpos'], CompositeVocab)
+        for clf in trainer.model.tag_clf['xpos']:
+            assert clf.in_features == trainer.args['deep_biaff_hidden_dim']
+        for clf in trainer.model.tag_clf['feats']:
+            assert clf.in_features == trainer.args['deep_biaff_hidden_dim']
+
+    def test_share_hid_extra_tag_column(self, tmp_path, wordvec_pretrain_file):
+        """An extra tagset works under share_hid, hanging off the same hidden layer"""
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file,
+                                    [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                                    extra_args=['--share_hid', '--extra_tag_columns', 'bis=BIS'])
+        assert trainer.model.tag_names == ['upos', 'xpos', 'feats', 'bis']
+        assert len(trainer.model.tag_hid) == 0
+        assert trainer.model.tag_clf['bis'].in_features == trainer.args['deep_biaff_hidden_dim']
+
+    def test_share_hid_rejects_parents(self, tmp_path, wordvec_pretrain_file):
+        """
+        share_hid cannot condition a column on anything but upos
+
+        There is nothing to hand a child: no hidden layer of its own and
+        no tag embedding.
+        """
+        with pytest.raises(ValueError):
+            self.run_training(tmp_path, wordvec_pretrain_file,
+                              [TRAIN_DATA, TRAIN_DATA_EXTRA_COLUMN * 5], DEV_DATA,
+                              extra_args=['--share_hid', '--extra_tag_columns', 'bis=BIS',
+                                          '--tag_column_parents', 'xpos=bis'])
 
     def test_save_each(self, tmp_path, wordvec_pretrain_file):
         extra_args = ['--save_each']
