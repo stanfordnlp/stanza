@@ -459,6 +459,45 @@ class TestDictLemmatizer:
                  ("running", "VERB"), ("running", "NOUN"), ("xyzzy", "NOUN")]
         assert loaded.predict_dict(pairs) == t.predict_dict(pairs)
 
+    @pytest.mark.parametrize("args", [
+        {'charlm_forward_file': None, 'charlm_backward_file': None},
+        {'charlm_forward_file': "forward.pt", 'charlm_backward_file': "backward.pt"},
+        {},
+    ])
+    def test_load_checkpoint_without_charlm_keys(self, tmp_path, args):
+        """
+        A checkpoint saved without the optional charlm keys must still load.
+
+        The mimic, genia and craft lemmatizers were published without
+        charlm_forward_file / charlm_backward_file in their config, and a
+        pipeline always passes an args dict, so reading the saved value as a
+        fallback has to tolerate the key being absent.
+        """
+        from stanza.models.lemma.vocab import MultiVocab, Vocab
+
+        char_vocab = Vocab("abcdefghijklmnopqrstuvwxyz", "en")
+        pos_vocab = Vocab(["NOUN", "VERB"], "en")
+        vocab = MultiVocab({'char': char_vocab, 'pos': pos_vocab})
+
+        checkpoint = {
+            'model': None,
+            'dicts': _pack_pos_dict({_POS_INDEPENDENT: {"running": "run"}}),
+            'dicts_version': _DICTS_VERSION_POS,
+            'vocab': vocab.state_dict(),
+            # no charlm_forward_file / charlm_backward_file, as in those models
+            'config': {'dict_only': True, 'caseless': False},
+            'contextual': [],
+        }
+        save_path = str(tmp_path / "no_charlm_keys.pt")
+        torch.save(checkpoint, save_path, _use_new_zipfile_serialization=False)
+
+        loaded = trainer.Trainer(args=args, model_file=save_path, device='cpu')
+
+        assert loaded.predict_dict([("running", "NOUN")]) == ["run"]
+        # whatever the caller passed wins; a caller that passed nothing gets None
+        assert loaded.args['charlm_forward_file'] == args.get('charlm_forward_file')
+        assert loaded.args['charlm_backward_file'] == args.get('charlm_backward_file')
+
     def test_legacy_load(self, tmp_path):
         """
         A checkpoint in the old (word_dict, composite_dict) format should

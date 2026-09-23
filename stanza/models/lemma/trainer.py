@@ -370,8 +370,14 @@ class Trainer(object):
             raise
         self.args = checkpoint['config']
         if args is not None:
-            self.args['charlm_forward_file'] = args.get('charlm_forward_file', self.args['charlm_forward_file'])
-            self.args['charlm_backward_file'] = args.get('charlm_backward_file', self.args['charlm_backward_file'])
+            # the charlm keys are optional in a saved config - the mimic, genia
+            # and craft lemmatizers were published without them - and the
+            # fallback here is evaluated whether or not args supplies its own
+            # value, so indexing self.args would raise KeyError on those models
+            # even when the caller had a path to offer.  build_seq2seq already
+            # reads these with .get() and treats a missing one as "no charlm".
+            self.args['charlm_forward_file'] = args.get('charlm_forward_file', self.args.get('charlm_forward_file'))
+            self.args['charlm_backward_file'] = args.get('charlm_backward_file', self.args.get('charlm_backward_file'))
 
         dicts_version = checkpoint.get('dicts_version', _DICTS_VERSION_LEGACY)
         if dicts_version == _DICTS_VERSION_POS:
