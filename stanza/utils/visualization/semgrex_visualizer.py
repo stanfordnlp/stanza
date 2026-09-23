@@ -101,7 +101,7 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
 
 
     @param orig_html: unedited HTML of a sentence's dependency visualization.
-    @param semgrex_sentence: a Semgrex result object containing the matches to a provided query.
+    @param semgrex_sentence: a SemgrexResponse.SentenceResult containing the matches of each query on one sentence.
     @return: edited HTML containing the visual changes described above.
     """
     tracker = {}  # keep track of which words have multiple labels
@@ -132,8 +132,8 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
     )
 
     # Color and bold words involved in each Semgrex match
-    for query in semgrex_sentence.result:
-        for i, match in enumerate(query.match):
+    for pattern_result in semgrex_sentence.pattern:
+        for i, match in enumerate(pattern_result.match):
             color = colors[i % len(colors)]
             paired_dy = 2
             for node in match.node:
@@ -278,15 +278,15 @@ def visualize_search_doc(
         # one html string for each sentence
         unedited_html_strings = get_sentences_html(doc, lang_code, visualize_xpos=visualize_xpos)
 
-        for semgrex_result in semgrex_results.result:
+        for sentence_result in semgrex_results.sentence:
             if matches_count >= end_match:  # we've collected enough matches
                 break
 
             # read the sentence_idx off the matches,
             # in case they came back in an unexpected order
             sentence_idx = None
-            for sentence_result in semgrex_result.result:
-                for match in sentence_result.match:
+            for pattern_result in sentence_result.pattern:
+                for match in pattern_result.match:
                     sentence_idx = match.sentenceIndex
                     break
             # don't count empty match objects as having matched
@@ -295,7 +295,7 @@ def visualize_search_doc(
             if start_match <= matches_count < end_match:
                 unedited_html_string = unedited_html_strings[sentence_idx]
                 edited_string = semgrexify_html(
-                    unedited_html_string, semgrex_result
+                    unedited_html_string, sentence_result
                 )
                 edited_string = adjust_dep_arrows(edited_string)
                 edited_html_strings.append(edited_string)

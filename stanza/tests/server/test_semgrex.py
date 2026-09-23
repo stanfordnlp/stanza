@@ -151,17 +151,35 @@ ONE_SENTENCE_DOC = Document(TEST_ONE_SENTENCE, "Unban Mox Opal!")
 TWO_SENTENCE_DOC = Document(TEST_TWO_SENTENCES, "Unban Mox Opal! Unban Mox Opal!")
 
 
+def check_indices(response):
+    """
+    Check that the sentence and semgrex indices agree with each other
+
+    This is for unsorted results, where every sentence has a result
+    for every semgrex, so the positions are the indices.
+
+    The indices on SentenceResult and PatternResult are only filled in
+    by versions of CoreNLP which have them, so they are only checked
+    when present.  The indices on each Match are always filled in
+    """
+    for sentence_idx, sentence_result in enumerate(response.sentence):
+        if sentence_result.HasField("sentenceIndex"):
+            assert sentence_result.sentenceIndex == sentence_idx
+        for semgrex_idx, pattern_result in enumerate(sentence_result.pattern):
+            if pattern_result.HasField("semgrexIndex"):
+                assert pattern_result.semgrexIndex == semgrex_idx
+            for match in pattern_result.match:
+                assert match.sentenceIndex == sentence_idx
+                assert match.semgrexIndex == semgrex_idx
+
 def check_response(response, response_len=1, semgrex_len=1, source_index=1, target_index=3, reln='obj'):
-    assert len(response.result) == response_len
-    for sentence_idx, sentence_result in enumerate(response.result):
-        for semgrex_result in sentence_result.result:
-            for match in semgrex_result.match:
-                assert sentence_idx == match.sentenceIndex
-    assert len(response.result[0].result) == semgrex_len
-    for semgrex_result in response.result[0].result:
-        assert len(semgrex_result.match) == 1
-        assert semgrex_result.match[0].matchIndex == source_index
-        for match in semgrex_result.match:
+    assert len(response.sentence) == response_len
+    check_indices(response)
+    assert len(response.sentence[0].pattern) == semgrex_len
+    for pattern_result in response.sentence[0].pattern:
+        assert len(pattern_result.match) == 1
+        assert pattern_result.match[0].matchIndex == source_index
+        for match in pattern_result.match:
             assert len(match.node) == 2
             assert match.node[0].name == 'source'
             assert match.node[0].matchIndex == source_index
@@ -271,19 +289,20 @@ def test_blank_dependency():
     blank_dep_doc = CoNLL.conll2doc(input_str=BLANK_DEPENDENCY_SENTENCE)
     blank_dep_request = semgrex.build_request(blank_dep_doc, "{}=root <_=edge {}")
     response = semgrex.send_semgrex_request(blank_dep_request)
-    assert len(response.result) == 1
-    assert len(response.result[0].result) == 1
-    assert len(response.result[0].result[0].match) == 1
+    assert len(response.sentence) == 1
+    assert len(response.sentence[0].pattern) == 1
+    assert len(response.sentence[0].pattern[0].match) == 1
+    match = response.sentence[0].pattern[0].match[0]
     # there should be a named node...
-    assert len(response.result[0].result[0].match[0].node) == 1
-    assert response.result[0].result[0].match[0].node[0].name == 'root'
-    assert response.result[0].result[0].match[0].node[0].matchIndex == 2
+    assert len(match.node) == 1
+    assert match.node[0].name == 'root'
+    assert match.node[0].matchIndex == 2
 
     # ... and a named edge
-    assert len(response.result[0].result[0].match[0].edge) == 1
-    assert response.result[0].result[0].match[0].edge[0].source == 1
-    assert response.result[0].result[0].match[0].edge[0].target == 2
-    assert response.result[0].result[0].match[0].edge[0].reln == "_"
+    assert len(match.edge) == 1
+    assert match.edge[0].source == 1
+    assert match.edge[0].target == 2
+    assert match.edge[0].reln == "_"
 
 EXPECTED_ONE_SENTENCE_MATCH = """
 # text = Unban Mox Opal!
