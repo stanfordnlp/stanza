@@ -109,6 +109,10 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
         2  # the original displacy html assigns two <tspan> objects per <text> object
     )
     CLOSING_TSPAN_LEN = 8  # </tspan> is 8 chars long
+    # Paul Tol's "bright" qualitative scheme, which is colorblind-friendly.
+    # Matches past the seventh reuse the colors in order, as the
+    # plotting libraries do, since no set of colors stays
+    # distinguishable much past that many.
     colors = [
         "#4477AA",
         "#66CCEE",
@@ -117,7 +121,7 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
         "#EE6677",
         "#AA3377",
         "#BBBBBB",
-    ]  # colorblind-friendly scheme
+    ]
     css_bolded_class = "<style> .bolded{font-weight: bold;} </style>\n"
     opening_svg_end_idx = orig_html.find("\n")
     # insert the new style class
@@ -130,7 +134,7 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
     # Color and bold words involved in each Semgrex match
     for query in semgrex_sentence.result:
         for i, match in enumerate(query.match):
-            color = colors[i]
+            color = colors[i % len(colors)]
             paired_dy = 2
             for node in match.node:
                 name, match_index = node.name, node.matchIndex
@@ -606,3 +610,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
