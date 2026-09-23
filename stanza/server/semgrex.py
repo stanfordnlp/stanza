@@ -110,18 +110,18 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
         semgrex_patterns = [semgrex_patterns]
     semgrex_patterns = [x if isinstance(x, SemgrexQuery) else SemgrexQuery(x, []) for x in semgrex_patterns]
     matched_ids = set()
-    for sentence_result in semgrex_result.result:
-        for pattern_result in sentence_result.result:
+    for sentence_result in semgrex_result.sentence:
+        for pattern_result in sentence_result.pattern:
             for match in pattern_result.match:
                 matched_ids.add(match.sentenceIndex)
 
     pattern_texts = [semgrex_pattern.pattern.replace("\n", " ") for semgrex_pattern in semgrex_patterns]
 
     matching_sentences = []
-    for sentence_result in semgrex_result.result:
+    for sentence_result in semgrex_result.sentence:
         sentence_matched = False
         matched_semgrex_ids = set()
-        for pattern_result in sentence_result.result:
+        for pattern_result in sentence_result.pattern:
             if len(pattern_result.match) == 0:
                 continue
 
