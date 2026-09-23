@@ -9,7 +9,7 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 import stanza
-from stanza.models.common.foundation_cache import FoundationCache, load_charlm
+from stanza.models.common.foundation_cache import BertRecord, FoundationCache, load_charlm
 from stanza.tests import TEST_MODELS_DIR
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
@@ -217,6 +217,111 @@ class TestFoundationCacheThreadSafety:
             f"Model was loaded {len(load_count)} times instead of once — "
             "the lock is not preventing redundant loads."
         )
+
+
+class TestFoundationCacheLockFreeHits:
+    """
+    A cache hit must not wait on the lock that a slow miss is holding.
+
+    The loads stay inside the lock so that two threads missing on the same
+    entry don't both download it.  The cost of that is the lock being held
+    for the length of a download, which a caller that only wants an
+    already-cached entry should not have to wait out.
+    """
+
+    @staticmethod
+    def read_while_lock_is_held(cache, read):
+        """
+        Call read() on a worker thread while another thread holds cache.lock.
+
+        Returns the value read, or raises AssertionError if the read did not
+        finish while the lock was held.
+        """
+        holding = threading.Event()
+        release = threading.Event()
+        result = []
+
+        def hold():
+            with cache.lock:
+                holding.set()
+                release.wait(timeout=30)
+
+        holder = threading.Thread(target=hold)
+        reader = threading.Thread(target=lambda: result.append(read()))
+        holder.start()
+        try:
+            assert holding.wait(timeout=10), "the lock holder never acquired the lock"
+            reader.start()
+            reader.join(timeout=5)
+            blocked = reader.is_alive()
+        finally:
+            release.set()
+            holder.join()
+            if reader.is_alive():
+                reader.join(timeout=10)
+
+        assert not blocked, (
+            "a cache hit blocked on the lock; callers that only need an "
+            "already-cached entry should not queue behind an unrelated load"
+        )
+        return result[0]
+
+    def test_cached_bert_does_not_wait_for_the_lock(self):
+        cache = FoundationCache()
+        record = BertRecord("model-sentinel", "tokenizer-sentinel", {})
+        cache.bert[BERT_MODEL] = record
+
+        model, tokenizer = self.read_while_lock_is_held(
+            cache, lambda: cache.load_bert(BERT_MODEL)
+        )
+        assert model is record.model
+        assert tokenizer is record.tokenizer
+
+    def test_cached_charlm_does_not_wait_for_the_lock(self):
+        cache = FoundationCache()
+        cache.charlms["some_charlm.pt"] = "charlm-sentinel"
+
+        charlm = self.read_while_lock_is_held(
+            cache, lambda: cache.load_charlm("some_charlm.pt")
+        )
+        assert charlm == "charlm-sentinel"
+
+    def test_cached_pretrain_does_not_wait_for_the_lock(self):
+        cache = FoundationCache()
+        cache.pretrains["some_pretrain.pt"] = "pretrain-sentinel"
+
+        pretrain = self.read_while_lock_is_held(
+            cache, lambda: cache.load_pretrain("some_pretrain.pt")
+        )
+        assert pretrain == "pretrain-sentinel"
+
+    def test_peft_request_still_takes_the_lock(self):
+        """
+        A peft name bumps peft_ids, so that path must stay guarded even
+        though the transformer itself is already cached.
+        """
+        cache = FoundationCache()
+        cache.bert[BERT_MODEL] = BertRecord("model-sentinel", "tokenizer-sentinel", {})
+
+        with pytest.raises(AssertionError, match="blocked on the lock"):
+            self.read_while_lock_is_held(
+                cache, lambda: cache.load_bert_with_peft(BERT_MODEL, "depparse")
+            )
+
+    def test_gradient_checkpointing_request_still_takes_the_lock(self):
+        """
+        Enabling gradient checkpointing mutates the shared model, so that
+        path must stay guarded as well.
+        """
+        cache = FoundationCache()
+        model = MagicMock()
+        cache.bert[BERT_MODEL] = BertRecord(model, "tokenizer-sentinel", {})
+
+        with pytest.raises(AssertionError, match="blocked on the lock"):
+            self.read_while_lock_is_held(
+                cache,
+                lambda: cache.load_bert(BERT_MODEL, enable_gradient_checkpointing=True),
+            )
 
 
 class TestNoTransformerFoundationCache:

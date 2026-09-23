@@ -64,6 +64,18 @@ class FoundationCache:
             self.pretrains = {}
             # future proof the module by using a lock for the glorious day
             # when the GIL is finally gone
+            #
+            # the loads themselves happen inside the lock on purpose.  if two
+            # threads miss the cache for the same transformer and both load it,
+            # one of those loads is thrown away when they reach the guarded
+            # section - and with a Pipeline bringing up POS and depparse at the
+            # same time, both wanting the same embedding, that is close to
+            # guaranteed rather than an unlucky race.  the wasted work is a
+            # download, so it is worth serializing misses to avoid it.
+            #
+            # a hit is a different matter: the loaders check the dicts once
+            # before taking the lock, so a caller that only needs an
+            # already-cached model does not queue behind an unrelated load.
             self.lock = threading.Lock()
         else:
             self.bert = other.bert
@@ -84,6 +96,16 @@ class FoundationCache:
         """
         if transformer_name is None:
             return None, None, None
+
+        # a hit is only a pure read when there is nothing left to mutate:
+        # peft_name bumps peft_ids, and enable_gradient_checkpointing changes
+        # the shared model.  both of those still need the lock.
+        if not peft_name and not enable_gradient_checkpointing:
+            bert_record = self.bert.get(transformer_name)
+            if bert_record is not None:
+                logger.debug("Reusing bert %s", transformer_name)
+                return bert_record.model, bert_record.tokenizer, None
+
         with self.lock:
             if transformer_name not in self.bert:
                 if local_files_only is None:
@@ -122,6 +144,11 @@ class FoundationCache:
         if not filename:
             return None
 
+        charlm = self.charlms.get(filename)
+        if charlm is not None:
+            logger.debug("Reusing charlm from %s", filename)
+            return charlm
+
         with self.lock:
             if filename not in self.charlms:
                 logger.debug("Loading charlm from %s", filename)
@@ -139,6 +166,12 @@ class FoundationCache:
         """
         if filename is None:
             return None
+
+        pretrain = self.pretrains.get(filename)
+        if pretrain is not None:
+            logger.debug("Reusing pretrain %s", filename)
+            return pretrain
+
         with self.lock:
             if filename not in self.pretrains:
                 logger.debug("Loading pretrain %s", filename)
