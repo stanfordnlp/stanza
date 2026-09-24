@@ -2,11 +2,13 @@
 Test the semgrex interface
 """
 
+import subprocess
+
 import pytest
 import stanza
 import stanza.server.semgrex as semgrex
 from stanza.models.common.doc import Document
-from stanza.protobuf import SemgrexRequest
+from stanza.protobuf import SemgrexRequest, SemgrexResponse
 from stanza.utils.conll import CoNLL
 
 from stanza.tests import *
@@ -366,3 +368,157 @@ def test_only_not_annotated():
     formatted = "{:C}".format(doc).strip()
     assert formatted == EXPECTED_ONE_SENTENCE_NO_MATCH
 
+
+# An empty word 5.1 for the elided "likes", which is only in the enhanced graph
+ENHANCED_SENTENCE = """
+# text = Sue likes coffee and Bill tea.
+1	Sue	Sue	PROPN	NNP	Number=Sing	2	nsubj	2:nsubj	_
+2	likes	like	VERB	VBZ	Number=Sing|Person=3|Tense=Pres	0	root	0:root	_
+3	coffee	coffee	NOUN	NN	Number=Sing	2	obj	2:obj	_
+4	and	and	CCONJ	CC	_	5	cc	5.1:cc	_
+5	Bill	Bill	PROPN	NNP	Number=Sing	2	conj	5.1:nsubj	_
+5.1	likes	like	VERB	VBZ	Number=Sing|Person=3|Tense=Pres	_	_	2:conj:and	CopyOf=2
+6	tea	tea	NOUN	NN	Number=Sing	5	orphan	5.1:obj	SpaceAfter=No
+7	.	.	PUNCT	.	_	2	punct	2:punct	_
+""".lstrip()
+
+# A sentence with no enhanced dependencies at all
+BASIC_ONLY_SENTENCE = """
+# text = Unban Mox Opal!
+1	Unban	unban	VERB	VB	Mood=Imp|VerbForm=Fin	0	root	_	_
+2	Mox	Mox	PROPN	NNP	Number=Sing	3	compound	_	_
+3	Opal	Opal	PROPN	NNP	Number=Sing	1	obj	_	SpaceAfter=No
+4	!	!	PUNCT	.	_	1	punct	_	_
+""".lstrip()
+
+def enhanced_doc():
+    return CoNLL.conll2doc(input_str=ENHANCED_SENTENCE, ignore_gapping=False)
+
+def mixed_doc():
+    """
+    One sentence with enhanced dependencies, one without
+    """
+    return CoNLL.conll2doc(input_str=ENHANCED_SENTENCE + "\n" + BASIC_ONLY_SENTENCE, ignore_gapping=False)
+
+def test_enhanced_request():
+    """
+    The basic graph goes in graph and the enhanced graph in enhancedGraph,
+    over one token list which has the empty words as well
+    """
+    request = semgrex.build_request(mixed_doc(), "{}", enhanced=True)
+    assert len(request.query) == 2
+
+    query = request.query[0]
+    assert len(query.token) == 8
+    assert [(token.index, token.emptyIndex) for token in query.token if token.emptyIndex] == [(5, 1)]
+    assert len(query.graph.node) == 7
+    assert len(query.enhancedGraph.node) == 8
+    assert len(query.enhancedGraph.token) == 0
+    assert any(edge.targetEmpty == 1 and edge.dep == "conj:and" for edge in query.enhancedGraph.edge)
+
+    # no enhanced dependencies means no enhanced graph
+    query = request.query[1]
+    assert len(query.token) == 4
+    assert not query.HasField("enhancedGraph")
+
+def test_default_request_has_enhanced():
+    """
+    The enhanced graph is sent unless asked not to
+    """
+    request = semgrex.build_request(enhanced_doc(), "{}")
+    query = request.query[0]
+    assert len(query.token) == 8
+    assert len(query.enhancedGraph.node) == 8
+
+def test_no_enhanced_request():
+    request = semgrex.build_request(enhanced_doc(), "{}", enhanced=False)
+    query = request.query[0]
+    assert len(query.token) == 7
+    assert not query.HasField("enhancedGraph")
+
+def test_enhanced_empty_root():
+    """
+    A match can start at an empty word, which only the enhanced graph has
+    """
+    response = semgrex.process_doc(enhanced_doc(), "{} !< {} <@enhanced {}", enhanced=True)
+    assert len(response.sentence) == 1
+    matches = response.sentence[0].pattern[0].match
+    assert len(matches) == 1
+    assert matches[0].matchIndex == 5
+    assert matches[0].matchEmptyIndex == 1
+
+def test_enhanced_edges():
+    """
+    Named edges say which graph they came from, and named nodes can be empty words
+    """
+    response = semgrex.process_doc(enhanced_doc(), "{word:likes}=l >nsubj=e1 {}=s >/conj.*/@enhanced=e2 {}=c", enhanced=True)
+    matches = response.sentence[0].pattern[0].match
+    assert len(matches) == 1
+    match = matches[0]
+    nodes = {node.name: (node.matchIndex, node.emptyIndex) for node in match.node}
+    assert nodes == {"l": (2, 0), "s": (1, 0), "c": (5, 1)}
+    edges = {edge.name: edge for edge in match.edge}
+    assert edges["e1"].graph == SemgrexResponse.GraphName.BASIC
+    assert edges["e2"].graph == SemgrexResponse.GraphName.ENHANCED
+    assert edges["e2"].reln == "conj:and"
+    assert (edges["e2"].target, edges["e2"].targetEmpty) == (5, 1)
+
+def test_enhanced_context():
+    with semgrex.Semgrex() as sem:
+        response = sem.process(enhanced_doc(), "{word:Bill} <nsubj@enhanced {}=h")
+    match = response.sentence[0].pattern[0].match[0]
+    assert (match.node[0].matchIndex, match.node[0].emptyIndex) == (5, 1)
+
+def test_mixed_doc_basic_pattern():
+    """
+    Sentences without enhanced dependencies are fine for patterns which
+    only search the basic graph
+    """
+    response = semgrex.process_doc(mixed_doc(), "{}=source >obj {}=target", enhanced=True)
+    assert len(response.sentence) == 2
+    assert [match.matchIndex for match in response.sentence[0].pattern[0].match] == [2]
+    assert [match.matchIndex for match in response.sentence[1].pattern[0].match] == [1]
+
+def test_mixed_doc_enhanced_pattern():
+    """
+    A sentence without enhanced dependencies fails a pattern which
+    searches the enhanced graph, rather than quietly giving wrong answers.
+    With an empty enhanced graph, this pattern would match every word
+    of the second sentence
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        semgrex.process_doc(mixed_doc(), "{}=w < {} !<@enhanced {}", enhanced=True)
+
+def test_enhanced_pattern_needs_enhanced():
+    """
+    Searching the enhanced graph without sending it is an error from CoreNLP
+    """
+    with pytest.raises(subprocess.CalledProcessError):
+        semgrex.process_doc(enhanced_doc(), "{} <@enhanced {}", enhanced=False)
+
+EXPECTED_ENHANCED_MATCH = """
+# text = Sue likes coffee and Bill tea.
+# sent_id = 0
+# semgrex pattern = |{word:likes}=l >/conj.*/@enhanced=e {}=c| matched at 2:likes  l=2:likes c=5.1:likes
+# highlight tokens = 2 5.1
+# highlight deprels = 5.1
+1	Sue	Sue	PROPN	NNP	Number=Sing	2	nsubj	2:nsubj	_
+2	likes	like	VERB	VBZ	Number=Sing|Person=3|Tense=Pres	0	root	0:root	_
+3	coffee	coffee	NOUN	NN	Number=Sing	2	obj	2:obj	_
+4	and	and	CCONJ	CC	_	5	cc	5.1:cc	_
+5	Bill	Bill	PROPN	NNP	Number=Sing	2	conj	5.1:nsubj	_
+5.1	likes	like	VERB	VBZ	Number=Sing|Person=3|Tense=Pres	_	_	2:conj:and	CopyOf=2
+6	tea	tea	NOUN	NN	Number=Sing	5	orphan	5.1:obj	SpaceAfter=No
+7	.	.	PUNCT	.	_	2	punct	2:punct	_
+""".strip()
+
+def test_enhanced_annotated():
+    """
+    The annotated CoNLL-U keeps the empty word and the enhanced
+    dependencies, and refers to the empty word as 5.1
+    """
+    doc = enhanced_doc()
+    pattern = "{word:likes}=l >/conj.*/@enhanced=e {}=c"
+    response = semgrex.process_doc(doc, pattern, enhanced=True)
+    annotated = semgrex.annotate_doc(doc, response, pattern, matches_only=True, exclude_matches=False)
+    assert "{:C}".format(annotated) == EXPECTED_ENHANCED_MATCH

@@ -203,15 +203,21 @@ def add_word_to_graph(graph, word, sent_idx):
             # the receiving side doesn't like null as a dependency
             edge.dep = "_"
 
-def convert_networkx_graph(graph_proto, sentence, sent_idx):
+def convert_networkx_graph(graph_proto, sentence, sent_idx, add_tokens=True):
     """
     Turns a networkx graph into a DependencyGraph from the proto file
+
+    If add_tokens is True, the words and empty words of the sentence
+    are added to the graph's own token list.  Set it to False when the
+    tokens are sent somewhere else, such as the token list a
+    SemgrexRequest shares between its basic and enhanced graphs
     """
-    for token in sentence.tokens:
-        for word in token.words:
-            add_token(graph_proto.token, word, token)
-    for word in sentence.empty_words:
-        add_token(graph_proto.token, word, None)
+    if add_tokens:
+        for token in sentence.tokens:
+            for word in token.words:
+                add_token(graph_proto.token, word, token)
+        for word in sentence.empty_words:
+            add_token(graph_proto.token, word, None)
 
     dependencies = sentence._enhanced_dependencies
     for target in dependencies:
@@ -362,4 +368,3 @@ class JavaProtobufContext(object):
         response = self.build_response()
         response.ParseFromString(response_text)
         return response
-
