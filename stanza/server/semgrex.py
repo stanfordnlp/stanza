@@ -20,6 +20,14 @@ whose description is in the proto file included with stanza.
 
 A minimal example is the main method of this module.
 
+The enhanced dependencies and empty words of each sentence which has
+them are sent as well as the basic dependencies.  A pattern searches
+the basic graph unless its relations name the enhanced graph, such as
+{} >nsubj@enhanced {}.  Matches on empty words come back with their
+emptyIndex set, so 5.1 is not mistaken for 5.  enhanced=False skips
+the enhanced graphs, which saves some time on a treebank which has them
+if none of the patterns use them.
+
 Note that launching the subprocess is potentially quite expensive
 relative to the search if used many times on small documents.  Ideally
 larger texts would be processed, and all of the desired semgrex
@@ -50,7 +58,19 @@ SemgrexQuery = namedtuple("SemgrexQuery", "pattern comments")
 def send_semgrex_request(request):
     return send_request(request, SemgrexResponse, SEMGREX_JAVA)
 
-def build_request(doc, semgrex_patterns, enhanced=False):
+def build_request(doc, semgrex_patterns, enhanced=True):
+    """
+    Build a SemgrexRequest for the given doc and patterns
+
+    Each sentence sends its basic dependencies.  If enhanced is True,
+    each sentence which has enhanced dependencies also sends them, and
+    its empty words go in the token list the two graphs share.
+
+    A sentence without enhanced dependencies sends no enhanced graph,
+    so a pattern which searches the enhanced graph fails on it in
+    CoreNLP.  An empty graph would instead give wrong answers: a
+    negated relation such as !<@enhanced would match every word.
+    """
     request = SemgrexRequest()
     if isinstance(semgrex_patterns, str):
         semgrex_patterns = [semgrex_patterns]
@@ -60,25 +80,26 @@ def build_request(doc, semgrex_patterns, enhanced=False):
 
     for sent_idx, sentence in enumerate(doc.sentences):
         query = request.query.add()
-        if enhanced:
-            # tokens will be added on to the graph object
-            convert_networkx_graph(query.graph, sentence, sent_idx)
-        else:
-            word_idx = 0
-            for token in sentence.tokens:
-                for word in token.words:
-                    add_token(query.token, word, token)
-                    add_word_to_graph(query.graph, word, sent_idx)
+        for token in sentence.tokens:
+            for word in token.words:
+                add_token(query.token, word, token)
+                add_word_to_graph(query.graph, word, sent_idx)
 
-                    word_idx = word_idx + 1
+        if enhanced and sentence.has_enhanced_dependencies():
+            for word in sentence.empty_words:
+                add_token(query.token, word, None)
+            convert_networkx_graph(query.enhancedGraph, sentence, sent_idx, add_tokens=False)
 
     return request
 
-def process_doc(doc, *semgrex_patterns, enhanced=False):
+def process_doc(doc, *semgrex_patterns, enhanced=True):
     """
     Returns the result of processing the given semgrex expression on the stanza doc.
 
     Currently the return is a SemgrexResponse from CoreNLP.proto
+
+    The enhanced dependencies are sent as well, for patterns which
+    search them with @enhanced, unless enhanced is False
     """
     request = build_request(doc, semgrex_patterns, enhanced=enhanced)
 
@@ -94,12 +115,40 @@ class Semgrex(JavaProtobufContext):
     def __init__(self, classpath=None):
         super(Semgrex, self).__init__(classpath, SemgrexResponse, SEMGREX_JAVA)
 
-    def process(self, doc, *semgrex_patterns):
+    def process(self, doc, *semgrex_patterns, enhanced=True):
         """
         Apply each of the semgrex patterns to each of the dependency trees in doc
+
+        The enhanced dependencies are sent as well, for patterns which
+        search them with @enhanced, unless enhanced is False
         """
-        request = build_request(doc, semgrex_patterns)
+        request = build_request(doc, semgrex_patterns, enhanced=enhanced)
         return self.process_request(request)
+
+def node_id(index, empty_index=0):
+    """
+    The CoNLL-U id of a node, such as 5 for a word or 5.1 for an empty word
+    """
+    if empty_index:
+        return "%d.%d" % (index, empty_index)
+    return "%d" % index
+
+def node_text(sentence, index, empty_index=0):
+    """
+    The text of the word or empty word at the given position in the sentence
+    """
+    if empty_index:
+        for word in sentence.empty_words:
+            if word.id == (index, empty_index):
+                return word.text
+        raise ValueError("Sentence has no empty word %s" % node_id(index, empty_index))
+    return sentence.words[index-1].text
+
+def sorted_node_ids(nodes):
+    """
+    Formats a collection of (index, empty_index) pairs as CoNLL-U ids, in sentence order
+    """
+    return " ".join(node_id(*node) for node in sorted(nodes))
 
 def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_matches):
     """
@@ -134,11 +183,13 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
                 pattern_text = pattern_texts[match.semgrexIndex]
                 matched_semgrex_ids.add(match.semgrexIndex)
 
-                match_word = "%d:%s" % (match.matchIndex, sentence.words[match.matchIndex-1].text)
+                match_word = "%s:%s" % (node_id(match.matchIndex, match.matchEmptyIndex),
+                                        node_text(sentence, match.matchIndex, match.matchEmptyIndex))
                 if len(match.node) == 0:
                     node_matches = ""
                 else:
-                    node_matches = ["%s=%d:%s" % (node.name, node.matchIndex, sentence.words[node.matchIndex-1].text)
+                    node_matches = ["%s=%s:%s" % (node.name, node_id(node.matchIndex, node.emptyIndex),
+                                                  node_text(sentence, node.matchIndex, node.emptyIndex))
                                     for node in match.node]
                     node_matches = "  " + " ".join(node_matches)
                 if len(match.varstring) == 0:
@@ -149,15 +200,17 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
                 sentence.add_comment("# semgrex pattern = |%s| matched at %s%s%s" % (pattern_text, match_word, node_matches, var_values))
                 for comment in semgrex_pattern.comments:
                     sentence.add_comment("# semgrex comment = %s" % comment)
-                highlight_tokens.add(match.matchIndex)
+                highlight_tokens.add((match.matchIndex, match.matchEmptyIndex))
                 for node in match.node:
-                    highlight_tokens.add(node.matchIndex)
+                    highlight_tokens.add((node.matchIndex, node.emptyIndex))
                 for edge in match.edge:
-                    highlight_edges.add(edge.target)
+                    # a deprel is highlighted on the word it points to,
+                    # which for an enhanced edge may be an empty word
+                    highlight_edges.add((edge.target, edge.targetEmpty))
             if len(highlight_tokens) > 0:
-                sentence.add_comment("# highlight tokens = %s" % (" ".join("%d" % x for x in sorted(highlight_tokens))))
+                sentence.add_comment("# highlight tokens = %s" % sorted_node_ids(highlight_tokens))
             if len(highlight_edges) > 0:
-                sentence.add_comment("# highlight deprels = %s" % (" ".join("%d" % x for x in sorted(highlight_edges))))
+                sentence.add_comment("# highlight deprels = %s" % sorted_node_ids(highlight_edges))
 
         if sentence_matched and not matches_only:
             for semgrex_idx, pattern_text in enumerate(pattern_texts):
@@ -201,7 +254,7 @@ def main():
     parser.add_argument('--no_matches_only', dest='matches_only', action='store_false', help="Only print the matching sentences")
     parser.add_argument('--exclude_matches', action='store_true', default=False, help="Only print the NON-matching sentences")
 
-    parser.add_argument('--enhanced', action='store_true', default=False, help='Use the enhanced dependencies instead of the basic')
+    parser.add_argument('--enhanced', action=argparse.BooleanOptionalAction, default=True, help='Send the enhanced dependencies, which patterns can search with @enhanced, such as {} >nsubj@enhanced {}.  --no-enhanced saves some time if no pattern uses them')
     parser.add_argument('--no_combined_doc', dest='combined_doc', action='store_false', default=True, help='By default, combine all the input docs into one big document.  Allows for easier secondary processing like sorting')
     args = parser.parse_args()
 
