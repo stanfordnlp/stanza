@@ -62,7 +62,8 @@ def build_request(doc, semgrex_patterns, enhanced=True):
     """
     Build a SemgrexRequest for the given doc and patterns
 
-    Each sentence sends its basic dependencies.  If enhanced is True,
+    Each sentence sends its sent_id, so an error from CoreNLP about the
+    sentence can name it, and its basic dependencies.  If enhanced is True,
     each sentence which has enhanced dependencies also sends them, and
     its empty words go in the token list the two graphs share.
 
@@ -80,6 +81,8 @@ def build_request(doc, semgrex_patterns, enhanced=True):
 
     for sent_idx, sentence in enumerate(doc.sentences):
         query = request.query.add()
+        if sentence.sent_id is not None:
+            query.sentenceID = str(sentence.sent_id)
         for token in sentence.tokens:
             for word in token.words:
                 add_token(query.token, word, token)

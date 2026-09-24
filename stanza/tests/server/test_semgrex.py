@@ -384,6 +384,7 @@ ENHANCED_SENTENCE = """
 
 # A sentence with no enhanced dependencies at all
 BASIC_ONLY_SENTENCE = """
+# sent_id = mox-opal
 # text = Unban Mox Opal!
 1	Unban	unban	VERB	VB	Mood=Imp|VerbForm=Fin	0	root	_	_
 2	Mox	Mox	PROPN	NNP	Number=Sing	3	compound	_	_
@@ -469,6 +470,14 @@ def test_enhanced_context():
     match = response.sentence[0].pattern[0].match[0]
     assert (match.node[0].matchIndex, match.node[0].emptyIndex) == (5, 1)
 
+def test_request_sent_id():
+    """
+    Each sentence sends its sent_id, including the one stanza makes up
+    from the sentence's index when the file does not have one
+    """
+    request = semgrex.build_request(mixed_doc(), "{}")
+    assert [query.sentenceID for query in request.query] == ["0", "mox-opal"]
+
 def test_mixed_doc_basic_pattern():
     """
     Sentences without enhanced dependencies are fine for patterns which
@@ -479,15 +488,18 @@ def test_mixed_doc_basic_pattern():
     assert [match.matchIndex for match in response.sentence[0].pattern[0].match] == [2]
     assert [match.matchIndex for match in response.sentence[1].pattern[0].match] == [1]
 
-def test_mixed_doc_enhanced_pattern():
+def test_mixed_doc_enhanced_pattern(capfd):
     """
     A sentence without enhanced dependencies fails a pattern which
     searches the enhanced graph, rather than quietly giving wrong answers.
     With an empty enhanced graph, this pattern would match every word
-    of the second sentence
+    of the second sentence.
+
+    CoreNLP's error names the sentence by its sent_id
     """
     with pytest.raises(subprocess.CalledProcessError):
         semgrex.process_doc(mixed_doc(), "{}=w < {} !<@enhanced {}", enhanced=True)
+    assert "sent_id |mox-opal|" in capfd.readouterr().err
 
 def test_enhanced_pattern_needs_enhanced():
     """
