@@ -522,3 +522,34 @@ def test_enhanced_annotated():
     response = semgrex.process_doc(doc, pattern, enhanced=True)
     annotated = semgrex.annotate_doc(doc, response, pattern, matches_only=True, exclude_matches=False)
     assert "{:C}".format(annotated) == EXPECTED_ENHANCED_MATCH
+
+
+EXPECTED_TWO_PATTERNS = """
+# text = Sue likes coffee and Bill tea.
+# sent_id = 0
+# semgrex pattern = |{word:likes}=l >/conj.*/@enhanced=e {}=c| matched at 2:likes  l=2:likes c=5.1:likes
+# semgrex pattern = |{word:Bill}=b <nsubj@enhanced=f {}=h| matched at 5:Bill  h=5.1:likes b=5:Bill
+# semgrex pattern = |{word:zzz}| did not match!
+# highlight tokens = 2 5 5.1
+# highlight deprels = 5 5.1
+1	Sue	Sue	PROPN	NNP	Number=Sing	2	nsubj	2:nsubj	_
+2	likes	like	VERB	VBZ	Number=Sing|Person=3|Tense=Pres	0	root	0:root	_
+3	coffee	coffee	NOUN	NN	Number=Sing	2	obj	2:obj	_
+4	and	and	CCONJ	CC	_	5	cc	5.1:cc	_
+5	Bill	Bill	PROPN	NNP	Number=Sing	2	conj	5.1:nsubj	_
+5.1	likes	like	VERB	VBZ	Number=Sing|Person=3|Tense=Pres	_	_	2:conj:and	CopyOf=2
+6	tea	tea	NOUN	NN	Number=Sing	5	orphan	5.1:obj	SpaceAfter=No
+7	.	.	PUNCT	.	_	2	punct	2:punct	_
+""".strip()
+
+def test_two_patterns_one_highlight():
+    """
+    When several patterns match one sentence, their highlights are
+    combined into one line each, as ConlluEditor only keeps the last
+    highlight line it reads
+    """
+    doc = enhanced_doc()
+    patterns = ["{word:likes}=l >/conj.*/@enhanced=e {}=c", "{word:Bill}=b <nsubj@enhanced=f {}=h", "{word:zzz}"]
+    response = semgrex.process_doc(doc, *patterns)
+    annotated = semgrex.annotate_doc(doc, response, patterns, matches_only=False, exclude_matches=False)
+    assert "{:C}".format(annotated) == EXPECTED_TWO_PATTERNS

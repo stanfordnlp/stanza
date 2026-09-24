@@ -170,12 +170,14 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
     for sentence_result in semgrex_result.sentence:
         sentence_matched = False
         matched_semgrex_ids = set()
+        # the highlights of every pattern which matched this sentence go
+        # on one line each, as ConlluEditor only keeps the last such line
+        highlight_tokens = set()
+        highlight_edges = set()
         for pattern_result in sentence_result.pattern:
             if len(pattern_result.match) == 0:
                 continue
 
-            highlight_tokens = set()
-            highlight_edges = set()
             for match in pattern_result.match:
                 sentence_matched = True
                 sentence = doc.sentences[match.sentenceIndex]
@@ -207,15 +209,16 @@ def annotate_doc(doc, semgrex_result, semgrex_patterns, matches_only, exclude_ma
                     # a deprel is highlighted on the word it points to,
                     # which for an enhanced edge may be an empty word
                     highlight_edges.add((edge.target, edge.targetEmpty))
-            if len(highlight_tokens) > 0:
-                sentence.add_comment("# highlight tokens = %s" % sorted_node_ids(highlight_tokens))
-            if len(highlight_edges) > 0:
-                sentence.add_comment("# highlight deprels = %s" % sorted_node_ids(highlight_edges))
 
         if sentence_matched and not matches_only:
             for semgrex_idx, pattern_text in enumerate(pattern_texts):
                 if semgrex_idx not in matched_semgrex_ids:
                     sentence.add_comment("# semgrex pattern = |%s| did not match!" % pattern_text)
+
+        if len(highlight_tokens) > 0:
+            sentence.add_comment("# highlight tokens = %s" % sorted_node_ids(highlight_tokens))
+        if len(highlight_edges) > 0:
+            sentence.add_comment("# highlight deprels = %s" % sorted_node_ids(highlight_edges))
 
         if sentence_matched:
             matching_sentences.append(sentence)
