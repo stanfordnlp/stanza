@@ -61,10 +61,11 @@ for lang in morphseg_langs:
 
 logger.info("DOWNLOADING CORENLP")
 
+# The models are downloaded to match the version of CoreNLP installed here
 installation.install_corenlp(dir=corenlp_dir)
-installation.download_corenlp_models(model="french", version="main", dir=corenlp_dir)
-installation.download_corenlp_models(model="german", version="main", dir=corenlp_dir)
-installation.download_corenlp_models(model="italian", version="main", dir=corenlp_dir)
-installation.download_corenlp_models(model="spanish", version="main", dir=corenlp_dir)
+installation.download_corenlp_models(model="french", dir=corenlp_dir)
+installation.download_corenlp_models(model="german", dir=corenlp_dir)
+installation.download_corenlp_models(model="italian", dir=corenlp_dir)
+installation.download_corenlp_models(model="spanish", dir=corenlp_dir)
 
 logger.info("Test setup completed.")
