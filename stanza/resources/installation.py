@@ -8,6 +8,7 @@ import re
 import shutil
 
 import huggingface_hub
+import huggingface_hub.constants
 import requests
 from packaging import version as pkg_version
 
@@ -62,6 +63,23 @@ def hf_repo_refs(repo_id, proxies=None):
     return branches, tags
 
 
+def cached_hf_refs(repo_id):
+    """
+    Names of the revisions of a HF model repo in the local HF cache, such as {"main", "v4.5.10"}
+    """
+    try:
+        cache = huggingface_hub.scan_cache_dir()
+    except (KeyboardInterrupt, SystemExit):
+        raise
+    except Exception as e:
+        logger.debug("Could not scan the HF cache: %s", e)
+        return set()
+    for repo in cache.repos:
+        if repo.repo_id == repo_id and repo.repo_type == "model":
+            return {ref for revision in repo.revisions for ref in revision.refs}
+    return set()
+
+
 def release_tags(tags):
     """
     Return {Version: tag name} for the tags which name a release, such as v4.5.10
@@ -101,6 +119,21 @@ def resolve_corenlp_version(url, requested, proxies=None):
         return requested, 'v' + requested, requested
 
     hf_parts = _parse_hf_url(url.format(tag='main', version='main'))
+    # With HF_HUB_OFFLINE set, huggingface_hub can only serve revisions
+    # already in its cache, so the newest release is the newest one there
+    if hf_parts is not None and not proxies and huggingface_hub.constants.HF_HUB_OFFLINE:
+        if requested == 'main':
+            return 'main', 'main', 'main (offline)'
+        repo_id = hf_parts[0]
+        cached = cached_hf_refs(repo_id)
+        releases = release_tags(cached)
+        if releases:
+            newest = max(releases)
+            return str(newest), releases[newest], f"{newest} (newest in the offline cache)"
+        if 'main' in cached:
+            return 'main', 'main', 'main (offline)'
+        raise RuntimeError(f"HF_HUB_OFFLINE is set, and {repo_id} is not in the HF cache")
+
     if requested is None:
         if hf_parts is None:
             raise ValueError(f"Cannot look up the newest CoreNLP version for {url}, "
