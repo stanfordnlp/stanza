@@ -15,7 +15,7 @@ After Stanza is installed, you need to install the CoreNLP software package and 
 ## Installing Java
 
 The client is written in Java, so you will first need to install the
-Java client.  CoreNLP requires Java 1.8 or higher.  You will also need
+Java client.  CoreNLP requires Java 11 or higher.  You will also need
 to add Java to your path.  On some systems, such as with the Windows
 installer, this may happen automatically, or you may need to manually
 update your path.
