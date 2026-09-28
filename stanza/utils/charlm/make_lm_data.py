@@ -81,6 +81,7 @@ def main():
     parser.add_argument("--no_make_test_file", default=True, dest="make_test_file", action="store_false", help="Don't save a test file.  Honestly, we never even use it.  Best for low resource languages where every bit helps")
     parser.add_argument("--max_open_handles", default=100, type=int, help="Cap on simultaneously open bucket files in pass 1.  Mainly relevant if split_size is set very small, producing a huge number of buckets; keep this comfortably under the OS file descriptor limit (ulimit -n).")
     parser.add_argument("--bucket_compression", default=False, action="store_true", help="Compress intermediate bucket files (pass 1 output) with xz.  Saves disk space at the cost of extra CPU; off by default since buckets are temporary and disk is usually cheaper than CPU time.")
+    parser.add_argument("--min_allowed_size", default=0.1, type=float, help="Minimum character count (in G); otherwise an error is thrown.")
     args = parser.parse_args()
 
     print("Processing files:")
@@ -130,7 +131,7 @@ def main():
                 os.makedirs(tgt_dir)
             print(f"-> Processing {lang}-{dataset_name}")
             prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, args.xz_output, split_size,
-                             args.make_test_file, args.max_open_handles, args.bucket_compression)
+                            args.make_test_file, args.max_open_handles, args.bucket_compression, args.min_allowed_size)
 
         print("")
 
@@ -234,7 +235,7 @@ def measure_size_for_bucket_count(input_files):
 
 
 def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress, split_size, make_test_file,
-                     max_open_handles, bucket_compression):
+                     max_open_handles, bucket_compression, min_allowed_size):
     """
     Combine, shuffle and split data into smaller files, following a naming convention.
 
@@ -273,7 +274,7 @@ def prepare_lm_data(src_dir, tgt_dir, lang, dataset_name, compress, split_size, 
         # the floor check stays conservative rather than silently permissive.
         approx_gb = actual_chars / 1024 / 1024 / 1024
         print(f"--> Actual size (approx, char count): {approx_gb:.4f} GB")
-        if approx_gb < 0.1:
+        if approx_gb < min_allowed_size:
             raise RuntimeError("Not enough data found to build a charlm.  At least 100MB data expected")
 
         print("--> Pass 2/2: shuffling each bucket and writing final shards...")
