@@ -23,7 +23,7 @@ default_treebanks = {
     "bxr":     "bdt",
     "ca":      "ancora",
     "cop":     "scriptorium",
-    "cs":      "pdt",
+    "cs":      "pdtc",
     "cu":      "proiel",
     "cy":      "ccg",
     "da":      "ddt",
