@@ -13,7 +13,7 @@ pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 def test_replace_long_tokens():
     nlp = stanza.Pipeline(lang="en", download_method=None, model_dir=TEST_MODELS_DIR, processors="tokenize")
 
-    test_str = "foo " + "x" * 10000 + " bar"
+    test_str = "foo " + "z" * 10000 + " bar"
 
     res = nlp(test_str)
 
