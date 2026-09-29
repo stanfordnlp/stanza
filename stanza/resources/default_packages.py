@@ -99,7 +99,7 @@ default_treebanks = {
     "sa":      "vedic",
     "say":     "autogramm",
     "sd":      "isra",
-    "sdh"      "garrusi",
+    "sdh":     "garrusi",
     "sk":      "snk",
     "sl":      "combined",
     "sme":     "giella",
