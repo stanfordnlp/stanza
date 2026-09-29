@@ -7,15 +7,40 @@ For example, on the cluster, you can do this:
 
 python3 -m stanza.resources.prepare_resources --input_dir /u/nlp/software/stanza/models/current-models-1.5.0 --output_dir /u/nlp/software/stanza/models/1.5.0 > resources.out 2>&1
 nlprun -a stanza-1.2 -q john "python3 -m stanza.resources.prepare_resources --input_dir /u/nlp/software/stanza/models/current-models-1.5.0 --output_dir /u/nlp/software/stanza/models/1.5.0" -o resources.out
+
+The work happens in two phases:
+
+  - Planning: the input directories are listed (filenames only, no
+    model files are read), and the resources, packages, and
+    default.zip contents are all computed in memory.  Every problem
+    found - a language missing from default_treebanks, a default
+    package with no matching model, a dependency on a model which
+    doesn't exist, etc - is collected, and if there are any, they are
+    all reported and the script exits before copying anything.
+    --check_only stops after this phase.
+
+  - Building: the models are copied, hashed, and zipped, using
+    --num_workers threads.
+
+A cache file, .prepare_resources_cache.json, is kept in the output
+directory.  It records the stat and md5 of each model and default.zip
+written.  On a rerun, a model whose input and output files are both
+unchanged is not copied again, and a default.zip whose members are all
+unchanged is not rebuilt.  --force ignores the cache.
 """
 
 import argparse
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import os
 from pathlib import Path
 import hashlib
 import shutil
+import sys
+import threading
+import time
+import traceback
 import zipfile
 
 from stanza import __resources_version__
@@ -33,6 +58,9 @@ def parse_args():
     parser.add_argument('--output_dir', type=str, default="/u/nlp/software/stanza/models/%s" % __resources_version__, help='Output dir for various models.')
     parser.add_argument('--packages_only', action='store_true', default=False, help='Only build the package maps instead of rebuilding everything')
     parser.add_argument('--lang', type=str, default=None, help='Only process this language or a comma-separated list of languages.  If left blank, will prepare all languages.  To use this argument, a previous prepared resources with all of the languages is necessary.')
+    parser.add_argument('--num_workers', type=int, default=8, help='Number of threads to use when copying, hashing, and zipping models')
+    parser.add_argument('--force', action='store_true', default=False, help='Copy every model and rebuild every default.zip, even if the cache says the output is up to date')
+    parser.add_argument('--check_only', action='store_true', default=False, help='Only check for problems in the models and default_packages.  Nothing is written')
     args = parser.parse_args()
     args.input_dir = os.path.abspath(args.input_dir)
     args.output_dir = os.path.abspath(args.output_dir)
@@ -79,9 +107,178 @@ def copy_file(src, dst):
     shutil.copy2(src, dst)
 
 
+COPY_CHUNK_SIZE = 16 * 1024 * 1024
+
 def get_md5(path):
-    data = open(path, 'rb').read()
-    return hashlib.md5(data).hexdigest()
+    """
+    md5 of a file, read in chunks so that large zips don't have to fit in memory
+    """
+    md5 = hashlib.md5()
+    with open(path, 'rb') as fin:
+        while True:
+            chunk = fin.read(COPY_CHUNK_SIZE)
+            if not chunk:
+                break
+            md5.update(chunk)
+    return md5.hexdigest()
+
+
+def copy_file_with_md5(src, dst):
+    """
+    Copy src to dst, including the stat info, and return the md5 of the data
+
+    The data is hashed as it is copied, so each file is only read once.
+    The copy is written to a temp file and then renamed, so an
+    interrupted copy never leaves a partial file at dst.
+    """
+    ensure_dir(Path(dst).parent)
+    tmp = dst + ".partial"
+    md5 = hashlib.md5()
+    with open(src, 'rb') as fin, open(tmp, 'wb') as fout:
+        while True:
+            chunk = fin.read(COPY_CHUNK_SIZE)
+            if not chunk:
+                break
+            md5.update(chunk)
+            fout.write(chunk)
+    shutil.copystat(src, tmp)
+    os.replace(tmp, dst)
+    return md5.hexdigest()
+
+
+def stat_signature(path):
+    """
+    [size, mtime_ns] of the file, or None if it doesn't exist
+    """
+    try:
+        st = os.stat(path)
+    except FileNotFoundError:
+        return None
+    return [st.st_size, st.st_mtime_ns]
+
+
+class OutputCache:
+    """
+    Remembers the md5 of each file written to the output directory
+
+    Each entry is keyed by the path relative to the output directory.
+    An entry is only trusted if the output file (and the input file,
+    for models) still has the same size and mtime as when the entry
+    was recorded.  The cache is thread safe and is periodically
+    flushed to disk, so an interrupted run keeps most of its work.
+    """
+    CACHE_NAME = ".prepare_resources_cache.json"
+    SAVE_EVERY = 25
+
+    def __init__(self, output_dir, use_existing=True):
+        self.output_dir = output_dir
+        self.path = os.path.join(output_dir, self.CACHE_NAME)
+        self.entries = {}
+        self.lock = threading.Lock()
+        self.unsaved = 0
+        if use_existing and os.path.exists(self.path):
+            try:
+                with open(self.path) as fin:
+                    self.entries = json.load(fin)
+            except (OSError, ValueError) as e:
+                print("WARNING: could not read %s, rebuilding everything: %s" % (self.path, e))
+                self.entries = {}
+
+    def key(self, path):
+        return os.path.relpath(path, self.output_dir)
+
+    def lookup_model(self, src, dst):
+        """
+        md5 of dst if it is an unchanged copy of an unchanged src, otherwise None
+        """
+        with self.lock:
+            entry = self.entries.get(self.key(dst))
+        if not entry or entry.get('src') != src:
+            return None
+        if entry.get('src_stat') != stat_signature(src) or entry.get('dst_stat') != stat_signature(dst):
+            return None
+        return entry.get('md5')
+
+    def store_model(self, src, dst, md5):
+        self.store(dst, {'src': src, 'src_stat': stat_signature(src), 'dst_stat': stat_signature(dst), 'md5': md5})
+
+    def lookup_zip(self, dst, members):
+        """
+        md5 of the zip at dst if it was built from exactly these [arcname, md5] members and hasn't changed since
+        """
+        with self.lock:
+            entry = self.entries.get(self.key(dst))
+        if not entry or entry.get('members') != members:
+            return None
+        if entry.get('dst_stat') != stat_signature(dst):
+            return None
+        return entry.get('md5')
+
+    def store_zip(self, dst, members, md5):
+        self.store(dst, {'members': members, 'dst_stat': stat_signature(dst), 'md5': md5})
+
+    def store(self, dst, entry):
+        with self.lock:
+            self.entries[self.key(dst)] = entry
+            self.unsaved += 1
+            if self.unsaved >= self.SAVE_EVERY:
+                self._save()
+
+    def save(self):
+        with self.lock:
+            self._save()
+
+    def _save(self):
+        ensure_dir(self.output_dir)
+        tmp = self.path + ".partial"
+        with open(tmp, 'w') as fout:
+            json.dump(self.entries, fout, indent=1)
+        os.replace(tmp, self.path)
+        self.unsaved = 0
+
+
+def write_resources(resources, output_dir):
+    ensure_dir(output_dir)
+    with open(os.path.join(output_dir, 'resources.json'), 'w') as fout:
+        json.dump(resources, fout, indent=2)
+
+
+def load_resources(output_dir):
+    with open(os.path.join(output_dir, 'resources.json')) as fin:
+        return json.load(fin)
+
+
+def run_in_threads(func, jobs, num_workers, desc):
+    """
+    Run func(*job) for each job, returning the results in job order
+
+    If any job fails, the jobs which haven't started yet are cancelled
+    and the exception is raised.
+    """
+    results = [None] * len(jobs)
+    if not jobs:
+        return results
+    with ThreadPoolExecutor(max_workers=max(1, num_workers)) as executor:
+        futures = {executor.submit(func, *job): idx for idx, job in enumerate(jobs)}
+        try:
+            for future in tqdm(as_completed(futures), total=len(futures), desc=desc):
+                results[futures[future]] = future.result()
+        except BaseException:
+            executor.shutdown(wait=True, cancel_futures=True)
+            raise
+    return results
+
+
+def describe_error(context, e):
+    """
+    Format an exception caught while checking for problems
+
+    Expected errors (bad config, missing models) are summarized in one
+    line.  Anything else is probably a bug, so it gets the full traceback.
+    """
+    if isinstance(e, (AssertionError, RuntimeError, FileNotFoundError, ValueError)):
+        return "%s: %s" % (context, e)
+    return "%s: %s: %s\n%s" % (context, type(e).__name__, e, traceback.format_exc())
 
 
 def split_model_name(model):
@@ -299,44 +496,95 @@ def get_dependencies(processor, lang, package):
         return get_tokenizer_dependencies(lang, package)
     return {}
 
-def process_dirs(args):
-    dirs = sorted(os.listdir(args.input_dir))
+def selected_langs(args):
+    return args.lang.split(",") if args.lang else None
+
+def scan_input_dirs(args, errors):
+    """
+    Build resources from the filenames in the input directories
+
+    No model files are read or copied here.  Each model gets an entry
+    with its dependencies and a placeholder md5, which is filled in by
+    copy_models.
+
+    Returns resources and a list of (input_path, output_path, lang, processor, package) to copy
+    """
+    langs = selected_langs(args)
     resources = {}
-    if args.lang:
-        resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
-        # this one language gets overridden
-        # if this is not done, and we reuse the old resources,
-        # any models which were deleted will still be in the resources
-        for lang in args.lang.split(","):
+    if langs:
+        resources = load_resources(args.output_dir)
+        # the selected languages get rebuilt from scratch
+        # otherwise, any models which were deleted would still be in the resources
+        for lang in langs:
             resources[lang] = {}
 
-    for model_dir in dirs:
-        print(f"Processing models in {model_dir}")
-        models = sorted(os.listdir(os.path.join(args.input_dir, model_dir)))
-        for model in tqdm(models):
+    copies = []
+    for model_dir in sorted(os.listdir(args.input_dir)):
+        dir_path = os.path.join(args.input_dir, model_dir)
+        if not os.path.isdir(dir_path):
+            continue
+        for model in sorted(os.listdir(dir_path)):
             if not model.endswith('.pt'): continue
-            # get processor
-            lang, package, processor = split_model_name(model)
-            if args.lang and lang not in args.lang.split(","):
+            try:
+                lang, package, processor = split_model_name(model)
+            except (AssertionError, ValueError) as e:
+                errors.append("%s/%s: cannot parse model name: %s" % (model_dir, model, e))
+                continue
+            if langs and lang not in langs:
                 continue
 
-            # copy file
-            input_path = os.path.join(args.input_dir, model_dir, model)
-            output_path = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
-            copy_file(input_path, output_path)
-            # maintain md5
-            md5 = get_md5(output_path)
-            # maintain dependencies
-            dependencies = get_dependencies(processor, lang, package)
-            # maintain resources
-            if lang not in resources: resources[lang] = {}
-            if processor not in resources[lang]: resources[lang][processor] = {}
+            try:
+                dependencies = get_dependencies(processor, lang, package)
+            except Exception as e:
+                errors.append(describe_error("%s/%s" % (model_dir, model), e))
+                dependencies = None
+
+            # md5 is filled in when the model is copied
+            # it is put in first so that the key order matches in resources.json
+            entry = {'md5': None}
             if dependencies:
-                resources[lang][processor][package] = {'md5': md5, 'dependencies': dependencies}
-            else:
-                resources[lang][processor][package] = {'md5': md5}
-    print("Processed initial model directories.  Writing preliminary resources.json")
-    json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
+                entry['dependencies'] = dependencies
+            resources.setdefault(lang, {}).setdefault(processor, {})[package] = entry
+
+            input_path = os.path.join(dir_path, model)
+            output_path = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
+            copies.append((input_path, output_path, lang, processor, package))
+    print("Found %d models in %s" % (len(copies), args.input_dir))
+    return resources, copies
+
+def check_dependencies(resources, copies, errors):
+    """
+    Check that every dependency of every scanned model is itself a known model
+    """
+    for _, _, lang, processor, package in copies:
+        entry = resources[lang][processor][package]
+        for dependency in entry.get('dependencies', []):
+            dep_model, dep_package = dependency['model'], dependency['package']
+            if dep_package is None or dep_package not in resources[lang].get(dep_model, {}):
+                errors.append("%s %s %s depends on %s %s, which does not exist" % (lang, processor, package, dep_model, dep_package))
+
+def copy_models(resources, copies, cache, num_workers):
+    """
+    Copy each model to the output directory, filling in its md5 in resources
+
+    Models which the cache says are already up to date are not copied.
+    """
+    def copy_one(input_path, output_path, lang, processor, package):
+        md5 = cache.lookup_model(input_path, output_path)
+        if md5 is not None:
+            return md5, False
+        md5 = copy_file_with_md5(input_path, output_path)
+        cache.store_model(input_path, output_path, md5)
+        return md5, True
+
+    try:
+        results = run_in_threads(copy_one, copies, num_workers, "Copying models")
+    finally:
+        cache.save()
+    for (_, _, lang, processor, package), (md5, _) in zip(copies, results):
+        resources[lang][processor][package]['md5'] = md5
+    num_copied = sum(1 for _, copied in results if copied)
+    print("Copied %d models, %d were already up to date" % (num_copied, len(copies) - num_copied))
 
 def get_default_pos_package(lang, ud_package, known_resources):
     charlm_package = get_pos_charlm_package(lang, ud_package)
@@ -382,59 +630,111 @@ def get_default_depparse_package(lang, ud_package, known_resources):
     # this will probably cause a problem when there is no model of this name
     return ud_package + "_nocharlm"
 
-def process_default_zips(args):
-    resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+def is_packaged_language(resources, lang):
+    """
+    Whether this entry in resources is a language which gets packages and a default.zip
+
+    url, alias, and lang_name are checked in case we are rerunning on an already built resources.json
+    """
+    if lang == 'url':
+        return False
+    if 'alias' in resources[lang]:
+        return False
+    if all(k in ("backward_charlm", "forward_charlm", "pretrain", "lang_name") for k in resources[lang].keys()):
+        return False
+    if lang in allowed_empty_languages and lang not in default_treebanks:
+        return False
+    return True
+
+def plan_default_zips(resources, args, errors):
+    """
+    Figure out which models go in each language's default.zip
+
+    Every model needed by the default package, or by one of its
+    dependencies, must be in resources.  Missing models are added to errors.
+
+    Returns a list of (lang, zip_path, [(filename, processor, package), ...])
+    """
+    langs = selected_langs(args)
+    zip_plans = []
     for lang in resources:
-        # check url, alias, and lang_name in case we are rerunning this step on an already built resources.json
-        if lang == 'url':
-            continue
-        if 'alias' in resources[lang]:
-            continue
-        if all(k in ("backward_charlm", "forward_charlm", "pretrain", "lang_name") for k in resources[lang].keys()):
-            continue
-        if lang in allowed_empty_languages and lang not in default_treebanks:
+        if not is_packaged_language(resources, lang):
             continue
         if lang not in default_treebanks:
-            raise AssertionError(f'{lang} not in default treebanks!!!')
-
-        if args.lang and lang not in args.lang.split(","):
+            # already reported by build_packages
+            continue
+        if langs and lang not in langs:
+            continue
+        if PACKAGES not in resources[lang]:
+            # build_packages failed for this language and already reported why
             continue
 
-        print(f'Preparing default models for language {lang}')
-
         models_needed = defaultdict(set)
-
-        packages = resources[lang][PACKAGES]["default"]
-        for processor, package in packages.items():
-            if processor == 'lemma' and package == 'identity':
-                continue
-            if processor == 'optional':
-                continue
-            models_needed[processor].add(package)
-            dependencies = get_dependencies(processor, lang, package)
-            for dependency in dependencies:
-                models_needed[dependency['model']].add(dependency['package'])
+        try:
+            packages = resources[lang][PACKAGES]["default"]
+            for processor, package in packages.items():
+                if processor == 'lemma' and package == 'identity':
+                    continue
+                if processor == 'optional':
+                    continue
+                models_needed[processor].add(package)
+                dependencies = get_dependencies(processor, lang, package)
+                for dependency in dependencies:
+                    models_needed[dependency['model']].add(dependency['package'])
+        except Exception as e:
+            errors.append(describe_error("%s default.zip" % lang, e))
+            continue
 
         model_files = []
         for processor in PROCESSORS:
             if processor in models_needed:
-                for package in sorted(models_needed[processor]):
+                for package in sorted(models_needed[processor], key=str):
+                    if package not in resources[lang].get(processor, {}):
+                        errors.append("Processor %s package %s needed for %s default.zip, but there is no such model" % (processor, package, lang))
+                        continue
                     filename = os.path.join(args.output_dir, lang, "models", processor, package + '.pt')
-                    if os.path.exists(filename):
-                        print("   Model {} package {}: file {}".format(processor, package, filename))
-                        model_files.append((filename, processor, package))
-                    else:
-                        raise FileNotFoundError(f"Processor {processor} package {package} needed for {lang} but cannot be found at {filename}")
+                    model_files.append((filename, processor, package))
 
-        with zipfile.ZipFile(os.path.join(args.output_dir, lang, 'models', 'default.zip'), 'w', zipfile.ZIP_DEFLATED) as zipf:
+        zip_path = os.path.join(args.output_dir, lang, 'models', 'default.zip')
+        zip_plans.append((lang, zip_path, model_files))
+    return zip_plans
+
+def build_default_zips(resources, zip_plans, cache, num_workers):
+    """
+    Write each planned default.zip and record its md5 in resources
+
+    A zip whose members are the same models (by md5) as the cached
+    version is not rebuilt.  The member order follows PROCESSORS, so
+    the zips come out the same as long as the models do.
+    """
+    def build_one(lang, zip_path, model_files):
+        members = [[os.path.join(processor, package + '.pt'), resources[lang][processor][package]['md5']]
+                   for _, processor, package in model_files]
+        md5 = cache.lookup_zip(zip_path, members)
+        if md5 is not None:
+            return md5, False
+        tmp = zip_path + ".partial"
+        with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for filename, processor, package in model_files:
                 zipf.write(filename=filename, arcname=os.path.join(processor, package + '.pt'))
+        os.replace(tmp, zip_path)
+        md5 = get_md5(zip_path)
+        cache.store_zip(zip_path, members, md5)
+        return md5, True
 
-        default_md5 = get_md5(os.path.join(args.output_dir, lang, 'models', 'default.zip'))
-        resources[lang]['default_md5'] = default_md5
+    for lang, _, model_files in zip_plans:
+        print('Default models for language %s' % lang)
+        for filename, processor, package in model_files:
+            print("   Model {} package {}: file {}".format(processor, package, filename))
 
-    print("Processed default model zips.  Writing resources.json")
-    json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
+    try:
+        results = run_in_threads(build_one, zip_plans, num_workers, "Building default.zip")
+    finally:
+        cache.save()
+    for (lang, _, _), (md5, _) in zip(zip_plans, results):
+        resources[lang]['default_md5'] = md5
+    num_built = sum(1 for _, built in results if built)
+    print("Built %d default.zip files, %d were already up to date" % (num_built, len(zip_plans) - num_built))
 
 def get_default_processors(resources, lang):
     """
@@ -448,6 +748,8 @@ def get_default_processors(resources, lang):
 
     default_package = default_treebanks[lang]
     default_processors = {}
+    if 'tokenize' not in resources[lang]:
+        raise AssertionError("No tokenizer models found for %s" % lang)
     if lang in default_tokenizer:
         default_processors['tokenize'] = default_tokenizer[lang]
     else:
@@ -607,106 +909,139 @@ def get_default_fast(resources, lang):
 
     return default_processors
 
-def process_packages(args):
+def build_lang_packages(resources, lang):
     """
     Build a package for a language's default processors and all of the treebanks specifically used for that language
     """
-    resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+    default_processors = get_default_processors(resources, lang)
 
+    # build the packages in a separate dict so that a failure partway
+    # through doesn't leave a half built PACKAGES entry
+    packages = {}
+    packages['default'] = default_processors
+
+    if lang not in no_pretrain_languages and lang != "multilingual":
+        packages['default_fast'] = get_default_fast(resources, lang)
+        packages['default_accurate'] = get_default_accurate(resources, lang)
+
+    # Now we loop over each of the tokenizers for this language
+    # ... we use this as a proxy for the available UD treebanks
+    # This loop also catches things such as "craft" which are
+    # included treebanks that aren't UD
+    # We then create a package in the packages dict for each of those treebanks
+    if 'tokenize' in resources[lang]:
+        for package in resources[lang]['tokenize']:
+            package, _, _ = split_package(package)
+            if package in packages:
+                # can happen in the case of a _nocharlm and _charlm version of the tokenizer
+                continue
+
+            processors = {}
+            # TODO: when we rebuild all the models, make all the tokenizers say _nocharlm
+            if package in resources[lang]['tokenize']:
+                processors["tokenize"] = package
+            elif package + "_nocharlm" in resources[lang]['tokenize']:
+                processors["tokenize"] = package + "_nocharlm"
+            elif package + "_charlm" in resources[lang]['tokenize']:
+                processors["tokenize"] = package + "_charlm"
+            else:
+                raise AssertionError("Should have found a tokenizer for lang %s package %s" % (lang, package))
+
+            if "mwt" in resources[lang] and package in resources[lang]["mwt"]:
+                processors["mwt"] = package
+
+            if "pos" in resources[lang]:
+                if package + "_charlm" in resources[lang]["pos"]:
+                    processors["pos"] = package + "_charlm"
+                elif package + "_nocharlm" in resources[lang]["pos"]:
+                    processors["pos"] = package + "_nocharlm"
+
+            if "lemma" in resources[lang] and "pos" in processors:
+                lemma_package = package + "_nocharlm"
+                if lemma_package in resources[lang]["lemma"]:
+                    processors["lemma"] = lemma_package
+                else:
+                    lemma_package = package + "_charlm"
+                    if lemma_package in resources[lang]['lemma']:
+                        processors['lemma'] = lemma_package
+                        print("WARNING: nocharlm lemmatizer for %s model does not exist, but %s does" % (package, lemma_package))
+
+            if "depparse" in resources[lang] and "pos" in processors:
+                depparse_package = None
+                if package + "_charlm" in resources[lang]["depparse"]:
+                    depparse_package = package + "_charlm"
+                elif package + "_nocharlm" in resources[lang]["depparse"]:
+                    depparse_package = package + "_nocharlm"
+                # we want to set the lemma first if it's identity
+                # THEN set the depparse
+                if depparse_package is not None:
+                    if "lemma" not in processors:
+                        processors["lemma"] = "identity"
+                    processors["depparse"] = depparse_package
+
+            packages[package] = processors
+
+    # TODO: eventually we can remove default_processors
+    # For now, we want to keep this so that v1.5.1 is compatible
+    # with the next iteration of resources files
+    resources[lang]['default_processors'] = default_processors
+    resources[lang][PACKAGES] = packages
+
+def build_packages(resources, args, errors):
+    """
+    Build the packages for each language, adding any problems found to errors
+    """
+    langs = selected_langs(args)
     for lang in resources:
-        # check url, alias, and lang_name in case we are rerunning this step on an already built resources.json
-        if lang == 'url':
-            continue
-        if 'alias' in resources[lang]:
-            continue
-        if all(k in ("backward_charlm", "forward_charlm", "pretrain", "lang_name") for k in resources[lang].keys()):
-            continue
-        if lang in allowed_empty_languages and lang not in default_treebanks:
+        if not is_packaged_language(resources, lang):
             continue
         if lang not in default_treebanks:
-            raise AssertionError(f'{lang} not in default treebanks!!!')
-
-        if args.lang and lang not in args.lang.split(","):
+            errors.append(f'{lang} not in default treebanks!!!')
             continue
 
-        default_processors = get_default_processors(resources, lang)
+        if langs and lang not in langs:
+            continue
 
-        # TODO: eventually we can remove default_processors
-        # For now, we want to keep this so that v1.5.1 is compatible
-        # with the next iteration of resources files
-        resources[lang]['default_processors'] = default_processors
-        resources[lang][PACKAGES] = {}
-        resources[lang][PACKAGES]['default'] = default_processors
+        try:
+            build_lang_packages(resources, lang)
+        except Exception as e:
+            errors.append(describe_error("%s packages" % lang, e))
 
-        if lang not in no_pretrain_languages and lang != "multilingual":
-            default_fast = get_default_fast(resources, lang)
-            resources[lang][PACKAGES]['default_fast'] = default_fast
-
-            default_accurate = get_default_accurate(resources, lang)
-            resources[lang][PACKAGES]['default_accurate'] = default_accurate
-
-        # Now we loop over each of the tokenizers for this language
-        # ... we use this as a proxy for the available UD treebanks
-        # This loop also catches things such as "craft" which are
-        # included treebanks that aren't UD
-        # We then create a package in the packages dict for each of those treebanks
-        if 'tokenize' in resources[lang]:
-            for package in resources[lang]['tokenize']:
-                package, _, _ = split_package(package)
-                if package in resources[lang][PACKAGES]:
-                    # can happen in the case of a _nocharlm and _charlm version of the tokenizer
+def check_packages(resources, args, errors):
+    """
+    Check that every model named in every package (not just default) exists
+    """
+    langs = selected_langs(args)
+    for lang in resources:
+        if langs and lang not in langs:
+            continue
+        if not is_packaged_language(resources, lang) or PACKAGES not in resources[lang]:
+            continue
+        for package_name, processors in resources[lang][PACKAGES].items():
+            to_check = [(k, v) for k, v in processors.items() if k != 'optional']
+            to_check.extend(processors.get('optional', {}).items())
+            for processor, package in to_check:
+                if processor == 'lemma' and package == 'identity':
                     continue
+                if package not in resources[lang].get(processor, {}):
+                    errors.append("%s package %s uses %s %s, but there is no such model" % (lang, package_name, processor, package))
 
-                processors = {}
-                # TODO: when we rebuild all the models, make all the tokenizers say _nocharlm
-                if package in resources[lang]['tokenize']:
-                    processors["tokenize"] = package
-                elif package + "_nocharlm" in resources[lang]['tokenize']:
-                    processors["tokenize"] = package + "_nocharlm"
-                elif package + "_charlm" in resources[lang]['tokenize']:
-                    processors["tokenize"] = package + "_charlm"
-                else:
-                    raise AssertionError("Should have found a tokenizer for lang %s package %s" % (lang, package))
+def check_lcode(resources, args, errors):
+    """
+    Check for problems which process_lcode would otherwise hit after all the copying
+    """
+    if 'multilingual' not in resources:
+        errors.append("No multilingual models found.  Is the langid model missing?")
+    langs = selected_langs(args)
+    for lang in resources:
+        if langs and lang not in langs:
+            continue
+        if lang in ('url', 'multilingual') or 'alias' in resources[lang]:
+            continue
+        if lang not in lcode2lang:
+            errors.append("%s not found in lcode2lang!  It would be left out of resources.json" % lang)
 
-                if "mwt" in resources[lang] and package in resources[lang]["mwt"]:
-                    processors["mwt"] = package
-
-                if "pos" in resources[lang]:
-                    if package + "_charlm" in resources[lang]["pos"]:
-                        processors["pos"] = package + "_charlm"
-                    elif package + "_nocharlm" in resources[lang]["pos"]:
-                        processors["pos"] = package + "_nocharlm"
-
-                if "lemma" in resources[lang] and "pos" in processors:
-                    lemma_package = package + "_nocharlm"
-                    if lemma_package in resources[lang]["lemma"]:
-                        processors["lemma"] = lemma_package
-                    else:
-                        lemma_package = package + "_charlm"
-                        if lemma_package in resources[lang]['lemma']:
-                            processors['lemma'] = lemma_package
-                            print("WARNING: nocharlm lemmatizer for %s model does not exist, but %s does" % (package, lemma_package))
-
-                if "depparse" in resources[lang] and "pos" in processors:
-                    depparse_package = None
-                    if package + "_charlm" in resources[lang]["depparse"]:
-                        depparse_package = package + "_charlm"
-                    elif package + "_nocharlm" in resources[lang]["depparse"]:
-                        depparse_package = package + "_nocharlm"
-                    # we want to set the lemma first if it's identity
-                    # THEN set the depparse
-                    if depparse_package is not None:
-                        if "lemma" not in processors:
-                            processors["lemma"] = "identity"
-                        processors["depparse"] = depparse_package
-
-                resources[lang][PACKAGES][package] = processors
-
-    print("Processed packages.  Writing resources.json")
-    json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
-
-def process_lcode(args):
-    resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+def process_lcode(resources):
     resources_new = {}
     resources_new["multilingual"] = resources["multilingual"]
     for lang in sorted(resources):
@@ -729,32 +1064,73 @@ def process_lcode(args):
             if alternative.lower() not in resources_new:
                 resources_new[alternative.lower()] = {'alias': lang.lower()}
     print("Processed lcode aliases.  Writing resources.json")
-    json.dump(resources_new, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
+    return resources_new
 
 
-def process_misc(args):
-    resources = json.load(open(os.path.join(args.output_dir, 'resources.json')))
+def process_misc(resources):
     resources['no'] = {'alias': 'nb'}
     resources['zh'] = {'alias': 'zh-hans'}
     # This is intended to be unformatted.  expand_model_url in common.py will fill in the raw string
     # with the appropriate values in order to find the needed model file on huggingface
     resources['url'] = 'https://huggingface.co/stanfordnlp/stanza-{lang}/resolve/v{resources_version}/models/{filename}'
-    print("Finalized misc attributes.  Writing resources.json")
-    json.dump(resources, open(os.path.join(args.output_dir, 'resources.json'), 'w'), indent=2)
+    print("Finalized misc attributes")
+    return resources
+
+
+def report_errors(errors):
+    if not errors:
+        print("No problems found")
+        return
+    print()
+    print("Found %d problem(s).  Nothing has been copied or written." % len(errors))
+    for error in errors:
+        print("  " + error)
+    sys.exit(1)
 
 
 def main():
     args = parse_args()
+    start = time.time()
     print("Converting models from %s to %s" % (args.input_dir, args.output_dir))
+
+    # Planning: everything here works from filenames and default_packages only,
+    # so all problems are found before any time is spent copying
+    errors = []
+    if args.packages_only:
+        resources = load_resources(args.output_dir)
+        copies = []
+    else:
+        resources, copies = scan_input_dirs(args, errors)
+        check_dependencies(resources, copies, errors)
+    build_packages(resources, args, errors)
+    check_packages(resources, args, errors)
+    zip_plans = plan_default_zips(resources, args, errors)
     if not args.packages_only:
-        process_dirs(args)
-    process_packages(args)
-    if not args.packages_only:
-        process_default_zips(args)
-        process_lcode(args)
-        process_misc(args)
+        check_lcode(resources, args, errors)
+    report_errors(errors)
+    print("Planning took %.1fs" % (time.time() - start))
+    if args.check_only:
+        return
+
+    if args.packages_only:
+        write_resources(resources, args.output_dir)
+        print("Wrote packages to resources.json")
+        return
+
+    # Building
+    cache = OutputCache(args.output_dir, use_existing=not args.force)
+    copy_models(resources, copies, cache, args.num_workers)
+    print("Copied models.  Writing preliminary resources.json  (%.1fs elapsed)" % (time.time() - start))
+    write_resources(resources, args.output_dir)
+
+    build_default_zips(resources, zip_plans, cache, args.num_workers)
+    print("Built default zips  (%.1fs elapsed)" % (time.time() - start))
+
+    resources = process_lcode(resources)
+    resources = process_misc(resources)
+    write_resources(resources, args.output_dir)
+    print("Wrote resources.json  (%.1fs total)" % (time.time() - start))
 
 
 if __name__ == '__main__':
     main()
-
