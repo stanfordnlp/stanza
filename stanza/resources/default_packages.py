@@ -90,6 +90,7 @@ default_treebanks = {
     "pa":      "rang",
     "pcm":     "nsc",
     "pl":      "pdb",
+    "pro":     "corag",
     "pt":      "bosque",
     "qaf":     "arabizi",
     "qpm":     "philotis",
