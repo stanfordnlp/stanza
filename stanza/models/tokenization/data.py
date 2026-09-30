@@ -74,13 +74,21 @@ augment_final_punct  (augment_final_punct_prob)
 augment_mid_sent_punct  (augment_mid_punct_prob)
     Replaces a mid-sentence punctuation character (currently comma) with a
     typographic alternative (en dash U+2013 or em dash U+2014).  Intended for
-    languages whose training data contains no dashes, so that the model learns
-    to tokenize them correctly without retraining from scratch.  Unlike
+    languages whose training data contains no dashes, or contains them only
+    as standalone tokens, so that the model learns to tokenize them correctly
+    in all spacing conventions.  For example, several Spanish treebanks have
+    many "a – b" but never "a–b", so without this augmentation the tokenizer
+    never learns to split the latter.  Unlike
     augment_final_punct, the substitution also randomly varies the surrounding
     whitespace, producing all four spacing styles (spaced both sides, attached
     left, attached right, attached both sides) with equal probability, since
     dashes appear in real text with all of these conventions.  Eligible pairs
-    are checked via augment_vocab(..., final=False).
+    are checked via augment_vocab(..., final=False, allow_standalone=True):
+    the replacement is allowed if every existing occurrence of it in the
+    training data is a complete token by itself, as determined by the gold
+    labels (see is_standalone_token).  Whitespace alone is not a reliable
+    signal, since a standalone dash can be glued to neighboring punctuation,
+    as in the open-ended date range "(1947 –)".
 
 comma_typo  (comma_typo_prob)
     Simulates a common typing mistake by moving a space from after a
@@ -439,10 +447,31 @@ def build_known_mwt(data, mwt_expansions):
             known_mwts.add(mwt)
     return known_mwts
 
+def is_standalone_token(chunk, idx):
+    """
+    Returns True if the unit at chunk[idx] is a complete token by itself
+
+    The unit must end a token (non-zero label), and the token must
+    also start at this unit: either idx is the start of the chunk,
+    or the previous unit is whitespace or itself ends a token.
+
+    This uses the labels rather than the surrounding whitespace, as a
+    standalone token can be attached to neighboring tokens.  For
+    example, in "(1947 –)" the dash is its own token even though it
+    is immediately followed by ")"
+    """
+    if chunk[idx][1] == 0:
+        return False
+    if idx == 0:
+        return True
+    prev_unit, prev_label = chunk[idx-1]
+    return prev_unit.isspace() or prev_label != 0
+
 
 # Pairs of (existing, replacement) for mid-sentence punctuation augmentation.
-# The existing character must appear in the training data and the replacement
-# must not, otherwise the pair is skipped (checked in augment_vocab).
+# The existing character must appear in the training data, and the replacement
+# must either be absent or only appear as a standalone token, otherwise the
+# pair is skipped (checked in augment_vocab).
 MID_SENT_AUGMENT_PAIRS = [
     (",", "\u2013"),   # comma -> en dash: –
     (",", "\u2014"),   # comma -> em dash: —
@@ -637,42 +666,64 @@ class DataLoader(TokenizationDataset):
         return vocab
 
     @staticmethod
-    def augment_vocab(vocab, data, existing_unit, new_unit, final=True):
+    def augment_vocab(vocab, data, existing_unit, new_unit, final=True, allow_standalone=False):
+        """
+        Check whether existing_unit can be augmented to new_unit in this dataset
+
+        existing_unit must occur in the data.  new_unit must not occur,
+        unless allow_standalone is set, in which case occurrences of
+        new_unit which are a complete token by themselves are acceptable.
+        Any occurrence of new_unit as part of a larger token, such as
+        "1947–1950" labeled as a single token, still blocks the
+        augmentation, since it means the dataset's convention is to
+        not split new_unit off from its neighbors.
+
+        final=True only looks at the last unit of each chunk.
+
+        If the augmentation is acceptable, new_unit is added to the vocab
+        if needed, and True is returned.
+        """
         if existing_unit not in vocab:
             return False
         new_unit_count = 0
+        standalone_count = 0
         existing_unit_count = 0
         for sentence in data:
             if final:
-                units = [sentence[-1][0]]
+                indices = [len(sentence) - 1]
             else:
-                units = [x[0] for x in sentence]
-            for unit in units:
+                indices = range(len(sentence))
+            for idx in indices:
+                unit = sentence[idx][0]
                 if unit == new_unit:
-                    new_unit_count += 1
+                    if allow_standalone and is_standalone_token(sentence, idx):
+                        standalone_count += 1
+                    else:
+                        new_unit_count += 1
                 elif unit == existing_unit:
                     existing_unit_count += 1
         if existing_unit_count == 0:
             return False
         if new_unit_count > 0:
+            logger.debug("Found %d |%s| which are not standalone tokens, so will not augment |%s| to |%s|", new_unit_count, new_unit, existing_unit, new_unit)
             return False
         if new_unit not in vocab:
             vocab.append(new_unit)
-        logger.debug("Found %d |%s| and %d |%s|", new_unit_count, new_unit, existing_unit_count, existing_unit)
+        logger.debug("Found %d |%s| (all standalone tokens) and %d |%s|", standalone_count, new_unit, existing_unit_count, existing_unit)
         return True
 
     @staticmethod
     def build_mid_sent_augmentations(vocab, data, pairs):
         """
         For each (existing, replacement) pair, check whether the substitution
-        is appropriate for this dataset (existing present, replacement absent)
-        using the same augment_vocab logic as augment_final_punct.  Returns a
-        dict mapping each source character to a list of valid replacement
-        characters.
+        is appropriate for this dataset using augment_vocab: existing must be
+        present, and replacement must be absent or only occur as standalone
+        tokens.  Returns a dict mapping each source character to a list of
+        valid replacement characters.
         """
         augmentations = defaultdict(list)
         for orig, target in pairs:
-            if DataLoader.augment_vocab(vocab, data, orig, target, final=False):
+            if DataLoader.augment_vocab(vocab, data, orig, target, final=False, allow_standalone=True):
                 logger.debug('Mid-sentence augmentation: will substitute |%s| with |%s|', orig, target)
                 augmentations[orig].append(target)
         return augmentations

@@ -121,6 +121,12 @@ def write_and_load(raw_text, labels, extra_args=None):
     return data
 
 
+def chars_with_labels(text, labels):
+    """Zip a text and a string of labels into the (char, label) chunk format used by data.py"""
+    assert len(text) == len(labels), "text %s has length %d but labels have length %d" % (text, len(text), len(labels))
+    return [(char, int(label)) for char, label in zip(text, labels)]
+
+
 def run_trials(fn, n=200):
     """
     Call fn() n times, collecting all non-None results.
@@ -173,6 +179,18 @@ class TestAugmentVocab:
         vocab, data = self._make(data)
         assert DataLoader.augment_vocab(vocab, data, ',', '\u2013', final=False) is True
         assert '\u2013' in vocab
+
+    def test_standalone_new_unit_blocks_by_default(self):
+        """Without allow_standalone, any occurrence of the new unit blocks the augmentation."""
+        data = [chars_with_labels("Hi, you – me.", "0110001010012")]
+        vocab, data = self._make(data)
+        assert DataLoader.augment_vocab(vocab, data, ',', '–', final=False) is False
+
+    def test_standalone_new_unit_allowed(self):
+        """With allow_standalone, a standalone occurrence of the new unit is acceptable."""
+        data = [chars_with_labels("Hi, you – me.", "0110001010012")]
+        vocab, data = self._make(data)
+        assert DataLoader.augment_vocab(vocab, data, ',', '–', final=False, allow_standalone=True) is True
 
     def test_not_final_includes_all_positions(self):
         """final=False counts all positions including the final character."""
@@ -241,15 +259,92 @@ class TestBuildMidSentAugmentations:
         assert ',' in result
         assert '\u2013' in result[','] or '\u2014' in result[',']
 
-    def test_dash_present_blocks_activation(self):
-        """En dash already in data -> comma->en dash substitution should not activate,
-        even when commas are also present."""
-        data = [[('H',0),('e',0),('l',0),('l',0),('o',0),(',',1),(' ',0),
-                 ('w',0),('o',0),('r',0),('l',0),('d',1),(' ',0),('\u2013',1),
-                 ('f',0),('o',0),('o',1),('.',2)]]
+    def test_dash_inside_token_blocks_activation(self):
+        """En dash already in data as part of a larger token -> comma->en dash
+        substitution should not activate, even when commas are also present."""
+        # "Hello, 1947\u20131950." with 1947\u20131950 as a single token
+        data = [chars_with_labels("Hello, 1947\u20131950.",
+                                  "000011" "0" "000000001" "2")]
         vocab = Vocab(data, "en")
         result = DataLoader.build_mid_sent_augmentations(vocab, data, [(',', '\u2013')])
         assert '\u2013' not in result.get(',', [])
+
+    def test_dash_starting_token_blocks_activation(self):
+        """A dash glued to the front of a token, such as "\u2013foo" as one token,
+        is not standalone and should block the substitution."""
+        # "Hello, world \u2013foo."
+        data = [chars_with_labels("Hello, world \u2013foo.",
+                                  "000011" "0" "00001" "0" "0001" "2")]
+        vocab = Vocab(data, "en")
+        result = DataLoader.build_mid_sent_augmentations(vocab, data, [(',', '\u2013')])
+        assert '\u2013' not in result.get(',', [])
+
+    def test_dash_ending_token_blocks_activation(self):
+        """A dash glued to the end of a token, such as "world\u2013" as one token,
+        is not standalone and should block the substitution."""
+        # "Hello, world\u2013 foo."
+        data = [chars_with_labels("Hello, world\u2013 foo.",
+                                  "000011" "0" "000001" "0" "001" "2")]
+        vocab = Vocab(data, "en")
+        result = DataLoader.build_mid_sent_augmentations(vocab, data, [(',', '\u2013')])
+        assert '\u2013' not in result.get(',', [])
+
+    def test_spaced_standalone_dash_allows_activation(self):
+        """Dashes which only occur as spaced standalone tokens, "a \u2013 b",
+        should still allow the substitution, so that the tokenizer learns "a\u2013b"."""
+        data = [chars_with_labels("Hello, world \u2013 foo.",
+                                  "000011" "0" "00001" "0" "1" "0" "001" "2")]
+        vocab = Vocab(data, "en")
+        result = DataLoader.build_mid_sent_augmentations(vocab, data, [(',', '\u2013')])
+        assert '\u2013' in result[',']
+
+    def test_attached_standalone_dash_allows_activation(self):
+        """A standalone dash does not need whitespace on both sides.
+        In "(1947 \u2013)" the dash is its own token, glued to the ")" """
+        data = [chars_with_labels("Naci\u00f3, (1947 \u2013).",
+                                  "000001" "0" "10001" "0" "1" "1" "2")]
+        vocab = Vocab(data, "es")
+        result = DataLoader.build_mid_sent_augmentations(vocab, data, [(',', '\u2013')])
+        assert '\u2013' in result[',']
+
+    def test_attached_both_sides_standalone_dash_allows_activation(self):
+        """A dash split off from both neighbors, "1947\u20131950" as three
+        tokens, is standalone even with no whitespace at all."""
+        data = [chars_with_labels("Hello, 1947\u20131950.",
+                                  "000011" "0" "0001" "1" "0001" "2")]
+        vocab = Vocab(data, "en")
+        result = DataLoader.build_mid_sent_augmentations(vocab, data, [(',', '\u2013')])
+        assert '\u2013' in result[',']
+
+    def test_dash_at_chunk_start_allows_activation(self):
+        """A single character dash token at the very start of a chunk is standalone."""
+        data = [chars_with_labels("\u2013 Hello, world.",
+                                  "1" "0" "00001" "1" "0" "00001" "2")]
+        vocab = Vocab(data, "en")
+        result = DataLoader.build_mid_sent_augmentations(vocab, data, [(',', '\u2013')])
+        assert '\u2013' in result[',']
+
+    def test_mixed_standalone_and_attached_blocks_activation(self):
+        """A single non-standalone dash blocks the substitution, even if all
+        of the other dashes are standalone."""
+        data = [chars_with_labels("Hello, world \u2013 foo.",
+                                  "000011" "0" "00001" "0" "1" "0" "001" "2"),
+                chars_with_labels("Hello, 1947\u20131950.",
+                                  "000011" "0" "000000001" "2")]
+        vocab = Vocab(data, "en")
+        result = DataLoader.build_mid_sent_augmentations(vocab, data, [(',', '\u2013')])
+        assert '\u2013' not in result.get(',', [])
+
+    def test_standalone_only_affects_matching_dash(self):
+        """Standalone en dashes do not interfere with the em dash augmentation,
+        and a non-standalone em dash only blocks the em dash."""
+        data = [chars_with_labels("Hello, world \u2013 foo.",
+                                  "000011" "0" "00001" "0" "1" "0" "001" "2"),
+                chars_with_labels("Hello, bar\u2014baz.",
+                                  "000011" "0" "0000001" "2")]
+        vocab = Vocab(data, "en")
+        result = DataLoader.build_mid_sent_augmentations(vocab, data, MID_SENT_AUGMENT_PAIRS)
+        assert result[','] == ['\u2013']
 
     def test_empty_when_no_comma(self):
         """No comma in data -> nothing to augment."""
@@ -328,6 +423,18 @@ class TestAugmentMidSentPunct:
             for char, label in zip(new_sentence[3], new_sentence[1]):
                 if char in ('\u2013', '\u2014'):
                     assert label != 0, "dash should not have continuation label"
+
+    def test_glued_dash_with_standalone_dashes_in_data(self):
+        """If the data only has spaced standalone dashes, "a – b", the
+        augmentation should still produce the glued "a–b" style."""
+        text = "Hello, world – foo."
+        labels = "000011" "0" "00001" "0" "1" "0" "001" "2"
+        loader = write_and_load(text, labels, extra_args={'augment_mid_punct_prob': 1.0})
+        assert '–' in loader.mid_sent_augmentations[',']
+        sentence = loader.sentences[0][0]
+        results = run_trials(lambda: loader.augment_mid_sent_punct(sentence))
+        glued = ["".join(result[0][3]) for result in results]
+        assert "Hello–world – foo." in glued
 
     def test_comma_in_number_not_replaced(self):
         """A comma with label 0 (inside a number token) should never be replaced."""
