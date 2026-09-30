@@ -444,8 +444,8 @@ def build_known_mwt(data, mwt_expansions):
 # The existing character must appear in the training data and the replacement
 # must not, otherwise the pair is skipped (checked in augment_vocab).
 MID_SENT_AUGMENT_PAIRS = [
-    (",", "\u2013"),   # comma -> en dash
-    (",", "\u2014"),   # comma -> em dash
+    (",", "\u2013"),   # comma -> en dash: –
+    (",", "\u2014"),   # comma -> em dash: —
 ]
 
 # --------------------------------------------------------------------------
