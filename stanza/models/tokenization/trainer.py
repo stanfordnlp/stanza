@@ -6,7 +6,7 @@ import torch.optim as optim
 
 from stanza.models.common import utils
 from stanza.models.common.trainer import Trainer as BaseTrainer
-from stanza.models.tokenization.utils import create_dictionary
+from stanza.models.tokenization.utils import create_dictionary, compress_word_list, decompress_word_list
 
 from .model import Tokenizer
 from .vocab import Vocab
@@ -18,6 +18,8 @@ class Trainer(BaseTrainer):
         """
         external_dict: the words of the external dictionary used to build the lexicon, if any.
           Saved with the model so that later rebuilds can reuse it (see --external_dict_from_model)
+          The words are kept compressed (see compress_word_list), and
+          external_dict_words() returns them as a list
         """
         # TODO: make a test of the training w/ and w/o charlm
         if model_file is not None:
@@ -29,13 +31,21 @@ class Trainer(BaseTrainer):
             self.vocab = vocab
             self.lexicon = list(lexicon) if lexicon is not None else None
             self.dictionary = dictionary
-            self.external_dict = list(external_dict) if external_dict is not None else None
+            self.external_dict = compress_word_list(external_dict) if external_dict is not None else None
             self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
         self.model = self.model.to(device)
         self.criterion = nn.CrossEntropyLoss(ignore_index=-1).to(device)
         self.optimizer = utils.get_optimizer("adam", self.model, lr=self.args['lr0'], betas=(.9, .9), weight_decay=self.args['weight_decay'])
         self.feat_funcs = self.args.get('feat_funcs', None)
         self.lang = self.args['lang'] # language determines how token normalization is done
+
+    def external_dict_words(self):
+        """
+        Return the external dictionary as a sorted list of words, or None if the model has none
+        """
+        if self.external_dict is None:
+            return None
+        return decompress_word_list(self.external_dict)
 
     def update(self, inputs):
         self.model.train()
@@ -90,8 +100,9 @@ class Trainer(BaseTrainer):
             'lexicon': list(self.lexicon) if self.lexicon is not None else None,
             # the external dictionary is kept separately from the lexicon,
             # which merges it with the training data words, so that it can
-            # be reused when rebuilding the model on new training data
-            'external_dict': list(self.external_dict) if self.external_dict is not None else None,
+            # be reused when rebuilding the model on new training data.
+            # it is saved as compressed bytes, which weights_only=True can load
+            'external_dict': self.external_dict,
             'config': self.args
         }
         try:
