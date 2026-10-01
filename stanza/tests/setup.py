@@ -4,7 +4,7 @@ import os
 import shutil
 import stanza
 from stanza.resources import installation
-from stanza.tests import TEST_HOME_VAR, TEST_WORKING_DIR
+from stanza.tests import TEST_HOME_VAR, TEST_WORKING_DIR, DICTIONARY_TOKENIZERS
 
 logger = logging.getLogger('stanza')
 
@@ -58,6 +58,12 @@ morphseg_langs = ['en', 'es', 'ru', 'fr', 'it', 'cs', 'hu', 'la']
 for lang in morphseg_langs:
     stanza.download(lang=lang, model_dir=models_dir, processors='tokenize', logging_level='info')
     logger.info(f"Downloaded {lang} tokenizer for morphseg tests")
+
+logger.info("DOWNLOADING TOKENIZERS WITH DICTIONARY FEATURES")
+
+for lang, package in DICTIONARY_TOKENIZERS:
+    stanza.download(lang=lang, model_dir=models_dir, package=None, processors={"tokenize": package}, logging_level='info')
+    logger.info(f"Downloaded {lang} {package} tokenizer for dictionary tests")
 
 logger.info("DOWNLOADING CORENLP")
 
