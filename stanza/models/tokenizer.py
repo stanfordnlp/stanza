@@ -58,7 +58,9 @@ def build_argparse():
     parser.add_argument('--input_dropout', action='store_true', help="Dropout input embeddings as well")
     parser.add_argument('--conv_res', type=str, default=None, help="Convolutional residual layers for the RNN")
     parser.add_argument('--rnn_layers', type=int, default=1, help="Layers of RNN in the tokenizer")
-    parser.add_argument('--use_dictionary', action='store_true', help="Use dictionary feature. The lexicon is created using the training data and external dict (if any) expected to be found under the same folder of training dataset, formatted as SHORTHAND-externaldict.txt where each line in this file is a word. For example, data/tokenize/zh_gsdsimp-externaldict.txt")
+    parser.add_argument('--use_dictionary', action='store_true', help="Use dictionary feature. The lexicon is created using the training data and an external dict (if any).  By default, the external dict is expected to be found under the same folder of training dataset, formatted as SHORTHAND-externaldict.txt where each line in this file is a word. For example, data/tokenize/zh-hans_gsdsimp-externaldict.txt  The external dict is saved in the model file, along with where it came from.")
+    parser.add_argument('--external_dict', type=str, default=None, help="Use this file as the external dict for --use_dictionary instead of SHORTHAND-externaldict.txt.  One word per line")
+    parser.add_argument('--external_dict_from_model', type=str, default=None, help="Use the external dict saved in this existing tokenizer model for --use_dictionary.  If the model does not record an external dict, its full lexicon is used instead")
     parser.add_argument('--feat_funcs', type=str, default=None, help="Comma-separated list of feature functions to use, overriding the default set (space_before,capitalized,numeric,end_of_para,start_of_para). Leave unset to keep the existing default behavior unchanged. See #1640 for the structural features (labeled_field, phone_id, date_pattern, currency) added to help the English tokenizer distinguish tabular/header text (datelines, signatures, salary tables) from narrative prose near digit-capital boundaries.")
 
     parser.add_argument('--max_grad_norm', type=float, default=1.0, help="Maximum gradient norm to clip to")
@@ -159,7 +161,7 @@ def main(args=None):
 def train(args):
     if args['use_dictionary']:
         #load lexicon
-        lexicon, args['num_dict_feat'] = load_lexicon(args)
+        lexicon, args['num_dict_feat'], external_dict = load_lexicon(args)
         #create the dictionary
         dictionary = create_dictionary(lexicon)
         #adjust the feat_dim
@@ -168,6 +170,7 @@ def train(args):
         args['num_dict_feat'] = 0
         lexicon=None
         dictionary=None
+        external_dict=None
 
     mwt_dict = load_mwt_dict(args['mwt_json_file'])
     mwt_expansions = {x: y[0] for x, y in mwt_dict.items()}
@@ -191,7 +194,7 @@ def train(args):
         args['use_mwt'] = train_batches.has_mwt()
         logger.info("Found {}mwts in the training data.  Setting use_mwt to {}".format(("" if args['use_mwt'] else "no "), args['use_mwt']))
 
-    trainer = Trainer(args=args, vocab=vocab, lexicon=lexicon, dictionary=dictionary, device=args['device'], foundation_cache=None)
+    trainer = Trainer(args=args, vocab=vocab, lexicon=lexicon, dictionary=dictionary, device=args['device'], foundation_cache=None, external_dict=external_dict)
 
     if args['load_name'] is not None:
         load_name = os.path.join(args['save_dir'], args['load_name'])

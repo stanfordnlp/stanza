@@ -63,6 +63,24 @@ DE_SHORTHAND = 'de_gsd'
 KK_SHORTHAND = 'kk_ktb'
 KO_SHORTHAND = 'ko_gsd'
 
+# (lang, package) of tokenizers which are expected to be built with
+# dictionary features, including an external dictionary.
+# stanza/tests/setup.py downloads these, and test_tokenize_data.py
+# checks that each one records its external dictionary.
+# The package names must match the resources file exactly, as
+# stanza.download ignores unknown packages with only a warning.
+DICTIONARY_TOKENIZERS = [
+    ('zh-hans', 'gsdsimp_charlm'),
+    ('zh-hans', 'gsdsimp_nocharlm'),
+    ('zh-hant', 'gsd_nocharlm'),
+    ('th', 'tud_charlm'),
+    ('th', 'tud_nocharlm'),
+    ('ja', 'combined_nocharlm'),
+    ('ja', 'combined_charlm'),
+    ('ja', 'gsd_nocharlm'),
+    ('ja', 'gsd_charlm'),
+]
+
 
 # utils for clean up
 # only allow removal of dirs/files in this approved list

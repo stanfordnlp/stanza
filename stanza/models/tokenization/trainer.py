@@ -14,7 +14,11 @@ from .vocab import Vocab
 logger = logging.getLogger('stanza')
 
 class Trainer(BaseTrainer):
-    def __init__(self, args=None, vocab=None, lexicon=None, dictionary=None, model_file=None, device=None, foundation_cache=None):
+    def __init__(self, args=None, vocab=None, lexicon=None, dictionary=None, model_file=None, device=None, foundation_cache=None, external_dict=None):
+        """
+        external_dict: the words of the external dictionary used to build the lexicon, if any.
+          Saved with the model so that later rebuilds can reuse it (see --external_dict_from_model)
+        """
         # TODO: make a test of the training w/ and w/o charlm
         if model_file is not None:
             # load everything from file
@@ -25,6 +29,7 @@ class Trainer(BaseTrainer):
             self.vocab = vocab
             self.lexicon = list(lexicon) if lexicon is not None else None
             self.dictionary = dictionary
+            self.external_dict = list(external_dict) if external_dict is not None else None
             self.model = Tokenizer(self.args, self.args['vocab_size'], self.args['emb_dim'], self.args['hidden_dim'], dropout=self.args['dropout'], feat_dropout=self.args['feat_dropout'])
         self.model = self.model.to(device)
         self.criterion = nn.CrossEntropyLoss(ignore_index=-1).to(device)
@@ -83,6 +88,10 @@ class Trainer(BaseTrainer):
             # save and load lexicon as list instead of set so
             # we can use weights_only=True
             'lexicon': list(self.lexicon) if self.lexicon is not None else None,
+            # the external dictionary is kept separately from the lexicon,
+            # which merges it with the training data words, so that it can
+            # be reused when rebuilding the model on new training data
+            'external_dict': list(self.external_dict) if self.external_dict is not None else None,
             'config': self.args
         }
         try:
@@ -113,6 +122,8 @@ class Trainer(BaseTrainer):
         self.model.load_state_dict(checkpoint['model'], strict=False)
         self.vocab = Vocab.load_state_dict(checkpoint['vocab'])
         self.lexicon = checkpoint['lexicon']
+        # tokenizers saved before external dictionaries were recorded do not have this entry
+        self.external_dict = checkpoint.get('external_dict', None)
 
         if self.lexicon is not None:
             self.lexicon = set(self.lexicon)

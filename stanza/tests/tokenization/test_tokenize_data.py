@@ -5,9 +5,11 @@ TODO: could add a bunch more simple tests, including tests of reading
 the data from a temp file, for example
 """
 
+import os
 import pytest
 import tempfile
 import numpy as np
+import torch
 
 import stanza
 
@@ -194,6 +196,28 @@ def test_dictionary_feats(zhtok):
         dict_features = batches.extract_dict_feat(data[0], i)
         assert dict_features == expected
 
+
+@pytest.mark.parametrize("lang, package", DICTIONARY_TOKENIZERS, ids=["%s_%s" % x for x in DICTIONARY_TOKENIZERS])
+def test_dictionary_tokenizer_has_external_dict(lang, package):
+    """
+    Each of the DICTIONARY_TOKENIZERS should have been built with an external dictionary
+
+    A rebuild which silently skipped the external dictionary
+    (for example, because SHORTHAND-externaldict.txt was missing)
+    changes the dictionary features of the model.  The lexicon
+    alone can't show that, as it mixes the external dictionary with
+    the training data, so this checks the external dictionary which
+    is saved separately in the model.
+    """
+    model_file = os.path.join(TEST_MODELS_DIR, lang, "tokenize", "%s.pt" % package)
+    assert os.path.exists(model_file), "Could not find %s.  Was it downloaded by stanza/tests/setup.py?" % model_file
+
+    checkpoint = torch.load(model_file, lambda storage, loc: storage, weights_only=True)
+    assert checkpoint['config'].get('use_dictionary', False), "%s %s tokenizer was not built with dictionary features" % (lang, package)
+    assert checkpoint.get('lexicon'), "%s %s tokenizer has no lexicon" % (lang, package)
+    external_dict = checkpoint.get('external_dict', None)
+    assert external_dict, "%s %s tokenizer does not record an external dictionary" % (lang, package)
+    assert checkpoint['config'].get('external_dict_source', None), "%s %s tokenizer does not record where its external dictionary came from" % (lang, package)
 
 def test_numeric_re():
     """

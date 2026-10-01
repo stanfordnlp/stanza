@@ -6,6 +6,7 @@ import re
 import logging
 import os
 
+import torch
 from torch.utils.data import DataLoader as TorchDataLoader
 
 import stanza.utils.default_paths as default_paths
@@ -49,7 +50,47 @@ def create_dictionary(lexicon):
 
     return dictionary
 
-def create_lexicon(shorthand=None, train_path=None, external_path=None):
+def read_external_dict(external_path):
+    """
+    Read an external dictionary file, one word per line, and return the lowercased words in file order
+    """
+    if not os.path.isfile(external_path):
+        raise FileNotFoundError(f"Cannot open external dictionary at {external_path}")
+
+    with open(external_path, "r", encoding="utf-8") as external_file:
+        return [line.lower().replace("\n", "") for line in external_file]
+
+def load_external_dict_from_model(model_file):
+    """
+    Return the external dictionary saved in a tokenizer model, along with a description of its source
+
+    Tokenizers saved before the external dictionary was stored in the
+    model file have no external dictionary entry.  For those, the full
+    lexicon of the model is returned instead, with a warning.  That
+    lexicon contains the external dictionary words merged with the
+    words from that model's training data, limited to that model's
+    dictionary feature length, so it is a superset of what is needed
+    for the dictionary features.
+
+    Raises ValueError if the model has neither, as it was not built with dictionary features.
+    """
+    checkpoint = torch.load(model_file, lambda storage, loc: storage, weights_only=True)
+    external_dict = checkpoint.get('external_dict', None)
+    if external_dict is not None:
+        original_source = checkpoint['config'].get('external_dict_source', None)
+        if original_source:
+            source = "%s, originally from %s" % (model_file, original_source)
+        else:
+            source = model_file
+        return list(external_dict), source
+
+    lexicon = checkpoint.get('lexicon', None)
+    if lexicon is None:
+        raise ValueError("Tokenizer model %s has no external dictionary and no lexicon.  It was probably not built with --use_dictionary" % model_file)
+    logger.warning("Tokenizer model %s does not record its external dictionary.  Using its full lexicon of %d words instead", model_file, len(lexicon))
+    return list(lexicon), "lexicon of %s" % model_file
+
+def create_lexicon(shorthand=None, train_path=None, external_path=None, external_words=None):
     """
     This function is to create a lexicon to store all the words from the training set and external dictionary.
     This lexicon will be saved with the model and will be used to create dictionary when the model is loaded.
@@ -59,11 +100,18 @@ def create_lexicon(shorthand=None, train_path=None, external_path=None):
 
     :param shorthand - language and dataset, eg: vi_vlsp, zh_gsdsimp
     :param train_path - path to conllu train file
-    :param external_path - path to extenral dict, expected to be inside the training dataset dir with format of: SHORTHAND-externaldict.txt
+    :param external_path - path to external dict, one word per line
+    :param external_words - the words of an external dict, as an alternative to external_path
     :return a set lexicon object that contains all distinct words
     """
+    if external_path is not None and external_words is not None:
+        raise ValueError("Only one of external_path and external_words can be specified")
+    if external_path is not None:
+        external_words = read_external_dict(external_path)
+
     lexicon = set()
     length_freq = []
+    count_word = 0
     #this regex is to check if a character is an actual Thai character as seems .isalpha() python method doesn't pick up Thai accent characters..
     pattern_thai = re.compile(r"(?:[^\d\W]+)|\s")
     
@@ -97,15 +145,9 @@ def create_lexicon(shorthand=None, train_path=None, external_path=None):
         logger.info(f"Added {count_word} words from the training data to the lexicon.")
 
     #checking for external dictionary and add them to lexicon.
-    if external_path is not None:
-        if not os.path.isfile(external_path):
-            raise FileNotFoundError(f"Cannot open external dictionary at {external_path}")
-
-        with open(external_path, "r", encoding="utf-8") as external_file:
-            lines = external_file.readlines()
-        for line in lines:
-            word = line.lower()
-            word = word.replace("\n","")
+    if external_words is not None:
+        for word in external_words:
+            word = word.lower()
             if check_valid_word(shorthand, word) and word not in lexicon:
                 lexicon.add(word)
                 length_freq.append(len(word))
@@ -122,24 +164,61 @@ def create_lexicon(shorthand=None, train_path=None, external_path=None):
 
 def load_lexicon(args):
     """
-    This function is to create a new dictionary and load it to training.
-    The external dictionary is expected to be inside the training dataset dir with format of: SHORTHAND-externaldict.txt
-    For example, vi_vlsp-externaldict.txt
+    Build the lexicon for the dictionary features from the training data and an external dictionary
+
+    The training data is read from {TOKENIZE_DATA_DIR}/{shorthand}.train.gold.conllu
+
+    The external dictionary comes from the first of these which is set:
+      args['external_dict']: a text file with one word per line
+      args['external_dict_from_model']: the external dictionary saved in an
+        existing tokenizer model (see load_external_dict_from_model)
+      {TOKENIZE_DATA_DIR}/{shorthand}-externaldict.txt, if it exists,
+        for example zh-hans_gsdsimp-externaldict.txt
+    If none of these are available, a warning is logged and only the
+    training data is used.
+
+    Sets args['external_dict_source'] to a description of where the
+    external dictionary came from, or None if there was none.
+
+    Returns lexicon, num_dict_feat, external_words
+      external_words is the full list of external dictionary words, or None,
+      so that it can be saved with the model
     """
     shorthand = args["shorthand"]
     tokenize_dir = paths["TOKENIZE_DATA_DIR"]
     train_path = f"{tokenize_dir}/{shorthand}.train.gold.conllu"
-    external_dict_path = f"{tokenize_dir}/{shorthand}-externaldict.txt"
-    if not os.path.exists(external_dict_path):
-        logger.info(f"External dictionary not found! Looked in {external_dict_path}  Checking training data...")
-        external_dict_path = None
+
+    external_dict_path = args.get('external_dict', None)
+    external_dict_model = args.get('external_dict_from_model', None)
+    if external_dict_path and external_dict_model:
+        raise ValueError("Only one of --external_dict and --external_dict_from_model can be used")
+
+    if external_dict_path:
+        external_words = read_external_dict(external_dict_path)
+        external_dict_source = external_dict_path
+    elif external_dict_model:
+        external_words, external_dict_source = load_external_dict_from_model(external_dict_model)
+    else:
+        default_path = f"{tokenize_dir}/{shorthand}-externaldict.txt"
+        if os.path.exists(default_path):
+            external_words = read_external_dict(default_path)
+            external_dict_source = default_path
+        else:
+            logger.warning("External dictionary not found!  Looked in %s.  The dictionary features will only use the training data.  To use the external dictionary of an existing tokenizer, use --external_dict_from_model", default_path)
+            external_words = None
+            external_dict_source = None
+    if external_words is not None:
+        logger.info("Using %d words from external dictionary %s", len(external_words), external_dict_source)
+    args['external_dict_source'] = external_dict_source
+
     if not os.path.exists(train_path):
         logger.info(f"Training dataset does not exist, thus cannot create dictionary {shorthand}")
         train_path = None
-    if train_path is None and external_dict_path is None:
-        raise FileNotFoundError(f"Cannot find training set / external dictionary at {train_path} and {external_dict_path}")
+    if train_path is None and external_words is None:
+        raise FileNotFoundError(f"Cannot find training set or external dictionary for {shorthand}")
 
-    return create_lexicon(shorthand, train_path, external_dict_path)
+    lexicon, num_dict_feat = create_lexicon(shorthand, train_path, external_words=external_words)
+    return lexicon, num_dict_feat, external_words
 
 
 def load_mwt_dict(filename):

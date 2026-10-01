@@ -341,3 +341,128 @@ class TestTokenizer:
             foundation_cache=None,
         )
         assert loaded_trainer.args.get('charlm_forward_file') == english_charlm_forward_file
+
+
+# ---------------------------------------------------------------------------
+# Dictionary features with an external dictionary
+# ---------------------------------------------------------------------------
+
+# lowercase and all the same length, so that none of them are dropped
+# by the lexicon's 95th percentile length limit
+EXTERNAL_DICT_WORDS = ["story", "comes", "these", "words", "other"]
+
+# no {shorthand}.train.gold.conllu should exist for this shorthand,
+# so the lexicon is built entirely from the external dictionary
+DICTIONARY_SHORTHAND = "en_dictionarytest"
+
+def write_external_dict(path, words):
+    with open(path, "w", encoding="utf-8") as fout:
+        fout.write("\n".join(words) + "\n")
+    return path
+
+def run_dictionary_training(tmp_path, dict_args):
+    os.makedirs(tmp_path, exist_ok=True)
+    return run_training(tmp_path, TRAIN_SENTENCES_NO_MWT,
+                        extra_args=['--use_dictionary', '--shorthand', DICTIONARY_SHORTHAND] + dict_args)
+
+def load_checkpoint(filename):
+    return torch.load(filename, lambda storage, loc: storage, weights_only=True)
+
+class TestTokenizerExternalDict:
+
+    def test_external_dict_saved(self, tmp_path):
+        """
+        Training with --external_dict saves the external dictionary and its path in the model
+        """
+        external_dict = write_external_dict(str(tmp_path / "externaldict.txt"), EXTERNAL_DICT_WORDS)
+        trainer, args = run_dictionary_training(tmp_path, ['--external_dict', external_dict])
+
+        checkpoint = load_checkpoint(args['save_name'])
+        assert checkpoint['external_dict'] == EXTERNAL_DICT_WORDS
+        assert checkpoint['config']['external_dict_source'] == external_dict
+        assert set(checkpoint['lexicon']) == set(EXTERNAL_DICT_WORDS)
+
+        loaded_trainer = Trainer(model_file=args['save_name'], args=None, device='cpu', foundation_cache=None)
+        assert loaded_trainer.external_dict == EXTERNAL_DICT_WORDS
+        assert loaded_trainer.dictionary is not None
+
+    def test_external_dict_resave(self, tmp_path):
+        """
+        Loading and saving a model again keeps its external dictionary
+        """
+        external_dict = write_external_dict(str(tmp_path / "externaldict.txt"), EXTERNAL_DICT_WORDS)
+        trainer, args = run_dictionary_training(tmp_path, ['--external_dict', external_dict])
+
+        loaded_trainer = Trainer(model_file=args['save_name'], args=None, device='cpu', foundation_cache=None)
+        resave_path = str(tmp_path / "resaved_tokenizer.pt")
+        loaded_trainer.save(resave_path)
+        checkpoint = load_checkpoint(resave_path)
+        assert checkpoint['external_dict'] == EXTERNAL_DICT_WORDS
+        assert checkpoint['config']['external_dict_source'] == external_dict
+
+    def test_external_dict_missing_file(self, tmp_path):
+        """
+        An explicitly requested external dictionary which doesn't exist is an error, not a silent fallback
+        """
+        with pytest.raises(FileNotFoundError):
+            run_dictionary_training(tmp_path, ['--external_dict', str(tmp_path / "nonexistent.txt")])
+
+    def test_external_dict_from_model(self, tmp_path):
+        """
+        A new model can reuse the external dictionary saved in an existing model,
+        and records both the model and the original source of the dictionary
+        """
+        external_dict = write_external_dict(str(tmp_path / "externaldict.txt"), EXTERNAL_DICT_WORDS)
+        _, first_args = run_dictionary_training(tmp_path / "first", ['--external_dict', external_dict])
+
+        _, second_args = run_dictionary_training(tmp_path / "second", ['--external_dict_from_model', first_args['save_name']])
+        checkpoint = load_checkpoint(second_args['save_name'])
+        assert checkpoint['external_dict'] == EXTERNAL_DICT_WORDS
+        source = checkpoint['config']['external_dict_source']
+        assert first_args['save_name'] in source
+        assert external_dict in source
+
+    def test_external_dict_from_model_without_external_dict(self, tmp_path):
+        """
+        For a model which only has a lexicon and no recorded external
+        dictionary, such as tokenizers saved before external
+        dictionaries were recorded, its lexicon is used instead
+        """
+        external_dict = write_external_dict(str(tmp_path / "externaldict.txt"), EXTERNAL_DICT_WORDS)
+        _, first_args = run_dictionary_training(tmp_path / "first", ['--external_dict', external_dict])
+
+        checkpoint = load_checkpoint(first_args['save_name'])
+        del checkpoint['external_dict']
+        del checkpoint['config']['external_dict_source']
+        lexicon_only_model = str(tmp_path / "lexicon_only_tokenizer.pt")
+        torch.save(checkpoint, lexicon_only_model, _use_new_zipfile_serialization=False)
+
+        _, second_args = run_dictionary_training(tmp_path / "second", ['--external_dict_from_model', lexicon_only_model])
+        checkpoint = load_checkpoint(second_args['save_name'])
+        assert sorted(checkpoint['external_dict']) == sorted(EXTERNAL_DICT_WORDS)
+        assert checkpoint['config']['external_dict_source'] == "lexicon of %s" % lexicon_only_model
+
+    def test_external_dict_from_model_without_dictionary(self, tmp_path):
+        """
+        Asking for the external dictionary of a model built without dictionary features is an error
+        """
+        _, first_args = run_training(tmp_path, TRAIN_SENTENCES_NO_MWT)
+        with pytest.raises(ValueError):
+            run_dictionary_training(tmp_path / "second", ['--external_dict_from_model', first_args['save_name']])
+
+    def test_external_dict_both_options(self, tmp_path):
+        """
+        --external_dict and --external_dict_from_model can't be used together
+        """
+        external_dict = write_external_dict(str(tmp_path / "externaldict.txt"), EXTERNAL_DICT_WORDS)
+        with pytest.raises(ValueError):
+            run_dictionary_training(tmp_path, ['--external_dict', external_dict, '--external_dict_from_model', 'foo.pt'])
+
+    def test_no_dictionary_no_external_dict(self, tmp_path):
+        """
+        Models trained without --use_dictionary save no external dictionary
+        """
+        _, args = run_training(tmp_path, TRAIN_SENTENCES_NO_MWT)
+        checkpoint = load_checkpoint(args['save_name'])
+        assert checkpoint['external_dict'] is None
+        assert checkpoint['lexicon'] is None
