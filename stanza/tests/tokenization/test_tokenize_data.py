@@ -16,6 +16,7 @@ import stanza
 from stanza import Pipeline
 from stanza.tests import *
 from stanza.models.tokenization.data import DataLoader, NUMERIC_RE
+from stanza.models.tokenization.utils import decompress_word_list
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
@@ -216,7 +217,8 @@ def test_dictionary_tokenizer_has_external_dict(lang, package):
     assert checkpoint['config'].get('use_dictionary', False), "%s %s tokenizer was not built with dictionary features" % (lang, package)
     assert checkpoint.get('lexicon'), "%s %s tokenizer has no lexicon" % (lang, package)
     external_dict = checkpoint.get('external_dict', None)
-    assert external_dict, "%s %s tokenizer does not record an external dictionary" % (lang, package)
+    assert external_dict is not None, "%s %s tokenizer does not record an external dictionary" % (lang, package)
+    assert len(decompress_word_list(external_dict)) > 0, "%s %s tokenizer has an empty external dictionary" % (lang, package)
     assert checkpoint['config'].get('external_dict_source', None), "%s %s tokenizer does not record where its external dictionary came from" % (lang, package)
 
 def test_numeric_re():

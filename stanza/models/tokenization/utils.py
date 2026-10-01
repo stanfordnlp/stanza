@@ -1,6 +1,7 @@
 from collections import Counter
 from copy import copy
 import json
+import lzma
 import numpy as np
 import re
 import logging
@@ -50,6 +51,26 @@ def create_dictionary(lexicon):
 
     return dictionary
 
+def compress_word_list(words):
+    """
+    Compress a list of words to bytes, for storing in a model file
+
+    The words are deduplicated, sorted, joined with newlines and
+    compressed with lzma, so the original order is not kept.  For a
+    Chinese dictionary of 350,000 words, this is about 1MB, compared
+    to 6.5MB as a pickled list of str.
+    """
+    return lzma.compress("\n".join(sorted(set(words))).encode("utf-8"))
+
+def decompress_word_list(data):
+    """
+    Return the list of words compressed by compress_word_list
+    """
+    text = lzma.decompress(data).decode("utf-8")
+    if not text:
+        return []
+    return text.split("\n")
+
 def read_external_dict(external_path):
     """
     Read an external dictionary file, one word per line, and return the lowercased words in file order
@@ -82,7 +103,7 @@ def load_external_dict_from_model(model_file):
             source = "%s, originally from %s" % (model_file, original_source)
         else:
             source = model_file
-        return list(external_dict), source
+        return decompress_word_list(external_dict), source
 
     lexicon = checkpoint.get('lexicon', None)
     if lexicon is None:

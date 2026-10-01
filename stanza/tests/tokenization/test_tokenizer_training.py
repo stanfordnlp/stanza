@@ -34,6 +34,7 @@ import torch
 
 from stanza.models import tokenizer as tokenizer_module
 from stanza.models.tokenization.trainer import Trainer
+from stanza.models.tokenization.utils import decompress_word_list
 from stanza.tests import TEST_MODELS_DIR
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
@@ -378,12 +379,13 @@ class TestTokenizerExternalDict:
         trainer, args = run_dictionary_training(tmp_path, ['--external_dict', external_dict])
 
         checkpoint = load_checkpoint(args['save_name'])
-        assert checkpoint['external_dict'] == EXTERNAL_DICT_WORDS
+        assert isinstance(checkpoint['external_dict'], bytes), "external dictionary should be saved compressed"
+        assert decompress_word_list(checkpoint['external_dict']) == sorted(EXTERNAL_DICT_WORDS)
         assert checkpoint['config']['external_dict_source'] == external_dict
         assert set(checkpoint['lexicon']) == set(EXTERNAL_DICT_WORDS)
 
         loaded_trainer = Trainer(model_file=args['save_name'], args=None, device='cpu', foundation_cache=None)
-        assert loaded_trainer.external_dict == EXTERNAL_DICT_WORDS
+        assert loaded_trainer.external_dict_words() == sorted(EXTERNAL_DICT_WORDS)
         assert loaded_trainer.dictionary is not None
 
     def test_external_dict_resave(self, tmp_path):
@@ -397,7 +399,7 @@ class TestTokenizerExternalDict:
         resave_path = str(tmp_path / "resaved_tokenizer.pt")
         loaded_trainer.save(resave_path)
         checkpoint = load_checkpoint(resave_path)
-        assert checkpoint['external_dict'] == EXTERNAL_DICT_WORDS
+        assert decompress_word_list(checkpoint['external_dict']) == sorted(EXTERNAL_DICT_WORDS)
         assert checkpoint['config']['external_dict_source'] == external_dict
 
     def test_external_dict_missing_file(self, tmp_path):
@@ -417,7 +419,7 @@ class TestTokenizerExternalDict:
 
         _, second_args = run_dictionary_training(tmp_path / "second", ['--external_dict_from_model', first_args['save_name']])
         checkpoint = load_checkpoint(second_args['save_name'])
-        assert checkpoint['external_dict'] == EXTERNAL_DICT_WORDS
+        assert decompress_word_list(checkpoint['external_dict']) == sorted(EXTERNAL_DICT_WORDS)
         source = checkpoint['config']['external_dict_source']
         assert first_args['save_name'] in source
         assert external_dict in source
@@ -439,7 +441,7 @@ class TestTokenizerExternalDict:
 
         _, second_args = run_dictionary_training(tmp_path / "second", ['--external_dict_from_model', lexicon_only_model])
         checkpoint = load_checkpoint(second_args['save_name'])
-        assert sorted(checkpoint['external_dict']) == sorted(EXTERNAL_DICT_WORDS)
+        assert decompress_word_list(checkpoint['external_dict']) == sorted(EXTERNAL_DICT_WORDS)
         assert checkpoint['config']['external_dict_source'] == "lexicon of %s" % lexicon_only_model
 
     def test_external_dict_from_model_without_dictionary(self, tmp_path):

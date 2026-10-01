@@ -271,3 +271,14 @@ def test_lexicon_from_training_data_and_external_words(tmp_path):
     train_lexicon, _ = utils.create_lexicon("en_test", conllu_file)
     lexicon, _ = utils.create_lexicon("en_test", conllu_file, external_words=EXTERNAL_WORDS)
     assert set(lexicon) == set(train_lexicon) | set(EXPECTED_EXTERNAL_LEXICON)
+
+def test_compress_word_list():
+    """
+    Compressed word lists come back deduplicated and sorted, including empty and non-ASCII words
+    """
+    words = ["puppies", "老师", "蛋白质", "kittens", "puppies", "", "a b"]
+    compressed = utils.compress_word_list(words)
+    assert isinstance(compressed, bytes)
+    assert utils.decompress_word_list(compressed) == sorted(set(words))
+
+    assert utils.decompress_word_list(utils.compress_word_list([])) == []
