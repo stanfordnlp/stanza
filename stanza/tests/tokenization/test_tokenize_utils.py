@@ -218,3 +218,56 @@ def test_lexicon_from_training_data(tmp_path):
     assert lexicon == expected_lexicon
     assert num_dict_feat == max(len(x) for x in lexicon)
 
+# a few multi-character words, a duplicate in a different case,
+# a single character word and a number, which are both filtered out of the lexicon.
+# the words are all the same length so that none are cut by the 95th percentile length limit
+EXTERNAL_WORDS = ["Kittens", "puppies", "KITTENS", "piglets", "x", "1234"]
+EXPECTED_EXTERNAL_LEXICON = ["kittens", "piglets", "puppies"]
+
+def test_read_external_dict(tmp_path):
+    """
+    The external dict file is read one word per line, lowercased, in file order
+    """
+    external_file = str(tmp_path / "externaldict.txt")
+    with open(external_file, "w", encoding="utf-8") as fout:
+        fout.write("\n".join(EXTERNAL_WORDS) + "\n")
+
+    words = utils.read_external_dict(external_file)
+    assert words == [x.lower() for x in EXTERNAL_WORDS]
+
+    with pytest.raises(FileNotFoundError):
+        utils.read_external_dict(str(tmp_path / "nonexistent.txt"))
+
+def test_lexicon_from_external_words():
+    """
+    A lexicon can be built from only a list of external words, with the same filtering as the training data
+    """
+    lexicon, num_dict_feat = utils.create_lexicon("en_test", external_words=EXTERNAL_WORDS)
+    assert sorted(lexicon) == EXPECTED_EXTERNAL_LEXICON
+    assert num_dict_feat == 7
+
+def test_lexicon_from_external_file(tmp_path):
+    """
+    Reading the external dict from a file gives the same lexicon as passing the words
+    """
+    external_file = str(tmp_path / "externaldict.txt")
+    with open(external_file, "w", encoding="utf-8") as fout:
+        fout.write("\n".join(EXTERNAL_WORDS) + "\n")
+
+    lexicon, num_dict_feat = utils.create_lexicon("en_test", external_path=external_file)
+    assert sorted(lexicon) == EXPECTED_EXTERNAL_LEXICON
+
+    with pytest.raises(ValueError):
+        utils.create_lexicon("en_test", external_path=external_file, external_words=EXTERNAL_WORDS)
+
+def test_lexicon_from_training_data_and_external_words(tmp_path):
+    """
+    The lexicon is the union of the training data words and the external words
+    """
+    conllu_file = str(tmp_path / "train.conllu")
+    with open(conllu_file, "w", encoding="utf-8") as fout:
+        fout.write(TRAIN_DATA)
+
+    train_lexicon, _ = utils.create_lexicon("en_test", conllu_file)
+    lexicon, _ = utils.create_lexicon("en_test", conllu_file, external_words=EXTERNAL_WORDS)
+    assert set(lexicon) == set(train_lexicon) | set(EXPECTED_EXTERNAL_LEXICON)
