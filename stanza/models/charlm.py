@@ -11,11 +11,13 @@ import os
 import random
 import time
 from types import GeneratorType
+import unicodedata
+
 import numpy as np
 import torch
 
-from stanza.models.common.char_model import build_charlm_vocab, CharacterLanguageModel, CharacterLanguageModelTrainer
-from stanza.models.common.vocab import CharVocab
+from stanza.models.common.char_model import build_charlm_vocab, CharacterLanguageModel, CharacterLanguageModelTrainer, Preprocessing
+from stanza.models.common.vocab import CharVocab, VOCAB_PREFIX
 from stanza.models.common import utils
 from stanza.models import _training_logging
 
@@ -45,23 +47,24 @@ def get_batch(source, i, seq_len):
     target = source[:, i+1:i+1+seq_len].reshape(-1)
     return data, target
 
-def load_file(filename, vocab, direction):
+def load_file(filename, model, direction):
     with utils.open_read_text(filename) as fin:
         data = fin.read()
+        data = model.preprocess(data)
 
-    idx = vocab['char'].map(data)
+    idx = model.vocab['char'].map(data)
     if direction == 'backward': idx = idx[::-1]
     return torch.tensor(idx)
 
-def load_data(path, vocab, direction):
+def load_data(path, model, direction):
     if os.path.isdir(path):
         filenames = sorted(os.listdir(path))
         for filename in filenames:
             logger.info('Loading data from {}'.format(filename))
-            data = load_file(os.path.join(path, filename), vocab, direction)
+            data = load_file(os.path.join(path, filename), model, direction)
             yield data
     else:
-        data = load_file(path, vocab, direction)
+        data = load_file(path, model, direction)
         yield data
 
 def build_argparse():
@@ -107,6 +110,8 @@ def build_argparse():
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+
+    parser.add_argument('--preprocessing', type=Preprocessing, choices=list(Preprocessing), default=Preprocessing.NONE, help='Which preprocessing method to use - for example, BHO condenses two similar looking characters')
     return parser
 
 def build_model_filename(args):
@@ -202,6 +207,23 @@ def evaluate_and_save(args, vocab, data, trainer, best_loss, model_file, checkpo
 
     return loss, ppl, best_loss
 
+def find_stale_chars(model):
+    """
+    Return the characters in the model's vocab which its preprocessing changes
+
+    Preprocessed text never contains these characters, so their embeddings
+    are never trained.  This happens when a vocab built without the current
+    preprocessing is reused.
+    """
+    return [c for c in model.vocab['char']
+            if c not in VOCAB_PREFIX and model.preprocess(c, allow_empty=True) != c]
+
+def describe_char(c):
+    """
+    Describe a character legibly in a log, even if it is invisible or combining
+    """
+    return "U+%04X %s" % (ord(c), unicodedata.name(c, "(unnamed)"))
+
 def get_current_lr(trainer, args):
     return trainer.scheduler.state_dict().get('_last_lr', [args['lr0']])[0]
 
@@ -225,7 +247,9 @@ def train(args):
         vocab = load_char_vocab(vocab_file)
     else:
         logger.info('Building and saving vocab')
-        vocab = {'char': build_charlm_vocab(args['train_file'] if args['train_dir'] is None else args['train_dir'], cutoff=args['cutoff'])}
+        vocab = {'char': build_charlm_vocab(args['train_file'] if args['train_dir'] is None else args['train_dir'],
+                                            cutoff=args['cutoff'],
+                                            preprocessing=args['preprocessing'])}
         torch.save(vocab['char'].state_dict(), vocab_file)
     logger.info("Training model with vocab size: {}".format(len(vocab['char'])))
 
@@ -234,6 +258,11 @@ def train(args):
         trainer = CharacterLanguageModelTrainer.load(args, checkpoint_file, finetune=True)
     else:
         trainer = CharacterLanguageModelTrainer.from_new_model(args, vocab)
+    logger.info("Training model with preprocessing: %s", trainer.model.preprocessing)
+    stale_chars = find_stale_chars(trainer.model)
+    if stale_chars:
+        logger.warning("Vocab contains %d characters which preprocessing %s changes, so their embeddings will never be trained: %s.  Delete %s to rebuild the vocab",
+                       len(stale_chars), trainer.model.preprocessing, ", ".join(describe_char(c) for c in stale_chars), vocab_file)
 
     writer = None
     if args['summary']:
@@ -264,8 +293,8 @@ def train(args):
             train_path = args['train_dir']
         else:
             train_path = args['train_file']
-        train_data = load_data(train_path, vocab, args['direction'])
-        dev_data = load_file(args['eval_file'], vocab, args['direction']) # dev must be a single file
+        train_data = load_data(train_path, trainer.model, args['direction'])
+        dev_data = load_file(args['eval_file'], trainer.model, args['direction']) # dev must be a single file
 
         # run over entire training set
         for data_chunk in train_data:
@@ -341,7 +370,7 @@ def evaluate(args):
 
     model = CharacterLanguageModel.load(model_file).to(args['device'])
     vocab = model.vocab
-    data = load_data(args['eval_file'], vocab, args['direction'])
+    data = load_data(args['eval_file'], model, args['direction'])
     criterion = torch.nn.CrossEntropyLoss()
     
     loss = evaluate_epoch(args, vocab, data, model, criterion)

@@ -296,3 +296,5 @@ class CharVocab(BaseVocab):
         self._id2unit = VOCAB_PREFIX + list(sorted(list(counter.keys()), key=lambda k: (counter[k], k), reverse=True))
         self._unit2id = {w:i for i, w in enumerate(self._id2unit)}
 
+    def __iter__(self):
+        return iter(self._id2unit)

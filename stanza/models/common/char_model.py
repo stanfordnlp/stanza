@@ -17,6 +17,8 @@ Based on
 """
 
 from collections import Counter
+import copy
+from enum import Enum
 from operator import itemgetter
 import os
 
@@ -79,7 +81,44 @@ class CharacterModel(nn.Module):
 
         return res
 
-def build_charlm_vocab(path, cutoff=0):
+# U+F06C is a Private Use Area glyph found in some crawled text
+BHO_REMAP = str.maketrans({
+    "\N{DEVANAGARI SIGN CANDRABINDU}": "\N{DEVANAGARI SIGN ANUSVARA}",
+})
+BHO_REMOVE = str.maketrans({
+    "\uF06C": None,
+})
+
+class Preprocessing(Enum):
+    NONE = "none"
+    BHO = "bho"
+
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            for member in cls:
+                if member.value == value.lower():
+                    return member
+        return None   # falls through to the normal ValueError
+
+    def __str__(self):
+        return self.value
+
+    def preprocess(self, text, preserve_length=False, allow_empty=False):
+        if not text:
+            return text
+
+        if self is Preprocessing.NONE:
+            return text
+        if self is Preprocessing.BHO:
+            candidate = text.translate(BHO_REMAP)
+            if preserve_length:
+                return candidate
+            stripped = candidate.translate(BHO_REMOVE)
+            return stripped if (stripped or allow_empty) else candidate
+        raise ValueError("Unknown Preprocessing type: %s" % self.name)
+
+def build_charlm_vocab(path, cutoff=0, preprocessing=Preprocessing.NONE):
     """
     Build a vocab for a CharacterLanguageModel
 
@@ -100,6 +139,7 @@ def build_charlm_vocab(path, cutoff=0):
         filename = os.path.join(path, filename)
         with open_read_text(filename) as fin:
             for line in fin:
+                line = preprocessing.preprocess(line, allow_empty=True)
                 counter.update(list(line))
 
     if len(counter) == 0:
@@ -142,6 +182,13 @@ class CharacterLanguageModel(nn.Module):
         self.dropout = nn.Dropout(args['char_dropout'])
         self.char_dropout = SequenceUnitDropout(args.get('char_unit_dropout', 0), UNK_ID)
 
+        # alternate methods of handling characters
+        # for example, BHO does some minor modifications to match what we found when crawling online BHO text
+        self.preprocessing = args.get('preprocessing', Preprocessing.NONE)
+
+    def preprocess(self, text, preserve_length=False, allow_empty=False):
+        return self.preprocessing.preprocess(text, preserve_length, allow_empty)
+
     def forward(self, chars, charlens, hidden=None):
         chars = self.char_dropout(chars)
         embs = self.dropout(self.char_emb(chars))
@@ -169,7 +216,7 @@ class CharacterLanguageModel(nn.Module):
         device = next(self.parameters()).device
         vocab = self.char_vocab()
 
-        all_data = [(vocab.map(word), len(word), idx) for idx, word in enumerate(words)]
+        all_data = [(vocab.map(self.preprocess(word, preserve_length=True)), len(word), idx) for idx, word in enumerate(words)]
         all_data.sort(key=itemgetter(1), reverse=True)
         chars = [x[0] for x in all_data]
         char_lens = [x[1] for x in all_data]
@@ -199,6 +246,7 @@ class CharacterLanguageModel(nn.Module):
 
         all_data = []
         for idx, words in enumerate(sentences):
+            words = [self.preprocess(w) for w in words]
             if not forward:
                 words = [x[::-1] for x in reversed(words)]
 
@@ -243,9 +291,11 @@ class CharacterLanguageModel(nn.Module):
                 super().train(mode)
 
     def full_state(self):
+        config = copy.deepcopy(self.args)
+        config['preprocessing'] = self.preprocessing.value
         state = {
             'vocab': self.vocab['char'].state_dict(),
-            'args': self.args,
+            'args': config,
             'state_dict': self.state_dict(),
             'pad': self.pad,
             'is_forward_lm': self.is_forward_lm
@@ -260,7 +310,9 @@ class CharacterLanguageModel(nn.Module):
     @classmethod
     def from_full_state(cls, state, finetune=False):
         vocab = {'char': CharVocab.load_state_dict(state['vocab'])}
-        model = cls(state['args'], vocab, state['pad'], state['is_forward_lm'])
+        config = copy.deepcopy(state['args'])
+        config['preprocessing'] = Preprocessing(config.get('preprocessing', 'none'))
+        model = cls(config, vocab, state['pad'], state['is_forward_lm'])
         model.load_state_dict(state['state_dict'])
         model.eval()
         model.finetune = finetune # set finetune status
