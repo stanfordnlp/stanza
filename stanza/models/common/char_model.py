@@ -142,7 +142,7 @@ class Preprocessing(Enum):
             candidate = word.replace("\uF06C", "")
             if not candidate:
                 return word
-            return candidate.replace("ँ", "ं")
+            return candidate.replace("\N{DEVANAGARI SIGN CANDRABINDU}", "\N{DEVANAGARI SIGN ANUSVARA}")
         raise ValueError("Unknown Preprocessing type: %s" % self.name)
 
 class CharacterLanguageModel(nn.Module):
