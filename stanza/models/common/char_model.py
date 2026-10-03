@@ -17,6 +17,8 @@ Based on
 """
 
 from collections import Counter
+import copy
+from enum import Enum
 from operator import itemgetter
 import os
 
@@ -118,6 +120,31 @@ def build_charlm_vocab(path, cutoff=0):
 CHARLM_START = "\n"
 CHARLM_END = " "
 
+class Preprocessing(Enum):
+    NONE = "none"
+    BHO = "bho"
+
+    @classmethod
+    def _missing_(cls, value):
+        if isinstance(value, str):
+            for member in cls:
+                if member.value == value.lower():
+                    return member
+        return None   # falls through to the normal ValueError
+
+    def preprocess(self, word):
+        if not word:
+            return word
+
+        if self is Preprocessing.NONE:
+            return word
+        if self is Preprocessing.BHO:
+            candidate = word.replace("\uF06C", "")
+            if not candidate:
+                return word
+            return candidate.replace("ँ", "ं")
+        raise ValueError("Unknown Preprocessing type: %s" % self.name)
+
 class CharacterLanguageModel(nn.Module):
 
     def __init__(self, args, vocab, pad=False, is_forward_lm=True):
@@ -141,6 +168,9 @@ class CharacterLanguageModel(nn.Module):
         self.decoder = nn.Linear(self.args['char_hidden_dim'], len(self.vocab['char']))
         self.dropout = nn.Dropout(args['char_dropout'])
         self.char_dropout = SequenceUnitDropout(args.get('char_unit_dropout', 0), UNK_ID)
+
+        # alternate methods
+        self.preprocessing = args.get('preprocessing', Preprocessing.NONE)
 
     def forward(self, chars, charlens, hidden=None):
         chars = self.char_dropout(chars)
@@ -243,9 +273,11 @@ class CharacterLanguageModel(nn.Module):
                 super().train(mode)
 
     def full_state(self):
+        config = copy.deepcopy(self.args)
+        config['preprocessing'] = self.preprocessing.name
         state = {
             'vocab': self.vocab['char'].state_dict(),
-            'args': self.args,
+            'args': config,
             'state_dict': self.state_dict(),
             'pad': self.pad,
             'is_forward_lm': self.is_forward_lm
@@ -260,7 +292,9 @@ class CharacterLanguageModel(nn.Module):
     @classmethod
     def from_full_state(cls, state, finetune=False):
         vocab = {'char': CharVocab.load_state_dict(state['vocab'])}
-        model = cls(state['args'], vocab, state['pad'], state['is_forward_lm'])
+        config = copy.deepcopy(state['args'])
+        config['preprocessing'] = Preprocessing(config.get('preprocessing', 'none'))
+        model = cls(config, vocab, state['pad'], state['is_forward_lm'])
         model.load_state_dict(state['state_dict'])
         model.eval()
         model.finetune = finetune # set finetune status

@@ -14,7 +14,7 @@ from types import GeneratorType
 import numpy as np
 import torch
 
-from stanza.models.common.char_model import build_charlm_vocab, CharacterLanguageModel, CharacterLanguageModelTrainer
+from stanza.models.common.char_model import build_charlm_vocab, CharacterLanguageModel, CharacterLanguageModelTrainer, Preprocessing
 from stanza.models.common.vocab import CharVocab
 from stanza.models.common import utils
 from stanza.models import _training_logging
@@ -107,6 +107,8 @@ def build_argparse():
 
     parser.add_argument('--wandb', action='store_true', help='Start a wandb session and write the results of training.  Only applies to training.  Use --wandb_name instead to specify a name')
     parser.add_argument('--wandb_name', default=None, help='Name of a wandb session to start when training.  Will default to the dataset short name')
+
+    parser.add_argument('--preprocessing', type=Preprocessing, choices=list(Preprocessing), default=Preprocessing.NONE, help='Which preprocessing method to use - for example, BHO condenses two similar looking characters')
     return parser
 
 def build_model_filename(args):
