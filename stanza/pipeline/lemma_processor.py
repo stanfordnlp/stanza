@@ -48,7 +48,8 @@ class LemmaProcessor(UDProcessor):
             # since a long running program will remember everything
             # (unless we go back and make it smarter)
             # we make this an option, not the default
-            # TODO: need to update the cache to skip the contextual lemmatizer
+            # the cache skips the words the contextual lemmatizers decide,
+            # see Trainer.drop_contextual
             self.store_results = config.get('store_results', False)
             self._use_identity = False
             args = {'charlm_forward_file': config.get('forward_charlm_path', None),
@@ -103,6 +104,10 @@ class LemmaProcessor(UDProcessor):
                 if self.store_results:
                     new_word_tags = compress(word_tags, map(lambda x: not x, skip))
                     new_predictions = [(x[0], x[1], y) for x, y in zip(new_word_tags, preds)]
+                    # these predictions have not been through the contextual
+                    # lemmatizers yet, which happens below, so the words those
+                    # decide must not be remembered from one sentence
+                    new_predictions = self.trainer.drop_contextual(new_predictions)
                     self.trainer.train_dict(new_predictions, update_word_dict=False)
                 # expand seq2seq predictions to the same size as all words
                 i = 0
