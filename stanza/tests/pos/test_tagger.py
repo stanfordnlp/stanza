@@ -269,6 +269,68 @@ class TestTagger:
         extra_args = charlm_args + ['--charlm_transform_dim', '100']
         trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=extra_args)
 
+    def test_char_model_without_charlm(self, tmp_path, wordvec_pretrain_file):
+        """
+        Without a pretrained charlm, the tagger trains its own character model
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA)
+        assert trainer.model.charmodel is not None
+        assert trainer.model.charmodel_forward is None
+        assert trainer.model.charmodel_backward is None
+
+    def test_charlm_replaces_char_model(self, tmp_path, wordvec_pretrain_file, charlm_args):
+        """
+        By default, a pretrained charlm takes the place of the tagger's own character model
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=charlm_args)
+        assert trainer.model.charmodel is None
+        assert trainer.model.charmodel_forward is not None
+        assert trainer.model.charmodel_backward is not None
+
+    def test_charlm_and_char_model(self, tmp_path, wordvec_pretrain_file, charlm_args):
+        """
+        --train_char_model keeps the tagger's own character model alongside the pretrained charlm
+
+        The tagger's character model is trained with the tagger, so it is
+        saved in the model file, while the charlms are not.  Both have to
+        be there again after reloading.
+        """
+        charlm_dir = tmp_path / "charlm_only"
+        charlm_dir.mkdir()
+        charlm_only = self.run_training(charlm_dir, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=charlm_args)
+
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=charlm_args + ['--train_char_model'])
+        assert trainer.model.charmodel is not None
+        assert trainer.model.charmodel_forward is not None
+        assert trainer.model.charmodel_backward is not None
+
+        # the tagger's character model adds its transformed output to the LSTM input
+        input_size = trainer.model.drop_replacement.shape[0]
+        charlm_only_size = charlm_only.model.drop_replacement.shape[0]
+        assert input_size == charlm_only_size + trainer.args['transformed_dim']
+
+        save_file = str(tmp_path / trainer.args['save_name'])
+        checkpoint = torch.load(save_file, lambda storage, loc: storage, weights_only=True)
+        assert any(x.startswith("charmodel.") for x in checkpoint['model'])
+        assert not any(x.startswith("charmodel_forward.") or x.startswith("charmodel_backward.") for x in checkpoint['model'])
+
+        pt = pretrain.Pretrain(wordvec_pretrain_file)
+        reloaded = Trainer(pretrain=pt, model_file=save_file)
+        assert reloaded.model.charmodel is not None
+        assert reloaded.model.charmodel_forward is not None
+        assert reloaded.model.charmodel_backward is not None
+        for name, param in trainer.model.charmodel.state_dict().items():
+            assert torch.allclose(param, reloaded.model.charmodel.state_dict()[name])
+
+    def test_no_char(self, tmp_path, wordvec_pretrain_file, charlm_args):
+        """
+        --no_char turns off every character model, even with a charlm and --train_char_model
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA, extra_args=charlm_args + ['--train_char_model', '--no_char'])
+        assert trainer.model.charmodel is None
+        assert trainer.model.charmodel_forward is None
+        assert trainer.model.charmodel_backward is None
+
     def test_missing_column(self, tmp_path, wordvec_pretrain_file):
         """
         Test that using train files with missing columns works
