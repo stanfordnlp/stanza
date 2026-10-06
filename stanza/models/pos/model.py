@@ -89,8 +89,12 @@ class Tagger(nn.Module):
             # upos embeddings
             self.upos_emb = nn.Embedding(len(vocab['upos']), self.args['tag_emb_dim'], padding_idx=0)
 
+        self.charmodel_forward = None
+        self.charmodel_backward = None
+        self.charmodel = None
         if self.args['char'] and self.args['char_emb_dim'] > 0:
-            if self.args.get('charlm', None):
+            charlm = self.args.get('charlm', None)
+            if charlm:
                 if args['charlm_forward_file'] is None or not os.path.exists(args['charlm_forward_file']):
                     raise FileNotFoundError('Could not find forward character model: {}  Please specify with --charlm_forward_file'.format(args['charlm_forward_file']))
                 if args['charlm_backward_file'] is None or not os.path.exists(args['charlm_backward_file']):
@@ -107,7 +111,7 @@ class Tagger(nn.Module):
                     self.charmodel_forward_transform = None
                     self.charmodel_backward_transform = None
                     input_size += self.charmodel_forward.hidden_dim() + self.charmodel_backward.hidden_dim()
-            else:
+            if not charlm or args.get('train_char_model'):
                 bidirectional = args.get('char_bidirectional', False)
                 self.charmodel = CharacterModel(args, vocab, bidirectional=bidirectional)
                 if bidirectional:
@@ -258,24 +262,25 @@ class Tagger(nn.Module):
         def pad(x):
             return pad_packed_sequence(PackedSequence(x, inputs[0].batch_sizes), batch_first=True)[0]
 
-        if self.args['char'] and self.args['char_emb_dim'] > 0:
-            if self.args.get('charlm', None):
-                all_forward_chars = self.charmodel_forward.build_char_representation(text)
-                assert isinstance(all_forward_chars, list)
-                if self.charmodel_forward_transform is not None:
-                    all_forward_chars = [self.charmodel_forward_transform(x) for x in all_forward_chars]
-                all_forward_chars = pack(pad_sequence(all_forward_chars, batch_first=True))
+        if self.charmodel_forward is not None:
+            all_forward_chars = self.charmodel_forward.build_char_representation(text)
+            assert isinstance(all_forward_chars, list)
+            if self.charmodel_forward_transform is not None:
+                all_forward_chars = [self.charmodel_forward_transform(x) for x in all_forward_chars]
+            all_forward_chars = pack(pad_sequence(all_forward_chars, batch_first=True))
+            inputs += [all_forward_chars]
 
-                all_backward_chars = self.charmodel_backward.build_char_representation(text)
-                if self.charmodel_backward_transform is not None:
-                    all_backward_chars = [self.charmodel_backward_transform(x) for x in all_backward_chars]
-                all_backward_chars = pack(pad_sequence(all_backward_chars, batch_first=True))
+        if self.charmodel_backward is not None:
+            all_backward_chars = self.charmodel_backward.build_char_representation(text)
+            if self.charmodel_backward_transform is not None:
+                all_backward_chars = [self.charmodel_backward_transform(x) for x in all_backward_chars]
+            all_backward_chars = pack(pad_sequence(all_backward_chars, batch_first=True))
+            inputs += [all_backward_chars]
 
-                inputs += [all_forward_chars, all_backward_chars]
-            else:
-                char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
-                char_reps = PackedSequence(self.trans_char(self.drop(char_reps.data)), char_reps.batch_sizes)
-                inputs += [char_reps]
+        if self.charmodel is not None:
+            char_reps = self.charmodel(wordchars, wordchars_mask, word_orig_idx, sentlens, wordlens)
+            char_reps = PackedSequence(self.trans_char(self.drop(char_reps.data)), char_reps.batch_sizes)
+            inputs += [char_reps]
 
         if self.bert_model is not None:
             device = next(self.parameters()).device
