@@ -158,3 +158,61 @@ def test_contextual_lemmatizer():
     # contextual classifier gets it right,
     # unless it gets retrained really badly
     assert doc.sentences[0].words[1].lemma == "be"
+
+
+def test_contextual_lemmatizer_results_are_not_cached():
+    """lemma_store_results must not remember a word a contextual lemmatizer decides.
+
+    The seq2seq prediction is made before update_contextual_preds runs, so one
+    word, pos answer for 's would stand in for every occurrence: have in "He's
+    added a lemmatizer" and be in "He's a little tired". The output itself is
+    saved by the contextual pass running on every call, so this asserts on the
+    dict rather than on the lemmas.
+    """
+    nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR,
+                          package={"lemma": "default_accurate"}, lemma_store_results=True,
+                          download_method=None)
+    trainer = nlp.processors['lemma']._trainer
+    assert len(trainer.contextual_lemmatizers) > 0
+
+    assert trainer.is_contextual_target("'s", "AUX")
+    assert trainer.is_contextual_target("'S", "AUX")      # matched lowercased
+    assert not trainer.is_contextual_target("'s", "PART")  # a different tag is not a target
+    assert not trainer.is_contextual_target("dog", "NOUN")
+    assert trainer.drop_contextual([("'s", "AUX", "be"), ("dog", "NOUN", "dog")]) == [("dog", "NOUN", "dog")]
+
+    # the shipped dict already knows 's, so skip_seq2seq skips it before the cache
+    # can see it; dropping those entries exercises the path the filter guards
+    for pos_dict in trainer.pos_dict.values():
+        pos_dict.pop("'s", None)
+    assert trainer.skip_seq2seq([("'s", "AUX")]) == [False]
+
+    doc = nlp("He's added a contextual lemmatizer")
+    assert doc.sentences[0].words[1].lemma == "have"
+    assert "'s" not in trainer.pos_dict.get("AUX", {})
+
+
+def test_contextual_lemma_survives_the_results_cache():
+    """With lemma_store_results on, the cache must never answer for a word the contextual
+    lemmatizer decides, however many times that word has been through the lemmatizer.
+
+    "her" is PRON in both senses, so the upos cannot separate them and only the contextual
+    lemmatizer can: she when it is the object, her when it is the possessive. Alternating
+    the two senses through one pipeline pins that behaviour.
+    """
+    nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR,
+                          package={"lemma": "default_accurate"}, lemma_store_results=True,
+                          download_method=None)
+    expected = [
+        ("I saw her yesterday.", "she"),
+        ("Her book is on the table.", "her"),
+        ("They thanked her warmly.", "she"),
+        ("Her car broke down.", "her"),
+        ("We invited her to dinner.", "she"),
+        ("Her sister called.", "her"),
+    ]
+    for text, lemma in expected:
+        words = [word for word in nlp(text).sentences[0].words if word.text.lower() == "her"]
+        assert len(words) == 1, text
+        assert words[0].pos == "PRON", f"{text}: upos {words[0].pos}, expected PRON"
+        assert words[0].lemma == lemma, f"{text}: lemma {words[0].lemma!r}, expected {lemma!r}"

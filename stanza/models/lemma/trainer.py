@@ -199,6 +199,29 @@ class Trainer(object):
     def has_contextual_lemmatizers(self):
         return self.contextual_lemmatizers is not None and len(self.contextual_lemmatizers) > 0
 
+    def is_contextual_target(self, word, upos):
+        """Whether a contextual lemmatizer decides this word, so the dict must not remember it.
+
+        Matches LemmaClassifier.target_indices: the word is compared
+        lowercased and the tag as given.
+        """
+        for contextual in self.contextual_lemmatizers:
+            if word.lower() in contextual.target_words and upos in contextual.target_upos:
+                return True
+        return False
+
+    def drop_contextual(self, triples):
+        """The (word, pos, lemma) triples a dict may remember, without the contextual ones.
+
+        A contextual lemmatizer answers from the sentence, so one word, pos
+        answer cannot stand for every occurrence: 's is have in one sentence
+        and be in the next. Caching the pre-contextual prediction would put a
+        lemma in the dict that the contextual lemmatizer exists to decide.
+        """
+        if not self.has_contextual_lemmatizers():
+            return list(triples)
+        return [triple for triple in triples if not self.is_contextual_target(triple[0], triple[1])]
+
     def predict_contextual(self, sentence_words, sentence_tags, preds):
         if len(self.contextual_lemmatizers) == 0:
             return preds
