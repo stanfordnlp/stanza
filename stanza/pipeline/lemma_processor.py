@@ -2,6 +2,7 @@
 Processor for performing lemmatization
 """
 
+from collections import OrderedDict
 from itertools import compress
 
 import torch
@@ -13,6 +14,10 @@ from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
 
 WORD_TAGS = [doc.TEXT, doc.UPOS]
+
+#: How many word, pos answers the cache keeps before evicting the least recently
+#: used, allowing us to keep a small cache as a default behavior.
+DEFAULT_STORE_RESULTS_SIZE = 10000
 
 @register_processor(name=LEMMA)
 class LemmaProcessor(UDProcessor):
@@ -45,18 +50,36 @@ class LemmaProcessor(UDProcessor):
             # decisions, not the surrounding context
             # therefore, we can save some time by remembering what
             # we did the last time we saw any given word,pos
-            # since a long running program will remember everything
-            # (unless we go back and make it smarter)
-            # we make this an option, not the default
-            # the cache skips the words the contextual lemmatizers decide,
+            # the cache has an upper bound, so it is on by default
+            # words the contextual lemmatizers decide are kept out of it,
             # see Trainer.drop_contextual
-            self.store_results = config.get('store_results', False)
+            self.store_results = config.get('store_results', True)
+            self.store_results_size = int(config.get('store_results_size', DEFAULT_STORE_RESULTS_SIZE))
+            # (word, pos) -> lemma, least recently used first
+            self._results = OrderedDict()
             self._use_identity = False
             args = {'charlm_forward_file': config.get('forward_charlm_path', None),
                     'charlm_backward_file': config.get('backward_charlm_path', None)}
             lemma_classifier_args = dict(args)
             lemma_classifier_args['wordvec_pretrain_file'] = config.get('pretrain_path', None)
             self._trainer = Trainer(args=args, model_file=config['model_path'], device=device, foundation_cache=pipeline.foundation_cache, lemma_classifier_args=lemma_classifier_args)
+
+    def _remember(self, triples):
+        """Keep (word, pos, lemma) answers, dropping the least recently used past the cap."""
+        for word, pos, lemma in triples:
+            key = (word, pos)
+            self._results.pop(key, None)
+            self._results[key] = lemma
+        while len(self._results) > self.store_results_size:
+            self._results.popitem(last=False)
+
+    def _recall(self, word, pos):
+        """A remembered lemma for this word and pos, or None; marks it recently used."""
+        key = (word, pos)
+        if key not in self._results:
+            return None
+        self._results.move_to_end(key)
+        return self._results[key]
 
     def _set_up_requires(self):
         self._pretagged = self._config.get('pretagged', None)
@@ -79,7 +102,14 @@ class LemmaProcessor(UDProcessor):
         else:
             if self.config.get('ensemble_dict', False):
                 # skip the seq2seq model when we can
-                skip = self.trainer.skip_seq2seq(batch.doc.get([doc.TEXT, doc.UPOS]))
+                word_tags_for_skip = batch.doc.get([doc.TEXT, doc.UPOS])
+                skip = self.trainer.skip_seq2seq(word_tags_for_skip)
+                if self.store_results:
+                    # a remembered answer is as good as a dictionary hit for skipping
+                    skip = [
+                        was_skipped or self._recall(word, pos) is not None
+                        for was_skipped, (word, pos) in zip(skip, word_tags_for_skip)
+                    ]
                 # although there is no explicit use of caseless or lemma_caseless in this processor,
                 # it shows up in the config which gets passed to the DataLoader,
                 # possibly affecting its results
@@ -108,7 +138,7 @@ class LemmaProcessor(UDProcessor):
                     # lemmatizers yet, which happens below, so the words those
                     # decide must not be remembered from one sentence
                     new_predictions = self.trainer.drop_contextual(new_predictions)
-                    self.trainer.train_dict(new_predictions, update_word_dict=False)
+                    self._remember(new_predictions)
                 # expand seq2seq predictions to the same size as all words
                 i = 0
                 preds1 = []
@@ -118,6 +148,13 @@ class LemmaProcessor(UDProcessor):
                     else:
                         preds1.append(preds[i])
                         i += 1
+                if self.store_results:
+                    # ensemble prefers the shipped dictionary, then whatever is passed
+                    # here, so a remembered answer fills the slot of a word we skipped
+                    preds1 = [
+                        pred if pred else (self._recall(word, pos) or pred)
+                        for pred, (word, pos) in zip(preds1, word_tags)
+                    ]
                 preds = self.trainer.ensemble(word_tags, preds1)
             else:
                 preds = self.trainer.postprocess(batch.doc.get([doc.TEXT]), preds, edits=edits)

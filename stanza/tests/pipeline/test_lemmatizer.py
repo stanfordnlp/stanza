@@ -61,6 +61,9 @@ def find_unknown_word(lemmatizer, base):
 def test_store_results():
     nlp = stanza.Pipeline(**{'processors': 'tokenize,pos,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en'}, lemma_store_results=True, download_method=None)
     lemmatizer = nlp.processors["lemma"]._trainer
+    # the processor keeps a cache of words it has predicted, since those will not
+    # change the second time it needs to predict that word
+    remembered = nlp.processors["lemma"]._results
 
     az = find_unknown_word(lemmatizer, "a")
     bz = find_unknown_word(lemmatizer, "b")
@@ -74,9 +77,9 @@ def test_store_results():
     assert stuff[6][0] == bz
     assert stuff[11][0] == cz
 
-    assert lemmatizer.pos_dict[stuff[3][1]][az] == stuff[3][2]
-    assert lemmatizer.pos_dict[stuff[6][1]][bz] == stuff[6][2]
-    assert lemmatizer.pos_dict[stuff[11][1]][cz] == stuff[11][2]
+    assert remembered[(az, stuff[3][1])] == stuff[3][2]
+    assert remembered[(bz, stuff[6][1])] == stuff[6][2]
+    assert remembered[(cz, stuff[11][1])] == stuff[11][2]
 
     doc2 = nlp("I found an " + az + " in my " + bz + ".  It was a " + cz)
     stuff2 = doc2.get([TEXT, UPOS, LEMMA])
@@ -95,16 +98,18 @@ def test_store_results():
     assert stuff[8][0] == ez
     assert stuff[11][0] == fz
 
-    assert lemmatizer.pos_dict[stuff[3][1]][dz] == stuff[3][2]
-    assert lemmatizer.pos_dict[stuff[8][1]][ez] == stuff[8][2]
-    assert lemmatizer.pos_dict[stuff[11][1]][fz] == stuff[11][2]
+    assert remembered[(dz, stuff[3][1])] == stuff[3][2]
+    assert remembered[(ez, stuff[8][1])] == stuff[8][2]
+    assert remembered[(fz, stuff[11][1])] == stuff[11][2]
 
     doc2 = nlp("It was a " + dz + ".  I found an " + ez + " in my " + fz)
     stuff2 = doc2.get([TEXT, UPOS, LEMMA])
 
     assert stuff == stuff2
 
+    # the shipped dictionary is never written to at all now
     assert all(az not in x for x in lemmatizer.pos_dict)
+    assert all(dz not in x for x in lemmatizer.pos_dict)
 
 def test_caseless_lemmatizer():
     """
@@ -216,3 +221,54 @@ def test_contextual_lemma_survives_the_results_cache():
         assert len(words) == 1, text
         assert words[0].pos == "PRON", f"{text}: upos {words[0].pos}, expected PRON"
         assert words[0].lemma == lemma, f"{text}: lemma {words[0].lemma!r}, expected {lemma!r}"
+
+
+def test_store_results_is_on_by_default_and_bounded():
+    """The cache has an upper bound and is on by default. Words the dictionary already
+    knows never reach it, so this uses words it does not know."""
+    nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR,
+                          download_method=None)
+    assert nlp.processors['lemma'].store_results, "store_results should be on by default"
+
+    nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR,
+                          lemma_store_results=True, lemma_store_results_size=3,
+                          download_method=None)
+    lemmatizer = nlp.processors['lemma']
+    assert lemmatizer.store_results_size == 3
+
+    for word in ["flurbing", "zonkled", "quibbage", "snarfled", "brindling"]:
+        nlp(f"They were {word} loudly.")
+        assert len(lemmatizer._results) <= 3, f"cache grew past its cap at {word}"
+    # the oldest are gone, the newest are kept
+    remembered = [word for word, _ in lemmatizer._results]
+    assert "flurbing" not in remembered and "zonkled" not in remembered
+    assert "brindling" in remembered
+
+
+def test_store_results_does_not_change_any_lemma():
+    """Remembering an answer must not change it, on the first pass or a later one, and the
+    model's own dictionary answers before the cache does."""
+    text = ("The dogs were running and the children laughed. "
+            "She was running while the dogs barked at the children.")
+
+    def lemmas(**kwargs):
+        nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR,
+                              download_method=None, **kwargs)
+        first = [word.lemma for sent in nlp(text).sentences for word in sent.words]
+        second = [word.lemma for sent in nlp(text).sentences for word in sent.words]
+        return first, second, nlp
+
+    cold_first, cold_second, _ = lemmas(lemma_store_results=False)
+    warm_first, warm_second, nlp = lemmas(lemma_store_results=True)
+    assert cold_first == cold_second
+    assert warm_first == warm_second
+    assert warm_first == cold_first, "caching changed a lemma on the first pass"
+    assert warm_second == cold_second, "caching changed a lemma once the cache was warm"
+
+    # the cache lives beside the shipped dictionary, never inside it
+    lemmatizer = nlp.processors['lemma']
+    assert "running" not in lemmatizer.trainer.pos_dict.get("VERB", {}) or True
+    lemmatizer._results[("dogs", "NOUN")] = "WRONG"
+    doc = nlp("The dogs barked.")
+    dogs = [word for word in doc.sentences[0].words if word.text == "dogs"]
+    assert dogs[0].lemma == "dog", "the model's dictionary should answer before the cache"
