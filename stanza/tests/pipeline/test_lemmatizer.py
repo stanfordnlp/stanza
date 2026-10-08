@@ -61,9 +61,8 @@ def find_unknown_word(lemmatizer, base):
 def test_store_results():
     nlp = stanza.Pipeline(**{'processors': 'tokenize,pos,lemma', 'dir': TEST_MODELS_DIR, 'lang': 'en'}, lemma_store_results=True, download_method=None)
     lemmatizer = nlp.processors["lemma"]._trainer
-    # the remembered answers live on the processor now, not in the trainer's pos_dict:
-    # that dict is the dictionary the model shipped with, and a bounded cache cannot
-    # evict from it without discarding model data
+    # the processor keeps a cache of words it has predicted, since those will not
+    # change the second time it needs to predict that word
     remembered = nlp.processors["lemma"]._results
 
     az = find_unknown_word(lemmatizer, "a")
@@ -225,9 +224,8 @@ def test_contextual_lemma_survives_the_results_cache():
 
 
 def test_store_results_is_on_by_default_and_bounded():
-    """The cache is bounded, so it can be the default: a long running process cannot grow it
-    without limit. Words the shipped dictionary already knows never reach it, so the test uses
-    words it does not know."""
+    """The cache has an upper bound and is on by default. Words the dictionary already
+    knows never reach it, so this uses words it does not know."""
     nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR,
                           download_method=None)
     assert nlp.processors['lemma'].store_results, "store_results should be on by default"
@@ -249,7 +247,7 @@ def test_store_results_is_on_by_default_and_bounded():
 
 def test_store_results_does_not_change_any_lemma():
     """Remembering an answer must not change it, on the first pass or a later one, and the
-    dictionary the model shipped with still wins over anything remembered at run time."""
+    model's own dictionary answers before the cache does."""
     text = ("The dogs were running and the children laughed. "
             "She was running while the dogs barked at the children.")
 
@@ -273,4 +271,4 @@ def test_store_results_does_not_change_any_lemma():
     lemmatizer._results[("dogs", "NOUN")] = "WRONG"
     doc = nlp("The dogs barked.")
     dogs = [word for word in doc.sentences[0].words if word.text == "dogs"]
-    assert dogs[0].lemma == "dog", "the shipped dictionary should win over the run time cache"
+    assert dogs[0].lemma == "dog", "the model's dictionary should answer before the cache"

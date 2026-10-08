@@ -15,9 +15,8 @@ from stanza.pipeline.processor import UDProcessor, register_processor
 
 WORD_TAGS = [doc.TEXT, doc.UPOS]
 
-#: How many word, pos answers the run time cache keeps before evicting the least
-#: recently used. Bounded so that a long running process cannot grow without limit,
-#: which is what kept store_results off by default.
+#: How many word, pos answers the cache keeps before evicting the least recently
+#: used, allowing us to keep a small cache as a default behavior.
 DEFAULT_STORE_RESULTS_SIZE = 10000
 
 @register_processor(name=LEMMA)
@@ -51,16 +50,12 @@ class LemmaProcessor(UDProcessor):
             # decisions, not the surrounding context
             # therefore, we can save some time by remembering what
             # we did the last time we saw any given word,pos
-            # since a long running program will remember everything
-            # (unless we go back and make it smarter)
-            # we make this an option, not the default
-            # the cache skips the words the contextual lemmatizers decide,
+            # the cache has an upper bound, so it is on by default
+            # words the contextual lemmatizers decide are kept out of it,
             # see Trainer.drop_contextual
             self.store_results = config.get('store_results', True)
             self.store_results_size = int(config.get('store_results_size', DEFAULT_STORE_RESULTS_SIZE))
-            # (word, pos) -> lemma, least recently used first. Kept here rather than in
-            # the trainer's pos_dict: that dict is the dictionary the model shipped with,
-            # so evicting from it would throw away model data, not cached answers.
+            # (word, pos) -> lemma, least recently used first
             self._results = OrderedDict()
             self._use_identity = False
             args = {'charlm_forward_file': config.get('forward_charlm_path', None),
