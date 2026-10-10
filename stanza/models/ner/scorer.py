@@ -1,6 +1,8 @@
 """
 An NER scorer that calculates F1 score given gold and predicted tags.
 """
+
+import argparse
 import sys
 import os
 import logging
@@ -158,11 +160,35 @@ def score_by_token(pred_tag_sequences, gold_tag_sequences, verbose=True, ignore_
             prec_micro*100, rec_micro*100, f_micro*100))
     return prec_micro, rec_micro, f_micro, confusion
 
+def read_file(filename):
+    sentences = []
+    next_sentence = []
+    with open(filename, encoding="utf-8") as fin:
+        for line_idx, line in enumerate(fin.readlines()):
+            line = line.strip()
+            if not line:
+                if len(next_sentence) > 0:
+                    sentences.append(next_sentence)
+                next_sentence = []
+                continue
+            pieces = line.rsplit(maxsplit=1)
+
+            if len(pieces) < 2:
+                print("Error at line idx %d" % line_idx)
+            next_sentence.append(pieces[1])
+
+    if len(next_sentence) > 0:
+        sentences.append(next_sentence)
+    return sentences
+
 def test():
-    pred_sequences = [['O', 'S-LOC', 'O', 'O', 'B-PER', 'E-PER'],
-                    ['O', 'S-MISC', 'O', 'E-ORG', 'O', 'B-PER', 'I-PER', 'E-PER']]
-    gold_sequences = [['O', 'B-LOC', 'E-LOC', 'O', 'B-PER', 'E-PER'],
-                    ['O', 'S-MISC', 'B-ORG', 'E-ORG', 'O', 'B-PER', 'E-PER', 'S-LOC']]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("pred", type=str, help="The pred file path")
+    parser.add_argument("gold", type=str, help="The gold file path")
+    args = parser.parse_args()
+
+    pred_sequences = read_file(args.pred)
+    gold_sequences = read_file(args.gold)
     print(score_by_token(pred_sequences, gold_sequences))
     print(score_by_entity(pred_sequences, gold_sequences))
 
