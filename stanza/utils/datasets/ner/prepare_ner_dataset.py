@@ -1389,26 +1389,28 @@ def process_sd_siner(paths, short_name):
     convert_sindhi_siner.convert_sindhi_siner(in_filename, paths["NER_DATA_DIR"], short_name)
 
 def process_en_worldwide_4class(paths, short_name):
-    simplify_en_worldwide.main(args=['--simplify'])
+    with tempfile.TemporaryDirectory() as tempdir:
+        simplify_en_worldwide.main(args=['--simplify', '--output_path', tempdir])
 
-    in_directory = os.path.join(paths["NERBASE"], "en_worldwide", "4class")
-    out_directory = paths["NER_DATA_DIR"]
+        in_directory = os.path.join(tempdir, "4class")
+        out_directory = paths["NER_DATA_DIR"]
 
-    destination_file = os.path.join(paths["NERBASE"], "en_worldwide", "en-worldwide-newswire", "regions.txt")
-    prefix_map = read_prefix_file(destination_file)
+        destination_file = os.path.join(paths["NERBASE"], "en_worldwide", "en-worldwide-newswire", "regions.txt")
+        prefix_map = read_prefix_file(destination_file)
 
-    random_shuffle_by_prefixes(in_directory, out_directory, short_name, prefix_map)
+        random_shuffle_by_prefixes(in_directory, out_directory, short_name, prefix_map)
 
 def process_en_worldwide_9class(paths, short_name):
-    simplify_en_worldwide.main(args=['--no_simplify'])
+    with tempfile.TemporaryDirectory() as tempdir:
+        simplify_en_worldwide.main(args=['--no_simplify', '--output_path', tempdir])
 
-    in_directory = os.path.join(paths["NERBASE"], "en_worldwide", "9class")
-    out_directory = paths["NER_DATA_DIR"]
+        in_directory = os.path.join(tempdir, "9class")
+        out_directory = paths["NER_DATA_DIR"]
 
-    destination_file = os.path.join(paths["NERBASE"], "en_worldwide", "en-worldwide-newswire", "regions.txt")
-    prefix_map = read_prefix_file(destination_file)
+        destination_file = os.path.join(paths["NERBASE"], "en_worldwide", "en-worldwide-newswire", "regions.txt")
+        prefix_map = read_prefix_file(destination_file)
 
-    random_shuffle_by_prefixes(in_directory, out_directory, short_name, prefix_map)
+        random_shuffle_by_prefixes(in_directory, out_directory, short_name, prefix_map)
 
 def process_en_ontonotes(paths, short_name):
     ner_input_path = paths['NERBASE']
