@@ -276,7 +276,7 @@ def random_shuffle_by_prefixes(input_dir, output_dir, short_name, prefix_map):
                 continue
             break
         else: # yes, stop asking
-            raise ValueError("Could not assign %s to any of the divisions in the prefix_map" % filename)
+            raise ValueError("Could not assign %s from %s to any of the divisions in the prefix_map" % (filename, input_dir))
         #print("Assigning %s to %s because of %s" % (filename, division, prefix))
         file_divisions[division].append(filename)
 
