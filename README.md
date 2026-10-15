@@ -84,7 +84,7 @@ We welcome community contributions to Stanza in the form of bugfixes 🛠️ and
 
 ### pip
 
-Stanza supports Python 3.6 or later. We recommend that you install Stanza via [pip](https://pip.pypa.io/en/stable/installing/), the Python package manager. To install, simply run:
+Stanza supports Python 3.9 or later. We recommend that you install Stanza via [pip](https://pip.pypa.io/en/stable/installing/), the Python package manager. To install, simply run:
 ```bash
 pip install stanza
 ```
