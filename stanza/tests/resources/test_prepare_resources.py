@@ -392,14 +392,158 @@ def test_lang(monkeypatch, fake_config, input_dir, output_dir):
     assert second["fr"]["default_md5"] != first["fr"]["default_md5"]
     assert second["french"] == {"alias": "fr"}
 
-def test_lang_removes_deleted_models(monkeypatch, fake_config, input_dir, output_dir):
+def test_lang_removes_deleted_models(monkeypatch, fake_config, input_dir, output_dir, capsys):
     write_model(input_dir, "pos", "fr_extra_nocharlm_tagger.pt")
     first = run_prepare(monkeypatch, input_dir, output_dir)
     assert "extra_nocharlm" in first["fr"]["pos"]
 
     os.remove(input_dir / "pos" / "fr_extra_nocharlm_tagger.pt")
+    capsys.readouterr()
     second = run_prepare(monkeypatch, input_dir, output_dir, "--lang", "fr")
     assert "extra_nocharlm" not in second["fr"]["pos"]
+
+    # the old file is left in place, but reported
+    out = capsys.readouterr().out
+    assert "1 .pt file(s)" in out
+    assert os.path.join("fr", "models", "pos", "extra_nocharlm.pt") in out
+    assert (output_dir / "fr" / "models" / "pos" / "extra_nocharlm.pt").exists()
+
+def test_no_unexpected_models(monkeypatch, fake_config, input_dir, output_dir, capsys):
+    run_prepare(monkeypatch, input_dir, output_dir)
+    run_prepare(monkeypatch, input_dir, output_dir)
+    assert "not in resources.json" not in capsys.readouterr().out
+
+def test_unexpected_models_reported(monkeypatch, fake_config, input_dir, output_dir, capsys):
+    run_prepare(monkeypatch, input_dir, output_dir)
+    stray = output_dir / "en" / "models" / "pos" / "old_model.pt"
+    stray.write_bytes(b"leftover from some earlier release")
+    os.remove(input_dir / "lemma" / "en_ewt_charlm_lemmatizer.pt")
+    capsys.readouterr()
+
+    unexpected = [os.path.join("en", "models", "lemma", "ewt_charlm.pt"),
+                  os.path.join("en", "models", "pos", "old_model.pt")]
+
+    # check_only lists them, as does a full run
+    for extra_args in (["--check_only"], []):
+        monkeypatch.setattr(sys, "argv", ["prepare_resources", "--input_dir", str(input_dir), "--output_dir", str(output_dir)] + extra_args)
+        prepare_resources.main()
+        out = capsys.readouterr().out
+        assert "2 .pt file(s)" in out
+        for path in unexpected:
+            assert path in out
+        assert stray.exists()
+        assert (output_dir / unexpected[0]).exists()
+
+def test_partial_files_removed(monkeypatch, fake_config, input_dir, output_dir, capsys):
+    first = run_prepare(monkeypatch, input_dir, output_dir)
+    partials = [output_dir / "en" / "models" / "pos" / "ewt_charlm.pt.partial",
+                output_dir / "fr" / "models" / "default.zip.partial",
+                output_dir / (prepare_resources.OutputCache.CACHE_NAME + ".partial")]
+    for path in partials:
+        path.write_bytes(b"interrupted")
+    capsys.readouterr()
+
+    # check_only reports them without removing anything
+    monkeypatch.setattr(sys, "argv", ["prepare_resources", "--input_dir", str(input_dir), "--output_dir", str(output_dir), "--check_only"])
+    prepare_resources.main()
+    out = capsys.readouterr().out
+    assert "Would remove 3 leftover partial file(s)" in out
+    assert all(path.exists() for path in partials)
+
+    # a real run removes them, and the cached models are still up to date
+    counter = CopyCounter(monkeypatch)
+    second = run_prepare(monkeypatch, input_dir, output_dir)
+    out = capsys.readouterr().out
+    assert "Removing 3 leftover partial file(s)" in out
+    assert os.path.join("en", "models", "pos", "ewt_charlm.pt.partial") in out
+    assert not any(path.exists() for path in partials)
+    assert counter.copied == []
+    assert second == first
+
+def test_partial_symlink_outside(monkeypatch, fake_config, input_dir, output_dir, tmp_path, capsys):
+    """
+    A .partial symlink pointing outside the output directory is reported, not removed
+    """
+    first = run_prepare(monkeypatch, input_dir, output_dir)
+    target = tmp_path / "precious.partial"
+    target.write_bytes(b"do not delete")
+    link = output_dir / "en" / "models" / "pos" / "ewt_charlm.pt.partial"
+    os.symlink(target, link)
+    capsys.readouterr()
+
+    second = run_prepare(monkeypatch, input_dir, output_dir)
+    out = capsys.readouterr().out
+    assert "not removing 1 partial file(s)" in out
+    assert str(target) in out
+    assert "Removing" not in out
+    assert os.path.islink(link)
+    assert target.read_bytes() == b"do not delete"
+    assert second == first
+
+def test_partial_symlink_inside(monkeypatch, fake_config, input_dir, output_dir, capsys):
+    """
+    A .partial symlink pointing inside the output directory is removed, and only the link goes away
+    """
+    first = run_prepare(monkeypatch, input_dir, output_dir)
+    target = output_dir / "en" / "models" / "pos" / "ewt_charlm.pt"
+    link = output_dir / "fr" / "models" / "pos" / "gsd_nocharlm.pt.partial"
+    os.symlink(target, link)
+
+    counter = CopyCounter(monkeypatch)
+    second = run_prepare(monkeypatch, input_dir, output_dir)
+    assert not os.path.lexists(link)
+    assert target.read_bytes() == model_contents("en_ewt_charlm_tagger.pt")
+    assert counter.copied == []
+    assert second == first
+
+def test_symlinked_dir_not_walked(monkeypatch, fake_config, input_dir, output_dir, tmp_path, capsys):
+    """
+    A symlinked directory inside the output directory is not searched at all
+    """
+    run_prepare(monkeypatch, input_dir, output_dir)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    (elsewhere / "something.partial").write_bytes(b"not ours")
+    (elsewhere / "something.pt").write_bytes(b"not ours either")
+    os.symlink(elsewhere, output_dir / "en" / "linked_dir")
+    capsys.readouterr()
+
+    run_prepare(monkeypatch, input_dir, output_dir)
+    out = capsys.readouterr().out
+    assert "partial file" not in out
+    assert "not in resources.json" not in out
+    assert (elsewhere / "something.partial").exists()
+
+def test_output_dir_is_symlink(monkeypatch, fake_config, input_dir, tmp_path, capsys):
+    """
+    When the output directory is a symlink, partial files in the directory it points to are still removed
+    """
+    real_output = tmp_path / "real_output"
+    real_output.mkdir()
+    linked_output = tmp_path / "linked_output"
+    os.symlink(real_output, linked_output)
+
+    first = run_prepare(monkeypatch, input_dir, linked_output)
+    assert (real_output / "resources.json").exists()
+    partial = real_output / "en" / "models" / "pos" / "ewt_charlm.pt.partial"
+    partial.write_bytes(b"interrupted")
+    capsys.readouterr()
+
+    second = run_prepare(monkeypatch, input_dir, linked_output)
+    assert "Removing 1 leftover partial file(s)" in capsys.readouterr().out
+    assert not partial.exists()
+    assert second == first
+
+def test_partial_files_kept_on_error(monkeypatch, fake_config, input_dir, output_dir, capsys):
+    """
+    A run which fails its checks doesn't touch the output directory at all
+    """
+    run_prepare(monkeypatch, input_dir, output_dir)
+    partial = output_dir / "en" / "models" / "pos" / "ewt_charlm.pt.partial"
+    partial.write_bytes(b"interrupted")
+    write_model(input_dir, "tokenize", "de_gsd_tokenizer.pt")
+    assert_fails_with(monkeypatch, capsys, input_dir, output_dir, ["de not in default treebanks"])
+    assert partial.exists()
 
 def test_packages_only(monkeypatch, fake_config, input_dir, output_dir):
     first = run_prepare(monkeypatch, input_dir, output_dir)
