@@ -246,11 +246,23 @@ def test_output_cache(tmp_path):
     src.write_bytes(b"new model")
     assert cache.lookup_model(str(src), str(dst)) is None
 
-    # so does changing the destination
+    # so does changing the destination, in either its size or its mtime
+    # the mtimes are set explicitly, since on a filesystem with coarse
+    # timestamps, a quick rewrite can otherwise keep the same mtime
     md5 = prepare_resources.copy_file_with_md5(str(src), str(dst))
     cache.store_model(str(src), str(dst), md5)
     assert cache.lookup_model(str(src), str(dst)) == md5
+    dst_stat = os.stat(dst)
+
+    # same size, different mtime
     dst.write_bytes(b"corrupted")
+    assert len(b"corrupted") == dst_stat.st_size
+    os.utime(dst, ns=(dst_stat.st_atime_ns, dst_stat.st_mtime_ns + 10**9))
+    assert cache.lookup_model(str(src), str(dst)) is None
+
+    # different size, same mtime
+    dst.write_bytes(b"corrupted, and longer")
+    os.utime(dst, ns=(dst_stat.st_atime_ns, dst_stat.st_mtime_ns))
     assert cache.lookup_model(str(src), str(dst)) is None
 
 def test_output_cache_zip(tmp_path):
