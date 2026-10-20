@@ -296,8 +296,6 @@ ner_pretrains = {
         # for English, that is the same as ontonotes
         "sample":       "fasttextcrawl",
 
-        "conll03":      "glove",
-
         "i2b2":         "mimic",
         "radiology":    "mimic",
     },
