@@ -280,8 +280,6 @@ ner_pretrains = {
     },
     "de": {
         "conll03":      "fasttextwiki",
-        # the bert version of germeval uses the smaller vector file
-        "germeval2014": "fasttextwiki",
     },
     "en": {
         "anatem":       "biomed",
