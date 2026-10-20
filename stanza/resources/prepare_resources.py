@@ -824,7 +824,7 @@ def update_processor_add_transformer(resources, lang, current_processors, proces
         return
 
     new_model = current_processors[processor].replace('_charlm', "_" + transformer).replace('_nocharlm', "_" + transformer)
-    if new_model in resources[lang][processor]:
+    if new_model in resources[lang].get(processor, {}):
         current_processors[processor] = new_model
     else:
         print("WARNING: wanted to use %s for %s accurate %s, but that model does not exist" % (new_model, lang, processor))
@@ -902,7 +902,7 @@ def get_default_fast(resources, lang):
     for processor, model in default_processors.items():
         if "_charlm" in model:
             nocharlm = model.replace("_charlm", "_nocharlm")
-            if nocharlm not in resources[lang][processor]:
+            if nocharlm not in resources[lang].get(processor, {}):
                 print("WARNING: wanted to use %s for %s default_fast processor %s, but that model does not exist" % (nocharlm, lang, processor))
             else:
                 default_processors[processor] = nocharlm
