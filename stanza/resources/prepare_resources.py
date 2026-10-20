@@ -27,6 +27,14 @@ directory.  It records the stat and md5 of each model and default.zip
 written.  On a rerun, a model whose input and output files are both
 unchanged is not copied again, and a default.zip whose members are all
 unchanged is not rebuilt.  --force ignores the cache.
+
+Files are written to a .partial temp file and then renamed into place.
+Before building, any .partial files left in the output directory by an
+interrupted run are removed.  After building, any .pt files in the
+output directory which aren't in resources.json, such as models which
+were deleted from the input directory, are listed.  Those are not
+deleted automatically.  --check_only reports both without changing
+anything.
 """
 
 import argparse
@@ -45,6 +53,7 @@ import zipfile
 
 from stanza import __resources_version__
 from stanza.models.common.constant import lcode2lang, two_to_three_letters, three_to_two_letters, extra_lcode_to_lang
+from stanza.resources.common import _is_within_directory
 from stanza.resources.default_packages import PACKAGES, TRANSFORMERS, TRANSFORMER_NICKNAMES
 from stanza.resources.default_packages import *
 from stanza.utils.datasets.prepare_lemma_classifier import DATASET_MAPPING as LEMMA_CLASSIFIER_DATASETS
@@ -109,6 +118,9 @@ def copy_file(src, dst):
 
 COPY_CHUNK_SIZE = 16 * 1024 * 1024
 
+# suffix of the temp files which are renamed into place once fully written
+PARTIAL_SUFFIX = ".partial"
+
 def get_md5(path):
     """
     md5 of a file, read in chunks so that large zips don't have to fit in memory
@@ -132,7 +144,7 @@ def copy_file_with_md5(src, dst):
     interrupted copy never leaves a partial file at dst.
     """
     ensure_dir(Path(dst).parent)
-    tmp = dst + ".partial"
+    tmp = dst + PARTIAL_SUFFIX
     md5 = hashlib.md5()
     with open(src, 'rb') as fin, open(tmp, 'wb') as fout:
         while True:
@@ -230,7 +242,7 @@ class OutputCache:
 
     def _save(self):
         ensure_dir(self.output_dir)
-        tmp = self.path + ".partial"
+        tmp = self.path + PARTIAL_SUFFIX
         with open(tmp, 'w') as fout:
             json.dump(self.entries, fout, indent=1)
         os.replace(tmp, self.path)
@@ -713,7 +725,7 @@ def build_default_zips(resources, zip_plans, cache, num_workers):
         md5 = cache.lookup_zip(zip_path, members)
         if md5 is not None:
             return md5, False
-        tmp = zip_path + ".partial"
+        tmp = zip_path + PARTIAL_SUFFIX
         with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for filename, processor, package in model_files:
                 zipf.write(filename=filename, arcname=os.path.join(processor, package + '.pt'))
@@ -1077,6 +1089,102 @@ def process_misc(resources):
     return resources
 
 
+def scan_output_dir(output_dir):
+    """
+    Find leftover .partial files and all .pt files in the output directory
+
+    Returns two sorted lists of paths.  If the output directory doesn't exist yet, both are empty.
+
+    If output_dir is itself a symlink, the directory it points to is
+    walked.  Symlinked directories inside it are not descended into.
+    Symlinks to files are included like regular files.
+    """
+    partial_files = []
+    model_files = []
+    for root, _, filenames in os.walk(output_dir, followlinks=False):
+        for filename in filenames:
+            if filename.endswith(PARTIAL_SUFFIX):
+                partial_files.append(os.path.join(root, filename))
+            elif filename.endswith('.pt'):
+                model_files.append(os.path.join(root, filename))
+    return sorted(partial_files), sorted(model_files)
+
+
+def remove_partial_files(partial_files, output_dir, dry_run=False):
+    """
+    Remove .partial files left behind by an interrupted run
+
+    A file is only removed if it resolves, with all symlinks followed,
+    to somewhere inside the output directory, also with symlinks
+    followed.  Anything which resolves elsewhere is reported and left alone.
+
+    With dry_run, only list them
+    """
+    if not partial_files:
+        return
+    removable = []
+    outside = []
+    for path in partial_files:
+        if _is_within_directory(output_dir, path):
+            removable.append(path)
+        else:
+            outside.append(path)
+
+    if outside:
+        print("WARNING: not removing %d partial file(s) which resolve to outside %s:" % (len(outside), os.path.realpath(output_dir)))
+        for path in outside:
+            print("  %s -> %s" % (os.path.relpath(path, output_dir), os.path.realpath(path)))
+
+    if not removable:
+        return
+    if dry_run:
+        print("Would remove %d leftover partial file(s) from an interrupted run:" % len(removable))
+    else:
+        print("Removing %d leftover partial file(s) from an interrupted run:" % len(removable))
+    for path in removable:
+        print("  " + os.path.relpath(path, output_dir))
+        if not dry_run:
+            try:
+                os.remove(path)
+            except FileNotFoundError:
+                pass
+
+
+def expected_model_files(resources, output_dir):
+    """
+    The set of output paths for every model listed in resources
+    """
+    expected = set()
+    for lang, lang_resources in resources.items():
+        if not isinstance(lang_resources, dict) or 'alias' in lang_resources:
+            continue
+        for processor in PROCESSORS:
+            for package in lang_resources.get(processor, {}):
+                expected.add(os.path.join(output_dir, lang, "models", processor, package + '.pt'))
+    return expected
+
+
+def report_unexpected_models(model_files, resources, output_dir):
+    """
+    List the .pt files in the output directory which aren't models in resources
+
+    These are typically models which were removed from the input
+    directory after an earlier run.  They are harmless, since nothing
+    refers to them, but they would be uploaded along with everything
+    else in the language directories.
+
+    Returns the list of unexpected files
+    """
+    expected = expected_model_files(resources, output_dir)
+    unexpected = [path for path in model_files if path not in expected]
+    if unexpected:
+        print()
+        print("WARNING: %d .pt file(s) in %s are not in resources.json.  They have not been deleted:" % (len(unexpected), output_dir))
+        for path in unexpected:
+            print("  " + os.path.relpath(path, output_dir))
+    return unexpected
+
+
 def report_errors(errors):
     if not errors:
         print("No problems found")
@@ -1109,15 +1217,23 @@ def main():
         check_lcode(resources, args, errors)
     report_errors(errors)
     print("Planning took %.1fs" % (time.time() - start))
-    if args.check_only:
-        return
 
     if args.packages_only:
-        write_resources(resources, args.output_dir)
-        print("Wrote packages to resources.json")
+        if not args.check_only:
+            write_resources(resources, args.output_dir)
+            print("Wrote packages to resources.json")
+        return
+
+    # the .pt files found here are compared with resources at the end
+    # nothing in this run deletes a .pt file, so one scan is enough
+    partial_files, existing_models = scan_output_dir(args.output_dir)
+    if args.check_only:
+        remove_partial_files(partial_files, args.output_dir, dry_run=True)
+        report_unexpected_models(existing_models, resources, args.output_dir)
         return
 
     # Building
+    remove_partial_files(partial_files, args.output_dir)
     cache = OutputCache(args.output_dir, use_existing=not args.force)
     copy_models(resources, copies, cache, args.num_workers)
     print("Copied models.  Writing preliminary resources.json  (%.1fs elapsed)" % (time.time() - start))
@@ -1130,6 +1246,8 @@ def main():
     resources = process_misc(resources)
     write_resources(resources, args.output_dir)
     print("Wrote resources.json  (%.1fs total)" % (time.time() - start))
+
+    report_unexpected_models(existing_models, resources, args.output_dir)
 
 
 if __name__ == '__main__':
