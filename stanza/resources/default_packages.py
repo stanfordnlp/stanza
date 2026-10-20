@@ -406,7 +406,7 @@ default_ners = {
     "ar": "aqmar_charlm",
     "bg": "bsnlp19",
     "da": "ddt",
-    "de": "germeval2014",
+    "de": "germeval2014_charlm",
     "en": "ontonotes-ww-multi_charlm",
     "es": "conll02",
     "fa": "arman",
