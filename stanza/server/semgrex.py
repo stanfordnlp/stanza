@@ -48,7 +48,7 @@ import re
 
 import stanza
 from stanza.protobuf import SemgrexRequest, SemgrexResponse
-from stanza.server.java_protobuf_requests import send_request, add_token, add_word_to_graph, JavaProtobufContext, convert_networkx_graph
+from stanza.server.java_protobuf_requests import send_request, add_dependencies, JavaProtobufContext
 from stanza.utils.conll import CoNLL
 
 SEMGREX_JAVA = "edu.stanford.nlp.semgraph.semgrex.ProcessSemgrexRequest"
@@ -80,18 +80,7 @@ def build_request(doc, semgrex_patterns, enhanced=True):
         request.semgrex.append(semgrex.pattern)
 
     for sent_idx, sentence in enumerate(doc.sentences):
-        query = request.query.add()
-        if sentence.sent_id is not None:
-            query.sentenceID = str(sentence.sent_id)
-        for token in sentence.tokens:
-            for word in token.words:
-                add_token(query.token, word, token)
-                add_word_to_graph(query.graph, word, sent_idx)
-
-        if enhanced and sentence.has_enhanced_dependencies():
-            for word in sentence.empty_words:
-                add_token(query.token, word, None)
-            convert_networkx_graph(query.enhancedGraph, sentence, sent_idx, add_tokens=False)
+        add_dependencies(request.query.add(), sentence, sent_idx, enhanced=enhanced)
 
     return request
 

@@ -256,6 +256,43 @@ def convert_networkx_graph(graph_proto, sentence, sent_idx, add_tokens=True):
                 node.emptyIndex = target[1]
     return graph_proto
 
+def add_dependencies(query, sentence, sent_idx, enhanced=True):
+    """
+    Fill in a SemgrexRequest.Dependencies with one stanza sentence
+
+    This is the form both a SemgrexRequest and an SsurgeonRequest use
+    for a sentence: its sent_id, so an error from CoreNLP about the
+    sentence can name it, its words as tokens, and its basic
+    dependencies.  If enhanced is True and the sentence has enhanced
+    dependencies, they are sent as well, and its empty words go in the
+    token list the two graphs share.
+
+    A sentence without enhanced dependencies sends no enhanced graph,
+    rather than an empty one.
+
+    Raises ValueError if the enhanced dependencies refer to an empty
+    word the sentence does not have, as happens when a CoNLL-U file
+    is read with ignore_gapping=True: the empty word lines are dropped
+    but the DEPS which point at them are kept.
+    """
+    if sentence.sent_id is not None:
+        query.sentenceID = str(sentence.sent_id)
+    for token in sentence.tokens:
+        for word in token.words:
+            add_token(query.token, word, token)
+            add_word_to_graph(query.graph, word, sent_idx)
+
+    if enhanced and sentence.has_enhanced_dependencies():
+        empty_ids = set(word.id for word in sentence.empty_words)
+        for node in sentence.enhanced_dependencies:
+            if isinstance(node, tuple) and node[1] != 0 and node not in empty_ids:
+                raise ValueError("Sentence %s has enhanced dependencies on the empty word %d.%d, but no such empty word.  "
+                                 "Perhaps it was read with ignore_gapping=True, which drops the empty words" %
+                                 (sentence.sent_id if sentence.sent_id is not None else sent_idx, node[0], node[1]))
+        for word in sentence.empty_words:
+            add_token(query.token, word, None)
+        convert_networkx_graph(query.enhancedGraph, sentence, sent_idx, add_tokens=False)
+
 def features_to_string(features):
     if not features:
         return None

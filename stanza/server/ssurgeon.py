@@ -3,6 +3,16 @@
 "ssurgeon" sends text to Java CoreNLP for processing with a ssurgeon
 (Semantic graph SURGEON) query
 
+Each sentence is sent with its basic dependencies and, if it has them,
+its enhanced dependencies and empty words.  The edits apply to both
+graphs: an edit which adds, removes, or renumbers words does so in
+both, and the semgrex can search the enhanced graph with relations
+such as >nsubj@enhanced.  The edited sentences come back with their
+DEPS and empty words as well as their basic dependencies.
+
+This needs a CoreNLP which knows about SsurgeonRequest.sentence.  An
+older one ignores the sentences, and convert_response_to_doc says so.
+
 The main program in this file gives a very short intro to how to use it.
 """
 
@@ -52,6 +62,13 @@ def send_ssurgeon_request(request):
     return java_protobuf_requests.send_request(request, SsurgeonResponse, SSURGEON_JAVA)
 
 def build_request(doc, ssurgeon_edits):
+    """
+    Build an SsurgeonRequest for the given doc and edits
+
+    Each sentence is sent with its sent_id, its basic dependencies, and,
+    if it has them, its enhanced dependencies and empty words, so that
+    the edits keep the two in step
+    """
     request = SsurgeonRequest()
 
     for ssurgeon in ssurgeon_edits:
@@ -68,14 +85,7 @@ def build_request(doc, ssurgeon_edits):
 
     try:
         for sent_idx, sentence in enumerate(doc.sentences):
-            graph = request.graph.add()
-            word_idx = 0
-            for token in sentence.tokens:
-                for word in token.words:
-                    java_protobuf_requests.add_token(graph.token, word, token)
-                    java_protobuf_requests.add_word_to_graph(graph, word, sent_idx)
-
-                    word_idx = word_idx + 1
+            java_protobuf_requests.add_dependencies(request.sentence.add(), sentence, sent_idx)
     except Exception as e:
         raise RuntimeError("Failed to process sentence {}:\n{:C}".format(sent_idx, sentence)) from e
 
@@ -100,9 +110,23 @@ def process_doc_one_operation(doc, semgrex_pattern, ssurgeon_edits, ssurgeon_id=
 
     return send_ssurgeon_request(request)
 
-def build_word_entry(word_index, graph_word):
+def node_id(index, empty_index):
+    """
+    The stanza id of a word: its index, or (index, empty_index) for an empty word
+    """
+    if empty_index:
+        return (index, empty_index)
+    return index
+
+def build_word_entry(graph_word):
+    """
+    The CoNLL-U dict for a token of an edited sentence
+
+    The id comes from the token's index and emptyIndex, which CoreNLP
+    sets on each token it returns
+    """
     word_entry = {
-        ID: word_index,
+        ID: node_id(graph_word.index, graph_word.emptyIndex),
         TEXT: graph_word.word if graph_word.word else None,
         LEMMA: graph_word.lemma if graph_word.lemma else None,
         UPOS: graph_word.coarseTag if graph_word.coarseTag else None,
@@ -126,28 +150,81 @@ def build_word_entry(word_index, graph_word):
         word_entry[MISC] = java_protobuf_requests.substitute_space_misc(graph_word.conllUMisc, word_entry[MISC])
     return word_entry
 
-def convert_response_to_doc(doc, semgrex_response, add_missing_text):
+def check_no_copies(graph):
+    """
+    Stanza has no way to represent the copy nodes of an enhanced++ graph,
+    and never sends any, so an edit which made one cannot be converted
+    """
+    for edge in graph.edge:
+        if edge.sourceCopy or edge.targetCopy:
+            raise ValueError("Ssurgeon returned a copy node, which stanza cannot represent: %d -%s-> %d" % (edge.source, edge.dep, edge.target))
+
+def deps_from_graph(graph):
+    """
+    The DEPS of each node of an enhanced graph, as a CoNLL-U DEPS string
+
+    Returns a map from the stanza id of each word with any incoming edges
+    (or which is a root) to its DEPS, such as "2:nsubj|4:nsubj:xsubj"
+    """
+    check_no_copies(graph)
+    deps = {}
+    for root in graph.rootNode:
+        node = graph.node[root]
+        deps.setdefault(node_id(node.index, node.emptyIndex), []).append("0:root")
+    for edge in graph.edge:
+        if edge.sourceEmpty:
+            source = "%d.%d" % (edge.source, edge.sourceEmpty)
+        else:
+            source = "%d" % edge.source
+        deps.setdefault(node_id(edge.target, edge.targetEmpty), []).append("%s:%s" % (source, edge.dep))
+    return {node: "|".join(pieces) for node, pieces in deps.items()}
+
+def convert_response_to_doc(doc, ssurgeon_response, add_missing_text):
+    """
+    Rebuild the doc from the edited sentences of an SsurgeonResponse
+
+    Each sentence is rebuilt from the tokens CoreNLP returns, with HEAD
+    and DEPREL from the basic graph and, if the sentence was sent with
+    enhanced dependencies, DEPS and empty words from the enhanced graph.
+
+    Raises RuntimeError if the response has no edited sentences, as from
+    a CoreNLP too old to know about SsurgeonRequest.sentence
+    """
+    if len(doc.sentences) > 0 and len(ssurgeon_response.sentenceResult) == 0:
+        raise RuntimeError("Ssurgeon returned no sentences.  This version of stanza needs a CoreNLP which handles SsurgeonRequest.sentence")
+    if len(ssurgeon_response.sentenceResult) != len(doc.sentences):
+        raise ValueError("Ssurgeon returned %d sentences for a document of %d sentences" % (len(ssurgeon_response.sentenceResult), len(doc.sentences)))
+
     doc = copy.deepcopy(doc)
     try:
-        for sent_idx, (sentence, ssurgeon_result) in enumerate(zip(doc.sentences, semgrex_response.result)):
-            # EditNode is currently bugged... :/
-            # TODO: change this after next CoreNLP release (after 4.5.3)
-            #if not ssurgeon_result.changed:
-            #    continue
+        for sent_idx, (sentence, ssurgeon_result) in enumerate(zip(doc.sentences, ssurgeon_response.sentenceResult)):
+            # every sentence is rebuilt from the response, whether or not
+            # it changed, so the output is written the same way throughout
+            result_sentence = ssurgeon_result.sentence
+            basic_graph = result_sentence.graph
+            check_no_copies(basic_graph)
+            deps = None
+            if result_sentence.HasField("enhancedGraph"):
+                deps = deps_from_graph(result_sentence.enhancedGraph)
 
-            ssurgeon_graph = ssurgeon_result.graph
             tokens = []
+            empty_words = []
             token_id_to_idx = {}
-            for graph_node, graph_word in zip(ssurgeon_graph.node, ssurgeon_graph.token):
-                word_entry = build_word_entry(graph_node.index, graph_word)
-                token_id_to_idx[graph_node.index] = len(tokens)
+            for graph_word in result_sentence.token:
+                word_entry = build_word_entry(graph_word)
+                if deps is not None:
+                    word_entry[DEPS] = deps.get(word_entry[ID], None)
+                if graph_word.emptyIndex:
+                    empty_words.append(word_entry)
+                    continue
+                token_id_to_idx[graph_word.index] = len(tokens)
                 tokens.append(word_entry)
-            for root in ssurgeon_graph.root:
+            for root in basic_graph.root:
                 tokens[token_id_to_idx[root]][HEAD] = 0
                 tokens[token_id_to_idx[root]][DEPREL] = "root"
-            for edge in ssurgeon_graph.edge:
-                # can't do anything about the extra dependencies for now
-                # TODO: put them all in .deps
+            for edge in basic_graph.edge:
+                # the basic graph has no extra dependencies of its own;
+                # the enhanced dependencies come back in the enhanced graph
                 if edge.isExtra:
                     continue
                 tokens[token_id_to_idx[edge.target]][HEAD] = edge.source
@@ -182,7 +259,7 @@ def convert_response_to_doc(doc, semgrex_response, add_missing_text):
                 mwt_tokens.append(word)
 
             old_comments = list(sentence.comments)
-            sentence = Sentence(mwt_tokens, doc)
+            sentence = Sentence(mwt_tokens, doc, empty_words=empty_words)
 
             token_text = []
             for token_idx, token in enumerate(sentence.tokens):
@@ -279,7 +356,7 @@ def main():
 
     if args.input:
         if os.path.isfile(args.input):
-            docs = [CoNLL.conll2doc(input_file=args.input)]
+            docs = [CoNLL.conll2doc(input_file=args.input, ignore_gapping=False)]
             if args.output is None:
                 outputs = [args.input]
             else:
@@ -301,10 +378,10 @@ def main():
                         continue
                     output_path = os.path.join(args.output, doc_filename)
                     print("Processing %s to %s" % (doc_path, output_path))
-                    yield CoNLL.conll2doc(input_file=doc_path), output_path
+                    yield CoNLL.conll2doc(input_file=doc_path, ignore_gapping=False), output_path
             input_output = read_docs()
     else:
-        docs = [CoNLL.conll2doc(input_str=SAMPLE_DOC)]
+        docs = [CoNLL.conll2doc(input_str=SAMPLE_DOC, ignore_gapping=False)]
         outputs = [None]
         input_output = zip(docs, outputs)
         args.stdout = True

@@ -141,30 +141,12 @@ EXISTING_MWT_DOC_INPUT = """
 6	”	"	PUNCT	''	_	4	punct	4:punct	_
 """
 
-# TODO: also, we shouldn't lose the enhanced dependencies...
-EXISTING_MWT_DOC_EXPECTED = """
-# sent_id = newsgroup-groups.google.com_GayMarriage_0ccbb50b41a5830b_ENG_20050321_181500-0005
-# text = One of “NCRC4ME’s”
-1	One	one	NUM	CD	NumType=Card	0	root	_	_
-2	of	of	ADP	IN	_	4	case	_	_
-3	“	"	PUNCT	``	_	4	punct	_	SpaceAfter=No
-4-5	NCRC4ME’s	_	_	_	_	_	_	_	SpaceAfter=No
-4	NCRC4ME	NCRC4ME	PROPN	NNP	Number=Sing	1	compound	_	_
-5	’s	's	PART	POS	_	4	case	_	_
-6	”	"	PUNCT	''	_	4	punct	_	_
-"""
-
 def test_ssurgeon_existing_mwt_no_change():
     """
     Test that converting a document with an MWT works as expected
 
-    Note regarding this test:
-    Currently it works because ssurgeon.py doesn't look at the
-      "changed" flag because of a bug in EditNode in CoreNLP 4.5.3
-    If that is fixed, but the enhanced dependencies aren't fixed,
-      this test will fail because the enhanced dependencies *aren't*
-      removed.  Fixing the enhanced dependencies as well will fix
-      that, though.
+    The pattern does not match, so the document comes back as it went
+    in, enhanced dependencies included
     """
     semgrex_pattern = "{word:It}=it . {word:/'s/}=s"
     ssurgeon_edits = ["EditNode -node it -is_mwt true  -is_first_mwt true  -mwt_text It's",
@@ -176,7 +158,7 @@ def test_ssurgeon_existing_mwt_no_change():
     updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response, add_missing_text=False)
 
     result = "{:C}".format(updated_doc)
-    compare_ignoring_whitespace(result, EXISTING_MWT_DOC_EXPECTED)
+    compare_ignoring_whitespace(result, EXISTING_MWT_DOC_INPUT)
 
 def check_empty_test(input_text, expected=None, echo=False):
     if expected is None:
@@ -424,3 +406,112 @@ def test_ssurgeon_rewrite_sindhi_roots():
 
     result = "{:C}".format(updated_doc)
     assert result == SINDHI_ROOT_EXPECTED
+
+EMPTY_WORD_DOC_INPUT = """
+# sent_id = empty-1
+# text = Sue likes coffee and Bill tea
+1	Sue	Sue	PROPN	NNP	Number=Sing	2	nsubj	2:nsubj	_
+2	likes	like	VERB	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	0	root	0:root	_
+3	coffee	coffee	NOUN	NN	Number=Sing	2	obj	2:obj	_
+4	and	and	CCONJ	CC	_	5	cc	5.1:cc	_
+5	Bill	Bill	PROPN	NNP	Number=Sing	2	conj	2:conj:and|5.1:nsubj	_
+5.1	likes	like	VERB	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	_	_	2:conj:and	CopyOf=2
+6	tea	tea	NOUN	NN	Number=Sing	5	orphan	5.1:obj	_
+"""
+
+def test_ssurgeon_empty_word_no_change():
+    """
+    The enhanced dependencies and empty words go to CoreNLP and come back unchanged
+    """
+    doc = CoNLL.conll2doc(input_str=EMPTY_WORD_DOC_INPUT, ignore_gapping=False)
+    ssurgeon_response = ssurgeon.process_doc(doc, [])
+    assert ssurgeon_response.sentenceResult[0].sentence.HasField("enhancedGraph")
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response, add_missing_text=False)
+    compare_ignoring_whitespace("{:C}".format(updated_doc), EMPTY_WORD_DOC_INPUT)
+
+DELETE_BEFORE_EMPTY_WORD_EXPECTED = """
+# sent_id = empty-1
+# text = Sue likes coffee Bill tea
+1	Sue	Sue	PROPN	NNP	Number=Sing	2	nsubj	2:nsubj	_
+2	likes	like	VERB	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	0	root	0:root	_
+3	coffee	coffee	NOUN	NN	Number=Sing	2	obj	2:obj	_
+4	Bill	Bill	PROPN	NNP	Number=Sing	2	conj	2:conj:and|4.1:nsubj	_
+4.1	likes	like	VERB	VBZ	Mood=Ind|Number=Sing|Person=3|Tense=Pres|VerbForm=Fin	_	_	2:conj:and	CopyOf=2
+5	tea	tea	NOUN	NN	Number=Sing	4	orphan	4.1:obj	_
+"""
+
+def test_ssurgeon_delete_before_empty_word():
+    """
+    Deleting a word renumbers both graphs, and the empty word after it
+    follows the word before it, so 5.1 becomes 4.1 in the DEPS as well
+    """
+    doc = CoNLL.conll2doc(input_str=EMPTY_WORD_DOC_INPUT, ignore_gapping=False)
+    ssurgeon_response = ssurgeon.process_doc_one_operation(doc, "{word:and}=a", ["deleteLeaf -node a"])
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response, add_missing_text=False)
+    compare_ignoring_whitespace("{:C}".format(updated_doc), DELETE_BEFORE_EMPTY_WORD_EXPECTED)
+
+XSUBJ_DOC_INPUT = """
+# sent_id = xsubj-1
+# text = I want to go now
+1	I	I	PRON	PRP	Case=Nom|Number=Sing|Person=1|PronType=Prs	2	nsubj	2:nsubj|4:nsubj:xsubj	_
+2	want	want	VERB	VBP	Mood=Ind|Number=Sing|Person=1|Tense=Pres|VerbForm=Fin	0	root	0:root	_
+3	to	to	PART	TO	_	4	mark	4:mark	_
+4	go	go	VERB	VB	VerbForm=Inf	2	xcomp	2:xcomp	_
+5	now	now	ADV	RB	_	2	advmod	2:advmod	_
+"""
+
+XSUBJ_ADD_WORD_EXPECTED = """
+# sent_id = xsubj-1
+# text = I want to go quickly now
+1	I	I	PRON	PRP	Case=Nom|Number=Sing|Person=1|PronType=Prs	2	nsubj	2:nsubj|4:nsubj:xsubj	_
+2	want	want	VERB	VBP	Mood=Ind|Number=Sing|Person=1|Tense=Pres|VerbForm=Fin	0	root	0:root	_
+3	to	to	PART	TO	_	4	mark	4:mark	_
+4	go	go	VERB	VB	VerbForm=Inf	2	xcomp	2:xcomp	_
+5	quickly	quickly	ADV	RB	_	4	advmod	4:advmod	_
+6	now	now	ADV	RB	_	2	advmod	2:advmod	_
+"""
+
+XSUBJ_ADD_WORD_EDIT = "addDep -gov g -reln advmod -word quickly -lemma quickly -cpos ADV -pos RB -position +g -after \" \""
+
+def test_ssurgeon_add_word_enhanced():
+    """
+    addDep puts its word and edge in both graphs, and the DEPS which
+    point at the words after it are renumbered
+    """
+    doc = CoNLL.conll2doc(input_str=XSUBJ_DOC_INPUT)
+    ssurgeon_response = ssurgeon.process_doc_one_operation(doc, "{word:go}=g !> {word:quickly}", [XSUBJ_ADD_WORD_EDIT])
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response, add_missing_text=False)
+    compare_ignoring_whitespace("{:C}".format(updated_doc), XSUBJ_ADD_WORD_EXPECTED)
+
+def test_ssurgeon_search_enhanced():
+    """
+    The semgrex can search the enhanced graph
+    """
+    doc = CoNLL.conll2doc(input_str=XSUBJ_DOC_INPUT)
+    ssurgeon_response = ssurgeon.process_doc_one_operation(doc, "{}=gov >/nsubj:xsubj/@enhanced {}", ["editNode -node gov -lemma GO"])
+    assert ssurgeon_response.sentenceResult[0].changed
+    updated_doc = ssurgeon.convert_response_to_doc(doc, ssurgeon_response, add_missing_text=False)
+    assert updated_doc.sentences[0].words[3].lemma == "GO"
+    assert updated_doc.sentences[0].words[0].deps == "2:nsubj|4:nsubj:xsubj"
+
+def test_ssurgeon_missing_empty_word():
+    """
+    Read with ignore_gapping=True, the empty word is dropped but the
+    DEPS which point at it are not, which is reported before anything
+    is sent to CoreNLP
+    """
+    doc = CoNLL.conll2doc(input_str=EMPTY_WORD_DOC_INPUT)
+    with pytest.raises(RuntimeError) as excinfo:
+        ssurgeon.build_request(doc, [])
+    assert isinstance(excinfo.value.__cause__, ValueError)
+    assert "5.1" in str(excinfo.value.__cause__)
+    assert "ignore_gapping" in str(excinfo.value.__cause__)
+
+def test_ssurgeon_old_corenlp():
+    """
+    A CoreNLP which does not know about SsurgeonRequest.sentence sends
+    back no sentences, which is an error rather than an unedited doc
+    """
+    doc = CoNLL.conll2doc(input_str=XSUBJ_DOC_INPUT)
+    with pytest.raises(RuntimeError, match="SsurgeonRequest.sentence"):
+        ssurgeon.convert_response_to_doc(doc, ssurgeon.SsurgeonResponse(), add_missing_text=False)
