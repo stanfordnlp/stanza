@@ -127,12 +127,10 @@ mentioned above, some languages use specific word vector packages.
 
 ### CoNLL 17
 
-For many of the languages which were in the conll 17 shared task, the word vectors used by default are the word vectors provided in that task.
+For many of the languages which were in the [conll 17 shared task](https://universaldependencies.org/conll17/data.html), the word vectors used by default are [the word vectors provided in that task](https://lindat.mff.cuni.cz/repository/xmlui/bitstream/handle/11234/1-1989/word-embeddings-conll17.tar?sequence=9&isAllowed=y).
 
-New in v1.5.1
-{: .label .label-green }
+Word vectors from this task are marked as such with "conll17" in the pretrain filename.
 
-Starting with Stanza 1.5.1, the conll17 word vectors are all marked as such in the pretrain filename.
 
 ### Fasttext
 
