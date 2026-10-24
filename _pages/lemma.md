@@ -27,6 +27,8 @@ The lemmatization module recovers the lemma form for each input word. For exampl
 | lemma_beam_size | int | 1 | Control the beam size used during decoding in the seq2seq lemmatizer. |
 | lemma_pretagged | bool | `False` | Assume the document is tokenized and pretagged. Only run lemma analysis on the document. |
 | lemma_max_dec_len | int | 50 | Control the maximum decoding character length in the seq2seq lemmatizer. The decoder will stop if this length is achieved and the end-of-sequence character is still not seen. |
+| lemma_store_results | bool | `True` | Remember the lemma predicted for each `(word, upos)` pair and reuse it the next time that pair appears, skipping the seq2seq model for words it has already seen. Words a contextual classifier decides, such as English `'s`, are never remembered, since their lemma depends on context. |
+| lemma_store_results_size | int | 10000 | How many `(word, upos)` pairs `lemma_store_results` keeps. Once full, the least recently used pair is dropped, so memory stays bounded however long the pipeline runs. |
 
 ## Example Usage
 
