@@ -152,6 +152,27 @@ def test_doc_id_comment(doc):
     assert len([x for x in doc.sentences[0].comments if x.startswith("# doc_id")]) == 1
     assert doc.sentences[0].doc_id == "bar"
 
+@pytest.mark.parametrize("expansion", ["dunno", "do not", "do not know"])
+def test_manual_mwt_ids_after_automatic_expansion(expansion):
+    doc = Document([[
+        {ID: 1, TEXT: "dunno", "misc": "MWT=Yes"},
+        {ID: 2, TEXT: "cannot", "manual_expansion": True},
+        {ID: 3, TEXT: "."},
+    ]])
+    doc.set_mwt_expansions(["can not"], process_manual_expanded=True)
+    doc.set_mwt_expansions([expansion], process_manual_expanded=False)
+
+    sentence = doc.sentences[0]
+    num_expanded = len(expansion.split())
+    assert [word.id for word in sentence.words] == list(range(1, num_expanded + 4))
+    assert [token.id for token in sentence.tokens] == [
+        (1, num_expanded) if num_expanded > 1 else (1,),
+        (num_expanded + 1, num_expanded + 2), (num_expanded + 3,),
+    ]
+    assert [(word.id, word.text) for word in sentence.tokens[1].words] == [
+        (num_expanded + 1, "can"), (num_expanded + 2, "not"),
+    ]
+
 @pytest.fixture(scope="module")
 def pipeline():
     return stanza.Pipeline(dir=TEST_MODELS_DIR, download_method=None)
