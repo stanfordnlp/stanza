@@ -44,16 +44,12 @@ def add_lemma_args(parser):
 
     parser.add_argument('--secondary_file', default=None, type=str, help='Which file to use as an external dictionary, if any.  If there is a default for the language, this overrides that default.  If you wish to cancel the default, use --no_use_secondary_file')
     parser.add_argument('--no_use_secondary_file', default=True, dest='use_secondary_file', action='store_false',
-                        help="For datasets such as sl_combined which use an external dictionary, don't use that dictionary")
+                        help="For datasets such as en_combined and sl_combined which use an external dictionary, don't use that dictionary")
 
-def maybe_rebuild_external_dictionary(paths, short_name):
+def build_sloleks_dictionary(paths, short_name):
     """
-    If the dataset is associated with an external lexicon (such as sl_combined)
-    either return the path or attempt to regenerate the lexicon
+    Return the path to the Sloleks lexicon for Slovenian, converting it to CoNLL-U if needed
     """
-    if short_name != 'sl_combined':
-        return None
-
     extern_dir = paths["STANZA_EXTERN_DIR"]
     sloleks_dir = os.path.join(extern_dir, "slovenian", "Sloleks.3.1")
     if not os.path.exists(sloleks_dir):
@@ -66,6 +62,43 @@ def maybe_rebuild_external_dictionary(paths, short_name):
     logger.info("External lexicon for %s does not exist in %s.  Rebuilding...", short_name, lexicon)
     convert_directory(sloleks_dir, lexicon)
     return lexicon
+
+def build_specialist_dictionary(paths, short_name):
+    """
+    Return the path to the SPECIALIST Lexicon dictionary for English, converting it to CoNLL-U if needed
+
+    The conversion reruns whenever inflVars.data is newer than the
+    converted file, so dropping in a new year's release is enough to
+    update the dictionary.
+    """
+    extern_dir = paths["STANZA_EXTERN_DIR"]
+    specialist_dir = os.path.join(extern_dir, "english", "specialist")
+    infl_vars = os.path.join(specialist_dir, "inflVars.data")
+    if not os.path.exists(infl_vars):
+        raise FileNotFoundError("Could not find the SPECIALIST Lexicon inflection table at %s ... please download inflVars.data from the MISC directory of the current release at https://lhncbc.nlm.nih.gov/LSG/Projects/lexicon/current/web/release/index.html or use --no_use_secondary_file to train without it" % infl_vars)
+    lexicon = os.path.join(specialist_dir, "specialist_lemmas.conllu")
+    if os.path.exists(lexicon) and os.path.getmtime(lexicon) >= os.path.getmtime(infl_vars):
+        return lexicon
+
+    from stanza.utils.datasets.lemma.convert_en_specialist import convert_file
+    logger.info("External lexicon for %s at %s is missing or older than %s.  Rebuilding...", short_name, lexicon, infl_vars)
+    convert_file(infl_vars, lexicon)
+    return lexicon
+
+EXTERNAL_DICTIONARIES = {
+    'en_combined': build_specialist_dictionary,
+    'sl_combined': build_sloleks_dictionary,
+}
+
+def maybe_rebuild_external_dictionary(paths, short_name):
+    """
+    If the dataset is associated with an external lexicon (such as en_combined or sl_combined)
+    either return the path or attempt to regenerate the lexicon
+    """
+    build_fn = EXTERNAL_DICTIONARIES.get(short_name)
+    if build_fn is None:
+        return None
+    return build_fn(paths, short_name)
 
 
 def build_model_filename(paths, short_name, command_args, extra_args):
