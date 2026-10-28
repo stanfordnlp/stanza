@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
 Convert Sloleks 3.x XML lexicon files to CoNLL-U rows.
-Usage: python3 sloleks_to_conllu.py file1.xml [file2.xml ...] > output.conllu
-       python3 sloleks_to_conllu.py *.xml > sloleks.conllu
+Usage: python3 -m stanza.utils.datasets.lemma.convert_sl_sloleks file1.xml [file2.xml ...] > output.conllu
+       python3 -m stanza.utils.datasets.lemma.convert_sl_sloleks *.xml > sloleks.conllu
 
 Sloleks 3.1 is available at: https://www.clarin.si/repository/xmlui/handle/11356/2080
 
@@ -109,7 +109,7 @@ def convert_directory(input_directory, output_filename):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python3 sloleks_to_conllu.py file1.xml [file2.xml ...]",
+        print("Usage: python3 -m stanza.utils.datasets.lemma.convert_sl_sloleks file1.xml [file2.xml ...]",
               file=sys.stderr)
         sys.exit(1)
 
