@@ -62,7 +62,7 @@ def maybe_rebuild_external_dictionary(paths, short_name):
     if os.path.exists(lexicon):
         return lexicon
 
-    from stanza.utils.datasets.slovenian.sloleks_lemmas import convert_directory
+    from stanza.utils.datasets.lemma.convert_sl_sloleks import convert_directory
     logger.info("External lexicon for %s does not exist in %s.  Rebuilding...", short_name, lexicon)
     convert_directory(sloleks_dir, lexicon)
     return lexicon
