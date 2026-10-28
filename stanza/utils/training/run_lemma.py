@@ -65,6 +65,7 @@ def maybe_rebuild_external_dictionary(paths, short_name):
     from stanza.utils.datasets.slovenian.sloleks_lemmas import convert_directory
     logger.info("External lexicon for %s does not exist in %s.  Rebuilding...", short_name, lexicon)
     convert_directory(sloleks_dir, lexicon)
+    return lexicon
 
 
 def build_model_filename(paths, short_name, command_args, extra_args):
