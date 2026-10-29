@@ -6,7 +6,10 @@ Usage: python3 -m stanza.utils.datasets.lemma.convert_sl_sloleks file1.xml [file
 
 Sloleks 3.1 is available at: https://www.clarin.si/repository/xmlui/handle/11356/2080
 
-This data goes into the Slovenian combined lemmatizer, improving the coverage of the dictionary
+This data goes into the Slovenian combined lemmatizer, improving the coverage of the dictionary.
+prepare_lemma_treebank writes it to data/lemma/sl_combined.dict.conllu
+from extern_data/slovenian/Sloleks.3.1, and run_lemma passes that file
+to the lemmatizer as its --secondary_file.
 """
 
 import glob
@@ -105,6 +108,15 @@ def write_sloleks_dict_file(filenames, output_filename):
 def convert_directory(input_directory, output_filename):
     input_filenames = glob.glob(os.path.join(input_directory, "sloleks_3.1_???.xml"))
     write_sloleks_dict_file(input_filenames, output_filename)
+
+def build_dictionary(paths, output_filename):
+    """
+    Convert the Sloleks 3.1 download in STANZA_EXTERN_DIR to a CoNLL-U dictionary at output_filename
+    """
+    sloleks_dir = os.path.join(paths["STANZA_EXTERN_DIR"], "slovenian", "Sloleks.3.1")
+    if not os.path.exists(sloleks_dir):
+        raise FileNotFoundError("Could not find the Sloleks 3.1 dataset at %s ... please download it from https://www.clarin.si/repository/xmlui/handle/11356/2080 or use --no_external_dictionary to prepare the dataset without it" % sloleks_dir)
+    convert_directory(sloleks_dir, output_filename)
 
 
 def main():
