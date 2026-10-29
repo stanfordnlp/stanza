@@ -2,12 +2,13 @@
 Tests for converting the SPECIALIST Lexicon inflection table to a lemma dictionary
 """
 
+import argparse
 import os
-import time
 
 import pytest
 
 from stanza.utils.conll import CoNLL
+from stanza.utils.datasets import prepare_lemma_treebank
 from stanza.utils.datasets.lemma import convert_en_specialist
 from stanza.utils.training import run_lemma
 
@@ -150,34 +151,57 @@ def test_report(sample_file, tmp_path):
     assert sorted(changed) == [('housewives', 'NOUN', 'housewife', None, 'housewife'),
                                ('hover', 'VERB', 'hover', None, 'hover')]
 
-def test_run_lemma_rebuild(sample_file, tmp_path):
-    """
-    The run_lemma hook raises if inflVars.data is missing, and rebuilds the dictionary when inflVars.data is newer
-    """
-    paths = {"STANZA_EXTERN_DIR": str(tmp_path / "extern")}
-    with pytest.raises(FileNotFoundError):
-        run_lemma.maybe_rebuild_external_dictionary(paths, "en_combined")
+def build_paths(tmp_path):
+    return {"STANZA_EXTERN_DIR": str(tmp_path / "extern"),
+            "LEMMA_DATA_DIR":    str(tmp_path / "data" / "lemma")}
 
+def write_infl_vars(tmp_path):
     specialist_dir = tmp_path / "extern" / "english" / "specialist"
     specialist_dir.mkdir(parents=True)
-    infl_vars = specialist_dir / "inflVars.data"
-    infl_vars.write_text(SAMPLE, encoding="utf-8")
+    (specialist_dir / "inflVars.data").write_text(SAMPLE, encoding="utf-8")
 
-    lexicon = run_lemma.maybe_rebuild_external_dictionary(paths, "en_combined")
-    assert lexicon == str(specialist_dir / "specialist_lemmas.conllu")
-    assert os.path.exists(lexicon)
-    assert len(CoNLL.conll2doc(input_file=lexicon).sentences) == len(EXPECTED)
+def test_prepare_missing_lexicon(tmp_path):
+    """
+    Preparing en_combined fails if inflVars.data is missing, and sl_combined fails without Sloleks
+    """
+    paths = build_paths(tmp_path)
+    with pytest.raises(FileNotFoundError):
+        prepare_lemma_treebank.prepare_external_dictionary(paths, "en_combined")
+    with pytest.raises(FileNotFoundError):
+        prepare_lemma_treebank.prepare_external_dictionary(paths, "sl_combined")
 
-    # an up to date lexicon is reused as is
-    with open(lexicon, "a", encoding="utf-8") as fout:
-        fout.write("# text = marker\n1\tmarker\tmarker\tNOUN\t_\t_\t0\troot\t_\t_\n\n")
-    assert run_lemma.maybe_rebuild_external_dictionary(paths, "en_combined") == lexicon
-    assert len(CoNLL.conll2doc(input_file=lexicon).sentences) == len(EXPECTED) + 1
+def test_prepare_external_dictionary(tmp_path):
+    """
+    The dictionary is written next to the train/dev/test files, and removed if it is turned off
+    """
+    paths = build_paths(tmp_path)
+    write_infl_vars(tmp_path)
 
-    # a newer inflVars.data causes a rebuild
-    future = time.time() + 100
-    os.utime(infl_vars, (future, future))
-    assert run_lemma.maybe_rebuild_external_dictionary(paths, "en_combined") == lexicon
-    assert len(CoNLL.conll2doc(input_file=lexicon).sentences) == len(EXPECTED)
+    dict_file = prepare_lemma_treebank.prepare_external_dictionary(paths, "en_combined")
+    assert dict_file == str(tmp_path / "data" / "lemma" / "en_combined.dict.conllu")
+    assert len(CoNLL.conll2doc(input_file=dict_file).sentences) == len(EXPECTED)
 
-    assert run_lemma.maybe_rebuild_external_dictionary(paths, "en_ewt") is None
+    assert prepare_lemma_treebank.prepare_external_dictionary(paths, "en_combined", use_external_dictionary=False) is None
+    assert not os.path.exists(dict_file)
+
+    # datasets without an external lexicon don't get a dictionary file
+    assert prepare_lemma_treebank.prepare_external_dictionary(paths, "en_ewt") is None
+    assert not os.path.exists(tmp_path / "data" / "lemma" / "en_ewt.dict.conllu")
+
+def secondary_args(secondary_file=None, use_secondary_file=True):
+    return argparse.Namespace(secondary_file=secondary_file, use_secondary_file=use_secondary_file)
+
+def test_find_secondary_file(tmp_path):
+    """
+    run_lemma uses the prepared dictionary if it exists, unless overridden or turned off
+    """
+    paths = build_paths(tmp_path)
+    assert run_lemma.find_secondary_file(paths, "en_combined", secondary_args()) is None
+
+    write_infl_vars(tmp_path)
+    dict_file = prepare_lemma_treebank.prepare_external_dictionary(paths, "en_combined")
+    assert run_lemma.find_secondary_file(paths, "en_combined", secondary_args()) == dict_file
+    assert run_lemma.find_secondary_file(paths, "en_combined", secondary_args("other.conllu")) == "other.conllu"
+    assert run_lemma.find_secondary_file(paths, "en_combined", secondary_args(use_secondary_file=False)) is None
+    assert run_lemma.find_secondary_file(paths, "en_combined", secondary_args("other.conllu", use_secondary_file=False)) is None
+    assert run_lemma.find_secondary_file(paths, "en_ewt", secondary_args()) is None

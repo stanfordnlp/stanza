@@ -36,8 +36,10 @@ lemma, such as axes -> axe / axis, is dropped entirely so that the
 seq2seq model makes the decision instead of the dictionary.
 
 The output has one single-word sentence per (form, UPOS, lemma),
-the same format as the Sloleks dictionary for Slovenian, and is used
-with the lemmatizer's --secondary_file flag.
+the same format as the Sloleks dictionary for Slovenian.
+prepare_lemma_treebank writes it to data/lemma/en_combined.dict.conllu
+from extern_data/english/specialist/inflVars.data, and run_lemma
+passes that file to the lemmatizer as its --secondary_file.
 
 The SPECIALIST Lexicon is distributed under the terms and conditions of
 the SPECIALIST NLP Tools:
@@ -64,6 +66,7 @@ Optionally, compare the result against UD training and dev data:
 import argparse
 from collections import Counter, defaultdict
 import logging
+import os
 import sys
 
 logger = logging.getLogger('stanza')
@@ -152,6 +155,16 @@ def convert_file(input_filename, output_filename):
     logger.info("Wrote %d (form, upos, lemma) entries to %s, skipping %d ambiguous (form, upos) pairs",
                 len(lemma_dict), output_filename, len(ambiguous))
     return lemma_dict, ambiguous
+
+
+def build_dictionary(paths, output_filename):
+    """
+    Convert inflVars.data from STANZA_EXTERN_DIR/english/specialist to a CoNLL-U dictionary at output_filename
+    """
+    infl_vars = os.path.join(paths["STANZA_EXTERN_DIR"], "english", "specialist", "inflVars.data")
+    if not os.path.exists(infl_vars):
+        raise FileNotFoundError("Could not find the SPECIALIST Lexicon inflection table at %s ... please download inflVars.data from the MISC directory of the current release at https://lhncbc.nlm.nih.gov/LSG/Projects/lexicon/current/web/release/index.html or use --no_external_dictionary to prepare the dataset without it" % infl_vars)
+    convert_file(infl_vars, output_filename)
 
 
 def read_conllu_triples(filenames):
