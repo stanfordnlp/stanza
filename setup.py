@@ -133,7 +133,14 @@ setup(
         ],
         'morphseg': [
             'morphseg>=0.2.5.1',
-        ]
+        ],
+        # used by stanza/utils/datasets/lemma/convert_de_wiktionary.py,
+        # which is written for this exact version.  It requires python 3.13+,
+        # so on older pythons this extra installs nothing, and the converter
+        # explains what is missing when it is run
+        'wiktionary': [
+            'wiktionary_de_parser==0.16.0; python_version >= "3.13"',
+        ],
     },
 
     # If there are data files included in your packages that need to be
