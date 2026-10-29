@@ -65,10 +65,38 @@ def test_variant_spelling():
 
 def test_non_form_fields():
     """
-    gender, stem, and no_plural are not forms
+    gender, stem, and no_plural are not forms, and are counted as unused fields
     """
     entry = fake_entry("Tausendfache", "Substantiv", inflection={'gender': 'n', 'stem': 'Tausendfache', 'no_plural': 'ja'})
-    assert convert_de_wiktionary.extract_lemmas([entry]) == [("Tausendfache", "Tausendfache", "NOUN")]
+    unused_fields = Counter()
+    assert convert_de_wiktionary.extract_lemmas([entry], unused_fields=unused_fields) == [("Tausendfache", "Tausendfache", "NOUN")]
+    assert unused_fields == Counter({'gender': 1, 'stem': 1, 'no': 1})
+
+def test_untranslated_fields():
+    """
+    Fields with a * attached are left in German by the parser
+
+    brechen can take either auxiliary, so its table has Hilfsverb=haben
+    and Hilfsverb*=sein, and the second one is not a form of brechen.
+    Alternative forms such as Genitiv Singular* are still forms.
+    """
+    entry = fake_entry("brechen", "Verb", inflection={'present_1sg': 'breche', 'participle_2': 'gebrochen',
+                                                       'auxiliary': 'haben', 'hilfsverb*': 'sein'})
+    unused_fields = Counter()
+    processed = convert_de_wiktionary.extract_lemmas([entry], unused_fields=unused_fields)
+    assert processed == [("brechen", form, "VERB") for form in ["breche", "brechen", "gebrochen"]]
+    assert unused_fields == Counter({'auxiliary': 1, 'hilfsverb': 1})
+
+    entry = fake_entry("Abend", "Substantiv", inflection={'nominative_singular': 'Abend', 'genitive_singular': 'Abends',
+                                                           'genitive_singular*': 'Abendes', 'genus*': 'm'})
+    processed = convert_de_wiktionary.extract_lemmas([entry])
+    assert processed == [("Abend", form, "NOUN") for form in ["Abend", "Abendes", "Abends"]]
+
+def test_field_type():
+    assert convert_de_wiktionary.field_type("hilfsverb*") == "hilfsverb"
+    assert convert_de_wiktionary.field_type("genitive_singular*") == "genitive"
+    assert convert_de_wiktionary.field_type("gender_1") == "gender"
+    assert convert_de_wiktionary.field_type("present_3sg") == "present"
 
 def test_eszett():
     """
@@ -106,14 +134,17 @@ def test_skipped_entries():
 
 def test_leaked_fields():
     """
-    If the parser renames a field, its values show up as forms, which should fail loudly
+    A gender or an auxiliary verb in a field which should hold forms fails loudly
     """
-    entry = fake_entry("Abend", "Substantiv", inflection={'genus': 'm', 'nominative_singular': 'Abend'})
+    entry = fake_entry("Abend", "Substantiv", inflection={'nominative_singular': 'Abend', 'nominative_plural': 'm'})
     with pytest.raises(ValueError):
         convert_de_wiktionary.extract_lemmas([entry])
-    entry = fake_entry("lieben", "Verb", inflection={'hilfsverb': 'sein', 'present_1sg': 'liebe'})
+    entry = fake_entry("lieben", "Verb", inflection={'present_1sg': 'liebe', 'participle_2': 'sein'})
     with pytest.raises(ValueError):
         convert_de_wiktionary.extract_lemmas([entry])
+    # sein is a form of sein, though
+    entry = fake_entry("sein", "Verb", inflection={'present_1sg': 'bin', 'present_1pl': 'sind', 'auxiliary': 'sein'})
+    assert [form for _, form, _ in convert_de_wiktionary.extract_lemmas([entry])] == ["bin", "sein", "sind"]
 
 def test_write_conllu(tmp_path):
     output_file = tmp_path / "de_wiki_lemmas.conllu"
@@ -195,6 +226,38 @@ PAGES = {
 |Stamm=Tausendfache|kein Plural=ja
 }}
 """,
+    "brechen": """== brechen ({{Sprache|Deutsch}}) ==
+=== {{Wortart|Verb|Deutsch}} ===
+
+{{Deutsch Verb Übersicht
+|Präsens_ich=breche
+|Präsens_du=brichst
+|Präsens_er, sie, es=bricht
+|Präteritum_ich=brach
+|Partizip II=gebrochen
+|Konjunktiv II_ich=bräche
+|Imperativ Singular=brich
+|Imperativ Plural=brecht
+|Hilfsverb=haben
+|Hilfsverb*=sein
+}}
+""",
+    "Abend": """== Abend ({{Sprache|Deutsch}}) ==
+=== {{Wortart|Substantiv|Deutsch}}, {{m}} ===
+
+{{Deutsch Substantiv Übersicht
+|Genus=m
+|Nominativ Singular=Abend
+|Nominativ Plural=Abende
+|Genitiv Singular=Abends
+|Genitiv Singular*=Abendes
+|Genitiv Plural=Abende
+|Dativ Singular=Abend
+|Dativ Plural=Abenden
+|Akkusativ Singular=Abend
+|Akkusativ Plural=Abende
+}}
+""",
     "pittoresk": """== pittoresk ({{Sprache|Deutsch}}) ==
 === {{Wortart|Adjektiv|Deutsch}} ===
 
@@ -226,6 +289,8 @@ def test_real_parser():
         by_lemma.setdefault((lemma, upos), set()).add(form)
     assert by_lemma == {
         ("lieben", "VERB"): {"geliebt", "liebe", "lieben", "liebst", "liebt", "liebte"},
+        ("brechen", "VERB"): {"breche", "brechen", "brichst", "bricht", "brach", "gebrochen", "bräche", "brich", "brecht"},
+        ("Abend", "NOUN"): {"Abend", "Abende", "Abends", "Abendes", "Abenden"},
         ("Fuß", "NOUN"): {"Fuß", "Fuss", "Füße", "Füsse", "Fußes", "Fusses", "Füßen", "Füssen"},
         ("Tausendfache", "NOUN"): {"Tausendfache"},
         ("pittoresk", "ADJ"): {"pittoresk", "pittoresker", "pittoreskesten"},
