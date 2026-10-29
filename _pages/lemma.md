@@ -106,40 +106,121 @@ AFTER ADDING LEMMA
 
 ### Improving the Lemmatizer by Providing Key-Value Dictionary
 
-It is possible to improve the lemmatizer by providing a key-value dictionary. Lemmatizer will check it first and then use statistical model if the word is not in dictionary.
+It is possible to improve the lemmatizer by adding entries to its
+dictionary.  The lemmatizer checks the dictionary first, and only uses
+the statistical model for words which are not in the dictionary.
 
-First, load your downloaded lemmatizer model. For English lemmatizer using `ewt` package, it can be found at `~/stanza_resources/en/lemma/ewt.pt`.
+The dictionary is stored in the model file as `{upos: {word: lemma}}`,
+compressed with gzip.  The lemmatizer first looks for the word under
+its UPOS, then under the special key `"*"`, which holds entries for any
+UPOS.  Words are matched exactly, including capitalization, unless the
+model is caseless.
 
-Second, customize two dictionaries: 1) `composite_dict` which maps `(word, pos)` to `lemma`; 2) `word_dict` which maps `word` to `lemma`. The lemmatizer will first check the composite dictionary, then word dictionary.
-
-Finally, save your customized model and load it with `Stanza`.
-
-Here is an example of customizing the lemmatizer by providing a key-value dictionary:
+To add entries, load the model file, unpack the dictionary, add your
+entries, and save the model under a new name:
 
 ```python
-# Load word_dict and composite_dict
-import torch
-model = torch.load('~/stanza_resources/en/lemma/ewt.pt', map_location='cpu')
-word_dict, composite_dict = model['dicts']
+import gzip
+import json
+import os
 
-# Customize your own dictionary
-composite_dict[('myword', 'NOUN')] = 'mylemma'
-word_dict['myword'] = 'mylemma'
-
-# Save your model
-torch.save(model, '~/stanza_resources/en/lemma/ewt_customized.pt')
-
-# Load your customized model with Stanza
 import stanza
-nlp = stanza.Pipeline('en', package='ewt', processors='tokenize,pos,lemma', lemma_model_path='~/stanza_resources/en/lemma/ewt_customized.pt'
-print(nlp('myword')) # Should get lemma 'mylemma'
+import torch
+
+# find the lemmatizer model used by the default English pipeline
+nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma')
+model_file = nlp.processors['lemma'].config['model_path']
+customized_file = os.path.join(os.path.dirname(model_file), 'customized_lemmatizer.pt')
+
+model = torch.load(model_file, map_location='cpu', weights_only=True)
+pos_dict = json.loads(gzip.decompress(model['dicts']))
+
+# myword as a NOUN has the lemma mylemma
+pos_dict.setdefault('NOUN', {})['myword'] = 'mylemma'
+# myword with any other UPOS has the lemma mylemma as well
+pos_dict.setdefault('*', {})['myword'] = 'mylemma'
+
+model['dicts'] = gzip.compress(json.dumps(pos_dict).encode('utf-8'))
+torch.save(model, customized_file)
+
+# load the customized model with Stanza
+nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', lemma_model_path=customized_file)
+print(nlp('myword'))  # should get lemma 'mylemma'
 ```
 
 As can be seen in the result, Stanza should lemmatize the word _myword_ as _mylemma_.
 
+This dictionary format is used starting with Stanza 1.15.  In 1.13 and
+earlier, `model['dicts']` was a tuple of two dictionaries, one mapping
+`(word, upos)` to `lemma` and one mapping `word` to `lemma`.  Models
+saved by 1.14 used a pickled version of the current format, which is
+no longer loaded for security reasons.  Models from either version can
+be converted to the current format with
+[stanza/utils/lemma/convert_lemma_dict.py](https://github.com/stanfordnlp/stanza/blob/main/stanza/utils/lemma/convert_lemma_dict.py).
+
 ## Training-Only Options
 
 Most training-only options are documented in the [argument parser](https://github.com/stanfordnlp/stanza/blob/main/stanza/models/lemmatizer.py#L22) of the lemmatizer.
+
+### Training with an external dictionary
+
+**Coming soon:** this section describes the
+[`dev` branch](https://github.com/stanfordnlp/stanza/tree/dev), and
+will be part of the next release.
+
+A lemmatizer can be trained with an external lexicon as well as a
+treebank.  The default Slovenian models do this with Sloleks, and the
+next English models will do this with the SPECIALIST Lexicon.  See
+[Combined models](combined_models.md#lemma-dictionaries) for where
+those lexicons come from and the terms of their licenses.
+
+The lexicon is used in two ways:
+
+- Every entry goes into the lemmatizer's dictionary.  Where the lexicon and the treebank disagree on the lemma for the same word and UPOS, the treebank's lemma wins.
+- The seq2seq model also trains on the lexicon, mixed in with the treebank batches.  This teaches it inflection patterns which the treebank has too few examples of, so it does better on words which are in neither one.
+
+The lexicon is converted when the dataset is prepared.  For
+`en_combined` and `sl_combined`, `prepare_lemma_treebank` reads the
+lexicon from `extern_data` and writes it next to the train, dev, and
+test files as `{short_name}.dict.conllu`:
+
+| Dataset | Lexicon | Expected location |
+| :------ | :------ | :---------------- |
+| en_combined | [`inflVars.data`](https://data.lhncbc.nlm.nih.gov/public/lsg/lexicon/2026/release/LEX_DOC/MISC/inflVars.data) from the [2026 SPECIALIST Lexicon release](https://lhncbc.nlm.nih.gov/LSG/Projects/lexicon/current/web/release/2026.html) | `extern_data/english/specialist/inflVars.data` |
+| sl_combined | [Sloleks 3.1](http://hdl.handle.net/11356/2080) XML files | `extern_data/slovenian/Sloleks.3.1/` |
+
+```bash
+python3 -m stanza.utils.datasets.prepare_lemma_treebank en_combined
+```
+
+If the lexicon is missing, preparing the dataset stops with an error.
+To prepare it without the lexicon, use `--no_external_dictionary`,
+which also removes a dictionary file left from an earlier run.
+
+`run_lemma` then uses `data/lemma/{short_name}.dict.conllu`
+automatically if it exists:
+
+```bash
+python3 -m stanza.utils.training.run_lemma en_combined
+```
+
+| Option | Script | Description |
+| --- | --- | --- |
+| `--no_external_dictionary` | `prepare_lemma_treebank` | Don't write the lexicon for a dataset which has one, and remove an existing `{short_name}.dict.conllu`. |
+| `--secondary_file` | `run_lemma` | Use this file as the external dictionary instead of the prepared one.  This works for any dataset, not just the ones with a default lexicon. |
+| `--no_use_secondary_file` | `run_lemma` | Train without an external dictionary, even if one was prepared. |
+| `--secondary_rate` | `run_lemma`, `lemmatizer` | How many batches of the lexicon the seq2seq model trains on for each batch of the treebank.  The default of 0.1 means one lexicon batch after every 10th treebank batch.  Batches are counted in words, and the lexicon is reshuffled after each pass through it.  0 uses the lexicon only for the dictionary. |
+
+To use a lexicon of your own, write it as CoNLL-U with one word per
+sentence, filling in the form, lemma, and UPOS:
+
+```
+# sent_id = my_lexicon-NOUN-housewives
+# text = housewives
+1	housewives	housewife	NOUN	_	_	0	root	_	_
+```
+
+and pass it to `run_lemma` with `--secondary_file`.
 
 ## Contextual Classifier
 
