@@ -693,11 +693,16 @@ def download(
             # https://huggingface.co/stanfordnlp/stanza-af/resolve/v1.3.0/models/default.zip
             # so we hopefully start from
             # https://huggingface.co/stanfordnlp/stanza-{lang}/resolve/v{resources_version}/models/{filename}
+            #
+            # alternate_default_md5 is the md5 of the previous default.zip,
+            # which is still accepted in case resources.json was updated
+            # before the new default.zip was uploaded
             request_file(
                 url.format(resources_version=resources_version, lang=lang, filename="default.zip"),
                 os.path.join(model_dir, lang, f'default.zip'),
                 proxies,
                 md5=resources[lang]['default_md5'],
+                alternate_md5=resources[lang].get('alternate_default_md5', None),
             )
             unzip(os.path.join(model_dir, lang), 'default.zip')
             download_list = [['zip', 'default.zip']]

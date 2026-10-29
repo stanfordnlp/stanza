@@ -376,3 +376,66 @@ def test_unzip_allows_well_formed_zip():
 
         assert os.path.exists(os.path.join(target_dir, "models", "default.pt"))
         assert os.path.exists(os.path.join(target_dir, "readme.txt"))
+
+
+def _write_default_resources(model_dir, default_md5, alternate_default_md5=None):
+    """
+    Write a minimal resources.json with just a default.zip for English
+    """
+    en = {"lang_name": "English", "default_md5": default_md5}
+    if alternate_default_md5 is not None:
+        en["alternate_default_md5"] = alternate_default_md5
+    resources = {"en": en, "url": "https://example.com/stanza-{lang}/v{resources_version}/{filename}"}
+    with open(os.path.join(model_dir, "resources.json"), "w", encoding="utf-8") as fout:
+        json.dump(resources, fout)
+
+def _zip_bytes(tmp_path, name, contents):
+    """
+    The bytes of a default.zip with a single pos model in it
+    """
+    zip_path = tmp_path / name
+    with zipfile.ZipFile(zip_path, "w") as zf:
+        zf.writestr("pos/ewt.pt", contents)
+    return zip_path.read_bytes()
+
+def test_download_default_alternate_md5(tmp_path):
+    """
+    A default.zip matching alternate_default_md5 is accepted
+
+    This happens when resources.json has been updated but the new
+    default.zip hasn't been uploaded yet, so the old one is downloaded
+    """
+    old_zip = _zip_bytes(tmp_path, "old.zip", b"old model")
+    new_zip = _zip_bytes(tmp_path, "new.zip", b"new model")
+    model_dir = tmp_path / "models"
+    model_dir.mkdir()
+    _write_default_resources(str(model_dir), hashlib.md5(new_zip).hexdigest(), hashlib.md5(old_zip).hexdigest())
+
+    def fake_download_file(url, path, proxies, raise_for_status=False):
+        with open(path, "wb") as fout:
+            fout.write(old_zip)
+        return 200
+
+    with patch("stanza.resources.common.download_file", side_effect=fake_download_file):
+        common.download("en", model_dir=str(model_dir), download_json=False, verbose=False)
+    with open(model_dir / "en" / "pos" / "ewt.pt", "rb") as fin:
+        assert fin.read() == b"old model"
+
+def test_download_default_wrong_md5(tmp_path):
+    """
+    Without an alternate_default_md5, an out of date default.zip is still rejected
+    """
+    old_zip = _zip_bytes(tmp_path, "old.zip", b"old model")
+    new_zip = _zip_bytes(tmp_path, "new.zip", b"new model")
+    model_dir = tmp_path / "models"
+    model_dir.mkdir()
+    _write_default_resources(str(model_dir), hashlib.md5(new_zip).hexdigest())
+
+    def fake_download_file(url, path, proxies, raise_for_status=False):
+        with open(path, "wb") as fout:
+            fout.write(old_zip)
+        return 200
+
+    with patch("stanza.resources.common.download_file", side_effect=fake_download_file):
+        with pytest.raises(ValueError):
+            common.download("en", model_dir=str(model_dir), download_json=False, verbose=False)
