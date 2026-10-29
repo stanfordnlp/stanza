@@ -35,6 +35,22 @@ output directory which aren't in resources.json, such as models which
 were deleted from the input directory, are listed.  Those are not
 deleted automatically.  --check_only reports both without changing
 anything.
+
+When the output directory already has a resources.json, any model
+whose md5 changes keeps its previous md5 as alternate_md5, and any
+default.zip whose md5 changes keeps its previous md5 as
+alternate_default_md5.  The download code accepts either md5, so
+users downloading in the window between writing resources.json and
+uploading the new files to HuggingFace don't get an md5 error.  An
+entry whose md5 doesn't change keeps any alternate it already had, as
+its new version may not have been uploaded yet.  Once the uploads are
+done, clear the alternates with
+
+python3 -m stanza.resources.prepare_resources --output_dir ... --packages_only --clear_alternate_md5
+
+--clear_alternate_md5 can also be used with a regular build, in which
+case no alternates are recorded and any existing ones are removed.
+With --lang, only those languages are cleared.
 """
 
 import argparse
@@ -70,6 +86,7 @@ def parse_args():
     parser.add_argument('--num_workers', type=int, default=8, help='Number of threads to use when copying, hashing, and zipping models')
     parser.add_argument('--force', action='store_true', default=False, help='Copy every model and rebuild every default.zip, even if the cache says the output is up to date')
     parser.add_argument('--check_only', action='store_true', default=False, help='Only check for problems in the models and default_packages.  Nothing is written')
+    parser.add_argument('--clear_alternate_md5', action='store_true', default=False, help='Remove the alternate md5s kept from previous versions of updated models, and record no new ones.  Use with --packages_only to clear them without rebuilding anything')
     args = parser.parse_args()
     args.input_dir = os.path.abspath(args.input_dir)
     args.output_dir = os.path.abspath(args.output_dir)
@@ -1185,6 +1202,149 @@ def report_unexpected_models(model_files, resources, output_dir):
     return unexpected
 
 
+ALTERNATE_MD5 = 'alternate_md5'
+DEFAULT_MD5 = 'default_md5'
+ALTERNATE_DEFAULT_MD5 = 'alternate_default_md5'
+
+def load_previous_resources(output_dir):
+    """
+    The resources.json already in the output directory, or None if there isn't a usable one
+    """
+    if not os.path.exists(os.path.join(output_dir, 'resources.json')):
+        return None
+    try:
+        return load_resources(output_dir)
+    except (OSError, ValueError) as e:
+        print("WARNING: could not read the existing resources.json, so no alternate md5s will be recorded: %s" % e)
+        return None
+
+
+def carry_alternate(entry, old_entry, md5_key, alternate_key):
+    """
+    Set entry[alternate_key] based on the previous version of the entry
+
+    If the md5 changed, the previous md5 becomes the alternate.  If the
+    md5 is unchanged, any alternate the previous version had is kept, as
+    the new version of the file may not have been uploaded yet.
+
+    Returns True if the md5 changed and a new alternate was recorded
+    """
+    entry.pop(alternate_key, None)
+    if not isinstance(old_entry, dict) or old_entry.get(md5_key) is None:
+        return False
+    if old_entry[md5_key] != entry[md5_key]:
+        entry[alternate_key] = old_entry[md5_key]
+        return True
+    if alternate_key in old_entry:
+        entry[alternate_key] = old_entry[alternate_key]
+    return False
+
+
+def previous_model_entry(previous, lang, processor, package):
+    lang_resources = previous.get(lang)
+    if not isinstance(lang_resources, dict):
+        return None
+    return lang_resources.get(processor, {}).get(package)
+
+
+def record_model_alternates(resources, previous, copies):
+    """
+    Add alternate_md5 to each copied model whose md5 differs from the previous resources.json
+    """
+    if previous is None:
+        return
+    changed = []
+    for _, _, lang, processor, package in copies:
+        entry = resources[lang][processor][package]
+        old_entry = previous_model_entry(previous, lang, processor, package)
+        if carry_alternate(entry, old_entry, 'md5', ALTERNATE_MD5):
+            changed.append("%s %s %s" % (lang, processor, package))
+    if changed:
+        print("%d model(s) changed since the previous resources.json.  Their previous md5 is kept as %s:" % (len(changed), ALTERNATE_MD5))
+        for model in changed:
+            print("  " + model)
+
+
+def carry_previous_default_md5(resources, previous, zip_plans):
+    """
+    Copy the previous default_md5 (and any alternate) into resources before the zips are rebuilt
+
+    This way, if the run is interrupted while zipping, the preliminary
+    resources.json still has the md5 of each existing default.zip, and
+    the next run can still record it as the alternate.
+    """
+    if previous is None:
+        return
+    for lang, _, _ in zip_plans:
+        old_lang = previous.get(lang)
+        if not isinstance(old_lang, dict) or DEFAULT_MD5 not in old_lang:
+            continue
+        resources[lang][DEFAULT_MD5] = old_lang[DEFAULT_MD5]
+        if ALTERNATE_DEFAULT_MD5 in old_lang:
+            resources[lang][ALTERNATE_DEFAULT_MD5] = old_lang[ALTERNATE_DEFAULT_MD5]
+
+
+def record_zip_alternates(resources, previous, zip_plans):
+    """
+    Add alternate_default_md5 to each language whose default.zip md5 differs from the previous resources.json
+    """
+    if previous is None:
+        return
+    changed = []
+    for lang, _, _ in zip_plans:
+        if carry_alternate(resources[lang], previous.get(lang), DEFAULT_MD5, ALTERNATE_DEFAULT_MD5):
+            changed.append(lang)
+    if changed:
+        print("%d default.zip file(s) changed since the previous resources.json.  Their previous md5 is kept as %s: %s" % (len(changed), ALTERNATE_DEFAULT_MD5, " ".join(changed)))
+
+
+def clear_alternate_md5s(resources, langs=None):
+    """
+    Remove all alternate md5s from resources, or only from the given languages
+
+    Returns the number removed
+    """
+    removed = 0
+    for lang, lang_resources in resources.items():
+        if langs and lang not in langs:
+            continue
+        if not isinstance(lang_resources, dict) or 'alias' in lang_resources:
+            continue
+        if lang_resources.pop(ALTERNATE_DEFAULT_MD5, None) is not None:
+            removed += 1
+        for processor in PROCESSORS:
+            for entry in lang_resources.get(processor, {}).values():
+                if entry.pop(ALTERNATE_MD5, None) is not None:
+                    removed += 1
+    return removed
+
+
+def count_alternate_md5s(resources):
+    """
+    Number of model entries and default.zip entries which have an alternate md5
+    """
+    num_models = 0
+    num_zips = 0
+    for lang_resources in resources.values():
+        if not isinstance(lang_resources, dict) or 'alias' in lang_resources:
+            continue
+        if ALTERNATE_DEFAULT_MD5 in lang_resources:
+            num_zips += 1
+        for processor in PROCESSORS:
+            num_models += sum(1 for entry in lang_resources.get(processor, {}).values() if ALTERNATE_MD5 in entry)
+    return num_models, num_zips
+
+
+def report_alternate_md5s(resources, output_dir):
+    num_models, num_zips = count_alternate_md5s(resources)
+    if num_models == 0 and num_zips == 0:
+        return
+    print()
+    print("resources.json has alternate md5s for %d model(s) and %d default.zip file(s)." % (num_models, num_zips))
+    print("Once the new files are uploaded to HuggingFace, clear them with")
+    print("  python3 -m stanza.resources.prepare_resources --output_dir %s --packages_only --clear_alternate_md5" % output_dir)
+
+
 def report_errors(errors):
     if not errors:
         print("No problems found")
@@ -1207,7 +1367,10 @@ def main():
     if args.packages_only:
         resources = load_resources(args.output_dir)
         copies = []
+        previous = None
     else:
+        # read before anything is written, so that changed md5s can be kept as alternates
+        previous = None if args.clear_alternate_md5 else load_previous_resources(args.output_dir)
         resources, copies = scan_input_dirs(args, errors)
         check_dependencies(resources, copies, errors)
     build_packages(resources, args, errors)
@@ -1220,8 +1383,12 @@ def main():
 
     if args.packages_only:
         if not args.check_only:
+            if args.clear_alternate_md5:
+                removed = clear_alternate_md5s(resources, selected_langs(args))
+                print("Removed %d alternate md5(s)" % removed)
             write_resources(resources, args.output_dir)
             print("Wrote packages to resources.json")
+            report_alternate_md5s(resources, args.output_dir)
         return
 
     # the .pt files found here are compared with resources at the end
@@ -1236,18 +1403,26 @@ def main():
     remove_partial_files(partial_files, args.output_dir)
     cache = OutputCache(args.output_dir, use_existing=not args.force)
     copy_models(resources, copies, cache, args.num_workers)
+    record_model_alternates(resources, previous, copies)
+    carry_previous_default_md5(resources, previous, zip_plans)
     print("Copied models.  Writing preliminary resources.json  (%.1fs elapsed)" % (time.time() - start))
     write_resources(resources, args.output_dir)
 
     build_default_zips(resources, zip_plans, cache, args.num_workers)
+    record_zip_alternates(resources, previous, zip_plans)
     print("Built default zips  (%.1fs elapsed)" % (time.time() - start))
 
+    if args.clear_alternate_md5:
+        # with --lang, the other languages come from the existing resources.json
+        # and may still have alternates of their own
+        clear_alternate_md5s(resources, selected_langs(args))
     resources = process_lcode(resources)
     resources = process_misc(resources)
     write_resources(resources, args.output_dir)
     print("Wrote resources.json  (%.1fs total)" % (time.time() - start))
 
     report_unexpected_models(existing_models, resources, args.output_dir)
+    report_alternate_md5s(resources, args.output_dir)
 
 
 if __name__ == '__main__':

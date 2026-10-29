@@ -643,3 +643,159 @@ def test_error_keeps_existing_output(monkeypatch, fake_config, input_dir, output
     assert_fails_with(monkeypatch, capsys, input_dir, output_dir, ["de not in default treebanks"])
     assert counter.copied == []
     assert (output_dir / "resources.json").read_text() == before
+
+
+def alternates_in(resources):
+    """
+    All the alternate md5s in a resources dict, as {(lang, processor, package): md5} with processor "default.zip" for the zips
+    """
+    found = {}
+    for lang, lang_resources in resources.items():
+        if not isinstance(lang_resources, dict) or 'alias' in lang_resources:
+            continue
+        if 'alternate_default_md5' in lang_resources:
+            found[(lang, "default.zip", None)] = lang_resources['alternate_default_md5']
+        for processor in prepare_resources.PROCESSORS:
+            for package, entry in lang_resources.get(processor, {}).items():
+                if 'alternate_md5' in entry:
+                    found[(lang, processor, package)] = entry['alternate_md5']
+    return found
+
+def test_no_alternates_on_first_build(monkeypatch, fake_config, input_dir, output_dir, capsys):
+    resources = run_prepare(monkeypatch, input_dir, output_dir)
+    assert alternates_in(resources) == {}
+    # a rerun with nothing changed doesn't add any either
+    resources = run_prepare(monkeypatch, input_dir, output_dir)
+    assert alternates_in(resources) == {}
+    assert "clear_alternate_md5" not in capsys.readouterr().out
+
+def test_alternate_md5_recorded(monkeypatch, fake_config, input_dir, output_dir, capsys):
+    first = run_prepare(monkeypatch, input_dir, output_dir)
+    write_model(input_dir, "pos", "en_ewt_charlm_tagger.pt", b"retrained en pos model")
+    # a brand new model has no previous md5, so it gets no alternate
+    write_model(input_dir, "pos", "en_new_nocharlm_tagger.pt")
+    capsys.readouterr()
+
+    second = run_prepare(monkeypatch, input_dir, output_dir)
+    assert alternates_in(second) == {
+        ("en", "pos", "ewt_charlm"): first["en"]["pos"]["ewt_charlm"]["md5"],
+        ("en", "default.zip", None): first["en"]["default_md5"],
+    }
+    assert second["en"]["pos"]["ewt_charlm"]["md5"] != first["en"]["pos"]["ewt_charlm"]["md5"]
+    assert second["en"]["default_md5"] != first["en"]["default_md5"]
+
+    out = capsys.readouterr().out
+    assert "1 model(s) changed" in out
+    assert "en pos ewt_charlm" in out
+    assert "1 default.zip file(s) changed" in out
+    assert "--packages_only --clear_alternate_md5" in out
+
+def test_alternate_md5_kept_when_unchanged(monkeypatch, fake_config, input_dir, output_dir):
+    """
+    A rerun after an update keeps the alternates, since the upload may not have happened yet
+    """
+    run_prepare(monkeypatch, input_dir, output_dir)
+    write_model(input_dir, "pos", "en_ewt_charlm_tagger.pt", b"retrained en pos model")
+    second = run_prepare(monkeypatch, input_dir, output_dir)
+    assert len(alternates_in(second)) == 2
+
+    counter = CopyCounter(monkeypatch)
+    third = run_prepare(monkeypatch, input_dir, output_dir)
+    assert counter.copied == []
+    assert third == second
+
+def test_alternate_md5_replaced_on_second_change(monkeypatch, fake_config, input_dir, output_dir):
+    """
+    When a model changes twice, the alternate is the md5 from just before the latest change
+    """
+    run_prepare(monkeypatch, input_dir, output_dir)
+    write_model(input_dir, "pos", "en_ewt_charlm_tagger.pt", b"retrained once")
+    second = run_prepare(monkeypatch, input_dir, output_dir)
+    write_model(input_dir, "pos", "en_ewt_charlm_tagger.pt", b"retrained twice")
+    third = run_prepare(monkeypatch, input_dir, output_dir)
+
+    assert third["en"]["pos"]["ewt_charlm"]["alternate_md5"] == second["en"]["pos"]["ewt_charlm"]["md5"]
+    assert third["en"]["alternate_default_md5"] == second["en"]["default_md5"]
+
+def test_alternate_md5_lang(monkeypatch, fake_config, input_dir, output_dir):
+    """
+    With --lang, the updated language gets alternates and the other languages keep theirs
+    """
+    run_prepare(monkeypatch, input_dir, output_dir)
+    write_model(input_dir, "pos", "en_ewt_charlm_tagger.pt", b"retrained en pos model")
+    second = run_prepare(monkeypatch, input_dir, output_dir)
+
+    write_model(input_dir, "pos", "fr_gsd_nocharlm_tagger.pt", b"retrained fr pos model")
+    third = run_prepare(monkeypatch, input_dir, output_dir, "--lang", "fr")
+    assert third["en"] == second["en"]
+    assert third["fr"]["pos"]["gsd_nocharlm"]["alternate_md5"] == second["fr"]["pos"]["gsd_nocharlm"]["md5"]
+    assert third["fr"]["alternate_default_md5"] == second["fr"]["default_md5"]
+    assert len(alternates_in(third)) == 4
+
+def test_alternate_md5_after_interrupted_zips(monkeypatch, fake_config, input_dir, output_dir):
+    """
+    If a run is interrupted while zipping, the next run still records the default.zip alternate
+
+    The preliminary resources.json written before the zips are built
+    has to carry the previous default_md5 for this to work.
+    """
+    first = run_prepare(monkeypatch, input_dir, output_dir)
+    write_model(input_dir, "pos", "en_ewt_charlm_tagger.pt", b"retrained en pos model")
+
+    def interrupted(*args, **kwargs):
+        raise KeyboardInterrupt()
+    with monkeypatch.context() as m:
+        m.setattr(prepare_resources, "build_default_zips", interrupted)
+        with pytest.raises(KeyboardInterrupt):
+            run_prepare(monkeypatch, input_dir, output_dir)
+    preliminary = read_resources(output_dir)
+    assert preliminary["en"]["default_md5"] == first["en"]["default_md5"]
+    assert preliminary["en"]["pos"]["ewt_charlm"]["alternate_md5"] == first["en"]["pos"]["ewt_charlm"]["md5"]
+
+    second = run_prepare(monkeypatch, input_dir, output_dir)
+    assert alternates_in(second) == {
+        ("en", "pos", "ewt_charlm"): first["en"]["pos"]["ewt_charlm"]["md5"],
+        ("en", "default.zip", None): first["en"]["default_md5"],
+    }
+    assert second["en"]["default_md5"] != first["en"]["default_md5"]
+
+def test_clear_alternate_md5_packages_only(monkeypatch, fake_config, input_dir, output_dir, capsys):
+    run_prepare(monkeypatch, input_dir, output_dir)
+    write_model(input_dir, "pos", "en_ewt_charlm_tagger.pt", b"retrained en pos model")
+    write_model(input_dir, "pos", "fr_gsd_nocharlm_tagger.pt", b"retrained fr pos model")
+    second = run_prepare(monkeypatch, input_dir, output_dir)
+    assert len(alternates_in(second)) == 4
+
+    # --lang only clears that language
+    counter = CopyCounter(monkeypatch)
+    third = run_prepare(monkeypatch, input_dir, output_dir, "--packages_only", "--clear_alternate_md5", "--lang", "fr")
+    assert set(alternates_in(third)) == {("en", "pos", "ewt_charlm"), ("en", "default.zip", None)}
+
+    capsys.readouterr()
+    fourth = run_prepare(monkeypatch, input_dir, output_dir, "--packages_only", "--clear_alternate_md5")
+    assert "Removed 2 alternate md5(s)" in capsys.readouterr().out
+    assert alternates_in(fourth) == {}
+    assert counter.copied == []
+    # everything other than the alternates is unchanged
+    prepare_resources.clear_alternate_md5s(second)
+    assert fourth == second
+
+    # and the next build doesn't bring them back
+    fifth = run_prepare(monkeypatch, input_dir, output_dir)
+    assert fifth == fourth
+
+def test_clear_alternate_md5_with_build(monkeypatch, fake_config, input_dir, output_dir):
+    first = run_prepare(monkeypatch, input_dir, output_dir)
+    write_model(input_dir, "pos", "en_ewt_charlm_tagger.pt", b"retrained en pos model")
+    second = run_prepare(monkeypatch, input_dir, output_dir, "--clear_alternate_md5")
+    assert alternates_in(second) == {}
+    assert second["en"]["pos"]["ewt_charlm"]["md5"] != first["en"]["pos"]["ewt_charlm"]["md5"]
+
+def test_check_only_keeps_alternates(monkeypatch, fake_config, input_dir, output_dir):
+    run_prepare(monkeypatch, input_dir, output_dir)
+    write_model(input_dir, "pos", "en_ewt_charlm_tagger.pt", b"retrained en pos model")
+    run_prepare(monkeypatch, input_dir, output_dir)
+    before = (output_dir / "resources.json").read_text()
+    monkeypatch.setattr(sys, "argv", ["prepare_resources", "--input_dir", str(input_dir), "--output_dir", str(output_dir), "--packages_only", "--clear_alternate_md5", "--check_only"])
+    prepare_resources.main()
+    assert (output_dir / "resources.json").read_text() == before
