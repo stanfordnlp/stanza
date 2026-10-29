@@ -54,7 +54,7 @@ def find_unknown_word(lemmatizer, base):
         # pos_dict: pos -> word -> lemma
         # make sure that none of the pos slices contain this word
         base = base + "z"
-        if all(base not in x for x in lemmatizer.pos_dict):
+        if all(base not in x for x in lemmatizer.pos_dict.values()):
             return base
     raise RuntimeError("wtf?")
 
@@ -108,8 +108,8 @@ def test_store_results():
     assert stuff == stuff2
 
     # the shipped dictionary is never written to at all now
-    assert all(az not in x for x in lemmatizer.pos_dict)
-    assert all(dz not in x for x in lemmatizer.pos_dict)
+    assert all(az not in x for x in lemmatizer.pos_dict.values())
+    assert all(dz not in x for x in lemmatizer.pos_dict.values())
 
 def test_caseless_lemmatizer():
     """
