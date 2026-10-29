@@ -714,6 +714,11 @@ def build_extra_combined_english_dataset(paths, model_type, dataset, args):
         sents.extend(handparsed_sentences)
         print("Loaded %d sentences from %s" % (len(sents), handparsed_path))
 
+        handparsed_path = os.path.join(handparsed_dir, "english-silver", "lemma_fix_bras_mine.conllu")
+        handparsed_sentences = read_sentences_from_conllu(handparsed_path)
+        sents.extend(handparsed_sentences)
+        print("Loaded %d sentences from %s" % (len(sents), handparsed_path))
+
         if model_type is common.ModelType.LEMMA:
             handparsed_path = os.path.join(handparsed_dir, "english-lemmas", "en_lemmas.conllu")
             handparsed_sentences = read_sentences_from_conllu(handparsed_path)
