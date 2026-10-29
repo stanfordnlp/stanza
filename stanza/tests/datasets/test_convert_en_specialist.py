@@ -52,6 +52,8 @@ axes|128|8|E9000007|axis|axis
 %LN|128|1|E9000009|%LN|%LN
 IL-2|128|1|E9000010|IL-2|IL-2
 β-blockers|128|8|E9000011|β-blocker|β-blocker
+Mondays|128|8|E9000012|Monday|Monday
+American|1|1|E9000013|American|American
 """.lstrip()
 
 EXPECTED = {
@@ -68,7 +70,9 @@ EXPECTED = {
     ('dives',       'NOUN'): 'dive',
     ('dives',       'VERB'): 'dive',
     ('redder',      'ADJ'):  'red',
-    ('IL-2',        'NOUN'): 'IL-2',
+    ('IL-2',        'PROPN'): 'IL-2',
+    ('Mondays',     'PROPN'): 'Monday',
+    ('American',    'ADJ'):  'American',
     ('β-blockers',  'NOUN'): 'β-blocker',
 }
 
