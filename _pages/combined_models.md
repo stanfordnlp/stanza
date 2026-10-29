@@ -73,7 +73,7 @@ to the following conditions, from the
 
 The modifications made to the lexicon are:
 
-- Only the noun, verb, adjective, and adverb rows are kept, mapped to the UPOS tags `NOUN`, `VERB`, `ADJ`, and `ADV`.
+- Only the noun, verb, adjective, and adverb rows are kept, mapped to the UPOS tags `NOUN`, `VERB`, `ADJ`, and `ADV`.  The lexicon has no category for proper nouns, so a noun whose lemma has a capital letter, such as `Alzheimer`, is tagged `PROPN`.
 - The lemma is the uninflected form of each row, which keeps the spelling of the inflected form (`colours` → `colour`), rather than the citation form.
 - Rows are dropped if the form or lemma contains whitespace, if the form is a negated contraction such as `didn't`, or if the form or lemma has characters other than letters, digits, `-`, `'`, and `.`.
 - A `(word, UPOS)` pair with more than one lemma, such as `axes` → `axe` / `axis`, is dropped.
