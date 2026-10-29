@@ -285,12 +285,11 @@ def trained_model_path(tmp_path_factory, pretrain_file):
         save_dir=None,
         save_name=None,
         wordvec_pretrain_file=str(pretrain_file),
-        # en_combined uses the SPECIALIST Lexicon from STANZA_EXTERN_DIR
-        # by default.  The dictionary conversion has its own tests in
-        # test_convert_en_specialist.py, and this test is about the
-        # lemma classifiers, so it trains without the lexicon
+        # no en_combined.dict.conllu is written to the data dir, so this
+        # trains without an external dictionary.  The dictionary handling
+        # is tested in test_convert_en_specialist.py
         secondary_file=None,
-        use_secondary_file=False,
+        use_secondary_file=True,
     )
 
     # extra_args are forwarded verbatim to lemmatizer.main.  The pretrain arg
