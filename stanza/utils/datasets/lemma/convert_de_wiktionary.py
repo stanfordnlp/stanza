@@ -11,6 +11,8 @@ it was written against:
 
   pip install wiktionary-de-parser==0.16.0
 
+or, from a Stanza checkout, pip install -e .[wiktionary]
+
 That version requires Python 3.13 or later.  Only this script needs
 it, so the library is imported when the script runs rather than when
 the module is imported, and the rest of Stanza is unaffected.
@@ -19,8 +21,9 @@ German nouns, verbs, adjectives, and adverbs are kept:
 
 - An entry's inflection table gives the forms of its lemma.  The lemma
   itself is included, since verb tables do not list the infinitive.
-  The gender, auxiliary verb, stem, and "no plural" fields of the
-  table are not forms and are skipped.
+  Only the fields for cases, adjective degrees, and verb forms are
+  used.  The others, such as the gender or the auxiliary verb, are
+  counted in the log.
 - An inflected verb entry such as "liebst" (a {{Grundformverweis}}
   page) maps that form to its lemma.  Inflected noun and adjective
   entries are skipped, since their forms are in the tables of the
@@ -66,17 +69,33 @@ POS_MAP = {
     "Verb":       "VERB",
 }
 
-# Inflection table fields which are not forms of the word.  The parser
-# translates the field names to English, so this is the first token
-# of the translated name: Genus -> gender, Hilfsverb -> auxiliary,
-# Stamm -> stem, kein Plural -> no_plural
-NON_FORM_FIELDS = {"gender", "auxiliary", "stem", "no", "keine", "unpersönlich"}
+# The first word of the inflection table fields which hold forms of
+# the word.  The parser translates the German field names to English
+# one word at a time, from its own list of grammar terms:
+#   Nominativ Singular -> nominative_singular
+#   Präsens_er, sie, es -> present_3sg
+# A word it does not recognize, including one with something attached
+# such as the * in Hilfsverb* or Genitiv Singular*, is kept in German,
+# so the German names are here as well.  Any other field, such as
+# gender (Genus), auxiliary (Hilfsverb), stem (Stamm), or no_plural
+# (kein Plural), is not used.
+FORM_FIELDS = {
+    # cases of nouns and adjectives
+    "nominative", "genitive", "dative", "accusative",
+    "nominativ", "genitiv", "dativ", "akkusativ",
+    # adjective degrees
+    "positive", "comparative", "superlative",
+    "positiv", "komparativ", "superlativ",
+    # verb forms
+    "present", "preterite", "subjunctive", "imperative", "participle", "infinitive",
+    "präsens", "präteritum", "konjunktiv", "imperativ", "partizip", "infinitiv",
+}
 
 # Characters which mean a form still has wiki markup in it
 MARKUP_CHARACTERS = set("[]{}<>|=")
 
-# Values which only appear in the fields above.  If one turns up as a
-# form, the parser has changed how it names the fields
+# Values from fields such as the gender or "no plural".  If one turns
+# up as a form, a field was sorted into the wrong group
 LEAKED_FIELD_VALUES = {"f", "m", "n", "ja", "1"}
 
 
@@ -116,21 +135,39 @@ def is_reference(entry, reference_type):
     return entry.reference is not None and entry.reference.type == reference_type
 
 
-def table_forms(entry):
+def field_type(key):
     """
-    Return the forms in an entry's inflection table, without the fields which are not forms
+    Return the first word of an inflection table field, without any * or digits attached
+
+    hilfsverb* -> hilfsverb, genitive_singular* -> genitive
+    """
+    return "".join(x for x in key.split("_")[0] if x.isalpha())
+
+
+def table_forms(entry, unused_fields=None):
+    """
+    Return the forms in an entry's inflection table
+
+    If unused_fields is a Counter, it is updated with the field types which are not forms
     """
     if not entry.inflection:
         return set()
-    return {value for key, value in entry.inflection.items()
-            if key.split("_")[0] not in NON_FORM_FIELDS}
+    forms = set()
+    for key, value in entry.inflection.items():
+        key_type = field_type(key)
+        if key_type in FORM_FIELDS:
+            forms.add(value)
+        elif unused_fields is not None:
+            unused_fields[key_type] += 1
+    return forms
 
 
-def entry_forms(entry, skipped):
+def entry_forms(entry, skipped, unused_fields=None):
     """
     Return (lemma, upos, forms) for one parsed entry, or None if the entry is not used
 
-    skipped is a Counter of the reasons entries are not used
+    skipped is a Counter of the reasons entries are not used, and
+    unused_fields is a Counter of the inflection table fields which are not forms
     """
     if entry.language_code != 'de':
         skipped['language'] += 1
@@ -155,7 +192,7 @@ def entry_forms(entry, skipped):
     else:
         # a variant spelling is its own lemma, so the lemma keeps the spelling of the text
         lemma = entry.page_name if is_reference(entry, "variant") else entry.lemma
-        forms = table_forms(entry)
+        forms = table_forms(entry, unused_fields)
         forms.add(lemma)
 
     if any(x.isspace() for x in lemma):
@@ -176,13 +213,15 @@ def entry_forms(entry, skipped):
     return lemma, upos, forms
 
 
-def extract_lemmas(entries, skipped=None):
+def extract_lemmas(entries, skipped=None, unused_fields=None):
     """
     Build a sorted list of (lemma, form, upos) from parsed Wiktionary entries
 
     If skipped is a Counter, it is updated with the number of entries
     which were not used for each reason, plus the number of (form, upos)
-    pairs dropped for having more than one lemma
+    pairs dropped for having more than one lemma.  If unused_fields is
+    a Counter, it is updated with the inflection table fields which are
+    not forms.
     """
     if skipped is None:
         skipped = Counter()
@@ -190,7 +229,7 @@ def extract_lemmas(entries, skipped=None):
     form_to_lemma = defaultdict(set)
     lemma_to_form = defaultdict(set)
     for entry in entries:
-        result = entry_forms(entry, skipped)
+        result = entry_forms(entry, skipped, unused_fields)
         if result is None:
             continue
         lemma, upos, forms = result
@@ -234,10 +273,12 @@ def convert_dump(dump_filename, output_filename, workers=None, allow_other_versi
     """
     check_parser_version(allow_other_version)
     skipped = Counter()
-    processed = extract_lemmas(parse_dump(dump_filename, workers), skipped)
+    unused_fields = Counter()
+    processed = extract_lemmas(parse_dump(dump_filename, workers), skipped, unused_fields)
     write_conllu(processed, output_filename)
     logger.info("Wrote %d (form, upos, lemma) entries to %s", len(processed), output_filename)
     logger.info("Skipped: %s", ", ".join("%s %d" % (reason, count) for reason, count in sorted(skipped.items())))
+    logger.info("Inflection table fields not used as forms: %s", ", ".join("%s %d" % (field, count) for field, count in unused_fields.most_common()))
     return processed
 
 
