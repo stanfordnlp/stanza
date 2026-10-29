@@ -98,15 +98,40 @@ def sloleks_to_dict(filenames):
 
     return lines
 
+def sent_ids():
+    """
+    Build sent_ids for (form, upos, lemma) entries, numbering any repeats
+
+    The id has the form and lemma in it, so the same entry gets the same
+    id each time the dictionary is built.  A form can have more than one
+    lemma, so the lemma is part of the id.  Whitespace becomes _, and the
+    rare id which would otherwise repeat (for example, from hyphens in
+    the form and lemma) gets a number on the end.
+    """
+    seen = set()
+    def build(form, upos, lemma):
+        base = "-".join(["sl_sloleks", upos, "_".join(form.split()), "_".join(lemma.split())])
+        new_id = base
+        idx = 2
+        while new_id in seen:
+            new_id = "%s-%d" % (base, idx)
+            idx += 1
+        seen.add(new_id)
+        return new_id
+    return build
+
 def write_sloleks_dict_file(filenames, output_filename):
-    with open(output_filename, 'w', encoding='utf-8') as fout:
+    build_id = sent_ids()
+    with open(output_filename, 'w', encoding='utf-8', newline='\n') as fout:
         for form, upos, lemma in sloleks_to_dict(filenames):
+            fout.write(f"# sent_id = {build_id(form, upos, lemma)}\n")
             fout.write(f"# text = {form}\n")
             fout.write(f"1\t{form}\t{lemma}\t{upos}\t_\t_\t0\troot\t_\t_\n")
             fout.write("\n")
 
 def convert_directory(input_directory, output_filename):
-    input_filenames = glob.glob(os.path.join(input_directory, "sloleks_3.1_???.xml"))
+    # sorted so that the output, and the numbering of any repeated ids, is the same on each run
+    input_filenames = sorted(glob.glob(os.path.join(input_directory, "sloleks_3.1_???.xml")))
     write_sloleks_dict_file(input_filenames, output_filename)
 
 def build_dictionary(paths, output_filename):

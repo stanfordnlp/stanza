@@ -30,8 +30,9 @@ spelling shared by every variant of an entry, which would turn
 house-wives into housewife.
 
 Rows are skipped if the form or lemma has whitespace (multiword
-terms), or if the form is a negated contraction such as didn't, which
-UD splits into two words.  A (form, UPOS) pair with more than one
+terms), if the form is a negated contraction such as didn't, which
+UD splits into two words, or if the form or lemma has symbols other
+than - ' and . such as (1)O(2) or %LN.  A (form, UPOS) pair with more than one
 lemma, such as axes -> axe / axis, is dropped entirely so that the
 seq2seq model makes the decision instead of the dictionary.
 
@@ -82,14 +83,36 @@ CATEGORY_MAP = {
 # apostrophes which appear in negated contractions such as didn't
 NEGATION_SUFFIXES = ("n't", "n’t")
 
+# punctuation which can appear inside a dictionary word, such as
+# mother-in-law, o'clock, or Ph.D.  Anything else outside of letters
+# and digits makes the row look like notation rather than a word
+WORD_PUNCTUATION = set("-'’.")
 
-def read_inflection_table(filename):
+
+def is_word(text):
+    """
+    Check that text is made of letters, digits, and the punctuation found inside ordinary words
+
+    Letters and digits in any script are allowed, so IL-2 and β-blocker
+    pass, while rows such as (1)O(2) or %LN do not.  At least one letter
+    is required.
+    """
+    return (all(x.isalnum() or x in WORD_PUNCTUATION for x in text) and
+            any(x.isalpha() for x in text))
+
+def read_inflection_table(filename, skipped=None):
     """
     Read inflVars.data, yielding (form, upos, lemma) for each usable row.
 
-    Rows outside the open class categories, multiword rows, and negated
-    contractions are skipped.  Duplicates are not removed here.
+    Rows outside the open class categories, multiword rows, negated
+    contractions, and rows with symbols in the form or lemma are skipped.
+    Duplicates are not removed here.
+
+    If skipped is a Counter, it is updated with the number of rows
+    skipped for each of those reasons.
     """
+    if skipped is None:
+        skipped = Counter()
     with open(filename, encoding='utf-8') as fin:
         for line_idx, line in enumerate(fin):
             line = line.rstrip('\r\n')
@@ -101,12 +124,19 @@ def read_inflection_table(filename):
             form, category, _inflection, _eui, lemma, _citation = pieces[:6]
             upos = CATEGORY_MAP.get(int(category))
             if upos is None:
+                skipped['category'] += 1
                 continue
             if not form or not lemma:
+                skipped['blank'] += 1
                 continue
             if any(x.isspace() for x in form) or any(x.isspace() for x in lemma):
+                skipped['multiword'] += 1
                 continue
             if form.lower().endswith(NEGATION_SUFFIXES):
+                skipped['negation'] += 1
+                continue
+            if not is_word(form) or not is_word(lemma):
+                skipped['symbols'] += 1
                 continue
             yield form, upos, lemma
 
@@ -132,6 +162,14 @@ def build_lemma_dict(triples):
     return unambiguous, ambiguous
 
 
+def sent_id(form, upos):
+    """
+    A sent_id for a dictionary entry, unique since each (form, upos) has one lemma
+
+    UPOS goes before the form, since UPOS never has a - in it but the form might
+    """
+    return f"en_specialist-{upos}-{form}"
+
 def write_conllu(lemma_dict, output_filename):
     """
     Write {(form, upos): lemma} as single-word CoNLL-U sentences, sorted by form then UPOS.
@@ -139,6 +177,7 @@ def write_conllu(lemma_dict, output_filename):
     with open(output_filename, 'w', encoding='utf-8', newline='\n') as fout:
         for (form, upos) in sorted(lemma_dict.keys()):
             lemma = lemma_dict[(form, upos)]
+            fout.write(f"# sent_id = {sent_id(form, upos)}\n")
             fout.write(f"# text = {form}\n")
             fout.write(f"1\t{form}\t{lemma}\t{upos}\t_\t_\t0\troot\t_\t_\n")
             fout.write("\n")
@@ -150,10 +189,13 @@ def convert_file(input_filename, output_filename):
 
     Returns the unambiguous {(form, upos): lemma} dict and the ambiguous pairs.
     """
-    lemma_dict, ambiguous = build_lemma_dict(read_inflection_table(input_filename))
+    skipped = Counter()
+    lemma_dict, ambiguous = build_lemma_dict(read_inflection_table(input_filename, skipped))
     write_conllu(lemma_dict, output_filename)
     logger.info("Wrote %d (form, upos, lemma) entries to %s, skipping %d ambiguous (form, upos) pairs",
                 len(lemma_dict), output_filename, len(ambiguous))
+    logger.info("Rows skipped when reading %s: %s", input_filename,
+                ", ".join("%s %d" % (reason, count) for reason, count in sorted(skipped.items())))
     return lemma_dict, ambiguous
 
 

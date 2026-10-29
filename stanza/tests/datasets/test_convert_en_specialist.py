@@ -3,6 +3,7 @@ Tests for converting the SPECIALIST Lexicon inflection table to a lemma dictiona
 """
 
 import argparse
+from collections import Counter
 import os
 
 import pytest
@@ -47,6 +48,10 @@ can|64|1|E9000004|can|can
 didn't|1024|4096|E9000005|do|do
 axes|128|8|E9000006|axe|axe
 axes|128|8|E9000007|axis|axis
+(1)O(2)|128|1|E9000008|(1)O(2)|(1)O(2)
+%LN|128|1|E9000009|%LN|%LN
+IL-2|128|1|E9000010|IL-2|IL-2
+β-blockers|128|8|E9000011|β-blocker|β-blocker
 """.lstrip()
 
 EXPECTED = {
@@ -63,6 +68,8 @@ EXPECTED = {
     ('dives',       'NOUN'): 'dive',
     ('dives',       'VERB'): 'dive',
     ('redder',      'ADJ'):  'red',
+    ('IL-2',        'NOUN'): 'IL-2',
+    ('β-blockers',  'NOUN'): 'β-blocker',
 }
 
 @pytest.fixture
@@ -95,6 +102,22 @@ def test_convert_file(sample_file, tmp_path):
     assert len(doc.sentences) == len(EXPECTED)
     words = {(word.text, word.upos): word.lemma for sentence in doc.sentences for word in sentence.words}
     assert words == EXPECTED
+    sent_ids = [sentence.sent_id for sentence in doc.sentences]
+    assert len(set(sent_ids)) == len(sent_ids)
+    assert "en_specialist-NOUN-housewives" in sent_ids
+    assert "en_specialist-VERB-dives" in sent_ids
+    assert "en_specialist-NOUN-dives" in sent_ids
+
+def test_skipped_counts(sample_file):
+    skipped = Counter()
+    list(convert_en_specialist.read_inflection_table(sample_file, skipped))
+    assert skipped == Counter({'category': 1, 'multiword': 6, 'negation': 1, 'symbols': 2})
+
+def test_is_word():
+    for text in ("housewives", "IL-2", "β-blocker", "o'clock", "Ph.D.", "mother-in-law"):
+        assert convert_en_specialist.is_word(text), text
+    for text in ("(1)O(2)", "%LN", "AT&T", "Na+", "123", "-", "and/or"):
+        assert not convert_en_specialist.is_word(text), text
 
 # hovered has a deliberately unusual lemma, so the tests can tell
 # whether the training data or the SPECIALIST entry was used
