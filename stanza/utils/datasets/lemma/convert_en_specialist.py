@@ -22,6 +22,8 @@ category and inflection are bit masks.  The categories used here are
 adj (1), adv (2), noun (128), and verb (1024).  The closed classes
 (aux, modal, pron, det, prep, conj, compl) are skipped, as the
 treebanks cover those words and the conventions differ from UD.
+SPECIALIST has no category for proper nouns, so a noun whose lemma
+has a capital letter, such as Alzheimer or DNA, is tagged PROPN.
 
 The lemma is the uninflected form, not the citation form.  The
 uninflected form keeps the spelling variant of the inflected form
@@ -138,6 +140,12 @@ def read_inflection_table(filename, skipped=None):
             if not is_word(form) or not is_word(lemma):
                 skipped['symbols'] += 1
                 continue
+            # SPECIALIST has no separate category for proper nouns, so
+            # names (Alzheimer, Kaposi, Monday) are nouns.  In UD they
+            # are PROPN, and keeping them as NOUN teaches the seq2seq
+            # model to keep the capital letters of common nouns
+            if upos == 'NOUN' and lemma != lemma.lower():
+                upos = 'PROPN'
             yield form, upos, lemma
 
 
@@ -196,6 +204,8 @@ def convert_file(input_filename, output_filename):
                 len(lemma_dict), output_filename, len(ambiguous))
     logger.info("Rows skipped when reading %s: %s", input_filename,
                 ", ".join("%s %d" % (reason, count) for reason, count in sorted(skipped.items())))
+    upos_counts = Counter(upos for _, upos in lemma_dict)
+    logger.info("Entries by UPOS: %s", ", ".join("%s %d" % (upos, count) for upos, count in sorted(upos_counts.items())))
     return lemma_dict, ambiguous
 
 
