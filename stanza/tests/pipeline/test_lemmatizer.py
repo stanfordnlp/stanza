@@ -2,6 +2,8 @@
 Basic testing of lemmatization
 """
 
+import copy
+
 import pytest
 import stanza
 
@@ -54,7 +56,7 @@ def find_unknown_word(lemmatizer, base):
         # pos_dict: pos -> word -> lemma
         # make sure that none of the pos slices contain this word
         base = base + "z"
-        if all(base not in x for x in lemmatizer.pos_dict):
+        if all(base not in x for x in lemmatizer.pos_dict.values()):
             return base
     raise RuntimeError("wtf?")
 
@@ -108,8 +110,8 @@ def test_store_results():
     assert stuff == stuff2
 
     # the shipped dictionary is never written to at all now
-    assert all(az not in x for x in lemmatizer.pos_dict)
-    assert all(dz not in x for x in lemmatizer.pos_dict)
+    assert all(az not in x for x in lemmatizer.pos_dict.values())
+    assert all(dz not in x for x in lemmatizer.pos_dict.values())
 
 def test_caseless_lemmatizer():
     """
@@ -236,13 +238,14 @@ def test_store_results_is_on_by_default_and_bounded():
     lemmatizer = nlp.processors['lemma']
     assert lemmatizer.store_results_size == 3
 
-    for word in ["flurbing", "zonkled", "quibbage", "snarfled", "brindling"]:
+    words = [find_unknown_word(lemmatizer.trainer, base) for base in ["flurbing", "zonkled", "quibbage", "snarfled", "brindling"]]
+    for word in words:
         nlp(f"They were {word} loudly.")
         assert len(lemmatizer._results) <= 3, f"cache grew past its cap at {word}"
     # the oldest are gone, the newest are kept
     remembered = [word for word, _ in lemmatizer._results]
-    assert "flurbing" not in remembered and "zonkled" not in remembered
-    assert "brindling" in remembered
+    assert words[0] not in remembered and words[1] not in remembered
+    assert words[-1] in remembered
 
 
 def test_store_results_does_not_change_any_lemma():
@@ -254,20 +257,28 @@ def test_store_results_does_not_change_any_lemma():
     def lemmas(**kwargs):
         nlp = stanza.Pipeline('en', processors='tokenize,pos,lemma', model_dir=TEST_MODELS_DIR,
                               download_method=None, **kwargs)
+        shipped = copy.deepcopy(nlp.processors['lemma'].trainer.pos_dict)
         first = [word.lemma for sent in nlp(text).sentences for word in sent.words]
         second = [word.lemma for sent in nlp(text).sentences for word in sent.words]
-        return first, second, nlp
+        return first, second, nlp, shipped
 
-    cold_first, cold_second, _ = lemmas(lemma_store_results=False)
-    warm_first, warm_second, nlp = lemmas(lemma_store_results=True)
+    cold_first, cold_second, _, _ = lemmas(lemma_store_results=False)
+    warm_first, warm_second, nlp, shipped = lemmas(lemma_store_results=True)
     assert cold_first == cold_second
     assert warm_first == warm_second
     assert warm_first == cold_first, "caching changed a lemma on the first pass"
     assert warm_second == cold_second, "caching changed a lemma once the cache was warm"
 
-    # the cache lives beside the shipped dictionary, never inside it
+    # the cache lives beside the shipped dictionary, never inside it.
+    # the words above are all in the dictionary, so made up words are
+    # needed to put something in the cache
     lemmatizer = nlp.processors['lemma']
-    assert "running" not in lemmatizer.trainer.pos_dict.get("VERB", {}) or True
+    verb = find_unknown_word(lemmatizer.trainer, "flurbing")
+    noun = find_unknown_word(lemmatizer.trainer, "quibbages")
+    nlp(f"They were {verb} the {noun}.")
+    assert len(lemmatizer._results) > 0, "the made up words should have gone through the cache"
+    assert lemmatizer.trainer.pos_dict == shipped, "the cache changed the shipped dictionary"
+
     lemmatizer._results[("dogs", "NOUN")] = "WRONG"
     doc = nlp("The dogs barked.")
     dogs = [word for word in doc.sentences[0].words if word.text == "dogs"]
