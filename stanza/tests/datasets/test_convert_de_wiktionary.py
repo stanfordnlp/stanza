@@ -439,3 +439,9 @@ def test_prepare_dictionary(tmp_path):
     dict_file = prepare_lemma_treebank.prepare_external_dictionary(paths, "de_combined")
     assert dict_file == str(tmp_path / "data" / "lemma" / "de_combined.dict.conllu")
     assert len(CoNLL.conll2doc(input_file=dict_file).sentences) == 6
+
+    # the gzipped file is used instead when it exists
+    (lemma_dir / "de_wiki_lemmas.conllu").unlink()
+    convert_de_wiktionary.write_conllu(convert_de_wiktionary.extract_lemmas([LIEBEN])[:3], str(lemma_dir / "de_wiki_lemmas.conllu.gz"))
+    dict_file = prepare_lemma_treebank.prepare_external_dictionary(paths, "de_combined")
+    assert len(CoNLL.conll2doc(input_file=dict_file).sentences) == 3

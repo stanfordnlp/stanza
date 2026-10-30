@@ -65,10 +65,15 @@ and run_lemma passes that file to the lemmatizer as its --secondary_file.
 German Wiktionary is licensed under CC BY-SA 4.0.
 
 Usage:
-  python3 -m stanza.utils.datasets.lemma.convert_de_wiktionary dewiktionary-latest-pages-articles-multistream.xml.bz2 de_wiki_lemmas.conllu
+  python3 -m stanza.utils.datasets.lemma.convert_de_wiktionary dewiktionary-latest-pages-articles-multistream.xml.bz2 de_wiki_lemmas.conllu.gz
+
+An output filename ending in .gz is written with gzip.  The file in
+handparsed-treebank is gzipped, as it is close to the GitHub size limit
+otherwise.
 """
 
 import argparse
+import gzip
 from collections import Counter, defaultdict
 import logging
 import os
@@ -376,11 +381,20 @@ def extract_lemmas(entries, skipped=None, unused_fields=None, ambiguous=None):
     return processed
 
 
+def open_text(filename, mode):
+    """
+    Open a text file, using gzip if the filename ends in .gz
+    """
+    if filename.endswith(".gz"):
+        return gzip.open(filename, mode + 't', encoding='utf-8', newline='\n')
+    return open(filename, mode, encoding='utf-8', newline='\n')
+
+
 def write_conllu(processed, output_filename):
     """
-    Write (lemma, form, upos) as single-word CoNLL-U sentences
+    Write (lemma, form, upos) as single-word CoNLL-U sentences, gzipped if the filename ends in .gz
     """
-    with open(output_filename, 'w', encoding='utf-8', newline='\n') as fout:
+    with open_text(output_filename, 'w') as fout:
         for lemma, form, upos in processed:
             fout.write("# sent_id = %s_%s_%s\n" % (form, lemma, upos))
             fout.write("# text = %s\n" % form)
@@ -428,14 +442,24 @@ def build_dictionary(paths, output_filename):
     """
     Copy the converted German Wiktionary lemmas from handparsed-treebank to output_filename
 
+    The file in handparsed-treebank is de_wiki_lemmas.conllu.gz, which
+    is decompressed here.  An uncompressed de_wiki_lemmas.conllu is used
+    if there is no gzipped one.
+
     The conversion itself is not rerun here, since it needs the whole
     dump and Python 3.13.  To update the file in handparsed-treebank,
     run this script on a new dump.
     """
-    lemma_filename = os.path.join(paths["HANDPARSED_DIR"], "german-lemmas-wiki", "de_wiki_lemmas.conllu")
-    if not os.path.exists(lemma_filename):
-        raise FileNotFoundError("Could not find the German Wiktionary lemmas at %s ... please check out https://github.com/stanfordnlp/handparsed-treebank or use --no_external_dictionary to prepare the dataset without it" % lemma_filename)
-    shutil.copyfile(lemma_filename, output_filename)
+    lemma_dir = os.path.join(paths["HANDPARSED_DIR"], "german-lemmas-wiki")
+    gz_filename = os.path.join(lemma_dir, "de_wiki_lemmas.conllu.gz")
+    lemma_filename = os.path.join(lemma_dir, "de_wiki_lemmas.conllu")
+    if os.path.exists(gz_filename):
+        with gzip.open(gz_filename, 'rb') as fin, open(output_filename, 'wb') as fout:
+            shutil.copyfileobj(fin, fout)
+    elif os.path.exists(lemma_filename):
+        shutil.copyfile(lemma_filename, output_filename)
+    else:
+        raise FileNotFoundError("Could not find the German Wiktionary lemmas at %s ... please check out https://github.com/stanfordnlp/handparsed-treebank or use --no_external_dictionary to prepare the dataset without it" % gz_filename)
 
 
 def parse_args(args=None):
