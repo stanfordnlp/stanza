@@ -48,9 +48,13 @@ German nouns, verbs, adjectives, and adverbs are kept, with names
   --ambiguous_file writes out the forms which were dropped.
 
 The output has one single-word sentence per (form, UPOS, lemma).
-It is used as part of the de_combined lemma training data, from
+Converting the dump takes the whole dump and Python 3.13, so the
+converted file is kept in handparsed-treebank:
 
   https://github.com/stanfordnlp/handparsed-treebank/tree/master/german-lemmas-wiki
+
+prepare_lemma_treebank copies it to data/lemma/de_combined.dict.conllu,
+and run_lemma passes that file to the lemmatizer as its --secondary_file.
 
 German Wiktionary is licensed under CC BY-SA 4.0.
 
@@ -62,6 +66,7 @@ import argparse
 from collections import Counter, defaultdict
 import logging
 import os
+import shutil
 import sys
 
 logger = logging.getLogger('stanza')
@@ -377,12 +382,16 @@ def convert_dump(dump_filename, output_filename, workers=None, allow_other_versi
 
 def build_dictionary(paths, output_filename):
     """
-    Convert the German Wiktionary dump in STANZA_EXTERN_DIR/german to a CoNLL-U dictionary at output_filename
+    Copy the converted German Wiktionary lemmas from handparsed-treebank to output_filename
+
+    The conversion itself is not rerun here, since it needs the whole
+    dump and Python 3.13.  To update the file in handparsed-treebank,
+    run this script on a new dump.
     """
-    dump_filename = os.path.join(paths["STANZA_EXTERN_DIR"], "german", DUMP_FILENAME)
-    if not os.path.exists(dump_filename):
-        raise FileNotFoundError("Could not find the German Wiktionary dump at %s ... please download it from https://dumps.wikimedia.org/dewiktionary/latest/" % dump_filename)
-    convert_dump(dump_filename, output_filename)
+    lemma_filename = os.path.join(paths["HANDPARSED_DIR"], "german-lemmas-wiki", "de_wiki_lemmas.conllu")
+    if not os.path.exists(lemma_filename):
+        raise FileNotFoundError("Could not find the German Wiktionary lemmas at %s ... please check out https://github.com/stanfordnlp/handparsed-treebank or use --no_external_dictionary to prepare the dataset without it" % lemma_filename)
+    shutil.copyfile(lemma_filename, output_filename)
 
 
 def parse_args(args=None):

@@ -375,3 +375,19 @@ def test_real_parser():
         ("Geschoß", "NOUN"): {"Geschoß"},
         ("Abgeordnete", "NOUN"): {"Abgeordnete", "Abgeordneten", "Abgeordneter", "Abgeordnetem"},
     }
+
+def test_prepare_dictionary(tmp_path):
+    """
+    prepare_lemma_treebank copies the converted lemmas from handparsed-treebank to de_combined.dict.conllu
+    """
+    from stanza.utils.datasets import prepare_lemma_treebank
+    paths = {"HANDPARSED_DIR": str(tmp_path / "handparsed"), "LEMMA_DATA_DIR": str(tmp_path / "data" / "lemma")}
+    with pytest.raises(FileNotFoundError):
+        prepare_lemma_treebank.prepare_external_dictionary(paths, "de_combined")
+
+    lemma_dir = tmp_path / "handparsed" / "german-lemmas-wiki"
+    lemma_dir.mkdir(parents=True)
+    convert_de_wiktionary.write_conllu(convert_de_wiktionary.extract_lemmas([LIEBEN]), str(lemma_dir / "de_wiki_lemmas.conllu"))
+    dict_file = prepare_lemma_treebank.prepare_external_dictionary(paths, "de_combined")
+    assert dict_file == str(tmp_path / "data" / "lemma" / "de_combined.dict.conllu")
+    assert len(CoNLL.conll2doc(input_file=dict_file).sentences) == 6
