@@ -684,23 +684,6 @@ def build_extra_combined_french_dataset(paths, model_type, dataset, args):
             sents.extend(handparsed_sentences)
     return sents
 
-def build_extra_combined_german_dataset(paths, model_type, dataset, args):
-    """
-    Extra sentences we don't want augmented for German
-
-    Currently, this is just the lemmas from Wiktionary
-    """
-    handparsed_dir = paths["HANDPARSED_DIR"]
-    sents = []
-    if dataset == 'train':
-        if model_type is common.ModelType.LEMMA:
-            handparsed_path = os.path.join(handparsed_dir, "german-lemmas-wiki", "de_wiki_lemmas.conllu")
-            handparsed_sentences = read_sentences_from_conllu(handparsed_path)
-            print("Loaded %d sentences from %s" % (len(handparsed_sentences), handparsed_path))
-            sents.extend(handparsed_sentences)
-    return sents
-
-
 def build_extra_combined_english_dataset(paths, model_type, dataset, args):
     """
     Extra sentences we don't want augmented
@@ -993,9 +976,10 @@ def build_combined_albanian_dataset(paths, model_type, dataset, args, context):
 
 def build_combined_german_dataset(paths, model_type, dataset, args, context):
     """
-    de_combined is currently GSD, with lemma information from Wiktionary
+    de_combined is currently GSD
 
-    the lemma information is added in build_extra_combined_german_dataset
+    The lemmatizer also uses a dictionary of lemmas from Wiktionary,
+    which prepare_lemma_treebank writes as de_combined.dict.conllu
 
     TODO: quite a bit of HDT we could possibly use
     """
@@ -1253,7 +1237,6 @@ COMBINED_FNS = {
 
 # some extra data for the combined models without augmenting
 COMBINED_EXTRA_FNS = {
-    "de_combined": build_extra_combined_german_dataset,
     "en_combined": build_extra_combined_english_dataset,
     "fi_combined": build_extra_combined_finnish_dataset,
     "fr_combined": build_extra_combined_french_dataset,

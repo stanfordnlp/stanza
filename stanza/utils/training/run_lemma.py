@@ -44,7 +44,7 @@ def add_lemma_args(parser):
 
     parser.add_argument('--secondary_file', default=None, type=str, help='Which file to use as an external dictionary, if any.  Overrides the {short_name}.dict.conllu written by prepare_lemma_treebank')
     parser.add_argument('--no_use_secondary_file', default=True, dest='use_secondary_file', action='store_false',
-                        help="Don't use an external dictionary, even if prepare_lemma_treebank wrote one for this dataset (such as en_combined or sl_combined)")
+                        help="Don't use an external dictionary, even if prepare_lemma_treebank wrote one for this dataset (such as de_combined, en_combined, or sl_combined)")
 
 def find_secondary_file(paths, short_name, command_args):
     """
