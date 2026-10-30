@@ -178,6 +178,12 @@ class Trainer(object):
     def postprocess(self, words, preds, edits=None):
         """ Postprocess, mainly for handing edits. """
         assert len(words) == len(preds), "Lemma predictions must have same length as words."
+        # A prediction as long as max_dec_len means the decoder never
+        # produced an end of sequence, such as 19,250,000 turning into
+        # 19250000 followed by zeros up to the length limit.  Those are
+        # blanked so that they fall back to the word below
+        max_dec_len = self.args.get('max_dec_len', 50)
+        preds = ["" if len(p) >= max_dec_len else p for p in preds]
         edited = []
         if self.args.get('edit', False):
             assert edits is not None and len(words) == len(edits)

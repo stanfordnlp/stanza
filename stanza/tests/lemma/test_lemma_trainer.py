@@ -569,3 +569,13 @@ class TestDictLemmatizer:
         # Verify the args dict has None for the missing keys
         assert loaded.args.get('charlm_forward_file') is None
         assert loaded.args.get('charlm_backward_file') is None
+
+def test_postprocess_runaway_prediction():
+    """
+    A prediction which reached max_dec_len never ended, so the word is used instead
+    """
+    model = trainer.Trainer(args={'dict_only': True, 'max_dec_len': 10, 'edit': True}, device='cpu')
+    words = ["1,000", "dogs", "Dogs", "cats"]
+    preds = ["1000000000", "dog", "whatever", "cat"]
+    edits = [0, 0, 2, 0]
+    assert model.postprocess(words, preds, edits=edits) == ["1,000", "dog", "dogs", "cat"]
