@@ -170,7 +170,8 @@ will be part of the next release.
 
 A lemmatizer can be trained with an external lexicon as well as a
 treebank.  The default Slovenian models do this with Sloleks, and the
-next English models will do this with the SPECIALIST Lexicon.  See
+next German and English models will do this with German Wiktionary and
+the SPECIALIST Lexicon.  See
 [Combined models](combined_models.md#lemma-dictionaries) for where
 those lexicons come from and the terms of their licenses.
 
@@ -180,13 +181,14 @@ The lexicon is used in two ways:
 - The seq2seq model also trains on the lexicon, mixed in with the treebank batches.  This teaches it inflection patterns which the treebank has too few examples of, so it does better on words which are in neither one.
 
 The lexicon is converted when the dataset is prepared.  For
-`en_combined` and `sl_combined`, `prepare_lemma_treebank` reads the
+`de_combined`, `en_combined`, and `sl_combined`, `prepare_lemma_treebank` reads the
 lexicon from `extern_data` and writes it next to the train, dev, and
 test files as `{short_name}.dict.conllu`:
 
 | Dataset | Lexicon | Expected location |
 | :------ | :------ | :---------------- |
 | en_combined | [`inflVars.data`](https://data.lhncbc.nlm.nih.gov/public/lsg/lexicon/2026/release/LEX_DOC/MISC/inflVars.data) from the [2026 SPECIALIST Lexicon release](https://lhncbc.nlm.nih.gov/LSG/Projects/lexicon/current/web/release/2026.html) | `extern_data/english/specialist/inflVars.data` |
+| de_combined | `de_wiki_lemmas.conllu`, already converted from German Wiktionary | `extern_data/handparsed-treebank/german-lemmas-wiki/de_wiki_lemmas.conllu` |
 | sl_combined | [Sloleks 3.1](http://hdl.handle.net/11356/2080) XML files | `extern_data/slovenian/Sloleks.3.1/` |
 
 ```bash

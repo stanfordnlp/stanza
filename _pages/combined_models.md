@@ -15,7 +15,7 @@ The default models for some languages are "combined".  The goal is to get better
 | :------- | :------------ | :------ |
 | English | EWT, GUM, GUMReddit, PUD, Pronouns | [SPECIALIST Lexicon](#specialist-lexicon) lemma dictionary (coming soon) |
 | French  | GSD, ParisStories, Rhapsodie, Sequoia | |
-| German  | GSD | [Lemmas data composed from German Wiktionary](https://github.com/stanfordnlp/handparsed-treebank/blob/master/german-lemmas-wiki/de_wiki_lemmas.conllu) |
+| German  | GSD | [German Wiktionary](#german-wiktionary) lemma dictionary |
 | Hebrew  | IAHLTwiki | [HTB fork from IAHLT](https://github.com/IAHLT/UD_Hebrew) |
 | Italian | ISDT, VIT, PoSTWITA, and TWITTIRO | [MWT list from Prof. Attardi](https://github.com/stanfordnlp/handparsed-treebank/blob/master/italian-mwt/italian.mwt) |
 | Japanese | GSD | [Parsed data from CMU](https://github.com/stanfordnlp/handparsed-treebank/blob/master/japanese-handparsed/spaces-ready-checked.conllu) |
@@ -34,8 +34,8 @@ Whether or not this was a good idea was explored [in a GURT paper from Georgetow
 
 ## Lemma dictionaries
 
-The Slovenian lemmatizer, and starting with the next model release
-the English lemmatizer, also use a large external lexicon, to cover
+The German and Slovenian lemmatizers, and starting with the next model
+release the English lemmatizer, also use a large external lexicon, to cover
 words which never appear in the treebanks.  Each lexicon is converted
 to a list of `(word, UPOS, lemma)` entries, and those entries go into
 the lemmatizer's dictionary.  Where a treebank and a lexicon disagree
@@ -81,6 +81,26 @@ The modifications made to the lexicon are:
 
 The complete conversion is
 [stanza/utils/datasets/lemma/convert_en_specialist.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/lemma/convert_en_specialist.py).
+
+### German Wiktionary
+
+The German lemma dictionary is built from
+[German Wiktionary](https://de.wiktionary.org/), which is licensed under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).  The
+converted lemmas are in
+[handparsed-treebank](https://github.com/stanfordnlp/handparsed-treebank/tree/master/german-lemmas-wiki).
+In the current models these lemmas are part of the training data.
+**Coming soon:** starting with the next model release, they are used
+as a dictionary in the same way as the English and Slovenian lexicons.
+
+The forms of nouns, verbs, adjectives, and adverbs are taken from the
+inflection tables of their entries, along with the pages for
+conjugated verb forms.  Names are tagged `PROPN`.  A noun with
+adjectival declension, such as *Abgeordneter*, has its weak form
+(*Abgeordnete*) as the lemma.  Every form with `ß` also gets a version
+with `ss`, for Swiss spelling, and a form with more than one lemma is
+left out.  The conversion is
+[stanza/utils/datasets/lemma/convert_de_wiktionary.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/lemma/convert_de_wiktionary.py).
 
 ### Sloleks
 
