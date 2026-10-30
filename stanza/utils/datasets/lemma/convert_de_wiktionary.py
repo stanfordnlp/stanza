@@ -17,7 +17,8 @@ That version requires Python 3.13 or later.  Only this script needs
 it, so the library is imported when the script runs rather than when
 the module is imported, and the rest of Stanza is unaffected.
 
-German nouns, verbs, adjectives, and adverbs are kept:
+German nouns, verbs, adjectives, and adverbs are kept, with names
+(towns, given names, surnames, and so on) tagged PROPN:
 
 - An entry's inflection table gives the forms of its lemma.  The lemma
   itself is included, since verb tables do not list the infinitive.
@@ -77,6 +78,12 @@ POS_MAP = {
     "Substantiv": "NOUN",
     "Verb":       "VERB",
 }
+
+# The parser files names under Substantiv, with one of these subtypes.
+# They are PROPN, so the town Aalen does not compete with Aalen as a
+# form of the noun Aal
+NAME_SUBTYPES = {"Toponym", "Vorname", "Nachname", "Familienname", "Patronym",
+                 "Eigenname", "Straßenname", "Bauwerksname", "Göttername"}
 
 # The first word of the inflection table fields which hold forms of
 # the word.  The parser translates the German field names to English
@@ -220,6 +227,8 @@ def entry_forms(entry, skipped, unused_fields=None):
     if upos is None:
         skipped['pos'] += 1
         return None
+    if upos == 'NOUN' and NAME_SUBTYPES.intersection(entry.pos[0].subtypes):
+        upos = 'PROPN'
 
     if is_reference(entry, "inflected"):
         if upos != 'VERB':

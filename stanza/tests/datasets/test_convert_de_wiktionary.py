@@ -16,7 +16,7 @@ from stanza.utils.datasets.lemma import convert_de_wiktionary
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
-def fake_entry(page_name, pos, lemma=None, inflection=None, reference=None, language_code='de'):
+def fake_entry(page_name, pos, lemma=None, inflection=None, reference=None, language_code='de', subtypes=()):
     """
     Build something shaped like a wiktionary_de_parser ParsedEntry
 
@@ -32,7 +32,7 @@ def fake_entry(page_name, pos, lemma=None, inflection=None, reference=None, lang
     if lemma is None:
         lemma = page_name
     return SimpleNamespace(page_name=page_name, lemma=lemma, language_code=language_code,
-                           pos=[SimpleNamespace(pos=x, subtypes=()) for x in pos],
+                           pos=[SimpleNamespace(pos=x, subtypes=tuple(subtypes)) for x in pos],
                            inflection=inflection, reference=reference)
 
 LIEBEN = fake_entry("lieben", "Verb", inflection={
@@ -137,6 +137,18 @@ def test_ambiguous_forms():
     ambiguous = []
     convert_de_wiktionary.extract_lemmas(entries, ambiguous=ambiguous)
     assert ambiguous == [("Masse", "NOUN", ["Masse", "Maß"])]
+
+def test_names():
+    """
+    Names are PROPN, so they do not collide with forms of nouns
+    """
+    entries = [fake_entry("Aal", "Substantiv", inflection={'nominative_singular': 'Aal', 'nominative_plural': 'Aale', 'dative_plural': 'Aalen'}),
+               fake_entry("Aalen", "Substantiv", subtypes=["Toponym"], inflection={'nominative_singular': 'Aalen', 'genitive_singular': 'Aalens'})]
+    skipped = Counter()
+    processed = convert_de_wiktionary.extract_lemmas(entries, skipped)
+    assert processed == [("Aal", "Aal", "NOUN"), ("Aal", "Aale", "NOUN"), ("Aal", "Aalen", "NOUN"),
+                         ("Aalen", "Aalen", "PROPN"), ("Aalen", "Aalens", "PROPN")]
+    assert skipped['ambiguous form'] == 0
 
 def test_variant_forms():
     """
