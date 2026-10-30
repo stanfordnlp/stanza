@@ -13,7 +13,7 @@ The default models for some languages are "combined".  The goal is to get better
 
 | Language | UD Datasets | Other |
 | :------- | :------------ | :------ |
-| English | EWT, GUM, GUMReddit, PUD, Pronouns | [SPECIALIST Lexicon](#specialist-lexicon) lemma dictionary (coming soon) |
+| English | EWT, GUM, GUMReddit, PUD, Pronouns | [SPECIALIST Lexicon](#specialist-lexicon) lemma dictionary |
 | French  | GSD, ParisStories, Rhapsodie, Sequoia | |
 | German  | GSD | [German Wiktionary](#german-wiktionary) lemma dictionary |
 | Hebrew  | IAHLTwiki | [HTB fork from IAHLT](https://github.com/IAHLT/UD_Hebrew) |
@@ -34,25 +34,21 @@ Whether or not this was a good idea was explored [in a GURT paper from Georgetow
 
 ## Lemma dictionaries
 
-The German and Slovenian lemmatizers, and starting with the next model
-release the English lemmatizer, also use a large external lexicon, to cover
-words which never appear in the treebanks.  Each lexicon is converted
-to a list of `(word, UPOS, lemma)` entries, and those entries go into
-the lemmatizer's dictionary.  Where a treebank and a lexicon disagree
-on the lemma for the same word and UPOS, the treebank's lemma is the
-one in the dictionary.
+The English, German, and Slovenian lemmatizers also use a large
+external lexicon, to cover words which never appear in the treebanks.
+Each lexicon is converted to a list of `(word, UPOS, lemma)` entries,
+and those entries go into the lemmatizer's dictionary.  Where a
+treebank and a lexicon disagree on the lemma for the same word and
+UPOS, the treebank's lemma is the one in the dictionary.
 
-Starting with the next model release, the seq2seq model also trains
-on the lexicon, at a lower rate than the treebank data, so that it
-learns the inflection patterns as well as the specific words.
+The seq2seq model also trains on the lexicon, at a lower rate than
+the treebank data, so that it learns the inflection patterns as well
+as the specific words.
 
 See [the lemmatizer page](lemma.md#training-with-an-external-dictionary)
 for how to rebuild these dictionaries when training a model.
 
 ### SPECIALIST Lexicon
-
-**Coming soon:** the English models with this dictionary will be part
-of the next model release.
 
 The English lemma dictionary is built from the inflection table
 ([`inflVars.data`](https://data.lhncbc.nlm.nih.gov/public/lsg/lexicon/2026/release/LEX_DOC/MISC/inflVars.data))
@@ -82,6 +78,12 @@ The modifications made to the lexicon are:
 The complete conversion is
 [stanza/utils/datasets/lemma/convert_en_specialist.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/lemma/convert_en_specialist.py).
 
+The English dictionary also has 10,000 generated numbers written with
+commas, such as `1,234,567` → `1234567`, which follows the UD English
+treebanks.  These are not from the SPECIALIST Lexicon.  They teach the
+seq2seq model to copy long numbers without changing or repeating
+digits.
+
 ### German Wiktionary
 
 The German lemma dictionary is built from
@@ -89,9 +91,6 @@ The German lemma dictionary is built from
 [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).  The
 converted lemmas are in
 [handparsed-treebank](https://github.com/stanfordnlp/handparsed-treebank/tree/master/german-lemmas-wiki).
-In the current models these lemmas are part of the training data.
-**Coming soon:** starting with the next model release, they are used
-as a dictionary in the same way as the English and Slovenian lexicons.
 
 The forms of nouns, verbs, adjectives, and adverbs are taken from the
 inflection tables of their entries, along with the pages for

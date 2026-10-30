@@ -164,14 +164,13 @@ Most training-only options are documented in the [argument parser](https://githu
 
 ### Training with an external dictionary
 
-**Coming soon:** this section describes the
+**Coming soon:** the scripts and options in this section are on the
 [`dev` branch](https://github.com/stanfordnlp/stanza/tree/dev), and
-will be part of the next release.
+will be part of the next code release.
 
 A lemmatizer can be trained with an external lexicon as well as a
-treebank.  The default Slovenian models do this with Sloleks, and the
-next German and English models will do this with German Wiktionary and
-the SPECIALIST Lexicon.  See
+treebank.  The default English, German, and Slovenian models do this,
+with the SPECIALIST Lexicon, German Wiktionary, and Sloleks.  See
 [Combined models](combined_models.md#lemma-dictionaries) for where
 those lexicons come from and the terms of their licenses.
 
