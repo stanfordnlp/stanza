@@ -65,12 +65,26 @@ def test_variant_spelling():
 
 def test_non_form_fields():
     """
-    gender, stem, and no_plural are not forms, and are counted as unused fields
+    gender and no_plural are not forms, and are counted as unused fields
     """
-    entry = fake_entry("Tausendfache", "Substantiv", inflection={'gender': 'n', 'stem': 'Tausendfache', 'no_plural': 'ja'})
+    entry = fake_entry("Abend", "Substantiv", inflection={'gender': 'm', 'nominative_singular': 'Abend', 'no_plural': 'ja'})
     unused_fields = Counter()
-    assert convert_de_wiktionary.extract_lemmas([entry], unused_fields=unused_fields) == [("Tausendfache", "Tausendfache", "NOUN")]
-    assert unused_fields == Counter({'gender': 1, 'stem': 1, 'no': 1})
+    assert convert_de_wiktionary.extract_lemmas([entry], unused_fields=unused_fields) == [("Abend", "Abend", "NOUN")]
+    assert unused_fields == Counter({'gender': 1, 'no': 1})
+
+def test_adjectival_nouns():
+    """
+    A noun with adjectival declension uses its stem as the lemma, with the endings added for the forms
+    """
+    entry = fake_entry("Abgeordneter", "Substantiv", inflection={'gender': 'm', 'stem': 'Abgeordnete'})
+    unused_fields = Counter()
+    processed = convert_de_wiktionary.extract_lemmas([entry], unused_fields=unused_fields)
+    assert unused_fields == Counter({'gender': 1})
+    assert processed == [("Abgeordnete", form, "NOUN") for form in ["Abgeordnete", "Abgeordnetem", "Abgeordneten", "Abgeordneter"]]
+
+    entry = fake_entry("Tausendfaches", "Substantiv", inflection={'gender': 'n', 'stem': 'Tausendfache', 'no_plural': 'ja'})
+    processed = convert_de_wiktionary.extract_lemmas([entry])
+    assert processed == [("Tausendfache", form, "NOUN") for form in ["Tausendfache", "Tausendfachem", "Tausendfachen", "Tausendfaches"]]
 
 def test_untranslated_fields():
     """
@@ -119,6 +133,25 @@ def test_ambiguous_forms():
     assert ("Maß", "Maße", "NOUN") in processed
     assert ("Masse", "Massen", "NOUN") in processed
     assert skipped['ambiguous form'] == 1
+
+    ambiguous = []
+    convert_de_wiktionary.extract_lemmas(entries, ambiguous=ambiguous)
+    assert ambiguous == [("Masse", "NOUN", ["Masse", "Maß"])]
+
+def test_variant_forms():
+    """
+    A form shared by an old spelling and the lemma it points to goes to that lemma
+    """
+    entries = [fake_entry("Geschoss", "Substantiv", inflection={'nominative_singular': 'Geschoss', 'nominative_plural': 'Geschosse', 'genitive_singular': 'Geschosses'}),
+               fake_entry("Geschoß", "Substantiv", reference=("variant", "Geschoss"),
+                          inflection={'nominative_singular': 'Geschoß', 'nominative_plural': 'Geschosse', 'genitive_singular': 'Geschosses'})]
+    skipped = Counter()
+    processed = convert_de_wiktionary.extract_lemmas(entries, skipped)
+    # Geschoss is also the ss version of Geschoß
+    assert processed == [("Geschoss", "Geschoss", "NOUN"), ("Geschoss", "Geschosse", "NOUN"), ("Geschoss", "Geschosses", "NOUN"),
+                         ("Geschoß", "Geschoß", "NOUN")]
+    assert skipped['variant form'] == 3
+    assert skipped['ambiguous form'] == 0
 
 def test_skipped_entries():
     entries = [fake_entry("instrument", "Substantiv", language_code='en'),
@@ -258,6 +291,38 @@ PAGES = {
 |Akkusativ Plural=Abende
 }}
 """,
+    "Geschoß": """== Geschoß ({{Sprache|Deutsch}}) ==
+=== {{Wortart|Substantiv|Deutsch}}, {{n}} ===
+
+{{Alte Schreibweise|Geschoss|Reform 1996}}
+
+{{Deutsch Substantiv Übersicht
+|Genus=n
+|Nominativ Singular=Geschoß
+|Nominativ Plural=Geschosse
+|Genitiv Singular=Geschosses
+|Dativ Plural=Geschossen
+}}
+""",
+    "Geschoss": """== Geschoss ({{Sprache|Deutsch}}) ==
+=== {{Wortart|Substantiv|Deutsch}}, {{n}} ===
+
+{{Deutsch Substantiv Übersicht
+|Genus=n
+|Nominativ Singular=Geschoss
+|Nominativ Plural=Geschosse
+|Genitiv Singular=Geschosses
+|Dativ Plural=Geschossen
+}}
+""",
+    "Abgeordneter": """== Abgeordneter ({{Sprache|Deutsch}}) ==
+=== {{Wortart|Substantiv|Deutsch}}, {{m}}, adjektivische Deklination ===
+
+{{Deutsch adjektivisch Übersicht
+|Genus=m
+|Stamm=Abgeordnete
+}}
+""",
     "pittoresk": """== pittoresk ({{Sprache|Deutsch}}) ==
 === {{Wortart|Adjektiv|Deutsch}} ===
 
@@ -292,6 +357,9 @@ def test_real_parser():
         ("brechen", "VERB"): {"breche", "brechen", "brichst", "bricht", "brach", "gebrochen", "bräche", "brich", "brecht"},
         ("Abend", "NOUN"): {"Abend", "Abende", "Abends", "Abendes", "Abenden"},
         ("Fuß", "NOUN"): {"Fuß", "Fuss", "Füße", "Füsse", "Fußes", "Fusses", "Füßen", "Füssen"},
-        ("Tausendfache", "NOUN"): {"Tausendfache"},
+        ("Tausendfache", "NOUN"): {"Tausendfache", "Tausendfachen", "Tausendfaches", "Tausendfachem"},
         ("pittoresk", "ADJ"): {"pittoresk", "pittoresker", "pittoreskesten"},
+        ("Geschoss", "NOUN"): {"Geschoss", "Geschosse", "Geschosses", "Geschossen"},
+        ("Geschoß", "NOUN"): {"Geschoß"},
+        ("Abgeordnete", "NOUN"): {"Abgeordnete", "Abgeordneten", "Abgeordneter", "Abgeordnetem"},
     }
