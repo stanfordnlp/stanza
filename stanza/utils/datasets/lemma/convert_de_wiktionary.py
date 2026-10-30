@@ -26,10 +26,16 @@ German nouns, verbs, adjectives, and adverbs are kept, with names
   used.  The others, such as the gender or the auxiliary verb, are
   counted in the log.
 - An inflected verb entry such as "liebst" (a {{Grundformverweis}}
-  page) maps that form to its lemma.  Inflected noun and adjective
-  entries are skipped, since their forms are in the tables of the
-  lemmas, and the comparative and superlative pages point to the
-  comparative rather than the base adjective.
+  page) maps that form to its lemma.
+- An inflected adjective entry such as "rechtsradikalen" maps that
+  form to its lemma.  The tables of adjectives only have the positive,
+  comparative, and superlative, so these pages are the only source of
+  the declined forms.  The pages for declined comparatives and
+  superlatives such as "schönere" point to the comparative ("schöner"),
+  which is looked up in the adjective tables to get the positive
+  ("schön"), as in the German GSD treebank.
+- Inflected noun entries are skipped, since their forms are in the
+  tables of the lemmas.
 - A noun with adjectival declension, such as "Abgeordneter", has only
   its stem in the table.  The stem ("Abgeordnete") is the lemma, as in
   the German GSD treebank, and the forms are the stem with the endings
@@ -211,10 +217,12 @@ def adjectival_forms(entry):
 
 def entry_forms(entry, skipped, unused_fields=None):
     """
-    Return (lemma, upos, forms, canonical) for one parsed entry, or None if the entry is not used
+    Return (lemma, upos, forms, canonical, resolve) for one parsed entry, or None if the entry is not used
 
     canonical is the lemma a variant spelling points to, or None for an
-    entry which is not a variant.
+    entry which is not a variant.  resolve is True for an inflected
+    adjective, whose lemma may be a comparative or superlative which
+    still needs to be looked up.
 
     skipped is a Counter of the reasons entries are not used, and
     unused_fields is a Counter of the inflection table fields which are not forms
@@ -235,13 +243,15 @@ def entry_forms(entry, skipped, unused_fields=None):
     if upos == 'NOUN' and NAME_SUBTYPES.intersection(entry.pos[0].subtypes):
         upos = 'PROPN'
 
+    resolve = False
     if is_reference(entry, "inflected"):
-        if upos != 'VERB':
-            skipped['inflected non-verb'] += 1
+        if upos not in ('VERB', 'ADJ'):
+            skipped['inflected noun'] += 1
             return None
         lemma = entry.lemma
         forms = {entry.page_name}
         canonical = None
+        resolve = upos == 'ADJ'
     else:
         # a variant spelling is its own lemma, so the lemma keeps the spelling of the text
         if is_reference(entry, "variant"):
@@ -272,7 +282,26 @@ def entry_forms(entry, skipped, unused_fields=None):
     if not forms:
         skipped['no usable forms'] += 1
         return None
-    return lemma, upos, forms, canonical
+    return lemma, upos, forms, canonical, resolve
+
+
+def resolve_adjective(target, form_to_lemma, lemma_to_form, skipped):
+    """
+    Return the positive form for the lemma an inflected adjective page points to
+
+    The target is a lemma itself (rechtsradikal), or the comparative or
+    superlative of one (schöner -> schön), found in the adjective tables.
+    A target which is in neither is used as is, and counted, since it is
+    usually an adjective with no table of its own, such as a participle
+    """
+    if (target, 'ADJ') in lemma_to_form:
+        return target
+    lemmas = form_to_lemma.get((target, 'ADJ'))
+    if lemmas is not None and len(lemmas) == 1:
+        skipped['adjective via comparative'] += 1
+        return next(iter(lemmas))
+    skipped['adjective target not in tables'] += 1
+    return target
 
 
 def extract_lemmas(entries, skipped=None, unused_fields=None, ambiguous=None):
@@ -293,17 +322,30 @@ def extract_lemmas(entries, skipped=None, unused_fields=None, ambiguous=None):
     lemma_to_form = defaultdict(set)
     # (variant spelling, upos) -> the lemma it points to
     canonical_lemma = {}
+    # inflected adjective forms, added once the adjective tables are all read
+    adjective_forms = []
     for entry in entries:
         result = entry_forms(entry, skipped, unused_fields)
         if result is None:
             continue
-        lemma, upos, forms, canonical = result
+        lemma, upos, forms, canonical, resolve = result
+        if resolve:
+            adjective_forms.extend((form, lemma) for form in forms)
+            continue
         if canonical is not None and canonical != lemma:
             canonical_lemma[(lemma, upos)] = canonical
         for form in forms:
             for variant in {form, form.replace("ß", "ss")}:
                 form_to_lemma[(variant, upos)].add(lemma)
                 lemma_to_form[(lemma, upos)].add(variant)
+
+    resolved = [(form, resolve_adjective(target, form_to_lemma, lemma_to_form, skipped))
+                for form, target in adjective_forms]
+    skipped['inflected adjective'] += len(resolved)
+    for form, lemma in resolved:
+        for variant in {form, form.replace("ß", "ss")}:
+            form_to_lemma[(variant, 'ADJ')].add(lemma)
+            lemma_to_form[(lemma, 'ADJ')].add(variant)
 
     # If the same form and POS maps to two different lemmas, that form
     # is removed from all of them, so the lemmatizer is not confused.
@@ -374,7 +416,9 @@ def convert_dump(dump_filename, output_filename, workers=None, allow_other_versi
         write_ambiguous(ambiguous, ambiguous_filename)
     logger.info("Wrote %d (form, upos, lemma) entries to %s", len(processed), output_filename)
     variant_forms = skipped.pop('variant form', 0)
+    adjectives = [skipped.pop(key, 0) for key in ('inflected adjective', 'adjective via comparative', 'adjective target not in tables')]
     logger.info("Skipped: %s", ", ".join("%s %d" % (reason, count) for reason, count in sorted(skipped.items())))
+    logger.info("Inflected adjective pages used: %d, of which %d point to a comparative or superlative and %d to an adjective with no table", *adjectives)
     logger.info("Forms shared by a variant spelling and the lemma it points to, given to that lemma: %d", variant_forms)
     logger.info("Inflection table fields not used as forms: %s", ", ".join("%s %d" % (field, count) for field, count in unused_fields.most_common()))
     return processed

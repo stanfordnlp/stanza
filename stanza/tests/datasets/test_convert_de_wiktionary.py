@@ -47,6 +47,28 @@ def test_verb_table():
     processed = convert_de_wiktionary.extract_lemmas([LIEBEN])
     assert processed == [("lieben", form, "VERB") for form in sorted(["geliebt", "liebe", "lieben", "liebst", "liebt", "liebte"])]
 
+def test_inflected_adjectives():
+    """
+    Inflected adjective pages are used, with comparatives looked up to get the positive
+    """
+    entries = [fake_entry("schön", "Adjektiv", inflection={'positive': 'schön', 'comparative': 'schöner', 'superlative': 'schönsten'}),
+               fake_entry("schönen", "Adjektiv", reference=("inflected", "schön")),
+               fake_entry("schönere", "Adjektiv", reference=("inflected", "schöner")),
+               fake_entry("rechtsradikalen", "Adjektiv", reference=("inflected", "rechtsradikal")),
+               fake_entry("größere", "Adjektiv", reference=("inflected", "größer"))]
+    skipped = Counter()
+    processed = convert_de_wiktionary.extract_lemmas(entries, skipped)
+    by_form = {form: lemma for lemma, form, upos in processed}
+    assert by_form["schönen"] == "schön"
+    assert by_form["schönere"] == "schön"
+    assert by_form["rechtsradikalen"] == "rechtsradikal"
+    # groß has no table here, so the comparative is used as is
+    assert by_form["größere"] == "größer"
+    assert by_form["grössere"] == "größer"
+    assert skipped['inflected adjective'] == 4
+    assert skipped['adjective via comparative'] == 1
+    assert skipped['adjective target not in tables'] == 2
+
 def test_inflected_entries():
     """
     Inflected verb pages are used, inflected noun pages are not
@@ -344,6 +366,31 @@ PAGES = {
 |Superlativ=pittoreskesten
 }}
 """,
+    "schön": """== schön ({{Sprache|Deutsch}}) ==
+=== {{Wortart|Adjektiv|Deutsch}} ===
+
+{{Deutsch Adjektiv Übersicht
+|Positiv=schön
+|Komparativ=schöner
+|Superlativ=schönsten
+}}
+""",
+    "schönere": """== schönere ({{Sprache|Deutsch}}) ==
+=== {{Wortart|Deklinierte Form|Deutsch}} ===
+
+{{Grammatische Merkmale}}
+* Nominativ Singular Femininum der starken Deklination des Komparativs des Adjektivs [[schön]]
+
+{{Grundformverweis Dekl|schöner}}
+""",
+    "schönen": """== schönen ({{Sprache|Deutsch}}) ==
+=== {{Wortart|Deklinierte Form|Deutsch}} ===
+
+{{Grammatische Merkmale}}
+* Genitiv Singular Maskulinum der starken Deklination des Positivs des Adjektivs [[schön]]
+
+{{Grundformverweis Dekl|schön}}
+""",
 }
 
 def test_real_parser():
@@ -371,6 +418,7 @@ def test_real_parser():
         ("Fuß", "NOUN"): {"Fuß", "Fuss", "Füße", "Füsse", "Fußes", "Fusses", "Füßen", "Füssen"},
         ("Tausendfache", "NOUN"): {"Tausendfache", "Tausendfachen", "Tausendfaches", "Tausendfachem"},
         ("pittoresk", "ADJ"): {"pittoresk", "pittoresker", "pittoreskesten"},
+        ("schön", "ADJ"): {"schön", "schöner", "schönsten", "schönere", "schönen"},
         ("Geschoss", "NOUN"): {"Geschoss", "Geschosse", "Geschosses", "Geschossen"},
         ("Geschoß", "NOUN"): {"Geschoß"},
         ("Abgeordnete", "NOUN"): {"Abgeordnete", "Abgeordneten", "Abgeordneter", "Abgeordnetem"},
