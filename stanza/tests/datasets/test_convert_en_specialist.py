@@ -101,7 +101,7 @@ def test_bad_line(tmp_path):
 
 def test_convert_file(sample_file, tmp_path):
     output_file = str(tmp_path / "specialist_lemmas.conllu")
-    convert_en_specialist.convert_file(sample_file, output_file)
+    convert_en_specialist.convert_file(sample_file, output_file, num_numbers=0)
     doc = CoNLL.conll2doc(input_file=output_file)
     assert len(doc.sentences) == len(EXPECTED)
     words = {(word.text, word.upos): word.lemma for sentence in doc.sentences for word in sentence.words}
@@ -206,7 +206,9 @@ def test_prepare_external_dictionary(tmp_path):
 
     dict_file = prepare_lemma_treebank.prepare_external_dictionary(paths, "en_combined")
     assert dict_file == str(tmp_path / "data" / "lemma" / "en_combined.dict.conllu")
-    assert len(CoNLL.conll2doc(input_file=dict_file).sentences) == len(EXPECTED)
+    words = [word for sentence in CoNLL.conll2doc(input_file=dict_file).sentences for word in sentence.words]
+    assert len([word for word in words if word.upos != 'NUM']) == len(EXPECTED)
+    assert len([word for word in words if word.upos == 'NUM']) == convert_en_specialist.DEFAULT_NUMBERS
 
     assert prepare_lemma_treebank.prepare_external_dictionary(paths, "en_combined", use_external_dictionary=False) is None
     assert not os.path.exists(dict_file)
@@ -232,3 +234,22 @@ def test_find_secondary_file(tmp_path):
     assert run_lemma.find_secondary_file(paths, "en_combined", secondary_args(use_secondary_file=False)) is None
     assert run_lemma.find_secondary_file(paths, "en_combined", secondary_args("other.conllu", use_secondary_file=False)) is None
     assert run_lemma.find_secondary_file(paths, "en_ewt", secondary_args()) is None
+
+def test_number_entries():
+    entries = convert_en_specialist.number_entries()
+    assert len(entries) == convert_en_specialist.DEFAULT_NUMBERS
+    assert entries == convert_en_specialist.number_entries()
+    lemmas = dict(entries)
+    assert lemmas["11,111"] == "11111"
+    assert lemmas["40,000,000"] == "40000000"
+    for form, lemma in entries:
+        assert "," in form
+        assert lemma == form.replace(",", "")
+
+def test_convert_file_numbers(sample_file, tmp_path):
+    output_file = str(tmp_path / "specialist_lemmas.conllu")
+    lemma_dict, _ = convert_en_specialist.convert_file(sample_file, output_file, num_numbers=200)
+    doc = CoNLL.conll2doc(input_file=output_file)
+    numbers = [(sentence.sent_id, sentence.words[0].text, sentence.words[0].lemma) for sentence in doc.sentences if sentence.words[0].upos == 'NUM']
+    assert len(numbers) == 200
+    assert ("en_numbers-NUM-1,000", "1,000", "1000") in numbers

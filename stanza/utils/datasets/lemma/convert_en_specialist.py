@@ -38,6 +38,10 @@ than - ' and . such as (1)O(2) or %LN.  A (form, UPOS) pair with more than one
 lemma, such as axes -> axe / axis, is dropped entirely so that the
 seq2seq model makes the decision instead of the dictionary.
 
+The dictionary also gets 10,000 generated numbers written with commas,
+such as 1,234,567 -> 1234567, the UD English convention for NUM, to
+teach the seq2seq model to copy long numbers.  See number_entries.
+
 The output has one single-word sentence per (form, UPOS, lemma),
 the same format as the Sloleks dictionary for Slovenian.
 prepare_lemma_treebank writes it to data/lemma/en_combined.dict.conllu
@@ -70,6 +74,7 @@ import argparse
 from collections import Counter, defaultdict
 import logging
 import os
+import random
 import sys
 
 logger = logging.getLogger('stanza')
@@ -174,9 +179,47 @@ def sent_id(form, upos):
     """
     A sent_id for a dictionary entry, unique since each (form, upos) has one lemma
 
-    UPOS goes before the form, since UPOS never has a - in it but the form might
+    UPOS goes before the form, since UPOS never has a - in it but the form might.
+    The generated numbers are not from SPECIALIST, so they get their own prefix
     """
+    if upos == 'NUM':
+        return f"en_numbers-{upos}-{form}"
     return f"en_specialist-{upos}-{form}"
+
+
+DEFAULT_NUMBERS = 10000
+
+def number_entries(count=DEFAULT_NUMBERS, seed=1234):
+    """
+    Generate count numbers written with commas, such as 1,234,567, mapped to the lemma without commas
+
+    This is the UD English convention for NUM.  The seq2seq model has
+    trouble copying long numbers: it changes digits, and sometimes keeps
+    repeating a digit until it reaches max_dec_len.  The entries include
+    runs of one digit (11,111 and 2,222,222) and round numbers
+    (40,000,000) so that it learns to count the digits of the input and
+    stop, plus random numbers from 4 to 12 digits, some with a decimal part.
+
+    The same seed always gives the same numbers.
+    """
+    def entry(digits, decimal=""):
+        form = "{:,}".format(int(digits)) + decimal
+        return form, form.replace(",", "")
+
+    entries = {}
+    for length in range(4, 13):
+        for digit in "123456789":
+            entries.update([entry(digit * length), entry(digit + "0" * (length - 1))])
+        entries.update([entry("1234567890"[:length] if length <= 10 else "123456789012"[:length])])
+
+    rng = random.Random(seed)
+    while len(entries) < count:
+        length = rng.randint(4, 12)
+        digits = str(rng.randint(1, 9)) + "".join(str(rng.randint(0, 9)) for _ in range(length - 1))
+        decimal = "." + "".join(str(rng.randint(0, 9)) for _ in range(rng.randint(1, 2))) if rng.random() < 0.1 else ""
+        form, lemma = entry(digits, decimal)
+        entries[form] = lemma
+    return sorted(entries.items())[:count] if len(entries) > count else sorted(entries.items())
 
 def write_conllu(lemma_dict, output_filename):
     """
@@ -191,14 +234,19 @@ def write_conllu(lemma_dict, output_filename):
             fout.write("\n")
 
 
-def convert_file(input_filename, output_filename):
+def convert_file(input_filename, output_filename, num_numbers=DEFAULT_NUMBERS):
     """
     Convert inflVars.data to a CoNLL-U dictionary file.
+
+    num_numbers generated numbers (see number_entries) are added as well.
 
     Returns the unambiguous {(form, upos): lemma} dict and the ambiguous pairs.
     """
     skipped = Counter()
     lemma_dict, ambiguous = build_lemma_dict(read_inflection_table(input_filename, skipped))
+    if num_numbers > 0:
+        for form, lemma in number_entries(num_numbers):
+            lemma_dict[(form, 'NUM')] = lemma
     write_conllu(lemma_dict, output_filename)
     logger.info("Wrote %d (form, upos, lemma) entries to %s, skipping %d ambiguous (form, upos) pairs",
                 len(lemma_dict), output_filename, len(ambiguous))
@@ -377,6 +425,7 @@ def parse_args(args=None):
     parser.add_argument('--train_files', nargs='*', default=None, help='UD training files to compare against')
     parser.add_argument('--dev_files', nargs='*', default=None, help='UD dev files for estimating the effect on dictionary lookups.  Requires --train_files')
     parser.add_argument('--report', default=None, help='Where to write a markdown report comparing the dictionary to the UD files')
+    parser.add_argument('--num_numbers', type=int, default=DEFAULT_NUMBERS, help='How many generated numbers such as 1,234,567 -> 1234567 to add to the dictionary.  0 for none')
     args = parser.parse_args(args=args)
     if args.dev_files and not args.train_files:
         parser.error("--dev_files requires --train_files")
@@ -387,7 +436,7 @@ def parse_args(args=None):
 
 def main(args=None):
     args = parse_args(args)
-    lemma_dict, ambiguous = convert_file(args.input_file, args.output_file)
+    lemma_dict, ambiguous = convert_file(args.input_file, args.output_file, num_numbers=args.num_numbers)
     print("Wrote %d entries to %s, skipping %d ambiguous (form, upos) pairs" % (len(lemma_dict), args.output_file, len(ambiguous)), file=sys.stderr)
     if args.report:
         train_triples = read_conllu_triples(args.train_files) if args.train_files else None
