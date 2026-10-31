@@ -253,3 +253,11 @@ def test_convert_file_numbers(sample_file, tmp_path):
     numbers = [(sentence.sent_id, sentence.words[0].text, sentence.words[0].lemma) for sentence in doc.sentences if sentence.words[0].upos == 'NUM']
     assert len(numbers) == 200
     assert ("en_numbers-NUM-1,000", "1,000", "1000") in numbers
+
+    # the SPECIALIST entries come first, then the numbers, each sorted by form
+    upos = [sentence.words[0].upos for sentence in doc.sentences]
+    assert upos[-200:] == ['NUM'] * 200
+    assert 'NUM' not in upos[:-200]
+    forms = [sentence.words[0].text for sentence in doc.sentences]
+    assert forms[:-200] == sorted(forms[:-200])
+    assert forms[-200:] == sorted(forms[-200:])
