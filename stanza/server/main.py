@@ -4,28 +4,29 @@
 Simple shell program to pipe in 
 """
 
-import corenlp
-
 import json
 import re
 import csv
 import sys
 from collections import namedtuple, OrderedDict
 
-FLOAT_RE = re.compile(r"\d*\.\d+")
-INT_RE = re.compile(r"\d+")
+from stanza.server import CoreNLPClient
+
+FLOAT_RE = re.compile(r"[-+]?\d*\.\d+")
+INT_RE = re.compile(r"[-+]?\d+")
 
 def dictstr(arg):
     """
     Parse a key=value string as a tuple (key, value) that can be provided as an argument to dict()
     """
-    key, value = arg.split("=")
+    # only split on the first =, so that values may contain = themselves
+    key, value = arg.split("=", 1)
 
     if value.lower() == "true" or value.lower() == "false":
-        value = bool(value)
-    elif INT_RE.match(value):
+        value = value.lower() == "true"
+    elif INT_RE.fullmatch(value):
         value = int(value)
-    elif FLOAT_RE.match(value):
+    elif FLOAT_RE.fullmatch(value):
         value = float(value)
     return (key, value)
 
@@ -35,7 +36,7 @@ def do_annotate(args):
     if args.sentence_mode:
         args.props["ssplit.isOneSentence"] = True
 
-    with corenlp.CoreNLPClient(annotators=args.annotators, properties=args.props, be_quiet=not args.verbose_server) as client:
+    with CoreNLPClient(annotators=args.annotators, properties=args.props, memory=args.memory, be_quiet=not args.verbose_server) as client:
         for line in args.input:
             if line.startswith("#"): continue
 
