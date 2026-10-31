@@ -187,7 +187,7 @@ test files as `{short_name}.dict.conllu`:
 | Dataset | Lexicon | Expected location |
 | :------ | :------ | :---------------- |
 | en_combined | [`inflVars.data`](https://data.lhncbc.nlm.nih.gov/public/lsg/lexicon/2026/release/LEX_DOC/MISC/inflVars.data) from the [2026 SPECIALIST Lexicon release](https://lhncbc.nlm.nih.gov/LSG/Projects/lexicon/current/web/release/2026.html) | `extern_data/english/specialist/inflVars.data` |
-| de_combined | `de_wiki_lemmas.conllu`, already converted from German Wiktionary | `extern_data/handparsed-treebank/german-lemmas-wiki/de_wiki_lemmas.conllu` |
+| de_combined | `de_wiki_lemmas.conllu.gz`, already converted from German Wiktionary | `extern_data/handparsed-treebank/german-lemmas-wiki/de_wiki_lemmas.conllu.gz` |
 | sl_combined | [Sloleks 3.1](http://hdl.handle.net/11356/2080) XML files | `extern_data/slovenian/Sloleks.3.1/` |
 
 ```bash
