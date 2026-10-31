@@ -223,10 +223,17 @@ def number_entries(count=DEFAULT_NUMBERS, seed=1234):
 
 def write_conllu(lemma_dict, output_filename):
     """
-    Write {(form, upos): lemma} as single-word CoNLL-U sentences, sorted by form then UPOS.
+    Write {(form, upos): lemma} as single-word CoNLL-U sentences
+
+    The SPECIALIST entries come first and the generated numbers after
+    them, each sorted by form then UPOS.
     """
+    def sort_key(key):
+        form, upos = key
+        return (upos == 'NUM', form, upos)
+
     with open(output_filename, 'w', encoding='utf-8', newline='\n') as fout:
-        for (form, upos) in sorted(lemma_dict.keys()):
+        for (form, upos) in sorted(lemma_dict.keys(), key=sort_key):
             lemma = lemma_dict[(form, upos)]
             fout.write(f"# sent_id = {sent_id(form, upos)}\n")
             fout.write(f"# text = {form}\n")
