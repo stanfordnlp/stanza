@@ -710,9 +710,10 @@ class Document(StanzaObject):
                         token.words.append(Word(sentence, {ID: idx_w + i, TEXT: e_word}))
                     idx_w = idx_w_end
                 elif perform_mwt_processing == MWTProcessingType.SKIP:
-                    token.id = tuple(orig_id + idx_e for orig_id in token.id)
+                    offset = idx_w - token.id[0]
+                    token.id = tuple(orig_id + offset for orig_id in token.id)
                     for i in token.words:
-                        i.id += idx_e
+                        i.id += offset
                     idx_w = token.id[-1]
                     token.manual_expansion = None
 
