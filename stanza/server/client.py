@@ -409,8 +409,10 @@ class CoreNLPClient(RobustService):
         if isinstance(self.properties, str):
             # try to translate to Stanford CoreNLP language name, or assume properties is a path
             if is_corenlp_lang(self.properties):
-                if self.properties.lower() in LANGUAGE_SHORTHANDS_TO_FULL:
-                    self.properties = LANGUAGE_SHORTHANDS_TO_FULL[self.properties]
+                # is_corenlp_lang is case insensitive, so normalize the
+                # case here as well, otherwise "EN" or "Zh" raise a KeyError
+                lang = self.properties.lower()
+                self.properties = LANGUAGE_SHORTHANDS_TO_FULL.get(lang, lang)
                 logger.info(
                     f"Using CoreNLP default properties for: {self.properties}.  Make sure to have "
                     f"{self.properties} models jar (available for download here: "
