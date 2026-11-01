@@ -14,6 +14,16 @@ from stanza.models.common.doc import *
 
 logger = logging.getLogger('stanza')
 
+def build_vocab(data, lang):
+    """
+    Build the char and pos vocab from a list of (word, pos, lemma) entries
+    """
+    char_data = "".join(d[0] + d[2] for d in data)
+    char_vocab = Vocab(char_data, lang)
+    pos_data = [d[1] for d in data]
+    pos_vocab = Vocab(pos_data, lang)
+    return MultiVocab({'char': char_vocab, 'pos': pos_vocab})
+
 class DataLoader:
     def __init__(self, doc, batch_size, args, vocab=None, evaluation=False, conll_only=False, skip=None, expand_unk_vocab=False):
         self.batch_size = batch_size
@@ -40,9 +50,8 @@ class DataLoader:
             else:
                 self.vocab = vocab
         else:
-            self.vocab = dict()
-            char_vocab, pos_vocab = self.init_vocab(data)
-            self.vocab = MultiVocab({'char': char_vocab, 'pos': pos_vocab})
+            assert self.eval is False, "Vocab file must exist for evaluation"
+            self.vocab = build_vocab(data, self.args['lang'])
 
         # filter and sample data
         if args.get('sample_train', 1.0) < 1.0 and not self.eval:
@@ -62,14 +71,6 @@ class DataLoader:
         data = [data[i:i+batch_size] for i in range(0, len(data), batch_size)]
         self.data = data
         logger.debug("{} batches created.".format(len(data)))
-
-    def init_vocab(self, data):
-        assert self.eval is False, "Vocab file must exist for evaluation"
-        char_data = "".join(d[0] + d[2] for d in data)
-        char_vocab = Vocab(char_data, self.args['lang'])
-        pos_data = [d[1] for d in data]
-        pos_vocab = Vocab(pos_data, self.args['lang'])
-        return char_vocab, pos_vocab
 
     def preprocess(self, data, char_vocab, pos_vocab, args):
         processed = []
@@ -119,6 +120,14 @@ class DataLoader:
     def __iter__(self):
         for i in range(self.__len__()):
             yield self.__getitem__(i)
+
+    def reshuffle(self):
+        """
+        Shuffle all of the examples and chunk them into new batches
+        """
+        data = [x for batch in self.data for x in batch]
+        random.shuffle(data)
+        self.data = [data[i:i+self.batch_size] for i in range(0, len(data), self.batch_size)]
 
     def raw_data(self):
         return self.load_doc(self.doc, self.args.get('caseless', False), self.args.get('skip_blank_lemmas', False), self.eval)

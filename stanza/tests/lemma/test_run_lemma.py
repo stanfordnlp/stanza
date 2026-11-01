@@ -285,7 +285,9 @@ def trained_model_path(tmp_path_factory, pretrain_file):
         save_dir=None,
         save_name=None,
         wordvec_pretrain_file=str(pretrain_file),
-        # currently not tested
+        # no en_combined.dict.conllu is written to the data dir, so this
+        # trains without an external dictionary.  The dictionary handling
+        # is tested in test_convert_en_specialist.py
         secondary_file=None,
         use_secondary_file=True,
     )
