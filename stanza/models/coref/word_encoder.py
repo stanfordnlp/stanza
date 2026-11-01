@@ -16,7 +16,7 @@ class WordEncoder(torch.nn.Module):  # pylint: disable=too-many-instance-attribu
     def __init__(self, features: int, config: Config):
         """
         Args:
-            features (int): the number of featues in the input embeddings
+            features (int): the number of features in the input embeddings
             config (Config): the configuration of the current session
         """
         super().__init__()

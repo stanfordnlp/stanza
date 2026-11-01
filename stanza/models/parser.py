@@ -159,7 +159,7 @@ def build_argparse():
     #   --no_second_optim
     # Later experiments found the current defaults helped the results
     # on several different datasets (using a transformer as the input embedding)
-    # These experiements are averaged across 5 models,
+    # These experiments are averaged across 5 models,
     # with multiple early stopping values as well
     #   5 model dev avg LAS  1 stage  1 stage 2k  1 stage 4k   2 stage
     # de_gsd                  89.03    89.50       89.71        89.83

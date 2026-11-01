@@ -347,7 +347,7 @@ def load_training_data(args, pretrain):
             raise ValueError("--train_ratios names files which are not in the training data: %s" % ", ".join(unmatched))
     if sum(len(x.sentences) for x in train_docs) == 0:
         raise RuntimeError("Training data for the tagger is empty: %s" % args['train_file'])
-    # we want to ensure that the model is able te output _ for empty columns,
+    # we want to ensure that the model is able to output _ for empty columns,
     # but create batches whereby if a doc has upos/xpos tags we include them all.
     # therefore, we create separate datasets and loaders for each input training file,
     # which will ensure the system be able to see batches with both upos available
