@@ -47,6 +47,17 @@ def test_verb_table():
     processed = convert_de_wiktionary.extract_lemmas([LIEBEN])
     assert processed == [("lieben", form, "VERB") for form in sorted(["geliebt", "liebe", "lieben", "liebst", "liebt", "liebte"])]
 
+def test_participles():
+    """
+    A present participle page is its own lemma, while a past participle page points to the verb
+    """
+    entries = [fake_entry("ausweichend", "Adjektiv", subtypes=["Partizip I"], reference=("inflected", "ausweichen")),
+               fake_entry("versiegelt", "Adjektiv", subtypes=["Partizip II"], reference=("inflected", "versiegeln"))]
+    skipped = Counter()
+    processed = convert_de_wiktionary.extract_lemmas(entries, skipped)
+    assert processed == [("ausweichend", "ausweichend", "ADJ"), ("versiegeln", "versiegelt", "ADJ")]
+    assert skipped['present participle'] == 1
+
 def test_inflected_adjectives():
     """
     Inflected adjective pages are used, with comparatives looked up to get the positive

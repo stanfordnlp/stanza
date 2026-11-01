@@ -34,6 +34,8 @@ German nouns, verbs, adjectives, and adverbs are kept, with names
   superlatives such as "schönere" point to the comparative ("schöner"),
   which is looked up in the adjective tables to get the positive
   ("schön"), as in the German GSD treebank.
+  A present participle page such as "ausweichend" is its own lemma,
+  also as in GSD, rather than pointing to the verb.
 - Inflected noun entries are skipped, since their forms are in the
   tables of the lemmas.
 - A noun with adjectival declension, such as "Abgeordneter", has only
@@ -253,10 +255,16 @@ def entry_forms(entry, skipped, unused_fields=None):
         if upos not in ('VERB', 'ADJ'):
             skipped['inflected noun'] += 1
             return None
-        lemma = entry.lemma
-        forms = {entry.page_name}
         canonical = None
-        resolve = upos == 'ADJ'
+        forms = {entry.page_name}
+        if upos == 'ADJ' and 'Partizip I' in entry.pos[0].subtypes:
+            # a present participle used as an adjective, such as
+            # ausweichend, is its own lemma in GSD, not the verb
+            lemma = entry.page_name
+            skipped['present participle'] += 1
+        else:
+            lemma = entry.lemma
+            resolve = upos == 'ADJ'
     else:
         # a variant spelling is its own lemma, so the lemma keeps the spelling of the text
         if is_reference(entry, "variant"):
@@ -430,9 +438,11 @@ def convert_dump(dump_filename, output_filename, workers=None, allow_other_versi
         write_ambiguous(ambiguous, ambiguous_filename)
     logger.info("Wrote %d (form, upos, lemma) entries to %s", len(processed), output_filename)
     variant_forms = skipped.pop('variant form', 0)
+    present_participles = skipped.pop('present participle', 0)
     adjectives = [skipped.pop(key, 0) for key in ('inflected adjective', 'adjective via comparative', 'adjective target not in tables')]
     logger.info("Skipped: %s", ", ".join("%s %d" % (reason, count) for reason, count in sorted(skipped.items())))
     logger.info("Inflected adjective pages used: %d, of which %d point to a comparative or superlative and %d to an adjective with no table", *adjectives)
+    logger.info("Present participle pages used as their own lemma: %d", present_participles)
     logger.info("Forms shared by a variant spelling and the lemma it points to, given to that lemma: %d", variant_forms)
     logger.info("Inflection table fields not used as forms: %s", ", ".join("%s %d" % (field, count) for field, count in unused_fields.most_common()))
     return processed
