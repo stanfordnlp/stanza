@@ -59,7 +59,7 @@ class Dataset:
             self.target_upos = input_json['upos']
 
             for idx, sentence in enumerate(sentences_data):
-                # TODO Could replace this with sentence.values(), but need to know if Stanza requires Python 3.7 or later for backward compatability reasons
+                # TODO Could replace this with sentence.values(), but need to know if Stanza requires Python 3.7 or later for backward compatibility reasons
                 words, target_idx, upos_tags, label = sentence.get("words"), sentence.get("index"), sentence.get("upos_tags"), sentence.get("lemma")
                 if None in [words, target_idx, upos_tags, label]:
                     raise ValueError(f"Expected data to be complete but found a null value in sentence {idx}: {sentence}")
