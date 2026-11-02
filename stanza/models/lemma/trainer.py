@@ -337,6 +337,25 @@ class Trainer(object):
                 if pos_independent.get(w) != l:
                     pos_entries[w] = l
 
+    def add_exact_entries(self, triples):
+        """
+        Add (word, pos, lemma) triples which only apply to their exact (word, pos)
+
+        Each entry replaces whatever the dictionary already has for that
+        (word, pos).  The pos-independent (_POS_INDEPENDENT) entries are
+        not changed, so the same word with any other pos is looked up as
+        before.  If a (word, pos) has more than one lemma, the most
+        frequent one wins.
+        """
+        ctr = Counter()
+        ctr.update([(p[0], p[1], p[2]) for p in triples])
+        seen_wp = set()
+        for (w, pos, l), _ in ctr.most_common():
+            if (w, pos) in seen_wp:
+                continue
+            seen_wp.add((w, pos))
+            self.pos_dict.setdefault(pos, {})[w] = l
+
     def predict_dict(self, pairs):
         """ Predict a list of lemmas using the dict model given (word, pos) pairs. """
         lemmas = []

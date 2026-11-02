@@ -19,7 +19,7 @@ import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_tre
 import stanza.utils.datasets.prepare_lemma_classifier as prepare_lemma_classifier
 
 from stanza.utils.datasets.dataset_retagging import Tags, add_retagging_args, build_retagger
-from stanza.utils.datasets.lemma import convert_de_wiktionary, convert_en_specialist, convert_sl_sloleks
+from stanza.utils.datasets.lemma import convert_de_wiktionary, convert_en_specialist, convert_sl_sloleks, noun_case_variants
 
 # Datasets with an external lexicon.  Each function converts the
 # lexicon from STANZA_EXTERN_DIR into the dictionary file given
@@ -29,11 +29,21 @@ EXTERNAL_DICTIONARIES = {
     'sl_combined': convert_sl_sloleks.build_dictionary,
 }
 
+# Datasets with an exact dictionary, whose entries only apply to their
+# exact word and UPOS.  Each function builds the dictionary file from
+# the prepared training file:
+#   build_fn(train_file, dict_file)
+EXACT_DICTIONARIES = {
+    'en_combined': noun_case_variants.build_exact_dictionary,
+}
+
 def add_specific_args(parser) -> None:
     parser.add_argument('--no_lemma_classifier', dest='lemma_classifier', action='store_false', default=True,
                         help="Don't use the lemma classifier datasets.  Default is to build lemma classifier as part of the original lemmatizer")
     parser.add_argument('--no_external_dictionary', dest='external_dictionary', action='store_false', default=True,
                         help="Don't write the external lexicon for datasets which have one, such as German Wiktionary for de_combined, the SPECIALIST Lexicon for en_combined, or Sloleks for sl_combined.  Removes any dictionary file left from an earlier run")
+    parser.add_argument('--no_exact_dictionary', dest='exact_dictionary', action='store_false', default=True,
+                        help="Don't write the exact dictionary for datasets which have one, such as the capitalized NOUNs for en_combined.  Removes any exact dictionary file left from an earlier run")
     add_retagging_args(parser)
 
 def dictionary_filename(lemma_dir, short_name):
@@ -41,6 +51,40 @@ def dictionary_filename(lemma_dir, short_name):
     The external dictionary for a dataset, which goes next to its train/dev/test files
     """
     return os.path.join(lemma_dir, f"{short_name}.dict.conllu")
+
+def exact_dictionary_filename(lemma_dir, short_name):
+    """
+    The exact dictionary for a dataset, which goes next to its train/dev/test files
+    """
+    return os.path.join(lemma_dir, f"{short_name}.exact_dict.conllu")
+
+def prepare_exact_dictionary(paths, short_name, use_exact_dictionary=True):
+    """
+    Write the exact dictionary for short_name, if it has one, to {short_name}.exact_dict.conllu in LEMMA_DATA_DIR
+
+    The dictionary is built from {short_name}.train.in.conllu, so this
+    runs after the training file is written.  If use_exact_dictionary
+    is False, an existing dictionary file is removed instead, so that
+    run_lemma does not train with it.
+
+    Returns the dictionary filename, or None if no dictionary was written
+    """
+    build_fn = EXACT_DICTIONARIES.get(short_name)
+    if build_fn is None:
+        return None
+
+    lemma_dir = paths["LEMMA_DATA_DIR"]
+    exact_file = exact_dictionary_filename(lemma_dir, short_name)
+    if not use_exact_dictionary:
+        if os.path.exists(exact_file):
+            print("Removing %s, as the exact dictionary was turned off" % exact_file)
+            os.remove(exact_file)
+        return None
+
+    train_file = os.path.join(lemma_dir, f"{short_name}.train.in.conllu")
+    print("Writing the exact dictionary for %s to %s" % (short_name, exact_file))
+    build_fn(train_file, exact_file)
+    return exact_file
 
 def prepare_external_dictionary(paths, short_name, use_external_dictionary=True):
     """
@@ -118,6 +162,8 @@ def process_treebank(treebank, model_type, paths, args):
         prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], args=args, augment=augment, postprocess=retag_dataset)
     else:
         raise ValueError("Unknown tags method: {}".format(args.tag_method))
+
+    prepare_exact_dictionary(paths, short_name, args.exact_dictionary)
 
     if args.lemma_classifier and short_name in prepare_lemma_classifier.DATASET_MAPPING:
         prepare_lemma_classifier.main(short_name)

@@ -24,7 +24,7 @@ from stanza.models import lemmatizer
 from stanza.utils.training import common
 from stanza.utils.training.common import Mode, add_charlm_args, build_lemma_charlm_args, choose_lemma_charlm
 
-from stanza.utils.datasets.prepare_lemma_treebank import check_lemmas, dictionary_filename
+from stanza.utils.datasets.prepare_lemma_treebank import check_lemmas, dictionary_filename, exact_dictionary_filename
 import stanza.utils.datasets.prepare_lemma_classifier as prepare_lemma_classifier
 
 logger = logging.getLogger('stanza')
@@ -61,6 +61,15 @@ def find_secondary_file(paths, short_name, command_args):
     dict_file = dictionary_filename(paths["LEMMA_DATA_DIR"], short_name)
     if os.path.exists(dict_file):
         return dict_file
+    return None
+
+def find_exact_dict_file(paths, short_name):
+    """
+    Return the {short_name}.exact_dict.conllu written by prepare_lemma_treebank, or None if there isn't one
+    """
+    exact_file = exact_dictionary_filename(paths["LEMMA_DATA_DIR"], short_name)
+    if os.path.exists(exact_file):
+        return exact_file
     return None
 
 
@@ -157,6 +166,10 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
             if secondary_file is not None:
                 logger.info("Using %s as the external dictionary for %s", secondary_file, short_name)
                 train_args.extend(["--secondary_file", secondary_file])
+            exact_dict_file = find_exact_dict_file(paths, short_name)
+            if exact_dict_file is not None:
+                logger.info("Using %s as the exact dictionary for %s", exact_dict_file, short_name)
+                train_args.extend(["--exact_dict_file", exact_dict_file])
 
             logger.info("Running train lemmatizer for {} with args {}".format(treebank, train_args))
             lemmatizer.main(train_args)
