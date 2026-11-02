@@ -37,6 +37,7 @@ def build_argparse():
     parser.add_argument('--eval_file', type=str, default=None, help='Evaluation input file for data loader.')
     parser.add_argument('--secondary_file', type=str, default=None, help='Secondary input file, such as a lexicon.  All of its entries go in the dictionary, and the seq2seq model also trains on it at --secondary_rate')
     parser.add_argument('--secondary_rate', type=float, default=0.1, help='Batches of the secondary file to train the seq2seq model on, per batch of the training file.  0.1 means one secondary batch for every 10 training batches.  0 means the secondary file is only used in the dictionary')
+    parser.add_argument('--exact_dict_file', type=str, default=None, help='Dictionary file whose entries only apply to their exact word and UPOS.  They take precedence over the training data for that word and UPOS, the same word with any other UPOS is looked up as before, and the seq2seq model does not train on them')
     parser.add_argument('--output_file', type=str, default=None, help='Output CoNLL-U file.')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
@@ -207,6 +208,11 @@ def train(args):
     if secondary_batch:
         dict_data.extend(secondary_batch.raw_data())
     trainer.train_dict(dict_data)
+    if args['exact_dict_file']:
+        exact_doc = CoNLL.conll2doc(input_file=args['exact_dict_file'])
+        exact_entries = DataLoader.load_doc(exact_doc, args['caseless'], skip_blank_lemmas=False, evaluation=True)
+        logger.info("Adding %d exact dictionary entries from %s", len(exact_entries), args['exact_dict_file'])
+        trainer.add_exact_entries(exact_entries)
     logger.info("Evaluating on dev set...")
     dev_preds = trainer.predict_dict(dev_batch.doc.get([TEXT, UPOS]))
     dev_batch.doc.set([LEMMA], dev_preds)

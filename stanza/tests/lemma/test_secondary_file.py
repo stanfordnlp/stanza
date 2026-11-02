@@ -67,6 +67,11 @@ TRAIN_ENTRIES = [
     ("quickly", "ADV",  "quickly"),
 ]
 
+# added to the training file so that the model is not caseless
+CASED_ENTRIES = [
+    ("Paris",   "PROPN", "Paris"),
+]
+
 DEV_ENTRIES = [
     ("birds",  "NOUN", "bird"),
     ("jumped", "VERB", "jump"),
@@ -101,9 +106,9 @@ def test_cycle_batches():
     for idx in range(3):
         assert sorted(words[idx*3:idx*3+3]) == sorted(x[0] for x in SECONDARY_ENTRIES)
 
-def train_model(tmp_path, secondary_rate):
+def train_model(tmp_path, secondary_rate, extra_args=()):
     train_file = tmp_path / "train.conllu"
-    train_file.write_text(build_conllu(TRAIN_ENTRIES), encoding="utf-8")
+    train_file.write_text(build_conllu(TRAIN_ENTRIES + CASED_ENTRIES), encoding="utf-8")
     dev_file = tmp_path / "dev.conllu"
     dev_file.write_text(build_conllu(DEV_ENTRIES), encoding="utf-8")
     secondary_file = tmp_path / "secondary.conllu"
@@ -119,7 +124,7 @@ def train_model(tmp_path, secondary_rate):
                      "--num_epoch", "2",
                      "--batch_size", "2",
                      "--hidden_dim", "8",
-                     "--cpu"])
+                     "--cpu"] + list(extra_args))
     model_files = glob.glob(str(save_dir / "*.pt"))
     assert len(model_files) == 1
     return Trainer(model_file=model_files[0], device="cpu")
@@ -142,3 +147,21 @@ def test_train_dict_only_secondary(tmp_path):
     char_vocab = trainer.vocab['char']
     assert 'é' not in char_vocab
     assert trainer.predict_dict([("housewives", "NOUN"), ("dogs", "NOUN")]) == ["housewife", "dog"]
+
+# Ñ only appears in the exact dictionary
+EXACT_ENTRIES = [
+    ("Dogs",   "NOUN", "dog"),
+    ("Ñandús", "NOUN", "ñandú"),
+]
+
+def test_train_exact_dict(tmp_path):
+    """
+    The exact dictionary goes in the model's dictionary for its exact (word, UPOS), and the seq2seq model does not train on it
+    """
+    exact_file = tmp_path / "exact.conllu"
+    exact_file.write_text(build_conllu(EXACT_ENTRIES), encoding="utf-8")
+    trainer = train_model(tmp_path, 1.0, ["--exact_dict_file", str(exact_file)])
+    assert 'Ñ' not in trainer.vocab['char']
+    queries = [("Dogs", "NOUN"), ("Ñandús", "NOUN"), ("Dogs", "PROPN"), ("Ñandús", "PROPN"), ("dogs", "NOUN")]
+    assert trainer.predict_dict(queries) == ["dog", "ñandú", "Dogs", "Ñandús", "dog"]
+    assert trainer.skip_seq2seq(queries) == [True, True, False, False, True]
