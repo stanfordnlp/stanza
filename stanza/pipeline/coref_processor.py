@@ -4,7 +4,7 @@ Processor that attaches coref annotations to a document
 
 from stanza.models.common.utils import misc_to_space_after
 from stanza.models.coref.coref_chain import CorefMention, CorefChain
-from stanza.models.common.doc import Word
+from stanza.models.common.doc import Word, Token
 
 from stanza.pipeline._constants import *
 from stanza.pipeline.processor import UDProcessor, register_processor
@@ -45,7 +45,16 @@ def extract_text(document, sent_id, start_word, end_word):
     text = []
     for token in tokens:
         text.append(token.text)
-        text.append(misc_to_space_after(token.misc))
+        if isinstance(token, Token):
+            # the tokenizer keeps the actual whitespace after a token in
+            # Token.spaces_after, and consolidate_whitespace moves any
+            # SpaceAfter / SpacesAfter annotation out of the misc field,
+            # so the misc field is usually empty here
+            text.append(token.spaces_after)
+        else:
+            # a word taken from inside a multi-word token still keeps its
+            # whitespace annotation in the misc field
+            text.append(misc_to_space_after(token.misc))
     # the last token space_after will be discarded
     # so that we don't have stray WS at the end of the mention text
     text = text[:-1]
