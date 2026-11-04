@@ -14,7 +14,7 @@ doc = CoNLL.conll2doc(filename, reconstruct_text=True)
 def process_se(doc):
     for sentence in doc.sentences:
         for idx, token in enumerate(sentence.tokens):
-            if any(word.text == 'se' for word in token.words):
+            if any(word.text.lower() == 'se' for word in token.words):
                 yield sentence, idx
 
 for sentence, idx in process_se(doc):
@@ -24,5 +24,6 @@ for sentence, idx in process_se(doc):
     start_char = token.start_char - sentence.tokens[0].start_char
     end_char = token.end_char - sentence.tokens[0].start_char
     text = sentence.text[:start_char] + "---> " + token.text + " <---" + sentence.text[end_char:]
+    text = text.replace('"', '')
     print(text)
 
