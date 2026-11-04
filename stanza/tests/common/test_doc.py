@@ -173,6 +173,50 @@ def test_manual_mwt_ids_after_automatic_expansion(expansion):
         (num_expanded + 1, "can"), (num_expanded + 2, "not"),
     ]
 
+@pytest.mark.parametrize("expansion", ["dunno", "do not", "do not know"])
+def test_manual_mwt_ids_in_later_sentence(expansion):
+    """
+    Word ids restart in each sentence, so MWTs in an earlier sentence
+    must not shift the ids of a manually expanded token in a later one.
+
+    The second sentence also has an automatic MWT in front of the
+    manual one, so its manual token still needs to be shifted, but
+    only by the words inserted in its own sentence.
+    """
+    doc = Document([
+        [
+            {ID: 1, TEXT: "dunno", "misc": "MWT=Yes"},
+            {ID: 2, TEXT: "."},
+        ],
+        [
+            {ID: 1, TEXT: "don't", "misc": "MWT=Yes"},
+            {ID: 2, TEXT: "cannot", "manual_expansion": True},
+            {ID: 3, TEXT: "."},
+        ],
+        [
+            {ID: 1, TEXT: "cannot", "manual_expansion": True},
+            {ID: 2, TEXT: "."},
+        ],
+    ])
+    doc.set_mwt_expansions(["can not", "can not"], process_manual_expanded=True)
+    doc.set_mwt_expansions([expansion, "do n't"], process_manual_expanded=False)
+
+    num_expanded = len(expansion.split())
+    first = doc.sentences[0]
+    assert [word.id for word in first.words] == list(range(1, num_expanded + 2))
+
+    second = doc.sentences[1]
+    assert [token.id for token in second.tokens] == [(1, 2), (3, 4), (5,)]
+    assert [(word.id, word.text) for word in second.words] == [
+        (1, "do"), (2, "n't"), (3, "can"), (4, "not"), (5, "."),
+    ]
+
+    third = doc.sentences[2]
+    assert [token.id for token in third.tokens] == [(1, 2), (3,)]
+    assert [(word.id, word.text) for word in third.words] == [
+        (1, "can"), (2, "not"), (3, "."),
+    ]
+
 @pytest.fixture(scope="module")
 def pipeline():
     return stanza.Pipeline(dir=TEST_MODELS_DIR, download_method=None)

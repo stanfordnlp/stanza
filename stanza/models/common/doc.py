@@ -710,6 +710,15 @@ class Document(StanzaObject):
                         token.words.append(Word(sentence, {ID: idx_w + i, TEXT: e_word}))
                     idx_w = idx_w_end
                 elif perform_mwt_processing == MWTProcessingType.SKIP:
+                    # This token was already expanded by an earlier call
+                    # with process_manual_expanded=True, so its words are
+                    # kept as is.  Expanding automatic MWTs earlier in this
+                    # sentence may have inserted words in front of it,
+                    # though, so its ids shift to start at idx_w.  The
+                    # shift is the number of words inserted so far in this
+                    # sentence, which is not the same as the number of
+                    # expansions: an expansion can add zero, one, or
+                    # several words.
                     offset = idx_w - token.id[0]
                     token.id = tuple(orig_id + offset for orig_id in token.id)
                     for i in token.words:
