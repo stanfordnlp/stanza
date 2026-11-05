@@ -142,7 +142,7 @@ class NERTagger(nn.Module):
         setattr(self, name, module)
 
     def log_norms(self):
-        lines = ["NORMS FOR MODEL PARAMTERS"]
+        lines = ["NORMS FOR MODEL PARAMETERS"]
         for name, param in self.named_parameters():
             if param.requires_grad and name.split(".")[0] not in ('charmodel_forward', 'charmodel_backward'):
                 lines.append("  %s %.6g" % (name, torch.norm(param).item()))

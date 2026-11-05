@@ -843,7 +843,7 @@ def misc_to_space_after(misc):
     return " "
 
 def log_norms(model):
-    lines = ["NORMS FOR MODEL PARAMTERS"]
+    lines = ["NORMS FOR MODEL PARAMETERS"]
     pieces = []
     for name, param in model.named_parameters():
         if param.requires_grad:

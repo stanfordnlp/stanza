@@ -452,7 +452,7 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         torch.save(savedict, save_path)
 
     def log_norms(self):
-        lines = ["NORMS FOR MODEL PARAMTERS"]
+        lines = ["NORMS FOR MODEL PARAMETERS"]
         for t_name, trainable in self.trainable.items():
             for name, param in trainable.named_parameters():
                 if param.requires_grad:

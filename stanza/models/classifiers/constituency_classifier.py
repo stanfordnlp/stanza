@@ -51,7 +51,7 @@ class ConstituencyClassifier(BaseClassifier):
         tlogger.info("Intermediate layers: %s", self.config.fc_shapes)
 
     def log_norms(self):
-        lines = ["NORMS FOR MODEL PARAMTERS"]
+        lines = ["NORMS FOR MODEL PARAMETERS"]
         lines.extend(["tree_embedding." + x for x in self.tree_embedding.get_norms()])
         for name, param in self.named_parameters():
             if param.requires_grad and not name.startswith('tree_embedding.'):

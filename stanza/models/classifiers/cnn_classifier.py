@@ -302,7 +302,7 @@ class CNNClassifier(BaseClassifier):
         tlogger.info("Intermediate layers: %s" % str(self.config.fc_shapes))
 
     def log_norms(self):
-        lines = ["NORMS FOR MODEL PARAMTERS"]
+        lines = ["NORMS FOR MODEL PARAMETERS"]
         for name, param in self.named_parameters():
             if param.requires_grad and name.split(".")[0] not in ('forward_charlm', 'backward_charlm'):
                 lines.append("%s %.6g" % (name, torch.norm(param).item()))
