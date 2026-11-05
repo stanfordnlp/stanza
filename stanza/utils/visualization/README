@@ -25,3 +25,18 @@ https://aclanthology.org/2023.tlt-1.7.pdf
 https://nlp.stanford.edu/nlp/javadoc/javanlp-3.5.0/edu/stanford/nlp/semgraph/semgrex/SemgrexPattern.html
 https://stanfordnlp.github.io/stanza/client_regex.html
 https://stanfordnlp.github.io/CoreNLP/corenlp-server.html#query-tokensregex-tokensregex
+
+## Dependency trees for LaTeX papers
+
+`conll_to_tikz.py` converts CoNLL-U trees into [tikz-dependency](https://ctan.org/pkg/tikz-dependency) drawings.
+It accepts either a full treebank file plus the sentence and token indices to draw,
+or a hand-trimmed excerpt whose token IDs don't start at 1.
+Right to left languages such as Sindhi or Urdu are drawn in the correct direction,
+and wide trees can be put in a `figure`, `figure*` or `sidewaysfigure` float.
+
+```
+python3 -m stanza.utils.visualization.conll_to_tikz train.conllu --sent-id sd_001 --indices 3-7 --language sindhi
+python3 -m stanza.utils.visualization.conll_to_tikz excerpt.conllu --float figure --caption 'Parse of {text}' --fit-width
+```
+
+`--standalone` writes a complete document for testing, and `--help` lists the other options.
