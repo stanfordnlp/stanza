@@ -2,11 +2,13 @@
 A utility script to load a word embedding file and save it as a .pt
 
 Run it as follows:
-  python stanza/models/common/convert_pretrain.py <.pt file> <vector file> <# vectors>
+  python3 -m stanza.utils.pretrain.convert_pretrain <.pt file> <vector file> <# vectors>
 
 The vector file can be a text file (.vec, .txt), a word2vec binary
 file, or a fastText .bin model, optionally compressed with xz, gz, or
-zip.  The format is detected from the contents of the file.  For a
+zip.  The format is detected from the contents of the file, except
+for CSV files, which are recognized by a .csv extension.  The
+readers are in stanza/utils/pretrain/vector_files.py  For a
 fastText .bin model, each word's vector is computed from its subword
 n-grams, the same as fastText's own .vec output.
 
@@ -17,18 +19,17 @@ more for fastText .bin models, where computing the n-gram vectors for
 millions of words takes tens of GB of memory.
 
 As a concrete example, you can convert a newly downloaded Faroese WV file as follows:
-  python3 stanza/models/common/convert_pretrain.py ~/stanza/saved_models/pos/fo_farpahc.pretrain.pt ~/extern_data/wordvec/fasttext/faroese.txt -1
+  python3 -m stanza.utils.pretrain.convert_pretrain ~/stanza/saved_models/pos/fo_farpahc.pretrain.pt ~/extern_data/wordvec/fasttext/faroese.txt -1
 or save part of an Icelandic WV file:
-  python3 stanza/models/common/convert_pretrain.py ~/stanza/saved_models/pos/is_icepahc.pretrain.pt ~/extern_data/wordvec/fasttext/icelandic.cc.is.300.vec 150000
+  python3 -m stanza.utils.pretrain.convert_pretrain ~/stanza/saved_models/pos/is_icepahc.pretrain.pt ~/extern_data/wordvec/fasttext/icelandic.cc.is.300.vec 150000
 or the most frequent words of a Polish fastText model:
-  python3 stanza/models/common/convert_pretrain.py ~/stanza/saved_models/pos/pl_pdb.pretrain.pt ~/extern_data/wordvec/kgr10/kgr10.plain.skipgram.dim300.neg10.bin 250000
+  python3 -m stanza.utils.pretrain.convert_pretrain ~/stanza/saved_models/pos/pl_pdb.pretrain.pt ~/extern_data/wordvec/kgr10/kgr10.plain.skipgram.dim300.neg10.bin 250000
 Note that if the pretrain already exists, nothing will be changed.  It will not overwrite an existing .pt file.
 
 """
 
 import argparse
 import os
-import sys
 
 from stanza.models.common import pretrain
 
