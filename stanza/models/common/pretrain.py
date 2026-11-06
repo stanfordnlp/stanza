@@ -16,6 +16,7 @@ from .vocab import BaseVocab, VOCAB_PREFIX, UNK_ID
 
 from stanza.models.common.utils import open_read_binary, open_read_text
 from stanza.resources.common import DEFAULT_MODEL_DIR
+from stanza.utils.byte_reader import ByteReader
 
 from pickle import UnpicklingError
 import warnings
@@ -376,74 +377,6 @@ def read_word2vec_binary(filename, max_vocab=None):
     if failed > 0:
         logger.info("Failed to read %d words from embedding", failed)
     return words, build_embedding(vectors, cols, unk_vector), failed
-
-class ByteReader:
-    """
-    Sequential reader over a binary stream with a lookahead buffer
-
-    Supports fixed size reads, NUL terminated strings, and skipping
-    forward, which covers everything the fastText reader needs.
-    Skipping uses seek, which is fast on a regular file and still
-    works on the compressed streams open_read_binary returns.
-    """
-    CHUNK_SIZE = 1 << 20
-
-    def __init__(self, fin):
-        self.fin = fin
-        self.buf = b''
-        self.pos = 0
-
-    def available(self):
-        return len(self.buf) - self.pos
-
-    def fill(self, needed):
-        """
-        Buffer at least needed bytes, or as many as are left in the stream
-        """
-        have = self.available()
-        if have >= needed:
-            return
-        chunks = [self.buf[self.pos:]]
-        while have < needed:
-            data = self.fin.read(max(self.CHUNK_SIZE, needed - have))
-            if not data:
-                break
-            chunks.append(data)
-            have += len(data)
-        self.buf = b''.join(chunks)
-        self.pos = 0
-
-    def read(self, size):
-        self.fill(size)
-        if self.available() < size:
-            raise EOFError("Unexpected end of file: wanted %d bytes, only %d left" % (size, self.available()))
-        data = self.buf[self.pos:self.pos+size]
-        self.pos += size
-        return data
-
-    def unpack(self, fmt):
-        return struct.unpack(fmt, self.read(struct.calcsize(fmt)))
-
-    def read_cstring(self):
-        while True:
-            end = self.buf.find(b'\0', self.pos)
-            if end >= 0:
-                data = self.buf[self.pos:end]
-                self.pos = end + 1
-                return data
-            have = self.available()
-            self.fill(have + 1)
-            if self.available() == have:
-                raise EOFError("Unexpected end of file while reading a string")
-
-    def skip(self, size):
-        have = self.available()
-        if size <= have:
-            self.pos += size
-            return
-        self.buf = b''
-        self.pos = 0
-        self.fin.seek(size - have, os.SEEK_CUR)
 
 def fasttext_subword_rows(word, minn, maxn, bucket, nwords, prune_map=None):
     """
