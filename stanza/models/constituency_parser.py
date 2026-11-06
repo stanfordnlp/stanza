@@ -192,10 +192,7 @@ def build_argparse():
 
     parser.add_argument('--data_dir', type=str, default='data/constituency', help='Directory of constituency data.')
 
-    parser.add_argument('--wordvec_dir', type=str, default='extern_data/wordvec', help='Directory of word vectors')
-    parser.add_argument('--wordvec_file', type=str, default='', help='File that contains word vectors')
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
-    parser.add_argument('--pretrain_max_vocab', type=int, default=250000)
 
     parser.add_argument('--charlm_forward_file', type=str, default=None, help="Exact path to use for forward charlm")
     parser.add_argument('--charlm_backward_file', type=str, default=None, help="Exact path to use for backward charlm")

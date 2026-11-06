@@ -36,8 +36,6 @@ logger = logging.getLogger('stanza')
 def build_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/ner', help='Directory of NER data.')
-    parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors')
-    parser.add_argument('--wordvec_file', type=str, default='', help='File that contains word vectors')
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for data loader.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for data loader.')
@@ -56,7 +54,6 @@ def build_argparse():
     parser.add_argument('--char_emb_dim', type=int, default=100)
     parser.add_argument('--num_layers', type=int, default=1)
     parser.add_argument('--char_num_layers', type=int, default=1)
-    parser.add_argument('--pretrain_max_vocab', type=int, default=100000)
     parser.add_argument('--word_dropout', type=float, default=0.01, help="How often to remove a word at training time.  Set to a small value to train unk when finetuning word embeddings")
     parser.add_argument('--locked_dropout', type=float, default=0.0)
     parser.add_argument('--dropout', type=float, default=0.5)
@@ -150,17 +147,9 @@ def load_pretrain(args):
     if not args['pretrain']:
         return None
 
-    if args['wordvec_pretrain_file']:
-        pretrain_file = args['wordvec_pretrain_file']
-        pretrain = Pretrain(pretrain_file, None, args['pretrain_max_vocab'], save_to_file=False)
-    else:
-        if len(args['wordvec_file']) == 0:
-            vec_file = utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
-        else:
-            vec_file = args['wordvec_file']
-        # do not save pretrained embeddings individually
-        pretrain = Pretrain(None, vec_file, args['pretrain_max_vocab'], save_to_file=False)
-    return pretrain
+    if not args['wordvec_pretrain_file']:
+        raise ValueError("The NER tagger needs a pretrain given with --wordvec_pretrain_file, or --no_pretrain to run without one.  Word vector files can be converted to a pretrain with python3 -m stanza.utils.pretrain.convert_pretrain")
+    return Pretrain(args['wordvec_pretrain_file'])
 
 def model_file_name(args):
     return utils.standard_model_file_name(args, "nertagger")

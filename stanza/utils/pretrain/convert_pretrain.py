@@ -31,22 +31,47 @@ Note that if the pretrain already exists, nothing will be changed.  It will not 
 import argparse
 import os
 
-from stanza.models.common import pretrain
+from stanza.models.common.pretrain import Pretrain, PretrainedWordVocab
+from stanza.models.common.vocab import VOCAB_PREFIX
+from stanza.utils.pretrain import vector_files
 
-def main():
+def is_csv_file(filename):
+    return any(filename.endswith(suffix) for suffix in (".csv", ".csv.gz", ".csv.xz"))
+
+def convert_pretrain(input_vec, max_vocab=-1):
+    """
+    Read a word vector file and return it as a Pretrain
+
+    max_vocab counts the VOCAB_PREFIX entries, so the resulting vocab
+    has at most max_vocab entries.  -1 keeps every vector in the file.
+    """
+    if is_csv_file(input_vec):
+        words, emb = vector_files.read_csv_vectors(input_vec)
+    else:
+        words, emb, failed = vector_files.read_vector_file(input_vec, max_vocab)
+
+    if len(emb) - len(VOCAB_PREFIX) != len(words):
+        raise RuntimeError("Loaded number of vectors does not match number of words.")
+
+    if max_vocab > len(VOCAB_PREFIX) and max_vocab < len(words) + len(VOCAB_PREFIX):
+        words = words[:max_vocab - len(VOCAB_PREFIX)]
+        emb = emb[:max_vocab]
+
+    return Pretrain(vocab=PretrainedWordVocab(words), emb=emb)
+
+def main(args=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("output_pt", default=None, help="Where to write the converted PT file")
     parser.add_argument("input_vec", default=None, help="Unconverted vectors file")
     parser.add_argument("max_vocab", type=int, default=-1, nargs="?", help="How many vectors to convert.  -1 means convert them all")
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     if os.path.exists(args.output_pt):
         print("Not overwriting existing pretrain file in %s" % args.output_pt)
+        return
 
-    if args.input_vec.endswith(".csv"):
-        pt = pretrain.Pretrain(args.output_pt, max_vocab=args.max_vocab, csv_filename=args.input_vec)
-    else:
-        pt = pretrain.Pretrain(args.output_pt, args.input_vec, max_vocab=args.max_vocab)
+    pt = convert_pretrain(args.input_vec, args.max_vocab)
+    pt.save(args.output_pt)
     print("Pretrain is of size {}".format(len(pt.vocab)))
 
 if __name__ == '__main__':

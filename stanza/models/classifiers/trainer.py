@@ -17,7 +17,6 @@ from stanza.models.classifiers.config import CNNConfig, ConstituencyConfig
 from stanza.models.classifiers.utils import ModelType, WVType, ExtraVectors
 from stanza.models.common.foundation_cache import load_bert, load_bert_with_peft, load_charlm, load_pretrain
 from stanza.models.common.peft_config import build_peft_wrapper, load_peft_wrapper
-from stanza.models.common.pretrain import Pretrain
 from stanza.models.common.utils import get_split_optimizer
 from stanza.models.constituency.tree_embedding import TreeEmbedding
 
@@ -207,21 +206,11 @@ class Trainer:
     def load_pretrain(args, foundation_cache):
         if args.wordvec_pretrain_file:
             pretrain_file = args.wordvec_pretrain_file
-        elif args.wordvec_type:
-            pretrain_file = '{}/{}.{}.pretrain.pt'.format(args.save_dir, args.shorthand, args.wordvec_type.name.lower())
         else:
-            raise RuntimeError("TODO: need to get the wv type back from get_wordvec_file")
+            pretrain_file = '{}/{}.{}.pretrain.pt'.format(args.save_dir, args.shorthand, args.wordvec_type.name.lower())
 
         logger.debug("Looking for pretrained vectors in {}".format(pretrain_file))
-        if os.path.exists(pretrain_file):
-            return load_pretrain(pretrain_file, foundation_cache)
-        elif args.wordvec_raw_file:
-            vec_file = args.wordvec_raw_file
-            logger.debug("Pretrain not found.  Looking in {}".format(vec_file))
-        else:
-            vec_file = utils.get_wordvec_file(args.wordvec_dir, args.shorthand, args.wordvec_type.name.lower())
-            logger.debug("Pretrain not found.  Looking in {}".format(vec_file))
-        pretrain = Pretrain(pretrain_file, vec_file, args.pretrain_max_vocab)
+        pretrain = load_pretrain(pretrain_file, foundation_cache)
         logger.debug("Embedding shape: %s" % str(pretrain.emb.shape))
         return pretrain
 

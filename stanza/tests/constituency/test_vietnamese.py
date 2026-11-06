@@ -9,7 +9,7 @@ import tempfile
 
 import pytest
 
-from stanza.models.common import pretrain
+from stanza.utils.pretrain.convert_pretrain import convert_pretrain
 from stanza.models.constituency import tree_reader
 
 from stanza.tests.constituency.test_trainer import build_trainer
@@ -65,8 +65,7 @@ def test_vi_embedding():
         pt_filename = os.path.join(tempdir, "emb.pt")
         with open(emb_filename, "w", encoding="utf-8") as fout:
             fout.write(VI_EMBEDDING)
-        pt = pretrain.Pretrain(filename=pt_filename, vec_filename=emb_filename, save_to_file=True)
-        pt.load()
+        convert_pretrain(emb_filename).save(pt_filename)
 
         trainer = build_trainer(pt_filename)
         model = trainer.model

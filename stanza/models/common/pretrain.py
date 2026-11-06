@@ -10,7 +10,6 @@ import torch
 from .vocab import BaseVocab, VOCAB_PREFIX
 
 from stanza.resources.common import DEFAULT_MODEL_DIR
-from stanza.utils.pretrain import vector_files
 
 from pickle import UnpicklingError
 
@@ -28,14 +27,26 @@ class PretrainedWordVocab(BaseVocab):
         return unit
 
 class Pretrain:
-    """ A loader and saver for pretrained embeddings. """
+    """
+    A loader and saver for pretrained embeddings in Stanza's .pt format
 
-    def __init__(self, filename=None, vec_filename=None, max_vocab=-1, save_to_file=True, csv_filename=None):
+    Either give a filename, which is loaded the first time vocab or
+    emb is used, or give the vocab and emb directly, as
+    stanza.utils.pretrain.convert_pretrain does when converting a
+    word vector file.
+    """
+
+    def __init__(self, filename=None, vocab=None, emb=None):
         self.filename = filename
-        self._vec_filename = vec_filename
-        self._csv_filename = csv_filename
-        self._max_vocab = max_vocab
-        self._save_to_file = save_to_file
+        if (vocab is None) != (emb is None):
+            raise ValueError("Pretrain needs both vocab and emb, or neither")
+        if vocab is not None:
+            if len(vocab) != len(emb):
+                raise ValueError("Pretrain vocab has %d entries, but there are %d vectors" % (len(vocab), len(emb)))
+            self._vocab = vocab
+            self._emb = emb
+        elif filename is None:
+            raise ValueError("Pretrain needs either a filename or a vocab and emb")
 
     def __len__(self):
         return len(self.vocab)
@@ -53,58 +64,29 @@ class Pretrain:
         return self._emb
 
     def load(self):
-        if self.filename is not None and os.path.exists(self.filename):
-            try:
-                try:
-                    data = torch.load(self.filename, lambda storage, loc: storage, weights_only=True)
-                except UnpicklingError as e:
-                    raise UnpicklingError("Unpickling %s failed.  If this is because it is an older model that needs weights_only=False, please convert it with a Stanza version 1.12.1 or earlier by loading and then saving." % self.filename) from e
-                logger.debug("Loaded pretrain from {}".format(self.filename))
-                if not isinstance(data, dict):
-                    raise RuntimeError("File {} exists but is not a stanza pretrain file.  It is not a dict, whereas a Stanza pretrain should have a dict with 'emb' and 'vocab'".format(self.filename))
-                if 'emb' not in data or 'vocab' not in data:
-                    raise RuntimeError("File {} exists but is not a stanza pretrain file.  A Stanza pretrain file should have 'emb' and 'vocab' fields in its state dict".format(self.filename))
-                self._vocab = PretrainedWordVocab.load_state_dict(data['vocab'])
-                self._emb = data['emb']
-                if isinstance(self._emb, np.ndarray):
-                    self._emb = torch.from_numpy(self._emb)
-                return
-            except (KeyboardInterrupt, SystemExit):
-                raise
-            except BaseException as e:
-                if not self._vec_filename and not self._csv_filename:
-                    raise
-                logger.warning("Pretrained file exists but cannot be loaded from {}, due to the following exception:\n\t{}".format(self.filename, e))
-                vocab, emb = self.read_pretrain()
-        else:
-            if not self._vec_filename and not self._csv_filename:
-                raise FileNotFoundError("Pretrained file {} does not exist, and no text/xz file was provided".format(self.filename))
-            if self.filename is not None:
-                logger.info("Pretrained filename %s specified, but file does not exist.  Attempting to load from text file" % self.filename)
-            vocab, emb = self.read_pretrain()
-
-        self._vocab = vocab
-        self._emb = emb
-
-        if self._save_to_file:
-            # save to file
-            assert self.filename is not None, "Filename must be provided to save pretrained vector to file."
-            self.save(self.filename)
+        if not os.path.exists(self.filename):
+            raise FileNotFoundError("Pretrained file %s does not exist.  Word vector files can be converted to a pretrain with python3 -m stanza.utils.pretrain.convert_pretrain" % self.filename)
+        try:
+            data = torch.load(self.filename, lambda storage, loc: storage, weights_only=True)
+        except UnpicklingError as e:
+            raise UnpicklingError("Unpickling %s failed.  If this is because it is an older model that needs weights_only=False, please convert it with a Stanza version 1.12.1 or earlier by loading and then saving." % self.filename) from e
+        logger.debug("Loaded pretrain from {}".format(self.filename))
+        if not isinstance(data, dict):
+            raise RuntimeError("File {} exists but is not a stanza pretrain file.  It is not a dict, whereas a Stanza pretrain should have a dict with 'emb' and 'vocab'".format(self.filename))
+        if 'emb' not in data or 'vocab' not in data:
+            raise RuntimeError("File {} exists but is not a stanza pretrain file.  A Stanza pretrain file should have 'emb' and 'vocab' fields in its state dict".format(self.filename))
+        self._vocab = PretrainedWordVocab.load_state_dict(data['vocab'])
+        self._emb = data['emb']
+        if isinstance(self._emb, np.ndarray):
+            self._emb = torch.from_numpy(self._emb)
 
     def save(self, filename):
         directory, _ = os.path.split(filename)
         if directory:
             os.makedirs(directory, exist_ok=True)
-        # should not infinite loop since the load function sets _vocab and _emb before trying to save
         data = {'vocab': self.vocab.state_dict(), 'emb': self.emb}
-        try:
-            torch.save(data, filename, _use_new_zipfile_serialization=False)
-            logger.info("Saved pretrained vocab and vectors to {}".format(filename))
-        except (KeyboardInterrupt, SystemExit):
-            raise
-        except BaseException as e:
-            logger.warning("Saving pretrained data failed due to the following exception... continuing anyway.\n\t{}".format(e))
-
+        torch.save(data, filename, _use_new_zipfile_serialization=False)
+        logger.info("Saved pretrained vocab and vectors to {}".format(filename))
 
     def write_text(self, filename, header=False):
         """
@@ -120,29 +102,6 @@ class Pretrain:
                 fout.write(" ")
                 fout.write(" ".join(["%.6f" % x.item() for x in row]))
                 fout.write("\n")
-
-
-    def read_pretrain(self):
-        # load from pretrained filename
-        if self._vec_filename is not None:
-            words, emb, failed = vector_files.read_vector_file(self._vec_filename, self._max_vocab)
-        elif self._csv_filename is not None:
-            words, emb = vector_files.read_csv_vectors(self._csv_filename)
-        else:
-            raise RuntimeError("Vector file is not provided.")
-
-        if len(emb) - len(VOCAB_PREFIX) != len(words):
-            raise RuntimeError("Loaded number of vectors does not match number of words.")
-
-        # Use a fixed vocab size
-        if self._max_vocab > len(VOCAB_PREFIX) and self._max_vocab < len(words) + len(VOCAB_PREFIX):
-            words = words[:self._max_vocab - len(VOCAB_PREFIX)]
-            emb = emb[:self._max_vocab]
-
-        vocab = PretrainedWordVocab(words)
-        
-        return vocab, emb
-
 
 
 def find_pretrain_file(wordvec_pretrain_file, save_dir, shorthand, lang):
@@ -181,21 +140,6 @@ def find_pretrain_file(wordvec_pretrain_file, save_dir, shorthand, lang):
         else:
             logger.debug("Cannot find pretrained vectors in %s" % pretrain_file)
 
-    # if we can't find it anywhere, just return the first location searched...
-    # maybe we'll get lucky and the original .txt file can be found
+    # if we can't find it anywhere, return the first location searched,
+    # so that the error when it fails to load names that location
     return default_pretrain_file
-
-
-if __name__ == '__main__':
-    with open('test.txt', 'w') as fout:
-        fout.write('3 2\na 1 1\nb -1 -1\nc 0 0\n')
-    # 1st load: save to pt file
-    pretrain = Pretrain('test.pt', 'test.txt')
-    print(pretrain.emb)
-    # verify pt file
-    x = torch.load('test.pt', weights_only=True)
-    print(x)
-    # 2nd load: load saved pt file
-    pretrain = Pretrain('test.pt', 'test.txt')
-    print(pretrain.emb)
-
