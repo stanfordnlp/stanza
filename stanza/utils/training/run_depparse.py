@@ -81,8 +81,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
         else:
             batch_size = "5000"
 
-        train_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
-                      "--train_file", train_file,
+        train_args = ["--train_file", train_file,
                       "--eval_file", eval_file if eval_file else dev_in_file,
                       "--batch_size", batch_size,
                       "--lang", short_language,
@@ -94,8 +93,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
         parser.main(train_args)
 
     if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
-        dev_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
-                    "--eval_file", eval_file if eval_file else dev_in_file,
+        dev_args = ["--eval_file", eval_file if eval_file else dev_in_file,
                     "--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
@@ -116,8 +114,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
             logger.info("Output saved to %s", dev_pred_file)
 
     if mode == Mode.SCORE_TEST or mode == Mode.TRAIN:
-        test_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
-                     "--eval_file", eval_file if eval_file else test_in_file,
+        test_args = ["--eval_file", eval_file if eval_file else test_in_file,
                      "--lang", short_language,
                      "--shorthand", short_name,
                      "--mode", "predict"]

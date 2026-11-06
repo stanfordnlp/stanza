@@ -1,5 +1,4 @@
 import os
-import tempfile
 
 import pytest
 import numpy as np
@@ -34,106 +33,62 @@ def check_pretrain(pt):
     check_vocab(pt.vocab)
     check_embedding(pt.emb)
 
-def test_text_pretrain():
-    pt = pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.txt', save_to_file=False)
+def build_pretrain(filename=None):
+    vocab = pretrain.PretrainedWordVocab(["unban", "mox", "opal"])
+    emb = torch.tensor([[0, 0, 0, 0]] * 4 + [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]], dtype=torch.float32)
+    return pretrain.Pretrain(filename, vocab=vocab, emb=emb)
+
+def test_load_pretrain():
+    pt = pretrain.Pretrain(f'{TEST_WORKING_DIR}/in/tiny_emb.pt')
     check_pretrain(pt)
 
-def test_xz_pretrain():
-    pt = pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz', save_to_file=False)
+def test_save_and_load(tmp_path):
+    """
+    A Pretrain built from a vocab and emb can be saved and loaded back
+    """
+    filename = str(tmp_path / "subdir" / "tiny.pt")
+    pt = build_pretrain()
     check_pretrain(pt)
+    pt.save(filename)
 
-def test_gz_pretrain():
-    pt = pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.gz', save_to_file=False)
-    check_pretrain(pt)
+    pt2 = pretrain.Pretrain(filename)
+    check_pretrain(pt2)
 
-def test_zip_pretrain():
-    pt = pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.zip', save_to_file=False)
-    check_pretrain(pt)
+    data = torch.load(filename, weights_only=True)
+    check_embedding(data['emb'])
 
-def test_csv_pretrain():
-    pt = pretrain.Pretrain(csv_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.csv', save_to_file=False)
-    check_pretrain(pt)
-
-def test_resave_pretrain():
+def test_missing_file(tmp_path):
     """
-    Test saving a pretrain and then loading from the existing file
+    A missing pretrain file is an error which says how to make one
     """
-    test_pt_file = tempfile.NamedTemporaryFile(dir=f'{TEST_WORKING_DIR}/out', suffix=".pt", delete=False)
-    try:
-        test_pt_file.close()
-        # note that this tests the ability to save a pretrain and the
-        # ability to fall back when the existing pretrain isn't working
-        pt = pretrain.Pretrain(filename=test_pt_file.name,
-                               vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz')
-        check_pretrain(pt)
+    pt = pretrain.Pretrain(str(tmp_path / "missing.pt"))
+    with pytest.raises(FileNotFoundError, match="convert_pretrain"):
+        pt.vocab
 
-        pt2 = pretrain.Pretrain(filename=test_pt_file.name,
-                               vec_filename=f'unban_mox_opal')
-        check_pretrain(pt2)
+def test_not_a_pretrain(tmp_path):
+    filename = str(tmp_path / "not_a_pretrain.pt")
+    torch.save({'foo': 1}, filename)
+    with pytest.raises(RuntimeError, match="not a stanza pretrain"):
+        pretrain.Pretrain(filename).emb
 
-        pt3 = torch.load(test_pt_file.name, weights_only=True)
-        check_embedding(pt3['emb'])
-    finally:
-        os.unlink(test_pt_file.name)
+def test_constructor_errors():
+    vocab = pretrain.PretrainedWordVocab(["unban", "mox", "opal"])
+    emb = torch.zeros((7, 4))
+    with pytest.raises(ValueError):
+        pretrain.Pretrain()
+    with pytest.raises(ValueError):
+        pretrain.Pretrain(vocab=vocab)
+    with pytest.raises(ValueError):
+        pretrain.Pretrain(emb=emb)
+    with pytest.raises(ValueError):
+        pretrain.Pretrain(vocab=vocab, emb=torch.zeros((6, 4)))
 
-SPACE_PRETRAIN="""
-3 4
-unban mox 1 2 3 4
-opal 5 6 7 8
-foo 9 10 11 12
-""".strip()
-
-def test_whitespace():
+def test_whitespace_lookup():
     """
-    Test reading a pretrain with an ascii space in it
-
-    The vocab word with a space in it should have the correct number
-    of dimensions read, with the space converted to nbsp
+    Words stored with nbsp can be looked up with an ascii space
     """
-    test_txt_file = tempfile.NamedTemporaryFile(dir=f'{TEST_WORKING_DIR}/out', suffix=".txt", delete=False)
-    try:
-        test_txt_file.write(SPACE_PRETRAIN.encode())
-        test_txt_file.close()
-
-        pt = pretrain.Pretrain(vec_filename=test_txt_file.name, save_to_file=False)
-        check_embedding(pt.emb)
-        assert "unban\xa0mox" in pt.vocab
-        # this one also works because of the normalize_unit in vocab.py
-        assert "unban mox" in pt.vocab
-    finally:
-        os.unlink(test_txt_file.name)
-
-NO_HEADER_PRETRAIN="""
-unban 1 2 3 4
-mox 5 6 7 8
-opal 9 10 11 12
-""".strip()
-
-def test_no_header():
-    """
-    Check loading a pretrain with no rows,cols header
-    """
-    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdir:
-        filename = os.path.join(tmpdir, "tiny.txt")
-        with open(filename, "w", encoding="utf-8") as fout:
-            fout.write(NO_HEADER_PRETRAIN)
-        pt = pretrain.Pretrain(vec_filename=filename, save_to_file=False)
-        check_embedding(pt.emb)
-
-UNK_PRETRAIN="""
-unban 1 2 3 4
-mox 5 6 7 8
-opal 9 10 11 12
-<unk> -1 -1 -1 -1
-""".strip()
-
-def test_unk_pretrain():
-    """
-    Check loading a pretrain with <unk> at the end, like GloVe does
-    """
-    with tempfile.TemporaryDirectory(dir=TEST_WORKING_DIR) as tmpdir:
-        filename = os.path.join(tmpdir, "tiny.txt")
-        with open(filename, "w", encoding="utf-8") as fout:
-            fout.write(UNK_PRETRAIN)
-        pt = pretrain.Pretrain(vec_filename=filename, save_to_file=False)
-        check_embedding(pt.emb, unk=True)
+    vocab = pretrain.PretrainedWordVocab(["unban\xa0mox", "opal", "foo"])
+    pt = pretrain.Pretrain(vocab=vocab, emb=torch.zeros((7, 4)))
+    assert "unban\xa0mox" in pt.vocab
+    # this one also works because of the normalize_unit in PretrainedWordVocab
+    assert "unban mox" in pt.vocab

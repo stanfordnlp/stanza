@@ -44,8 +44,6 @@ logger = logging.getLogger('stanza')
 def build_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/depparse', help='Root dir for saving models.')
-    parser.add_argument('--wordvec_dir', type=str, default='extern_data/word2vec', help='Directory of word vectors.')
-    parser.add_argument('--wordvec_file', type=str, default=None, help='Word vectors filename.')
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--train_file', type=str, default=None, help='Input train file for data loader.')
     # Depending on how they are produced, a --silver_file can provide
@@ -118,7 +116,6 @@ def build_argparse():
     parser.add_argument('--char_num_layers', type=int, default=1)
     parser.add_argument('--checkpoint_save_name', type=str, default=None, help="File name to save the most recent checkpoint")
     parser.add_argument('--no_checkpoint', dest='checkpoint', action='store_false', help="Don't save checkpoints")
-    parser.add_argument('--pretrain_max_vocab', type=int, default=250000)
     parser.add_argument('--word_dropout', type=float, default=0.33)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--rec_dropout', type=float, default=0, help="Recurrent dropout")
@@ -291,11 +288,7 @@ def load_pretrain(args):
     pt = None
     if args['pretrain']:
         pretrain_file = pretrain.find_pretrain_file(args['wordvec_pretrain_file'], args['save_dir'], args['shorthand'], args['lang'])
-        if os.path.exists(pretrain_file):
-            vec_file = None
-        else:
-            vec_file = args['wordvec_file'] if args['wordvec_file'] else utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
-        pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
+        pt = pretrain.Pretrain(pretrain_file)
     return pt
 
 def train(args):

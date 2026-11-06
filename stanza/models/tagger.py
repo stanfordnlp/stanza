@@ -36,8 +36,6 @@ logger = logging.getLogger('stanza')
 def build_argparse():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data_dir', type=str, default='data/pos', help='Root dir for saving models.')
-    parser.add_argument('--wordvec_dir', type=str, default='extern_data/wordvec', help='Directory of word vectors.')
-    parser.add_argument('--wordvec_file', type=str, default=None, help='Word vectors filename.')
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None, help='Exact name of the pretrain file to read')
     parser.add_argument('--train_file', type=str, default=None, help='Input file for training.')
     parser.add_argument('--eval_file', type=str, default=None, help='Input file for scoring.')
@@ -69,7 +67,6 @@ def build_argparse():
     parser.add_argument('--transformed_dim', type=int, default=125)
     parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--char_num_layers', type=int, default=1)
-    parser.add_argument('--pretrain_max_vocab', type=int, default=250000)
     parser.add_argument('--word_dropout', type=float, default=0.33)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--rec_dropout', type=float, default=0, help="Recurrent dropout")
@@ -174,11 +171,7 @@ def load_pretrain(args):
     pt = None
     if args['pretrain']:
         pretrain_file = pretrain.find_pretrain_file(args['wordvec_pretrain_file'], args['save_dir'], args['shorthand'], args['lang'])
-        if os.path.exists(pretrain_file):
-            vec_file = None
-        else:
-            vec_file = args['wordvec_file'] if args['wordvec_file'] else utils.get_wordvec_file(args['wordvec_dir'], args['shorthand'])
-        pt = pretrain.Pretrain(pretrain_file, vec_file, args['pretrain_max_vocab'])
+        pt = pretrain.Pretrain(pretrain_file)
     return pt
 
 def set_predictions(doc, trainer, preds, extra_preds=None):

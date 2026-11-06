@@ -160,8 +160,7 @@ class TestXPOSVocabFactory:
 
     @pytest.fixture(scope="class")
     def pt(self):
-        pt = pretrain.Pretrain(vec_filename=f'{TEST_WORKING_DIR}/in/tiny_emb.xz', save_to_file=False)
-        return pt
+        return pretrain.Pretrain(f'{TEST_WORKING_DIR}/in/tiny_emb.pt')
 
     def test_reload_word_vocab(self, pt):
         """

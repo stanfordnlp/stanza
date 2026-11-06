@@ -79,8 +79,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
                 return
         train_file = ";".join(train_pieces)
 
-        train_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
-                      "--train_file", train_file,
+        train_args = ["--train_file", train_file,
                       "--lang", short_language,
                       "--shorthand", short_name,
                       "--mode", "train"]
@@ -95,8 +94,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
         tagger.main(train_args)
 
     if mode == Mode.SCORE_DEV or mode == Mode.TRAIN:
-        dev_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
-                    "--lang", short_language,
+        dev_args = ["--lang", short_language,
                     "--shorthand", short_name,
                     "--mode", "predict"]
         if eval_file is None:
@@ -117,8 +115,7 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
             logger.info("Output saved to %s", dev_pred_file)
 
     if mode == Mode.SCORE_TEST or mode == Mode.TRAIN:
-        test_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
-                     "--lang", short_language,
+        test_args = ["--lang", short_language,
                      "--shorthand", short_name,
                      "--mode", "predict"]
         if eval_file is None:

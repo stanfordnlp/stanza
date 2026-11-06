@@ -51,7 +51,6 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
     mwt_dir      = paths["MWT_DATA_DIR"]
     lemma_dir    = paths["LEMMA_DATA_DIR"]
     ete_dir      = paths["ETE_DATA_DIR"]
-    wordvec_dir  = paths["WORDVEC_DIR"]
 
     # run models in the following order:
     #   tokenize
@@ -109,8 +108,7 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
     # TODO: add transformer args
     logger.info("-----  POS        ----------")
     pos_output = f"{ete_dir}/{short_name}.{dataset}.pos.conllu"
-    pos_args = ['--wordvec_dir', wordvec_dir,
-                '--eval_file', mwt_output,
+    pos_args = ['--eval_file', mwt_output,
                 '--output_file', pos_output,
                 '--lang', short_language,
                 '--shorthand', short_name,
@@ -154,8 +152,7 @@ def run_ete(paths, dataset, short_name, command_args, extra_args):
     # TODO: add batch args
     logger.info("-----  DEPPARSE   ----------")
     depparse_output = f"{ete_dir}/{short_name}.{dataset}.depparse.conllu"
-    depparse_args = ['--wordvec_dir', wordvec_dir,
-                     '--eval_file', lemma_output,
+    depparse_args = ['--eval_file', lemma_output,
                      '--output_file', depparse_output,
                      '--lang', short_name,
                      '--shorthand', short_name,

@@ -85,8 +85,7 @@ def build_retagger(treebank, paths, args):
     short_language, dataset = short_name.split("_", 1)
 
     # fmt: off
-    base_args = ["--wordvec_dir", paths["WORDVEC_DIR"],
-                 "--lang", short_language,
+    base_args = ["--lang", short_language,
                  "--shorthand", short_name,
                  "--mode", "predict"]
     # fmt: on

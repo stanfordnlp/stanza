@@ -10,7 +10,7 @@ import stanza
 import stanza.models.classifier as classifier
 import stanza.models.classifiers.data as data
 from stanza.models.classifiers.trainer import Trainer
-from stanza.models.common import pretrain
+from stanza.utils.pretrain.convert_pretrain import convert_pretrain
 from stanza.models.common import utils
 
 from stanza.tests import TEST_MODELS_DIR
@@ -40,8 +40,7 @@ def fake_embeddings(tmp_path_factory):
             fout.write("\t".join(str(x) for x in emb))
             fout.write("\n")
 
-    pt = pretrain.Pretrain(str(embedding_pt), str(embedding_txt))
-    pt.load()
+    convert_pretrain(str(embedding_txt)).save(str(embedding_pt))
     assert os.path.exists(embedding_pt)
     return embedding_pt
 
