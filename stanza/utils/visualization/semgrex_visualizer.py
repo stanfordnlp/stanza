@@ -18,6 +18,51 @@ from typing import List, Tuple, Any
 from stanza.utils.visualization.utils import find_nth, round_base
 
 
+def _word_key(word_id):
+    if isinstance(word_id, (tuple, list)):
+        return tuple(word_id)
+    return (word_id, 0)
+
+
+def _word_key_string(word_key):
+    if word_key[1]:
+        return "%s.%s" % word_key
+    return str(word_key[0])
+
+
+def _word_head(sentence, word):
+    if word.head is not None:
+        if word.head == 0:
+            return _word_key(word.id), word.deprel
+        return _word_key(word.head), word.deprel
+
+    if sentence.has_enhanced_dependencies():
+        edges = list(sentence.enhanced_dependencies.in_edges(word.id, keys=True))
+        if edges:
+            head, _, dep = edges[0]
+            if head == 0:
+                return _word_key(word.id), dep
+            return _word_key(head), dep
+    return _word_key(word.id), word.deprel or "dep"
+
+
+def _add_word_ids(html, word_keys):
+    marker = '<text class="displacy-token"'
+    positions = []
+    start = 0
+    for _ in word_keys:
+        start = html.find(marker, start)
+        if start < 0:
+            raise ValueError("Could not find a rendered token in displaCy output")
+        positions.append(start)
+        start += len(marker)
+
+    for start, word_key in reversed(list(zip(positions, word_keys))):
+        attribute = ' data-stanza-id="%s"' % _word_key_string(word_key)
+        html = html[:start + len("<text")] + attribute + html[start + len("<text"):]
+    return html
+
+
 def get_sentences_html(doc: Any, language: str, visualize_xpos: bool = False) -> List[str]:
     """
     Returns a list of HTML strings representing the dependency visualizations of a given stanza document.
@@ -31,41 +76,27 @@ def get_sentences_html(doc: Any, language: str, visualize_xpos: bool = False) ->
     @return: a list of HTML strings which visualize the dependencies of the doc object.
     """
     USE_FINE_GRAINED = False if not visualize_xpos else True
-    html_strings, sentences_to_visualize = [], []
+    html_strings, sentences_to_visualize, sentence_word_keys = [], [], []
     nlp = spacy.blank(
         "en"
     )  # blank model - we don't use any of the model features, just the visualization
     for sentence in doc.sentences:
         words, lemmas, heads, deps, tags = [], [], [], [], []
-        if is_right_to_left(
-            language
-        ):  # order of words displayed is reversed, dependency arcs remain intact
-            sentence_len = len(sentence.words)
-            for word in reversed(sentence.words):
-                words.append(word.text)
-                lemmas.append(word.lemma)
-                deps.append(word.deprel)
-                if visualize_xpos and word.xpos:
-                    tags.append(word.xpos)
-                else:
-                    tags.append(word.upos)
-                if word.head == 0:  # spaCy head indexes are one-off from Stanza's
-                    heads.append(sentence_len - word.id)
-                else:
-                    heads.append(sentence_len - word.head)
-        else:  # left to right rendering
-            for word in sentence.words:
-                words.append(word.text)
-                lemmas.append(word.lemma)
-                deps.append(word.deprel)
-                if visualize_xpos and word.xpos:
-                    tags.append(word.xpos)
-                else:
-                    tags.append(word.upos)
-                if word.head == 0:
-                    heads.append(word.id - 1)
-                else:
-                    heads.append(word.head - 1)
+        sentence_words = sentence.all_words
+        if is_right_to_left(language):
+            sentence_words = list(reversed(sentence_words))
+        word_keys = [_word_key(word.id) for word in sentence_words]
+        word_positions = {word_key: idx for idx, word_key in enumerate(word_keys)}
+        for idx, word in enumerate(sentence_words):
+            words.append(word.text)
+            lemmas.append(word.lemma or word.text)
+            if visualize_xpos and word.xpos:
+                tags.append(word.xpos)
+            else:
+                tags.append(word.upos or "")
+            head_key, dep = _word_head(sentence, word)
+            heads.append(word_positions.get(head_key, idx))
+            deps.append(dep or "dep")
         if USE_FINE_GRAINED:
             stanza_to_spacy_doc = Doc(
                 nlp.vocab, words=words, lemmas=lemmas, heads=heads, deps=deps, tags=tags
@@ -75,22 +106,23 @@ def get_sentences_html(doc: Any, language: str, visualize_xpos: bool = False) ->
                 nlp.vocab, words=words, lemmas=lemmas, heads=heads, deps=deps, pos=tags
             )
         sentences_to_visualize.append(stanza_to_spacy_doc)
+        sentence_word_keys.append(word_keys)
 
-    for line in sentences_to_visualize:  # render all sentences through displaCy
-        html_strings.append(
-            displacy.render(
-                line,
-                style="dep",
-                options={
-                    "compact": True,
-                    "word_spacing": 30,
-                    "distance": 100,
-                    "arrow_spacing": 20,
-                    "fine_grained": USE_FINE_GRAINED
-                },
-                jupyter=False,
-            )
+    for line, word_keys in zip(sentences_to_visualize, sentence_word_keys):
+        html = displacy.render(
+            line,
+            style="dep",
+            options={
+                "compact": True,
+                "word_spacing": 30,
+                "distance": 100,
+                "arrow_spacing": 20,
+                "collapse_punct": False,
+                "fine_grained": USE_FINE_GRAINED
+            },
+            jupyter=False,
         )
+        html_strings.append(_add_word_ids(html, word_keys))
     return html_strings
 
 
@@ -138,12 +170,14 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
             paired_dy = 2
             for node in match.node:
                 name, match_index = node.name, node.matchIndex
+                node_key = (match_index, node.emptyIndex)
+                node_id = _word_key_string(node_key)
                 # edit existing <tspan> to change color and bold the text
-                start = find_nth(
-                    orig_html, "<text", match_index
-                )  # finds start of svg <text> of interest
+                start = orig_html.find('<text data-stanza-id="%s"' % node_id)
+                if start < 0:
+                    continue
                 if (
-                    match_index not in tracker
+                    node_key not in tracker
                 ):  # if we've already bolded and colored, keep the first color
                     tspan_start = orig_html.find(
                         "<tspan", start
@@ -171,16 +205,16 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
                         + orig_html[tspan_end + CLOSING_TSPAN_LEN + 2 :]
                     )
 
-                    tracker[match_index] = DEFAULT_TSPAN_COUNT
+                    tracker[node_key] = DEFAULT_TSPAN_COUNT
 
                 # next, we have to insert the new <tspan> object for the label
                 # Copy old <tspan> to copy formatting when creating new <tspan> later
                 prev_tspan_start = (
-                    find_nth(orig_html[start:], "<tspan", tracker[match_index] - 1)
+                    find_nth(orig_html[start:], "<tspan", tracker[node_key] - 1)
                     + start
                 )  # find the previous <tspan> start index
                 prev_tspan_end = (
-                    find_nth(orig_html[start:], "</tspan>", tracker[match_index] - 1)
+                    find_nth(orig_html[start:], "</tspan>", tracker[node_key] - 1)
                     + start
                 )  # find the prev </tspan> start index
                 prev_tspan = orig_html[
@@ -189,7 +223,7 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
 
                 # Find spot to insert new tspan
                 closing_tspan_start = (
-                    find_nth(orig_html[start:], "</tspan>", tracker[match_index])
+                    find_nth(orig_html[start:], "</tspan>", tracker[node_key])
                     + start
                 )
                 up_to_new_tspan = orig_html[
@@ -212,11 +246,15 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
                     dy = paired_dy
                 if node == match.node[0] and len(match.node) > 1:
                     paired_node_level = 2
+                    paired_node_key = (
+                        match.node[1].matchIndex,
+                        match.node[1].emptyIndex,
+                    )
                     if (
-                        match.node[1].matchIndex in tracker
+                        paired_node_key in tracker
                     ):  # check if we need to adjust heights of labels
-                        paired_node_level = tracker[match.node[1].matchIndex]
-                        dif = tracker[match_index] - paired_node_level
+                        paired_node_level = tracker[paired_node_key]
+                        dif = tracker[node_key] - paired_node_level
                         if dif > 0:  # current node has more labels
                             paired_dy = DEFAULT_DY_VAL * dif + 1
                             dy = DEFAULT_DY_VAL
@@ -227,7 +265,7 @@ def semgrexify_html(orig_html: str, semgrex_sentence) -> str:
                 # Insert new <tspan> object
                 new_tspan = f'  <tspan class="displacy-word" dy="{dy}em" fill="{color}" x={x_value}>{name[: 3].title()}.</tspan>\n'  # abbreviate label names to 3 chars
                 orig_html = up_to_new_tspan + new_tspan + rest
-                tracker[match_index] += 1
+                tracker[node_key] += 1
 
         # process out extra term if present -- TODO: Figure out why the semgrexify_html function lines 164-168 cause a duplication bug
         end = find_nth(haystack=orig_html, needle="</svg", n=1)
@@ -610,4 +648,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
