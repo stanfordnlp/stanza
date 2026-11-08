@@ -81,7 +81,7 @@ def main():
 
     path = sys.argv[1]
     print(f"Loading: {path}\n")
-    checkpoint = torch.load(path, map_location="cpu", weights_only=False)
+    checkpoint = torch.load(path, map_location="cpu", weights_only=True)
 
     # Case 1: combined lemmatizer — contextual lemmatizers under 'contextual'
     if "contextual" in checkpoint and isinstance(checkpoint["contextual"], list) and len(checkpoint.get("contextual", [])) > 0:
