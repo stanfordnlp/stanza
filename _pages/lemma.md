@@ -169,8 +169,9 @@ Most training-only options are documented in the [argument parser](https://githu
 will be part of the next code release.
 
 A lemmatizer can be trained with an external lexicon as well as a
-treebank.  The default English, German, and Slovenian models do this,
-with the SPECIALIST Lexicon, German Wiktionary, and Sloleks.  See
+treebank.  The default English, German, Slovenian, and Spanish models
+do this, with the SPECIALIST Lexicon, German Wiktionary, Sloleks, and
+FreeLing.  See
 [Combined models](combined_models.md#lemma-dictionaries) for where
 those lexicons come from and the terms of their licenses.
 

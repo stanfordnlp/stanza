@@ -20,7 +20,7 @@ The default models for some languages are "combined".  The goal is to get better
 | Italian | ISDT, VIT, PoSTWITA, and TWITTIRO | [MWT list from Prof. Attardi](https://github.com/stanfordnlp/handparsed-treebank/blob/master/italian-mwt/italian.mwt) |
 | Japanese | GSD | [Parsed data from CMU](https://github.com/stanfordnlp/handparsed-treebank/blob/master/japanese-handparsed/spaces-ready-checked.conllu) |
 | Slovenian | SSJ, SST | [SUK](https://www.clarin.si/repository/xmlui/handle/11356/1959) ssj500k and ambiga for POS and lemmas, [Sloleks](#sloleks) lemma dictionary |
-| Spanish | AnCora, GSD | [MWT and lemmas for clitics and adjectives](https://github.com/stanfordnlp/handparsed-treebank/blob/master/spanish-mwt/adjectives.conllu) |
+| Spanish | AnCora, GSD | [MWT and lemmas for clitics and adjectives](https://github.com/stanfordnlp/handparsed-treebank/blob/master/spanish-mwt/adjectives.conllu), [FreeLing](#freeling) lemma dictionary |
 
 Other data sets would be added, or combined models for other languages
 created, but there are often data problems preventing that.  For
@@ -34,7 +34,7 @@ Whether or not this was a good idea was explored [in a GURT paper from Georgetow
 
 ## Lemma dictionaries
 
-The English, German, and Slovenian lemmatizers also use a large
+The English, German, Slovenian, and Spanish lemmatizers also use a large
 external lexicon, to cover words which never appear in the treebanks.
 Each lexicon is converted to a list of `(word, UPOS, lemma)` entries,
 and those entries go into the lemmatizer's dictionary.  Where a
@@ -115,6 +115,30 @@ orthographic forms of each headword.  Conjunctions, abbreviations, and
 residuals are skipped, and the other categories are mapped to UPOS.
 The conversion is
 [stanza/utils/datasets/lemma/convert_sl_sloleks.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/lemma/convert_sl_sloleks.py).
+
+### FreeLing
+
+The Spanish lemma dictionary is built from the Spanish dictionary of
+[FreeLing](https://github.com/TALP-UPC/FreeLing), which is extracted
+from the Spanish Resource Grammar and was developed at the Institut
+Universitari de Lingüística Aplicada of the Universitat Pompeu Fabra.
+It is distributed under the
+[Lesser General Public License For Linguistic Resources](http://sanskrit.inria.fr/DATA/LGPLLR.html)
+(LGPL-LR), and the dictionary entries in the Spanish lemmatizer, which
+are a modified version of it, are distributed under the same license.
+
+The modifications made to the dictionary are:
+
+- Only the adjectives, common nouns, verbs, and interjections are kept, mapped to `ADJ`, `NOUN`, `VERB`, and `INTJ`.  Verbs whose lemma is *ser*, *haber*, *estar*, *poder*, or *deber* are also tagged `AUX`.
+- Ordinals have the masculine singular ordinal as their lemma (*decimotercera* → *decimotercero*, *primer* → *primero*) instead of the number.
+- Feminine nouns have the feminine singular as their lemma (*investigadoras* → *investigadora*) instead of the masculine.
+- *bueno* and *malo* are lemmatized as *buen* and *mal*, and participial adjectives have the adjective as their lemma (*parecida* → *parecido*) instead of the verb.
+- Abbreviations, spelling normalizations, and suppletive lemmas, such as *km* → *kilómetro* and *óptima* → *bueno*, are dropped.
+- A `(word, UPOS)` pair with more than one lemma, such as *sienta* → *sentar* / *sentir*, is dropped.
+- The remaining entries are written as one-word CoNLL-U sentences.
+
+The conversion is
+[stanza/utils/datasets/lemma/convert_es_freeling.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/lemma/convert_es_freeling.py).
 
 ## Data augmentation
 
