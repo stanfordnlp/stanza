@@ -3,6 +3,8 @@ Tests for converting the FreeLing Spanish dictionary to a lemma dictionary
 """
 
 import os
+import shutil
+import subprocess
 
 import pytest
 
@@ -142,6 +144,9 @@ def test_convert_directory(tmp_path):
     assert words == EXPECTED
     sent_ids = [sentence.sent_id for sentence in doc.sentences]
     assert sent_ids[0] == "es_freeling-ADJ-abacial"
+    # not a git clone, so only the hash of the entries is recorded
+    first_comments = [x for x in doc.sentences[0].comments if not x.startswith(("# sent_id", "# text"))]
+    assert first_comments == ["# freeling_entries_sha256 = %s" % convert_es_freeling.entries_sha256(str(freeling_dir / "data" / "es" / "dictionary" / "entries"))]
     assert len(set(sent_ids)) == len(sent_ids)
 
     assert ambiguous_file.read_text(encoding="utf-8").splitlines() == ["era\tVERB\terar ser", "fue\tVERB\tir ser", "sienta\tVERB\tsentar sentir"]
@@ -180,3 +185,27 @@ def test_feminine_lemma():
     assert convert_es_freeling.feminine_lemma("narices", "nariz", "NCFP000", {"nariz"}) == "nariz"
     # nothing matches, so the FreeLing lemma stays
     assert convert_es_freeling.feminine_lemma("afueras", "afuera", "NCFP000", set()) == "afuera"
+
+@pytest.mark.skipif(shutil.which("git") is None, reason="needs git")
+def test_source_comments(tmp_path):
+    """
+    A git clone of FreeLing records its commit, and a copy of the entries inside some other repo does not
+    """
+    def git(directory, *args):
+        result = subprocess.run(["git", "-C", str(directory)] + list(args), capture_output=True, text=True, check=True)
+        return result.stdout.strip()
+
+    freeling_dir = tmp_path / "FreeLing"
+    entries_dir = write_sample(freeling_dir)
+    git(freeling_dir, "init", "-q")
+    git(freeling_dir, "add", ".")
+    git(freeling_dir, "-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "-q", "-m", "sample")
+    commit = git(freeling_dir, "rev-parse", "HEAD")
+    sha = convert_es_freeling.entries_sha256(str(entries_dir))
+
+    assert convert_es_freeling.source_comments(str(entries_dir)) == ["# freeling_commit = %s" % commit, "# freeling_entries_sha256 = %s" % sha]
+
+    # the same entries somewhere else in the repo are not FreeLing's
+    other_dir = freeling_dir / "copy"
+    shutil.copytree(entries_dir, other_dir)
+    assert convert_es_freeling.source_comments(str(other_dir)) == ["# freeling_entries_sha256 = %s" % sha]
