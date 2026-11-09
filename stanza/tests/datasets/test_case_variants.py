@@ -1,5 +1,5 @@
 """
-Tests for the exact dictionary of capitalized and uppercase NOUNs, and how it is prepared and used
+Tests for the exact dictionary of capitalized and uppercase words, and how it is prepared and used
 """
 
 import os
@@ -9,7 +9,7 @@ import pytest
 from stanza.models.lemma.trainer import Trainer
 from stanza.utils.conll import CoNLL
 from stanza.utils.datasets import prepare_lemma_treebank
-from stanza.utils.datasets.lemma import noun_case_variants
+from stanza.utils.datasets.lemma import case_variants
 from stanza.utils.training import run_lemma
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
@@ -55,17 +55,55 @@ def build_conllu(triples):
         lines.append("")
     return "\n".join(lines) + "\n"
 
-def test_noun_case_variants():
-    assert noun_case_variants.noun_case_variants(TRAIN_TRIPLES) == EXPECTED
+def test_case_variants():
+    assert case_variants.case_variants(TRAIN_TRIPLES) == EXPECTED
+
+SPANISH_TRIPLES = [
+    ("comía",   "VERB", "comer"),
+    ("casas",   "NOUN", "casa"),
+    ("rápida",  "ADJ",  "rápido"),
+    ("está",    "AUX",  "estar"),
+    ("ya",      "ADV",  "ya"),
+    # already in the training data capitalized as a VERB
+    ("Dijo",    "VERB", "decir"),
+    ("dijo",    "VERB", "decir"),
+    # a capitalized form which is a PROPN doesn't stop the NOUN variant
+    ("Rosa",    "PROPN", "Rosa"),
+    ("rosa",    "NOUN", "rosa"),
+    # not an open class
+    ("la",      "DET",  "el"),
+]
+
+# sorted by form then UPOS, the order the dictionary is written in
+SPANISH_EXPECTED = sorted([
+    ("CASAS",   "NOUN", "casa"),
+    ("COMÍA",   "VERB", "comer"),
+    ("Casas",   "NOUN", "casa"),
+    ("Comía",   "VERB", "comer"),
+    ("DIJO",    "VERB", "decir"),
+    ("ESTÁ",    "AUX",  "estar"),
+    ("Está",    "AUX",  "estar"),
+    ("RÁPIDA",  "ADJ",  "rápido"),
+    ("ROSA",    "NOUN", "rosa"),
+    ("Rosa",    "NOUN", "rosa"),
+    ("Rápida",  "ADJ",  "rápido"),
+    ("YA",      "ADV",  "ya"),
+    ("Ya",      "ADV",  "ya"),
+])
+
+def test_spanish_case_variants():
+    assert case_variants.case_variants(SPANISH_TRIPLES, case_variants.SPANISH_UPOS) == SPANISH_EXPECTED
+    # with the English tags, only the NOUNs
+    assert case_variants.case_variants(SPANISH_TRIPLES) == [x for x in SPANISH_EXPECTED if x[1] == "NOUN"]
 
 def test_build_exact_dictionary(tmp_path):
     train_file = tmp_path / "train.conllu"
     train_file.write_text(build_conllu(TRAIN_TRIPLES), encoding="utf-8")
     output_file = str(tmp_path / "exact.conllu")
-    noun_case_variants.build_exact_dictionary(str(train_file), output_file)
+    case_variants.build_exact_dictionary(str(train_file), output_file)
     doc = CoNLL.conll2doc(input_file=output_file)
     assert [(word.text, word.upos, word.lemma) for sentence in doc.sentences for word in sentence.words] == EXPECTED
-    assert doc.sentences[0].sent_id == "noun_case-NOUN-BEER"
+    assert doc.sentences[0].sent_id == "case_variants-NOUN-BEER"
 
 def build_paths(tmp_path):
     return {"LEMMA_DATA_DIR": str(tmp_path / "data" / "lemma")}
@@ -88,6 +126,12 @@ def test_prepare_exact_dictionary(tmp_path):
     assert prepare_lemma_treebank.prepare_exact_dictionary(paths, "en_combined", use_exact_dictionary=False) is None
     assert not os.path.exists(exact_file)
     assert run_lemma.find_exact_dict_file(paths, "en_combined") is None
+
+    # es_combined gets the open classes
+    (lemma_dir / "es_combined.train.in.conllu").write_text(build_conllu(SPANISH_TRIPLES), encoding="utf-8")
+    exact_file = prepare_lemma_treebank.prepare_exact_dictionary(paths, "es_combined")
+    words = [(word.text, word.upos, word.lemma) for sentence in CoNLL.conll2doc(input_file=exact_file).sentences for word in sentence.words]
+    assert words == SPANISH_EXPECTED
 
     # datasets without an exact dictionary don't get one
     (lemma_dir / "en_ewt.train.in.conllu").write_text(build_conllu(TRAIN_TRIPLES), encoding="utf-8")
