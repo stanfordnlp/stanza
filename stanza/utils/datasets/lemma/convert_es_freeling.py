@@ -62,6 +62,13 @@ The FreeLing repo keeps changing, so the first sentence of the output
 records which version it came from: the git commit of the FreeLing
 clone, if it is one, and a sha256 of the MM.* files.
 
+The lemma changes above follow the conventions of GSD and AnCora.
+check_conventions compares the dictionary with the training data on
+the words affected by each of them, such as the -dora nouns, and
+fails if they no longer agree.  prepare_lemma_treebank runs it after
+writing the es_combined training data, so a change to the treebank
+conventions shows up when the lemma data is prepared.
+
 Usage:
   python3 -m stanza.utils.datasets.lemma.convert_es_freeling FreeLing es_freeling.conllu
 where FreeLing is a clone of the FreeLing repo, or its data/es/dictionary/entries directory
@@ -355,6 +362,86 @@ def convert_directory(freeling_path, output_filename, ambiguous_filename=None):
     upos_counts = Counter(upos for _, upos in lemma_dict)
     logger.info("Entries by UPOS: %s", ", ".join("%s %d" % (upos, count) for upos, count in sorted(upos_counts.items())))
     return lemma_dict, ambiguous
+
+def read_conllu_words(filename):
+    """
+    Read (form, upos, lemma, feats) for every word in a CoNLL-U file, skipping MWT ranges and empty nodes
+    """
+    words = []
+    with open(filename, encoding='utf-8') as fin:
+        for line in fin:
+            pieces = line.rstrip('\r\n').split('\t')
+            if len(pieces) < 6 or not pieces[0].isdigit():
+                continue
+            words.append((pieces[1], pieces[3], pieces[2], pieces[5]))
+    return words
+
+def has_feature(feats, feature):
+    return feature in feats.split('|')
+
+def dora_form(form):
+    return form.lower().endswith(('dora', 'doras'))
+
+# The conventions which the lemma changes in convert_entries follow.
+# Each is a description and a function of a training word's (form,
+# upos, feats) which selects the words the convention applies to.
+CONVENTIONS = [
+    ("-dora nouns have the -dora lemma (investigadoras -> investigadora)",
+     lambda form, upos, feats: upos == 'NOUN' and dora_form(form)),
+    ("-dora adjectives have the -dor lemma (conservadoras -> conservador)",
+     lambda form, upos, feats: upos == 'ADJ' and dora_form(form)),
+    ("feminine nouns have the feminine singular lemma (hermanas -> hermana)",
+     lambda form, upos, feats: upos == 'NOUN' and has_feature(feats, 'Gender=Fem')),
+    ("ordinals have the masculine singular ordinal as the lemma (primeras -> primero)",
+     lambda form, upos, feats: upos == 'ADJ' and has_feature(feats, 'NumType=Ord')),
+    ("bueno and malo have the lemmas buen and mal",
+     lambda form, upos, feats: upos == 'ADJ' and form.lower() in ('bueno', 'buena', 'buenos', 'buenas', 'malo', 'mala', 'malos', 'malas')),
+]
+
+# The fraction of words where the dictionary and the training data
+# need to agree.  The treebanks have some errors in each category, such
+# as feminine nouns with a made up masculine lemma, but a change of
+# convention would make most of a category disagree
+MIN_AGREEMENT = 0.9
+
+def check_conventions(train_file, dict_file, min_agreement=MIN_AGREEMENT):
+    """
+    Check that the dictionary and the training data agree on the words each of the CONVENTIONS applies to
+
+    The training lemma of a (form, upos) is its most frequent lemma.
+    For each convention, the (form, upos) pairs in both the training
+    data and the dictionary which the convention selects are compared.
+
+    Raises ValueError if any convention has no words to compare or
+    agrees on less than min_agreement of them.  Returns a list of
+    (description, agree, total) for the conventions.
+    """
+    dictionary = {(form, upos): lemma for form, upos, lemma, _ in read_conllu_words(dict_file)}
+    train_words = read_conllu_words(train_file)
+
+    results = []
+    failures = []
+    for description, selects in CONVENTIONS:
+        lemmas = defaultdict(Counter)
+        for form, upos, lemma, feats in train_words:
+            if lemma != '_' and (form, upos) in dictionary and selects(form, upos, feats):
+                lemmas[(form, upos)][lemma] += 1
+        disagree = []
+        for key, counts in sorted(lemmas.items()):
+            train_lemma = counts.most_common(1)[0][0]
+            if train_lemma != dictionary[key]:
+                disagree.append((key[0], train_lemma, dictionary[key]))
+        total = len(lemmas)
+        agree = total - len(disagree)
+        results.append((description, agree, total))
+        logger.info("%s: the dictionary agrees with %s on %d of %d words", description, train_file, agree, total)
+        if total == 0 or agree < min_agreement * total:
+            examples = ", ".join("%s (%s / %s)" % x for x in disagree[:10])
+            failures.append("%s: agrees on %d of %d words.  Examples (training / dictionary): %s" % (description, agree, total, examples))
+
+    if failures:
+        raise ValueError("The FreeLing dictionary %s does not follow the lemma conventions of %s.  If the treebank conventions have changed, update the lemma rules in stanza/utils/datasets/lemma/convert_es_freeling.py to match.\n  %s" % (dict_file, train_file, "\n  ".join(failures)))
+    return results
 
 def build_dictionary(paths, output_filename):
     """

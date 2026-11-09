@@ -9,6 +9,7 @@ import subprocess
 import pytest
 
 from stanza.utils.conll import CoNLL
+from stanza.utils.datasets import prepare_lemma_treebank
 from stanza.utils.datasets.lemma import convert_es_freeling
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
@@ -209,3 +210,67 @@ def test_source_comments(tmp_path):
     other_dir = freeling_dir / "copy"
     shutil.copytree(entries_dir, other_dir)
     assert convert_es_freeling.source_comments(str(other_dir)) == ["# freeling_entries_sha256 = %s" % sha]
+
+# training words as (form, upos, lemma, feats)
+TRAIN_WORDS = [
+    ("investigadoras", "NOUN", "investigadora", "Gender=Fem|Number=Plur"),
+    ("investigadoras", "NOUN", "investigadora", "Gender=Fem|Number=Plur"),
+    ("jugadora",       "NOUN", "jugadora",      "Gender=Fem|Number=Sing"),
+    ("conservadoras",  "ADJ",  "conservador",   "Gender=Fem|Number=Plur"),
+    ("hermanas",       "NOUN", "hermana",       "Gender=Fem|Number=Plur"),
+    ("casas",          "NOUN", "casa",          "Gender=Fem|Number=Plur"),
+    ("primeras",       "ADJ",  "primero",       "Gender=Fem|Number=Plur|NumType=Ord"),
+    ("buena",          "ADJ",  "buen",          "Gender=Fem|Number=Sing"),
+    # not in the dictionary, so not compared
+    ("ganadoras",      "NOUN", "ganador",       "Gender=Fem|Number=Plur"),
+]
+
+DICTIONARY = [
+    ("investigadoras", "NOUN", "investigadora"),
+    ("jugadora",       "NOUN", "jugadora"),
+    ("conservadoras",  "ADJ",  "conservador"),
+    ("hermanas",       "NOUN", "hermana"),
+    ("casas",          "NOUN", "casa"),
+    ("primeras",       "ADJ",  "primero"),
+    ("buena",          "ADJ",  "buen"),
+]
+
+def write_words(filename, words):
+    lines = []
+    for form, upos, lemma, feats in words:
+        lines.append(f"1\t{form}\t{lemma}\t{upos}\t_\t{feats}\t0\troot\t_\t_")
+        lines.append("")
+    filename.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return str(filename)
+
+def test_check_conventions(tmp_path):
+    train_file = write_words(tmp_path / "train.conllu", TRAIN_WORDS)
+    dict_file = write_words(tmp_path / "dict.conllu", [(form, upos, lemma, "_") for form, upos, lemma in DICTIONARY])
+    results = convert_es_freeling.check_conventions(train_file, dict_file)
+    assert [(agree, total) for _, agree, total in results] == [(2, 2), (1, 1), (4, 4), (1, 1), (1, 1)]
+
+def test_check_conventions_changed(tmp_path):
+    """
+    If the training data changes a convention, such as -dor for the -dora nouns, the check fails
+    """
+    train_words = [(form, upos, lemma[:-1] if form.endswith(("dora", "doras")) and upos == "NOUN" else lemma, feats)
+                   for form, upos, lemma, feats in TRAIN_WORDS]
+    train_file = write_words(tmp_path / "train.conllu", train_words)
+    dict_file = write_words(tmp_path / "dict.conllu", [(form, upos, lemma, "_") for form, upos, lemma in DICTIONARY])
+    with pytest.raises(ValueError, match="-dora nouns have the -dora lemma .* agrees on 0 of 2 words.*investigadoras \\(investigador / investigadora\\)"):
+        convert_es_freeling.check_conventions(train_file, dict_file)
+
+    # with a lower threshold, the same data passes
+    convert_es_freeling.check_conventions(train_file, dict_file, min_agreement=0.0)
+
+def test_check_conventions_no_words(tmp_path):
+    """
+    A convention with no words to compare fails, as there is nothing to show it still holds
+    """
+    train_file = write_words(tmp_path / "train.conllu", [x for x in TRAIN_WORDS if "NumType=Ord" not in x[3]])
+    dict_file = write_words(tmp_path / "dict.conllu", [(form, upos, lemma, "_") for form, upos, lemma in DICTIONARY])
+    with pytest.raises(ValueError, match="ordinals .* agrees on 0 of 0 words"):
+        convert_es_freeling.check_conventions(train_file, dict_file)
+
+def test_prepare_check():
+    assert prepare_lemma_treebank.EXTERNAL_DICTIONARY_CHECKS["es_combined"] is convert_es_freeling.check_conventions

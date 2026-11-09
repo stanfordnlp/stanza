@@ -30,6 +30,15 @@ EXTERNAL_DICTIONARIES = {
     'sl_combined': convert_sl_sloleks.build_dictionary,
 }
 
+# Checks of an external dictionary against the prepared training data,
+# run after the training data is written:
+#   check_fn(train_file, dict_file)
+# Each one raises an exception if the lexicon no longer follows the
+# treebank's lemma conventions
+EXTERNAL_DICTIONARY_CHECKS = {
+    'es_combined': convert_es_freeling.check_conventions,
+}
+
 # Datasets with an exact dictionary, whose entries only apply to their
 # exact word and UPOS.  Each function builds the dictionary file from
 # the prepared training file:
@@ -142,7 +151,7 @@ def check_lemmas(train_file):
 def process_treebank(treebank, model_type, paths, args):
     short_name = treebank_to_short_name(treebank)
     # done first so that a missing lexicon fails before any of the treebank is written
-    prepare_external_dictionary(paths, short_name, args.external_dictionary)
+    dict_file = prepare_external_dictionary(paths, short_name, args.external_dictionary)
 
     if treebank.startswith("UD_"):
         udbase_dir = paths["UDBASE"]
@@ -163,6 +172,10 @@ def process_treebank(treebank, model_type, paths, args):
         prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], args=args, augment=augment, postprocess=retag_dataset)
     else:
         raise ValueError("Unknown tags method: {}".format(args.tag_method))
+
+    if dict_file is not None and short_name in EXTERNAL_DICTIONARY_CHECKS:
+        train_file = os.path.join(paths["LEMMA_DATA_DIR"], f"{short_name}.train.in.conllu")
+        EXTERNAL_DICTIONARY_CHECKS[short_name](train_file, dict_file)
 
     prepare_exact_dictionary(paths, short_name, args.exact_dictionary)
 
