@@ -19,7 +19,7 @@ import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_tre
 import stanza.utils.datasets.prepare_lemma_classifier as prepare_lemma_classifier
 
 from stanza.utils.datasets.dataset_retagging import Tags, add_retagging_args, build_retagger
-from stanza.utils.datasets.lemma import convert_de_wiktionary, convert_en_specialist, convert_es_freeling, convert_sl_sloleks, noun_case_variants
+from stanza.utils.datasets.lemma import convert_de_wiktionary, convert_en_specialist, convert_es_freeling, convert_sl_sloleks, case_variants
 
 # Datasets with an external lexicon.  Each function converts the
 # lexicon from STANZA_EXTERN_DIR into the dictionary file given
@@ -44,7 +44,8 @@ EXTERNAL_DICTIONARY_CHECKS = {
 # the prepared training file:
 #   build_fn(train_file, dict_file)
 EXACT_DICTIONARIES = {
-    'en_combined': noun_case_variants.build_exact_dictionary,
+    'en_combined': case_variants.build_english_dictionary,
+    'es_combined': case_variants.build_spanish_dictionary,
 }
 
 def add_specific_args(parser) -> None:
@@ -53,7 +54,7 @@ def add_specific_args(parser) -> None:
     parser.add_argument('--no_external_dictionary', dest='external_dictionary', action='store_false', default=True,
                         help="Don't write the external lexicon for datasets which have one, such as German Wiktionary for de_combined, the SPECIALIST Lexicon for en_combined, FreeLing for es_combined, or Sloleks for sl_combined.  Removes any dictionary file left from an earlier run")
     parser.add_argument('--no_exact_dictionary', dest='exact_dictionary', action='store_false', default=True,
-                        help="Don't write the exact dictionary for datasets which have one, such as the capitalized NOUNs for en_combined.  Removes any exact dictionary file left from an earlier run")
+                        help="Don't write the exact dictionary for datasets which have one, such as the capitalized words for en_combined and es_combined.  Removes any exact dictionary file left from an earlier run")
     add_retagging_args(parser)
 
 def dictionary_filename(lemma_dir, short_name):
