@@ -1,0 +1,182 @@
+"""
+Tests for converting the FreeLing Spanish dictionary to a lemma dictionary
+"""
+
+import os
+
+import pytest
+
+from stanza.utils.conll import CoNLL
+from stanza.utils.datasets.lemma import convert_es_freeling
+
+pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
+
+# A few lines of each FreeLing file, in its format: form lemma tag
+SAMPLE = {
+    "MM.adj": """
+abacial abacial AQ0CS00
+abaciales abacial AQ0CP00
+conservadora conservador AQ0FS00
+buena bueno AQ0FS00
+óptima bueno AQ0FS00
+parecidas parecer AQ0FP00
+ocular ocular AQ0CS00
+primer 1 AO0MS00
+primero 1 AO0MS00
+primera 1 AO0FS00
+cuarto 4 AO0MS00
+cuartas 4 AO0FP00
+decimotercero 13 AO0MS00
+decimotercera 13 AO0FS00
+séptimo 7 AO0MS00
+sétimo 7 AO0MS00
+sétima 7 AO0FS00
+""",
+    "MM.nom": """
+casa casa NCFS000
+casas casa NCFP000
+hermano hermano NCMS000
+hermana hermano NCFS000
+hermanas hermano NCFP000
+actriz actriz NCFS000
+actrices actriz NCFP000
+cazadora cazador NCFS000
+cazadora cazadora NCFS000
+crisis crisis NCFN000
+estudiantes estudiante NCCP000
+km kilómetro NCMN000
+cía compañía NCFS000
+""",
+    "MM.verb": """
+cantaba cantar VMII3S0
+puede poder VMIP3S0
+sienta sentar VMIP3S0
+sienta sentir VMSP3S0
+fue ir VMIS3S0
+era erar VMIP3S0
+""",
+    "MM.vaux": """
+fue ser VSIS3S0
+era ser VSII3S0
+estado estar VAP00SM
+""",
+    "MM.adv": """
+muy muy RG
+""",
+    "MM.int": """
+abur abur I
+""",
+    "MM.tanc": """
+a a SP
+adonde adonde PR00000
+""",
+}
+
+EXPECTED = {
+    ("abacial", "ADJ"): "abacial",
+    ("abaciales", "ADJ"): "abacial",
+    # adjectives keep the masculine lemma
+    ("conservadora", "ADJ"): "conservador",
+    ("buena", "ADJ"): "buen",
+    ("parecidas", "ADJ"): "parecido",
+    ("ocular", "ADJ"): "ocular",
+    # ordinals
+    ("primer", "ADJ"): "primero",
+    ("primero", "ADJ"): "primero",
+    ("primera", "ADJ"): "primero",
+    ("cuarto", "ADJ"): "cuarto",
+    ("cuartas", "ADJ"): "cuarto",
+    ("decimotercero", "ADJ"): "decimotercero",
+    ("decimotercera", "ADJ"): "decimotercero",
+    ("séptimo", "ADJ"): "séptimo",
+    ("sétimo", "ADJ"): "sétimo",
+    ("sétima", "ADJ"): "sétimo",
+    # feminine nouns keep the feminine lemma
+    ("casa", "NOUN"): "casa",
+    ("casas", "NOUN"): "casa",
+    ("hermano", "NOUN"): "hermano",
+    ("hermana", "NOUN"): "hermana",
+    ("hermanas", "NOUN"): "hermana",
+    ("actriz", "NOUN"): "actriz",
+    ("actrices", "NOUN"): "actriz",
+    ("cazadora", "NOUN"): "cazadora",
+    ("crisis", "NOUN"): "crisis",
+    ("estudiantes", "NOUN"): "estudiante",
+    # a feminine singular noun is its own lemma, even an abbreviation
+    ("cía", "NOUN"): "cía",
+    # verbs, with AUX for the auxiliaries
+    ("cantaba", "VERB"): "cantar",
+    ("puede", "VERB"): "poder",
+    ("puede", "AUX"): "poder",
+    ("fue", "AUX"): "ser",
+    ("era", "AUX"): "ser",
+    ("estado", "VERB"): "estar",
+    ("estado", "AUX"): "estar",
+    ("abur", "INTJ"): "abur",
+}
+
+EXPECTED_AMBIGUOUS = {
+    ("sienta", "VERB"): ["sentar", "sentir"],
+    ("fue", "VERB"): ["ir", "ser"],
+    ("era", "VERB"): ["erar", "ser"],
+}
+
+def write_sample(directory):
+    entries_dir = directory / "data" / "es" / "dictionary" / "entries"
+    entries_dir.mkdir(parents=True)
+    for filename, text in SAMPLE.items():
+        (entries_dir / filename).write_text(text.lstrip(), encoding="utf-8")
+    return entries_dir
+
+def test_convert_directory(tmp_path):
+    freeling_dir = tmp_path / "FreeLing"
+    write_sample(freeling_dir)
+    output_file = tmp_path / "es_freeling.conllu"
+    ambiguous_file = tmp_path / "ambiguous.tsv"
+    lemma_dict, ambiguous = convert_es_freeling.convert_directory(str(freeling_dir), str(output_file), str(ambiguous_file))
+    assert lemma_dict == EXPECTED
+    assert ambiguous == EXPECTED_AMBIGUOUS
+
+    doc = CoNLL.conll2doc(input_file=str(output_file))
+    words = {(word.text, word.upos): word.lemma for sentence in doc.sentences for word in sentence.words}
+    assert words == EXPECTED
+    sent_ids = [sentence.sent_id for sentence in doc.sentences]
+    assert sent_ids[0] == "es_freeling-ADJ-abacial"
+    assert len(set(sent_ids)) == len(sent_ids)
+
+    assert ambiguous_file.read_text(encoding="utf-8").splitlines() == ["era\tVERB\terar ser", "fue\tVERB\tir ser", "sienta\tVERB\tsentar sentir"]
+
+def test_entries_dir(tmp_path):
+    """
+    The converter takes either a FreeLing clone or the entries directory itself
+    """
+    entries_dir = write_sample(tmp_path / "FreeLing")
+    lemma_dict, _ = convert_es_freeling.convert_directory(str(entries_dir), str(tmp_path / "out.conllu"))
+    assert lemma_dict == EXPECTED
+
+    with pytest.raises(FileNotFoundError):
+        convert_es_freeling.convert_directory(str(tmp_path), str(tmp_path / "out.conllu"))
+
+def test_build_dictionary(tmp_path):
+    paths = {"STANZA_EXTERN_DIR": str(tmp_path / "extern")}
+    output_file = tmp_path / "es_combined.dict.conllu"
+    with pytest.raises(FileNotFoundError):
+        convert_es_freeling.build_dictionary(paths, str(output_file))
+
+    write_sample(tmp_path / "extern" / "spanish" / "FreeLing")
+    convert_es_freeling.build_dictionary(paths, str(output_file))
+    assert os.path.exists(output_file)
+
+def test_ordinal_lemma():
+    masc_sing = {"séptimo", "sétimo"}
+    assert convert_es_freeling.ordinal_lemma("séptimas", "AO0FP00", masc_sing) == "séptimo"
+    assert convert_es_freeling.ordinal_lemma("sétimo", "AO0MS00", masc_sing) == "sétimo"
+    # no way to choose between the two
+    assert convert_es_freeling.ordinal_lemma("sept", "AO0MS00", masc_sing) is None
+
+def test_feminine_lemma():
+    assert convert_es_freeling.feminine_lemma("hermanas", "hermano", "NCFP000", {"hermana"}) == "hermana"
+    assert convert_es_freeling.feminine_lemma("hermana", "hermano", "NCFS000", {"hermana"}) == "hermana"
+    assert convert_es_freeling.feminine_lemma("narices", "nariz", "NCFP000", {"nariz"}) == "nariz"
+    # nothing matches, so the FreeLing lemma stays
+    assert convert_es_freeling.feminine_lemma("afueras", "afuera", "NCFP000", set()) == "afuera"
