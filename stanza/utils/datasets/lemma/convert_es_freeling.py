@@ -58,6 +58,10 @@ A (form, UPOS) pair with more than one lemma, such as sienta -> sentar /
 sentir, is dropped entirely so that the seq2seq model makes the
 decision instead of the dictionary.
 
+The FreeLing repo keeps changing, so the first sentence of the output
+records which version it came from: the git commit of the FreeLing
+clone, if it is one, and a sha256 of the MM.* files.
+
 Usage:
   python3 -m stanza.utils.datasets.lemma.convert_es_freeling FreeLing es_freeling.conllu
 where FreeLing is a clone of the FreeLing repo, or its data/es/dictionary/entries directory
@@ -66,8 +70,10 @@ where FreeLing is a clone of the FreeLing repo, or its data/es/dictionary/entrie
 import argparse
 from collections import Counter, defaultdict
 import glob
+import hashlib
 import logging
 import os
+import subprocess
 import unicodedata
 
 logger = logging.getLogger('stanza')
@@ -111,6 +117,48 @@ def find_entries_dir(path):
         if glob.glob(os.path.join(candidate, "MM.*")):
             return candidate
     raise FileNotFoundError("Could not find the FreeLing Spanish dictionary in %s.  Expected the MM.* files in %s" % (path, os.path.join(path, ENTRIES_SUBDIR)))
+
+def git_commit(entries_dir):
+    """
+    The git commit of the FreeLing clone containing entries_dir
+
+    Returns None if entries_dir is not data/es/dictionary/entries of a
+    git repo, such as a copy of the entries inside some other repo, or
+    if git isn't available
+    """
+    def git(*args):
+        result = subprocess.run(["git", "-C", entries_dir] + list(args), capture_output=True, text=True, check=True)
+        return result.stdout.strip()
+
+    try:
+        toplevel = git("rev-parse", "--show-toplevel")
+        if not os.path.samefile(os.path.join(toplevel, ENTRIES_SUBDIR), entries_dir):
+            return None
+        return git("rev-parse", "HEAD") or None
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
+def entries_sha256(entries_dir):
+    """
+    A sha256 of the names and contents of the MM.* files in entries_dir
+    """
+    digest = hashlib.sha256()
+    for filename in sorted(glob.glob(os.path.join(entries_dir, "MM.*"))):
+        digest.update(os.path.basename(filename).encode('utf-8'))
+        with open(filename, 'rb') as fin:
+            digest.update(fin.read())
+    return digest.hexdigest()
+
+def source_comments(entries_dir):
+    """
+    Comments recording which version of FreeLing a dictionary was built from
+    """
+    comments = []
+    commit = git_commit(entries_dir)
+    if commit is not None:
+        comments.append(f"# freeling_commit = {commit}")
+    comments.append(f"# freeling_entries_sha256 = {entries_sha256(entries_dir)}")
+    return comments
 
 def read_entries(entries_dir, skipped):
     """
@@ -264,11 +312,15 @@ def build_lemma_dict(triples):
             ambiguous[key] = sorted(values)
     return unambiguous, ambiguous
 
-def write_conllu(lemma_dict, output_filename):
+def write_conllu(lemma_dict, output_filename, first_comments=()):
     """
     Write {(form, upos): lemma} as single-word CoNLL-U sentences, sorted by form then UPOS
+
+    first_comments are written as comment lines at the start of the first sentence
     """
     with open(output_filename, 'w', encoding='utf-8', newline='\n') as fout:
+        for line in first_comments:
+            fout.write(line + "\n")
         for (form, upos) in sorted(lemma_dict.keys()):
             # UPOS goes before the form, since UPOS never has a - in it but the form might
             fout.write(f"# sent_id = es_freeling-{upos}-{form}\n")
@@ -294,7 +346,7 @@ def convert_directory(freeling_path, output_filename, ambiguous_filename=None):
     skipped = Counter()
     rows = read_entries(entries_dir, skipped)
     lemma_dict, ambiguous = build_lemma_dict(convert_entries(rows, skipped))
-    write_conllu(lemma_dict, output_filename)
+    write_conllu(lemma_dict, output_filename, source_comments(entries_dir))
     if ambiguous_filename:
         write_ambiguous(ambiguous, ambiguous_filename)
     logger.info("Wrote %d (form, upos, lemma) entries from %s to %s, skipping %d ambiguous (form, upos) pairs",
