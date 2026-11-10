@@ -50,6 +50,8 @@ def build_argparse():
     parser.add_argument('--tag_column_link', type=str, default=TAG_LINK_EMB, choices=TAG_LINKS, help='What a parent column hands to its children.  "tag_emb" embeds the parent tag, gold while training when the batch has it and predicted otherwise.  "hidden" hands over the parent hidden layer, which is wider and needs no tag at all.')
     parser.add_argument('--detach_parent_tags', action='store_true', default=False, help='Stop the gradient at the parent, so a child column does not train the layers it is conditioned on.  Only meaningful with --tag_column_link hidden.')
     parser.add_argument('--upos_word_regex', type=str, default=None, help='Regex to use to build a confusion matrix specifically for those words.  Example use case, to test whether adding "como" as a VERB to the Spanish dataset caused errors on ADV or SCONJ usages.  Uses "search", so an example regex for that test would be "^(?i:como)$"')
+    parser.add_argument('--feature_confusion', type=lambda x: [y for y in x.split(',') if y], default=None, help='Comma separated features which get a confusion matrix when scoring, such as "Mood,VerbForm".  Every feature gets one by default')
+    parser.add_argument('--no_feature_confusion', dest='feature_confusion', action='store_const', const=[], help='Do not print any feature confusion matrices when scoring')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
@@ -633,6 +635,9 @@ def evaluate_trainer(args, trainer, pretrain):
         CoNLL.write_doc2conll(dev_data.doc, system_pred_file)
 
     if args['gold_labels']:
+        gold_doc = CoNLL.conll2doc(input_file=args['eval_file'])
+        scorer.score_named_tags(dev_data.doc, gold_doc, args.get('feature_confusion'))
+
         system_pred_file = "{:C}\n\n".format(dev_data.doc)
         system_pred_file = io.StringIO(system_pred_file)
         _, _, score = scorer.score(system_pred_file, args['eval_file'], eval_type=eval_type)
