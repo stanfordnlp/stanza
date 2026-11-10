@@ -288,6 +288,35 @@ of FreeLing it was built from: `# freeling_commit` if the FreeLing
 directory is a git clone, and `# freeling_entries_sha256`, a hash of
 its dictionary files.
 
+### Updating a lexicon
+
+After a lexicon is updated, prepare the dataset again and retrain the
+lemmatizer with `run_lemma`.  `extern_data` is the default for
+`$STANZA_EXTERN_DIR`, and `extern_data/handparsed-treebank` for
+`$HANDPARSED_DIR`.
+
+- **SPECIALIST Lexicon** (`en_combined`): download `inflVars.data` from the `LEX_DOC/MISC` directory of the new release, replacing `extern_data/english/specialist/inflVars.data`.  The license requires the release number and date of the lexicon to be given with any distribution, so update the release in the table above and in [Combined models](combined_models.md#specialist-lexicon) when models built with it are released.
+- **FreeLing** (`es_combined`): run `git pull` in `extern_data/spanish/FreeLing`.  The [convention check](#checking-the-spanish-conventions) runs when the dataset is prepared.
+- **Sloleks** (`sl_combined`): the converter reads `extern_data/slovenian/Sloleks.3.1/`, so a new version needs the directory in `build_dictionary` of [convert_sl_sloleks.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/lemma/convert_sl_sloleks.py) changed, along with the citation in [Combined models](combined_models.md#sloleks).
+- **German Wiktionary** (`de_combined`): the dump is converted ahead of time, and the result is kept in handparsed-treebank, so preparing `de_combined` doesn't need the dump or the parser library.  To rebuild it, install the `wiktionary` extra, which needs Python 3.13 or later (`pip install -e '.[wiktionary]'` from a git checkout of Stanza), download the latest `dewiktionary-latest-pages-articles-multistream.xml.bz2` from [Wikimedia dumps](https://dumps.wikimedia.org/dewiktionary/latest/), and run
+
+  ```bash
+  python3 -m stanza.utils.datasets.lemma.convert_de_wiktionary dewiktionary-latest-pages-articles-multistream.xml.bz2 de_wiki_lemmas.conllu.gz
+  ```
+
+  then replace `german-lemmas-wiki/de_wiki_lemmas.conllu.gz` in handparsed-treebank with the new file.  The converter is written for version 0.16.0 of `wiktionary-de-parser`, whose output has changed between versions, and stops if a different version is installed unless given `--allow_other_parser_version`.
+
+### Adding a lexicon
+
+A lexicon for another dataset needs a license which allows the
+converted entries to be distributed as part of a model.  To add one:
+
+1. Write a converter in [stanza/utils/datasets/lemma](https://github.com/stanfordnlp/stanza/tree/dev/stanza/utils/datasets/lemma), named after the language and the lexicon, such as `convert_es_freeling.py`.  It needs a `build_dictionary(paths, output_filename)` function which reads the lexicon from `paths["STANZA_EXTERN_DIR"]` and writes one word per sentence in the format above.  If the lexicon is missing, it should raise `FileNotFoundError` with where to download it.
+2. Map the lexicon's categories to UPOS, and change its lemmas to match the treebank's conventions.  Comparing the converted entries with the training data, on the words in both and on the dev set words the training data doesn't have, turns up most of the differences.  Drop a word and UPOS with more than one lemma rather than choosing one, and leave out the closed classes, which the treebank already covers.
+3. Add the dataset and its `build_dictionary` to `EXTERNAL_DICTIONARIES` in [prepare_lemma_treebank.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/prepare_lemma_treebank.py).  If any of the lemma rules depend on a treebank convention which might change, also add a check to `EXTERNAL_DICTIONARY_CHECKS`, such as `convert_es_freeling.check_conventions`.  It is run as `check_fn(train_file, dict_file)` after the training data is written, and should raise an exception if the conventions no longer match.
+4. For the [capitalized entries](#capitalized-words), add the dataset to `EXACT_DICTIONARIES`, with the UPOS tags to build them for.
+5. Add the lexicon to the table above, and describe its source, its license, and the modifications made to it in [Combined models](combined_models.md#lemma-dictionaries).
+
 ## Contextual Classifier
 
 As of Stanza 1.10, there is a contextual classifier for words with
