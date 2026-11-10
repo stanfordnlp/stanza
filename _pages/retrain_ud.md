@@ -203,6 +203,30 @@ Note that MWT does not apply for datasets with no multi-word tokens.  If you att
 | POS      | stanza.utils.datasets.prepare_pos_treebank       | stanza.utils.training.run_pos      | POS_DATA_DIR          | saved_models/pos      |
 | Depparse | stanza.utils.datasets.prepare_depparse_treebank  | stanza.utils.training.run_depparse | DEPPARSE_DATA_DIR     | saved_models/depparse |
 
+### Combined datasets
+
+The default models for several languages are trained on
+[combined datasets](combined_models.md), such as `en_combined`, rather
+than a single UD treebank.  Preparing a combined dataset also needs
+[handparsed-treebank](https://github.com/stanfordnlp/handparsed-treebank)
+in `$HANDPARSED_DIR`.  For the lemmatizer, `en_combined`,
+`de_combined`, `es_combined`, and `sl_combined` also need an external
+lexicon in `$STANZA_EXTERN_DIR`, which defaults to `extern_data`.  The
+[lemmatizer page](lemma.md#training-with-an-external-dictionary) lists
+where each lexicon goes:
+
+```bash
+python3 -m stanza.utils.datasets.prepare_lemma_treebank en_combined
+python3 -m stanza.utils.training.run_lemma en_combined
+```
+
+Preparing the dataset stops with an error if the lexicon is missing.
+For a new UD release, it is also a good time to
+[update the lexicons](lemma.md#updating-a-lexicon).  For
+`es_combined`, preparing the dataset also
+[checks the Spanish lemma conventions](lemma.md#checking-the-spanish-conventions),
+which stops if a treebank in the new release has changed one of them.
+
 ### Word Vectors
 
 The POS models use word vectors and charlm.  We provide default word

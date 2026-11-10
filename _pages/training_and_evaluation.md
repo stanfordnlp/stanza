@@ -42,6 +42,7 @@ We provide scripts that are useful for model training and evaluation in the `scr
 - `NER_DATA_DIR`: For example, this subdirectory stores intermediate files used by NER.  Those intermediate data files may include [BIO](https://en.wikipedia.org/wiki/Inside–outside–beginning_(tagging)) files and/or files in the `.json` format used internally by Stanza's NER module.. The dir is organized as `{NER_DATA_DIR}/{corpus}_{train,dev,test}.bio`.  See [NER Data](training_and_evaluation.md#ner-data) for more info.
 - `WORDVEC_DIR`: The directory to store all word vector files (see below).
 - `HANDPARSED_DIR`: A fork of [handparsed-treebank](https://github.com/stanfordnlp/handparsed-treebank), only needed if retraining "combined" models
+- `STANZA_EXTERN_DIR`: Where other external resources are read from, such as the lemma lexicons for the combined models.  Defaults to `extern_data`.  See [Lemmatization](lemma.md#training-with-an-external-dictionary) for what goes there
 
 These variables are used by the `.sh` files in the `scripts` folder.  They are also used by the python scripts, and so they need to be part of your environment.
 
