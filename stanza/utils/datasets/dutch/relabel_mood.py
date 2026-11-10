@@ -28,9 +28,11 @@ Rules:
       WW|pv|tgw|met-t with a postverbal "u" subject ("Komt u binnen")
     - it heads (or is the aux/cop of) a root, conj, or parataxis clause
     - nothing precedes it in the clause except punctuation, a coordinating
-      conjunction, a discourse marker, a vocative, or a clausal adverbial
-      ("Als je dat wilt, zeur dan niet")
+      conjunction, a discourse marker, a vocative, or a subordinate clause
+      ("Als je dat wilt, zeur dan niet"), or else whatever precedes it is
+      set off by a comma ("In Outlook, ga naar ...")
     - the clause has no subject, or only a postverbal jij/u/jullie/gij/ge
+      which does not follow a fronted constituent
     - the clause does not end in a question mark
     - a subjectless conj is not sharing the subject of the clause it is
       conjoined to ("Hij komt binnen en zet koffie")
@@ -66,6 +68,8 @@ import sys
 SUBJECTS = {'nsubj', 'nsubj:pass', 'csubj', 'csubj:pass', 'expl', 'expl:pv'}
 ADDRESS_PRONOUNS = {'jij', 'u', 'jullie', 'gij', 'ge'}
 ALLOWED_BEFORE = {'punct', 'cc', 'discourse', 'vocative', 'advcl'}
+# relations which do not count as a fronted constituent for V2 word order
+UNFRONTED = {'punct', 'cc', 'discourse', 'vocative'}
 CLAUSE_RELATIONS = {'root', 'conj', 'parataxis'}
 NO_IMPERATIVE = {'zijn', 'kunnen', 'mogen', 'willen', 'zullen', 'moeten', 'hoeven', 'weten'}
 
@@ -194,6 +198,16 @@ def clause_of(by_id, children, verb):
     return head, clause
 
 
+def is_subordinate_clause(children, word):
+    """
+    True for a fronted subordinate clause attached as parataxis
+
+    Alpino analyzes "Als X, dan Y" as two discourse parts, which the UD
+    conversion attaches as parataxis rather than advcl
+    """
+    return word.deprel.startswith('parataxis') and any(w.deprel == 'mark' for w in children[word.id])
+
+
 def imperative_candidate(words, by_id, children, verb):
     xpos = verb.xpos.split('|')
     if verb.feature('VerbForm') != 'Fin' or xpos[:3] != ['WW', 'pv', 'tgw']:
@@ -205,16 +219,20 @@ def imperative_candidate(words, by_id, children, verb):
     head, clause = clause_of(by_id, children, verb)
     if head.deprel.split(':')[0] not in CLAUSE_RELATIONS:
         return False
-    if any(w.id < verb.id and w.deprel.split(':')[0] not in ALLOWED_BEFORE for w in clause):
+    before = [w for w in clause if w.id < verb.id]
+    # anything may precede the verb if it is set off by a comma: "In Outlook, ga naar ..."
+    comma_before = verb.id - 1 in by_id and by_id[verb.id - 1].form == ','
+    if not comma_before and any(w.deprel.split(':')[0] not in ALLOWED_BEFORE and
+                                not is_subordinate_clause(children, w) for w in before):
         return False
-    fronted_clause = any(w.id < verb.id and w.deprel.startswith('advcl') for w in clause)
+    fronted = any(w.deprel.split(':')[0] not in UNFRONTED for w in before)
 
     subjects = [w for w in clause if w.deprel in SUBJECTS]
     if any(w.form.lower() not in ADDRESS_PRONOUNS or w.id < verb.id for w in subjects):
         return False
-    # after a fronted clause, a postverbal subject is ordinary V2 word order:
+    # after a fronted constituent, a postverbal subject is ordinary V2 word order:
     # "Als ik jou er een stuur, neem jij het van mij over"
-    if subjects and fronted_clause:
+    if subjects and fronted:
         return False
     if xpos[3] == 'met-t' and not any(w.form.lower() == 'u' for w in subjects):
         return False
@@ -354,12 +372,17 @@ def check_upstream_fixes(report):
                     'and the Imp rule may no longer be worth running' % (counts['added_imp'], total_imp))
 
 
-def relabel_lines(lines):
+def relabel_lines(lines, check=True):
     """
     Relabel Mood in the lines of a CoNLL-U document.
 
     Returns the relabeled lines and a Report holding the changes, warnings
     and notes.  The input list is not modified.
+
+    check=False skips the convention and upstream checks, which are
+    calibrated on the UD treebanks.  This is for data which is known to look
+    different, such as a corpus which is mostly imperatives.  Warnings about
+    the exception lists are still reported.
     """
     report = Report()
     output = []
@@ -373,11 +396,12 @@ def relabel_lines(lines):
     for key in sorted((EXCLUDE | FORCE | DEMOTE) - report.used):
         if key[0] in sent_ids:
             report.warn('exception %s did not apply' % (key,))
-    check_conventions(report)
-    # if the conventions have drifted, a low count of additions means the
-    # rules are broken, not that upstream fixed anything
-    if not report.warnings:
-        check_upstream_fixes(report)
+    if check:
+        check_conventions(report)
+        # if the conventions have drifted, a low count of additions means the
+        # rules are broken, not that upstream fixed anything
+        if not report.warnings:
+            check_upstream_fixes(report)
     return output, report
 
 

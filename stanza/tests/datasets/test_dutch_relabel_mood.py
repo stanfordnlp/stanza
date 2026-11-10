@@ -126,6 +126,50 @@ def fronted_clause_sentence(sent_id, with_subject):
     text = 'Als ik bel, neem jij op.' if with_subject else 'Als ik bel, neem op.'
     return sentence(sent_id, text, rows)
 
+def comma_fronted_sentence(sent_id, with_subject):
+    """
+    In Outlook, ga naar Bestand.       imperative after a fronted PP and a comma
+    In Outlook, ga jij naar Bestand.   ordinary V2 word order, not an imperative
+    """
+    rows = [
+        ('In',      'in',      'ADP',   'VZ|init',                    '_',           2, 'case'),
+        ('Outlook', 'Outlook', 'PROPN', 'N|eigen|ev|basis|zijd|stan', 'Number=Sing', 4, 'obl'),
+        (',',       ',',       'PUNCT', 'LET',                        '_',           2, 'punct'),
+        ('ga',      'gaan',    'VERB',  'WW|pv|tgw|ev',               FIN_SING,      0, 'root'),
+    ]
+    if with_subject:
+        rows.append(('jij', 'jij', 'PRON', 'VNW|pers|pron|nomin|vol|2v|ev', 'Case=Nom|Person=2|PronType=Prs', 4, 'nsubj'))
+    offset = len(rows)
+    rows.append(('naar',    'naar',    'ADP',   'VZ|init',                   '_',           offset + 2, 'case'))
+    rows.append(('Bestand', 'Bestand', 'PROPN', 'N|eigen|ev|basis|onz|stan', 'Number=Sing', 4,          'obl'))
+    rows.append(('.',       '.',       'PUNCT', 'LET',                       '_',           4,          'punct'))
+    text = 'In Outlook, ga jij naar Bestand.' if with_subject else 'In Outlook, ga naar Bestand.'
+    return sentence(sent_id, text, rows)
+
+def parataxis_conditional_sentence(sent_id, mark):
+    """
+    Als het misgaat herstart dan de computer.
+    Zo het misgaat herstart dan de computer.
+
+    The conditional clause is attached as parataxis, as alud does for "Als X, dan Y".
+    There is no comma, so the imperative rule has to recognize the clause as
+    subordinate from its mark.  With mark=False the fronted parataxis has an
+    advmod instead of a mark, and the verb is not an imperative.
+    """
+    first = ('Als', 'als', 'SCONJ', 'VG|onder', '_', 3, 'mark') if mark else ('Zo', 'zo', 'ADV', 'BW', '_', 3, 'advmod')
+    rows = [
+        first,
+        ('het',      'het',        'PRON',  'VNW|pers|pron|stan|red|3|ev|onz', 'Person=3|PronType=Prs', 3, 'nsubj'),
+        ('misgaat',  'mis_gaan',   'VERB',  'WW|pv|tgw|met-t',                 FIN_SING,       4, 'parataxis'),
+        ('herstart', 'herstarten', 'VERB',  'WW|pv|tgw|ev',                    FIN_SING,       0, 'root'),
+        ('dan',      'dan',        'ADV',   'BW',                              '_',            4, 'advmod'),
+        ('de',       'de',         'DET',   'LID|bep|stan|rest',               'Definite=Def', 7, 'det'),
+        ('computer', 'computer',   'NOUN',  'N|soort|ev|basis|zijd|stan',      'Number=Sing',  4, 'obj'),
+        ('.',        '.',          'PUNCT', 'LET',                             '_',            4, 'punct'),
+    ]
+    text = '%s het misgaat herstart dan de computer.' % first[0]
+    return sentence(sent_id, text, rows)
+
 # Leve de koning!
 #   gold subjunctive tag, converted as Mood=Ind
 SUBJUNCTIVE = sentence('sub1', 'Leve de koning!', [
@@ -187,6 +231,33 @@ class TestImperativeRule:
         assert result[('front2', 5)] == 'Ind'
         # the verb of the subordinate clause is never a candidate
         assert result[('front1', 3)] == 'Ind'
+
+    def test_comma_fronted(self):
+        """Anything set off by a comma may precede an imperative, but not a V2 declarative"""
+        result, _ = relabel(comma_fronted_sentence('comma1', False), comma_fronted_sentence('comma2', True))
+        assert result[('comma1', 4)] == 'Imp'
+        assert result[('comma2', 4)] == 'Ind'
+
+    def test_fronted_without_comma(self):
+        """Without the comma, a fronted constituent means V2 word order"""
+        no_comma = sentence('comma3', 'In Outlook ga naar Bestand.', [
+            ('In',      'in',      'ADP',   'VZ|init',                    '_',           2, 'case'),
+            ('Outlook', 'Outlook', 'PROPN', 'N|eigen|ev|basis|zijd|stan', 'Number=Sing', 3, 'obl'),
+            ('ga',      'gaan',    'VERB',  'WW|pv|tgw|ev',               FIN_SING,      0, 'root'),
+            ('naar',    'naar',    'ADP',   'VZ|init',                    '_',           5, 'case'),
+            ('Bestand', 'Bestand', 'PROPN', 'N|eigen|ev|basis|onz|stan',  'Number=Sing', 3, 'obl'),
+            ('.',       '.',       'PUNCT', 'LET',                        '_',           3, 'punct'),
+        ])
+        result, _ = relabel(no_comma)
+        assert result[('comma3', 3)] == 'Ind'
+
+    def test_fronted_subordinate_parataxis(self):
+        """Alpino attaches "Als X, dan Y" as parataxis; an imperative may follow it, even without a comma"""
+        result, _ = relabel(parataxis_conditional_sentence('para1', True), parataxis_conditional_sentence('para2', False))
+        assert result[('para1', 3)] == 'Ind'
+        assert result[('para1', 4)] == 'Imp'
+        # a fronted parataxis with no mark is not a subordinate clause
+        assert result[('para2', 4)] == 'Ind'
 
     def test_existing_imperative_kept(self):
         """Existing Mood=Imp tokens are left alone, even ones the rule would not find"""
@@ -317,6 +388,20 @@ class TestChecks:
         assert result == {('sub1', 1): 'Sub'}
         assert report.changes == []
         assert any('Sub rule is no longer needed' in n for n in report.notes)
+
+    def test_check_false(self, monkeypatch):
+        """check=False skips the convention checks, for data known to look different"""
+        monkeypatch.setattr(relabel_mood, 'MIN_FINITE', 1)
+        drifted = [line.replace('\tnsubj\t', '\tsubj\t') for line in DECLARATIVE]
+        _, report = relabel_mood.relabel_lines(drifted, check=False)
+        assert not report.warnings
+        assert not report.notes
+
+    def test_check_false_keeps_exception_warnings(self, monkeypatch):
+        """check=False still reports exception list entries which do not match"""
+        monkeypatch.setattr(relabel_mood, 'DEMOTE', {('demote1', 4, 'praten')})
+        _, report = relabel_mood.relabel_lines(FALSE_IMPERATIVE, check=False)
+        assert any('does not match form praat' in w for w in report.warnings)
 
     def test_no_upstream_note_with_warnings(self, monkeypatch):
         """With convention warnings, a lack of additions is not reported as an upstream fix"""
