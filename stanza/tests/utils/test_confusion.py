@@ -14,7 +14,9 @@ from stanza.utils.confusion import (
     confusion_to_f1,
     confusion_to_macro_f1,
     confusion_to_weighted_f1,
+    format_label_f1,
 )
+from collections import Counter
 
 pytestmark = [pytest.mark.pipeline, pytest.mark.travis]
 
@@ -367,3 +369,32 @@ class TestConfusionToWeightedF1:
         lo = min(results['FREQ'].f1, results['RARE'].f1)
         hi = max(results['FREQ'].f1, results['RARE'].f1)
         assert lo <= weighted <= hi
+
+
+# ---------------------------------------------------------------------------
+# format_label_f1
+# ---------------------------------------------------------------------------
+
+class TestFormatLabelF1:
+
+    def test_lines(self):
+        tp = Counter({'NOUN': 3, 'VERB': 1})
+        fp = Counter({'VERB': 1})
+        fn = Counter({'NOUN': 1, 'ADJ': 2})
+        lines = format_label_f1(tp, fp, fn)
+        assert lines == [
+            " ADJ: p 0.0000 r 0.0000 f1 0.0000 (2 actual)",
+            "NOUN: p 1.0000 r 0.7500 f1 0.8571 (4 actual)",
+            "VERB: p 0.5000 r 1.0000 f1 0.6667 (1 actual)",
+        ]
+
+    def test_latex(self):
+        lines = format_label_f1(Counter({'NOUN': 1}), Counter(), Counter())
+        assert lines == ["NOUN: p 1.0000 r 1.0000 f1 1.0000 (1 actual)"]
+        lines = format_label_f1(Counter({'NOUN': 1}), Counter(), Counter(), output_latex=True)
+        assert lines[0] == r"\begin{tabular}{lrr}"
+        assert lines[2] == r"NOUN & 1.0000 & 1 \\"
+        assert lines[-1] == r"\end{tabular}"
+
+    def test_empty(self):
+        assert format_label_f1(Counter(), Counter(), Counter()) == []

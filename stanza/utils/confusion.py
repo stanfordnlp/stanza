@@ -454,3 +454,62 @@ def confusion_to_weighted_f1(confusion_matrix, exclude=None):
         total_items += k_items
         sum_f1 += results[k].f1 * k_items
     return sum_f1 / total_items
+
+
+def format_label_f1(tp, fp, fn, output_latex=False):
+    """
+    Format per-label precision, recall, and F1 as a list of lines.
+
+    Each label gets one line with its precision, recall, F1, and the
+    number of gold instances of that label (``tp + fn``).  Labels are
+    sorted alphabetically.
+
+    Parameters
+    ----------
+    tp : collections.Counter
+        True positives for each label.
+    fp : collections.Counter
+        False positives for each label, keyed by the predicted label.
+    fn : collections.Counter
+        False negatives for each label, keyed by the gold label.
+    output_latex : bool, optional
+        If ``True``, return the lines of a LaTeX ``tabular`` with the F1
+        and gold count of each label instead.  Default ``False``.
+
+    Returns
+    -------
+    list[str]
+        The formatted lines.  Empty if there are no labels.
+    """
+    labels = sorted(set(tp.keys()).union(fp.keys()).union(fn.keys()))
+    if not labels:
+        return []
+    max_len = max(len(x) for x in labels)
+    log_lines = []
+    if output_latex:
+        log_lines.append(r"\begin{tabular}{lrr}")
+        log_lines.append(r"Reln & F1 & Total \\")
+        log_line_fmt = "{label} & {f1:0.4f} & {actual} \\\\"
+    else:
+        log_line_fmt = "{label:>" + str(max_len) + "s}: p {precision:0.4f} r {recall:0.4f} f1 {f1:0.4f} ({actual} actual)"
+    for label in labels:
+        if tp[label] == 0:
+            precision = 0
+            recall = 0
+            f1 = 0
+        else:
+            precision = tp[label] / (tp[label] + fp[label])
+            recall = tp[label] / (tp[label] + fn[label])
+            f1 = 2 * (precision * recall) / (precision + recall)
+        actual = tp[label] + fn[label]
+        template = {
+            'label': label,
+            'precision': precision,
+            'recall': recall,
+            'f1': f1,
+            'actual': actual
+        }
+        log_lines.append(log_line_fmt.format(**template))
+    if output_latex:
+        log_lines.append(r"\end{tabular}")
+    return log_lines
