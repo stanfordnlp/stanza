@@ -1403,6 +1403,7 @@ def prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_la
     else:
         sents = read_sentences_from_conllu(input_conllu)
         write_sentences_to_conllu(output_conllu, sents)
+    return output_conllu
 
 def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args):
     """
@@ -1411,11 +1412,10 @@ def process_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_l
     SL-SSJ and other datasets with inline modifications all use this code path as well.
     """
     augment = args.augment
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment)
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment)
-    prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment)
-    return True
-
+    train_conllu = prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "train", augment)
+    dev_conllu   = prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "dev", augment)
+    test_conllu  = prepare_ud_dataset(treebank, udbase_dir, tokenizer_dir, short_name, short_language, "test", augment)
+    return (train_conllu, dev_conllu, test_conllu)
 
 
 def process_test_only_ud_treebank(treebank, udbase_dir, tokenizer_dir, short_name, short_language, args):
