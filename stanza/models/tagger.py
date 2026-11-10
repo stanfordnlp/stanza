@@ -641,7 +641,7 @@ def evaluate_trainer(args, trainer, pretrain):
         system_pred_file = "{:C}\n\n".format(dev_data.doc)
         system_pred_file = io.StringIO(system_pred_file)
         _, _, score = scorer.score(system_pred_file, args['eval_file'], eval_type=eval_type)
-        logger.info("POS Tagger score: %s %.2f", args['shorthand'], score*100)
+        logger.info("POS Tagger score on %s file %s: %.2f", args['shorthand'], args['eval_file'], score*100)
 
     return dev_data.doc
 
