@@ -40,6 +40,7 @@ from stanza.models.common.short_name_to_treebank import canonical_treebank_name
 from stanza.resources.default_packages import default_treebanks
 import stanza.utils.datasets.common as common
 from stanza.utils.datasets.common import read_sentences_from_conllu, write_sentences_to_conllu, write_sentences_to_file, INT_RE, MWT_RE, MWT_OR_COPY_RE
+from stanza.utils.datasets.dutch import merge_colon_sentences, relabel_mood
 from stanza.utils.datasets.indic.bho_bis_mapping import XPOS_TO_BIS
 import stanza.utils.datasets.indic.convert_iit_bhojpuri_pos as convert_iit_bhojpuri_pos
 import stanza.utils.datasets.tokenization.convert_ml_cochin as convert_ml_cochin
@@ -929,6 +930,44 @@ def build_combined_japanese_dataset(paths, model_type, dataset, args, context):
         return gsd_sents
 
 
+def preprocess_dutch_file(treebank, dataset, udbase_dir, output_dir):
+    """
+    Apply preprocessing steps to the Dutch treebanks before using them
+    in combined models
+
+    - add more imperative tags - this is from Claude and not reviewed
+    - combine colon separated sentences into one sentence
+    """
+    # TODO: make this a parameter?
+    output_name = "nl_combined"
+    short_name = treebank_to_short_name(treebank).split("_", maxsplit=1)[1]
+
+    conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+    imp_file = os.path.join(output_dir, "%s.%s.imps.%s.conllu" % (output_name, short_name, dataset))
+    relabel_mood.relabel_file(conllu_file, imp_file)
+
+    colon_file = os.path.join(output_dir, "%s.%s.colons.%s.conllu" % (output_name, short_name, dataset))
+    merge_colon_sentences.merge_file(imp_file, colon_file)
+
+    return colon_file
+
+def build_combined_dutch_dataset(paths, model_type, dataset, args, context):
+    # According to Claude, Alpino and LassySmall are converted the same way
+    # from their original non-UD parses
+    udbase_dir = paths["UDBASE"]
+    output_dir = paths["TOKENIZE_DATA_DIR"]
+    treebanks = ["UD_Dutch-Alpino", "UD_Dutch-LassySmall"]
+
+    sents = []
+    for treebank in treebanks:
+        conllu_file = preprocess_dutch_file(treebank, dataset, udbase_dir, output_dir)
+        #conllu_file = common.find_treebank_dataset_file(treebank, udbase_dir, dataset, "conllu", fail=True)
+        new_sents = read_sentences_from_conllu(conllu_file)
+        print("Read %d sentences from %s" % (len(new_sents), conllu_file))
+        sents.extend(new_sents)
+
+    return sents
+
 def build_combined_albanian_dataset(paths, model_type, dataset, args, context):
     """
     sq_combined is STAF as the base, with TSA added for some things
@@ -1231,6 +1270,7 @@ COMBINED_FNS = {
     "he_combined": build_combined_hebrew_dataset,
     "it_combined": build_combined_italian_dataset,
     "ja_combined": build_combined_japanese_dataset,
+    "nl_combined": build_combined_dutch_dataset,
     "sl_combined": build_combined_slovenian_dataset,
     "sq_combined": build_combined_albanian_dataset,
 }
@@ -1260,6 +1300,7 @@ def build_combined_bhojpuri_context(paths, short_name, model_type, args):
         # sanity check that it's three entries, as expected
         train_conllu, dev_conllu, test_conllu = conllu_files
         yield output_dir, conllu_files
+
 
 @contextmanager
 def build_null_context(*args, **kwargs):
