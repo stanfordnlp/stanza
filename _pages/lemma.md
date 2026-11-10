@@ -225,6 +225,37 @@ sentence, filling in the form, lemma, and UPOS:
 
 and pass it to `run_lemma` with `--secondary_file`.
 
+### Capitalized words
+
+The dictionary is case-sensitive, so a word at the start of a sentence
+or in a headline, such as *Beer* or *Comía*, misses the entry for the
+lowercase word.  For `en_combined` and `es_combined`,
+`prepare_lemma_treebank` also writes `{short_name}.exact_dict.conllu`,
+with the Capitalized and UPPERCASE forms of the lowercase words in the
+training data and the same lemmas: nouns for English, and nouns,
+verbs, auxiliaries, adjectives, and adverbs for Spanish.  Single
+letters are left out, as are forms the training data already has with
+that UPOS.  The entries come from the prepared training file, not from
+the lexicon.
+
+These entries only apply to their exact word and UPOS.  Each one takes
+precedence over the training data for that word and UPOS, but the same
+word with any other UPOS is looked up as before, so *Rosa* as a
+`PROPN` is still *Rosa*.  The seq2seq model does not train on them.
+They are stored in the model's dictionary, and the lookup when
+lemmatizing is the same, so they work with any version of Stanza which
+can load the model.
+
+`run_lemma` passes `data/lemma/{short_name}.exact_dict.conllu` to the
+lemmatizer if it exists.  The lemmatizer can also be given any
+CoNLL-U file in the same one word per sentence format as a lexicon,
+for entries which should only apply to their exact word and UPOS.
+
+| Option | Script | Description |
+| --- | --- | --- |
+| `--no_exact_dictionary` | `prepare_lemma_treebank` | Don't write the capitalized entries for a dataset which has them, and remove an existing `{short_name}.exact_dict.conllu`. |
+| `--exact_dict_file` | `lemmatizer` | Add the entries in this file to the dictionary for their exact word and UPOS only. |
+
 ## Contextual Classifier
 
 As of Stanza 1.10, there is a contextual classifier for words with
