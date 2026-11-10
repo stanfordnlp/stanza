@@ -256,6 +256,38 @@ for entries which should only apply to their exact word and UPOS.
 | `--no_exact_dictionary` | `prepare_lemma_treebank` | Don't write the capitalized entries for a dataset which has them, and remove an existing `{short_name}.exact_dict.conllu`. |
 | `--exact_dict_file` | `lemmatizer` | Add the entries in this file to the dictionary for their exact word and UPOS only. |
 
+### Checking the Spanish conventions
+
+The FreeLing conversion changes some lemmas to match the conventions
+of GSD and AnCora, as described in
+[Combined models](combined_models.md#freeling).  After writing the
+`es_combined` training data, `prepare_lemma_treebank` compares the
+converted dictionary with the training data on the words each of
+those changes applies to:
+
+| Convention | Words compared |
+| :--------- | :------------- |
+| -dora nouns have the -dora lemma (*investigadoras* → *investigadora*) | `NOUN`s ending in -dora or -doras |
+| -dora adjectives have the -dor lemma (*conservadoras* → *conservador*) | `ADJ`s ending in -dora or -doras |
+| Feminine nouns have the feminine singular lemma (*hermanas* → *hermana*) | `NOUN`s with `Gender=Fem` |
+| Ordinals have the masculine singular ordinal as the lemma (*primeras* → *primero*) | `ADJ`s with `NumType=Ord` |
+| *bueno* and *malo* have the lemmas *buen* and *mal* | `ADJ` forms of *bueno* and *malo* |
+
+Only words in both the dictionary and the training data are compared,
+using the most frequent lemma in the training data for each word and
+UPOS.  If any convention agrees on fewer than 90% of its words, or has
+no words to compare, preparing the dataset stops with a list of the
+words which disagree.  That usually means a treebank has changed one
+of its conventions, and the rules in
+[convert_es_freeling.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/lemma/convert_es_freeling.py)
+need to change to match.  The check is skipped with
+`--no_external_dictionary`.
+
+The first sentence of `es_combined.dict.conllu` records which version
+of FreeLing it was built from: `# freeling_commit` if the FreeLing
+directory is a git clone, and `# freeling_entries_sha256`, a hash of
+its dictionary files.
+
 ## Contextual Classifier
 
 As of Stanza 1.10, there is a contextual classifier for words with
