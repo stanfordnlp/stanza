@@ -346,7 +346,8 @@ def test_delta_embedding_reserved_rows(trained_s_classifier):
     model = trained_s_classifier
     assert model.known_words[:VOCAB_PREFIX_SIZE] == VOCAB_PREFIX
     assert min(model.known_word_map.values()) == VOCAB_PREFIX_SIZE
-    assert model.delta_embedding.num_embeddings == len(model.known_words)
+    # one extra row so releases from before VOCAB_PREFIX can load the model
+    assert model.delta_embedding.num_embeddings == len(model.known_words) + 1
     assert model.unknown_word_id == UNK_ID
     # <UNK> never appears in training, so both reserved rows are still zero after training
     assert not model.delta_embedding.weight[PAD_ID].any()
@@ -372,7 +373,29 @@ def test_delta_embedding_new_known_words(pretrain_file):
     model = _build_lstm(pretrain_file, VOCAB_PREFIX + ["'s", "she"])
     assert model.known_word_map == {"'s": VOCAB_PREFIX_SIZE, "she": VOCAB_PREFIX_SIZE + 1}
     assert model.unknown_word_id == UNK_ID
-    assert model.delta_embedding.num_embeddings == VOCAB_PREFIX_SIZE + 2
+    assert model.delta_embedding.num_embeddings == VOCAB_PREFIX_SIZE + 3
     assert not model.delta_embedding.weight[PAD_ID].any()
     assert not model.delta_embedding.weight[UNK_ID].any()
+    assert not model.delta_embedding.weight[-1].any()
     assert model.delta_embedding.weight[VOCAB_PREFIX_SIZE].any()
+
+def test_delta_embedding_loadable_by_old_releases(trained_s_classifier):
+    """
+    A VOCAB_PREFIX model must work in releases from before VOCAB_PREFIX
+
+    Those releases build the delta embedding with len(known_words) + 1 rows,
+    number words with enumerate(known_words), and send unknown words to row 0.
+    """
+    model = trained_s_classifier
+    known_words = model.known_words
+
+    # same shape as the old code builds, so load_state_dict works there
+    assert model.get_save_dict()["params"]["delta_embedding.weight"].shape[0] == len(known_words) + 1
+
+    # every real word gets the same row in the old numbering
+    old_known_word_map = {word: idx for idx, word in enumerate(known_words)}
+    for word, idx in model.known_word_map.items():
+        assert old_known_word_map[word] == idx
+
+    # unknown words get row 0 in the old code, which is zero like <UNK>
+    assert torch.equal(model.delta_embedding.weight[PAD_ID], model.delta_embedding.weight[UNK_ID])
