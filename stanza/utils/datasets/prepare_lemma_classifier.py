@@ -6,6 +6,7 @@ from stanza.utils.datasets.common import find_treebank_dataset_file, UnknownData
 from stanza.utils.default_paths import get_default_paths
 from stanza.models.lemma_classifier import prepare_dataset
 from stanza.models.common.short_name_to_treebank import short_name_to_treebank
+from stanza.resources.default_packages import default_charlms, lemma_charlms
 from stanza.utils.conll import CoNLL
 
 SECTIONS = ("train", "dev", "test")
@@ -208,6 +209,54 @@ DATASET_TARGETS = {
 
 DATASET_TARGETS["sl_ssj"] = DATASET_TARGETS["sl_combined"]
 DATASET_TARGETS["sl_sst"] = DATASET_TARGETS["sl_combined"]
+
+def default_lemma_charlm(short_name, language_charlms=None, dataset_charlms=None):
+    """
+    Return the charlm a lemmatizer for short_name uses by default, or None if it has no charlm
+
+    Uses the same precedence as choose_charlm in stanza/utils/training/common.py:
+    a dataset-specific entry in dataset_charlms, even an empty one, overrides the
+    language default.
+
+    language_charlms and dataset_charlms default to default_charlms and
+    lemma_charlms from default_packages.
+    """
+    if language_charlms is None:
+        language_charlms = default_charlms
+    if dataset_charlms is None:
+        dataset_charlms = lemma_charlms
+
+    lang, dataset = short_name.split("_", 1)
+    if dataset in dataset_charlms.get(lang, {}):
+        return dataset_charlms[lang][dataset] or None
+    return language_charlms.get(lang, None)
+
+def uses_lemma_classifier(short_name, charlm, classifier_datasets=None, language_charlms=None, dataset_charlms=None):
+    """
+    Return whether the lemmatizer for short_name built with charlm has the contextual classifier attached
+
+    charlm is the charlm actually used, with "default" already resolved, or None for no charlm
+
+    The classifier goes on the charlm lemmatizer when the treebank has a charlm.
+    When there is no charlm for the treebank, as with el_gdt, the nocharlm
+    lemmatizer is the most accurate one available, so it gets the classifier.
+
+    run_lemma.py uses this to decide whether to attach the classifier, and
+    prepare_resources.py uses it to decide which lemmatizers need a pretrain,
+    so the two stay in agreement.
+
+    classifier_datasets defaults to DATASET_MAPPING.  The charlm maps are
+    passed to default_lemma_charlm.  prepare_resources.py passes its own
+    copies of all three so its tests can substitute a fake configuration.
+    """
+    if classifier_datasets is None:
+        classifier_datasets = DATASET_MAPPING
+
+    if short_name not in classifier_datasets:
+        return False
+    if charlm:
+        return True
+    return default_lemma_charlm(short_name, language_charlms, dataset_charlms) is None
 
 def main(dataset_name):
     paths = get_default_paths()

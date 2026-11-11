@@ -73,6 +73,7 @@ from stanza.resources.common import _is_within_directory
 from stanza.resources.default_packages import PACKAGES, TRANSFORMERS, TRANSFORMER_NICKNAMES
 from stanza.resources.default_packages import *
 from stanza.utils.datasets.prepare_lemma_classifier import DATASET_MAPPING as LEMMA_CLASSIFIER_DATASETS
+from stanza.utils.datasets.prepare_lemma_classifier import uses_lemma_classifier
 from stanza.utils.get_tqdm import get_tqdm
 
 tqdm = get_tqdm()
@@ -407,16 +408,21 @@ def get_pos_dependencies(lang, package):
     return dependencies
 
 def get_lemma_pretrain_package(lang, package):
-    package, uses_pretrain, uses_charlm = split_package(package)
+    """
+    Return the pretrain needed by the contextual lemma classifier, if this lemmatizer has one attached
+
+    The seq2seq lemmatizer itself doesn't use a pretrain
+    """
+    base_package, uses_pretrain, _ = split_package(package)
     if not uses_pretrain:
         return None
-    if not uses_charlm:
-        # currently the contextual lemma classifier is only active
-        # for the charlm lemmatizers
+    charlm_package = get_lemma_charlm_package(lang, package)
+    if not uses_lemma_classifier("%s_%s" % (lang, base_package), charlm_package,
+                                 classifier_datasets=LEMMA_CLASSIFIER_DATASETS,
+                                 language_charlms=default_charlms,
+                                 dataset_charlms=lemma_charlms):
         return None
-    if "%s_%s" % (lang, package) not in LEMMA_CLASSIFIER_DATASETS:
-        return None
-    return get_pretrain_package(lang, package, {}, default_pretrains)
+    return get_pretrain_package(lang, base_package, {}, default_pretrains)
 
 def get_lemma_charlm_package(lang, package):
     return get_charlm_package(lang, package, lemma_charlms, default_charlms)

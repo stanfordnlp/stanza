@@ -33,9 +33,9 @@ def add_lemma_args(parser):
     add_charlm_args(parser)
 
     parser.add_argument('--lemma_classifier', dest='lemma_classifier', action='store_true', default=None,
-                        help="Don't use the lemma classifier datasets.  Default is to build lemma classifier as part of the original lemmatizer if the charlm is used")
+                        help="Build the lemma classifier and attach it to the lemmatizer.  Default is to attach it to the charlm lemmatizer, or to the nocharlm lemmatizer if the treebank has no charlm")
     parser.add_argument('--no_lemma_classifier', dest='lemma_classifier', action='store_false',
-                        help="Don't use the lemma classifier datasets.  Default is to build lemma classifier as part of the original lemmatizer if the charlm is used")
+                        help="Don't use the lemma classifier datasets.  Default is to attach it to the charlm lemmatizer, or to the nocharlm lemmatizer if the treebank has no charlm")
 
     parser.add_argument('--wordvec_pretrain_file', default=None, type=str,
                         help="Location for finding the word vectors, if not default.  Used by the lemma classifier (which not all languages support)")
@@ -196,8 +196,12 @@ def run_treebank(mode, paths, treebank, short_name, command_args, extra_args):
 
         use_lemma_classifier = command_args.lemma_classifier
         if use_lemma_classifier is None:
-            use_lemma_classifier = command_args.charlm is not None
-        use_lemma_classifier = use_lemma_classifier and short_name in prepare_lemma_classifier.DATASET_MAPPING
+            charlm = choose_lemma_charlm(short_language, dataset, command_args.charlm)
+            use_lemma_classifier = prepare_lemma_classifier.uses_lemma_classifier(short_name, charlm)
+        else:
+            # an explicit --lemma_classifier can attach a classifier to a model
+            # prepare_resources.py won't expect it on, so it won't get a pretrain dependency
+            use_lemma_classifier = use_lemma_classifier and short_name in prepare_lemma_classifier.DATASET_MAPPING
         if use_lemma_classifier and mode == Mode.TRAIN:
             # some installations may not have transformers,
             # so we bury the lemma_classifier import in the codepath
