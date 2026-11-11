@@ -80,7 +80,7 @@ default_treebanks = {
     "naq":     "kdt",
     "nb":      "bokmaal",
     "nds":     "lsdc",
-    "nl":      "alpino",
+    "nl":      "combined",
     "nn":      "nynorsk",
     "oc":      "ttb",
     "olo":     "kkpp",
