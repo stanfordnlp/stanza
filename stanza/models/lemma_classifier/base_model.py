@@ -121,6 +121,8 @@ class LemmaClassifier(ABC, nn.Module):
 
         # strict=False to accommodate missing parameters from the transformer or charlm
         model.load_state_dict(checkpoint['params'], strict=False)
+        # a loaded classifier is used for prediction, so turn off dropout
+        model.eval()
         return model
 
     @staticmethod

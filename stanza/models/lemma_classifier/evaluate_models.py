@@ -127,7 +127,7 @@ def model_predict(model: nn.Module, position_indices: torch.Tensor, sentences: L
     return predicted_class
 
 
-def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_training: bool = False) -> Tuple[Mapping, Mapping, float, float]:
+def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True) -> Tuple[Mapping, Mapping, float, float]:
     """
     Helper function for model evaluation
 
@@ -136,7 +136,9 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
         model_path (str): Path to the saved model weights that will be loaded into `model`.
         eval_path (str): Path to the saved evaluation dataset.
         verbose (bool, optional): True if `evaluate_sequences()` should print the F1, Precision, and Recall for each class. Defaults to True.
-        is_training (bool, optional): Whether the model is in training mode. If the model is training, we do not change it to eval mode.
+
+    The model is evaluated in eval mode, so dropout is off, and is then
+    returned to whichever mode it was in before.
 
     Returns:
         1. Multi-class results (Mapping[int, Mapping[str, float]]): first map has keys as the classes (lemma indices) and value is
@@ -149,24 +151,27 @@ def evaluate_model(model: nn.Module, eval_path: str, verbose: bool = True, is_tr
     device = default_device()
     model.to(device)
 
-    if not is_training:
-        model.eval()  # set to eval mode
-
-    # load in eval data
-    dataset = utils.Dataset(eval_path, label_decoder=model.label_decoder, shuffle=False)
+    # load in eval data, using the model's own UPOS tag ids
+    dataset = utils.Dataset(eval_path, label_decoder=model.label_decoder, shuffle=False,
+                            upos_to_id=getattr(model, "upos_to_id", None))
 
     logger.info(f"Evaluating on evaluation file {eval_path}")
 
     correct, total = 0, 0
     gold_tags, pred_tags = dataset.labels, []
 
-    # run eval on each example from dataset
-    for sentences, pos_indices, upos_tags, labels in tqdm(dataset, "Evaluating examples from data file"):
-        pred = model_predict(model, pos_indices, sentences, upos_tags)  # Pred should be size (batch_size, )
-        correct_preds = pred == labels.to(device)
-        correct += torch.sum(correct_preds)
-        total += len(correct_preds)
-        pred_tags += pred.tolist()
+    was_training = model.training
+    model.eval()
+    try:
+        # run eval on each example from dataset
+        for sentences, pos_indices, upos_tags, labels in tqdm(dataset, "Evaluating examples from data file"):
+            pred = model_predict(model, pos_indices, sentences, upos_tags)  # Pred should be size (batch_size, )
+            correct_preds = pred == labels.to(device)
+            correct += torch.sum(correct_preds)
+            total += len(correct_preds)
+            pred_tags += pred.tolist()
+    finally:
+        model.train(was_training)
 
     logger.info("Finished evaluating on dataset. Computing scores...")
     accuracy = correct / total

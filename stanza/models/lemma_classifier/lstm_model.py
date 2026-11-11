@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_se
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from typing import List, Tuple
 
-from stanza.models.common.vocab import UNK_ID
+from stanza.models.common.vocab import PAD_ID, UNK
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.base_model import LemmaClassifier
 from stanza.models.lemma_classifier.constants import ModelType
@@ -36,6 +36,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
 
         Kwargs:
             upos_emb_dim (int): The size of the UPOS tag embeddings
+            upos_dropout (float): During training, the probability of replacing a context word's UPOS tag with <UNK>
             num_heads (int): The number of heads to use for attention. If there are more than 0 heads, attention will be used instead of the LSTM.
 
         Raises:
@@ -77,14 +78,17 @@ class LemmaClassifierLSTM(LemmaClassifier):
 
         self.upos_emb_dim = self.model_args["upos_emb_dim"]
         self.upos_to_id = upos_to_id
+        self.upos_dropout = self.model_args.get("upos_dropout", 0.0)
+        if self.upos_to_id is not None:
+            self.unknown_upos_id = utils.unknown_upos_id(self.upos_to_id)
         if self.upos_emb_dim > 0 and self.upos_to_id is not None:
-            # convert_tags maps tags unseen in training to padding_idx 0,
-            # which has a zero embedding
-            # TODO: index 0 is also the first tag seen in the training data,
-            # so that tag shares the untrained padding embedding
+            # upos_to_id starts with the VOCAB_PREFIX tags, so PAD_ID is reserved for padding
+            # Models from before the VOCAB_PREFIX convention gave id 0 to the
+            # first tag in their training data, so for those models that tag
+            # shares the untrained padding embedding with unknown tags
             self.upos_emb = nn.Embedding(num_embeddings=len(self.upos_to_id),
                                          embedding_dim=self.upos_emb_dim,
-                                         padding_idx=0)
+                                         padding_idx=PAD_ID)
             self.input_size += self.upos_emb_dim
 
         device = next(self.parameters()).device
@@ -128,13 +132,27 @@ class LemmaClassifierLSTM(LemmaClassifier):
         Convert UPOS tags to the ids used by the tag embedding
 
         A tag not seen in the training data, such as SYM in a treebank
-        where no training sentence had one, maps to 0, the embedding's
-        padding index.  Its embedding is all zeros, so the tag
-        contributes no POS information rather than crashing the pipeline.
+        where no training sentence had one, maps to the unknown tag id.
+        See utils.unknown_upos_id for what that is for older models.
         """
         if self.upos_to_id is not None:
-            return [[self.upos_to_id.get(x, 0) for x in sentence] for sentence in upos_tags]
+            return [[self.upos_to_id.get(x, self.unknown_upos_id) for x in sentence] for sentence in upos_tags]
         return None
+
+    def drop_tags(self, upos_tags, pos_indices):
+        """
+        Replace random context tags with <UNK> so the <UNK> embedding gets trained
+
+        upos_tags is the padded (batch, length) tensor of tag ids.
+        Padding is never replaced.  Neither is the target word's tag,
+        since the target word always has one of target_upos at
+        prediction time.
+        """
+        drop = torch.rand(upos_tags.shape, device=upos_tags.device) < self.upos_dropout
+        drop = drop & (upos_tags != PAD_ID)
+        rows = torch.arange(upos_tags.shape[0], device=upos_tags.device)
+        drop[rows, torch.as_tensor(pos_indices, device=upos_tags.device)] = False
+        return upos_tags.masked_fill(drop, self.unknown_upos_id)
 
     def forward(self, pos_indices: List[int], sentences: List[List[str]], upos_tags: List[List[int]]):
         """
@@ -167,7 +185,10 @@ class LemmaClassifierLSTM(LemmaClassifier):
 
         if self.upos_emb_dim > 0:
             upos_tags = [torch.tensor(sentence_tags) for sentence_tags in upos_tags]  # convert internal lists to tensors
-            upos_tags = pad_sequence(upos_tags, batch_first=True, padding_value=0).to(device)
+            upos_tags = pad_sequence(upos_tags, batch_first=True, padding_value=PAD_ID).to(device)
+            # only models with an <UNK> tag can learn from tag dropout
+            if self.training and self.upos_dropout > 0 and UNK in self.upos_to_id:
+                upos_tags = self.drop_tags(upos_tags, pos_indices)
             pos_emb = self.upos_emb(upos_tags)
             embedded = torch.cat((embedded, pos_emb), 2).to(device)
 
@@ -200,7 +221,9 @@ class LemmaClassifierLSTM(LemmaClassifier):
             embedded += pos_enc.expand_as(embedded)
 
         padded_sequences = pad_sequence(embedded, batch_first=True)
-        lengths = torch.tensor([len(seq) for seq in embedded])
+        # the real sentence lengths, so that the LSTM doesn't run over the
+        # padding and each sentence's result doesn't depend on its batch
+        lengths = torch.tensor([len(words) for words in sentences])
 
         if self.num_heads > 0:
             target_seq_length, src_seq_length = padded_sequences.size(1), padded_sequences.size(1)
@@ -214,7 +237,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
             token_reps = attn_output[torch.arange(attn_output.size(0)), pos_indices]
 
         else:
-            packed_sequences = pack_padded_sequence(padded_sequences, lengths, batch_first=True)
+            packed_sequences = pack_padded_sequence(padded_sequences, lengths, batch_first=True, enforce_sorted=False)
             lstm_out, (hidden, _) = self.lstm(packed_sequences)
             # Extract the hidden state at the index of the token to classify
             unpacked_lstm_outputs, _ = pad_packed_sequence(lstm_out, batch_first=True)

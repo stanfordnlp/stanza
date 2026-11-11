@@ -109,7 +109,7 @@ class BaseLemmaClassifierTrainer(ABC):
             logger.info(f"Epoch [{epoch + 1}/{num_epochs}], Loss: {loss.item()}")
             if eval_file:
                 # Evaluate model on dev set to see if it should be saved.
-                _, _, _, f1 = evaluate_model(self.model, eval_file, is_training=True)
+                _, _, _, f1 = evaluate_model(self.model, eval_file)
                 logger.info(f"Weighted f1 for model: {f1}")
                 if f1 > best_f1:
                     best_f1 = f1
