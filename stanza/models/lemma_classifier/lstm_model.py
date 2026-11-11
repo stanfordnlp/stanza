@@ -7,7 +7,7 @@ from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence, pad_packed_se
 from stanza.models.common.char_model import CharacterModel, CharacterLanguageModel
 from typing import List, Tuple
 
-from stanza.models.common.vocab import PAD_ID, UNK
+from stanza.models.common.vocab import PAD_ID, UNK, UNK_ID, VOCAB_PREFIX, VOCAB_PREFIX_SIZE
 from stanza.models.lemma_classifier import utils
 from stanza.models.lemma_classifier.base_model import LemmaClassifier
 from stanza.models.lemma_classifier.constants import ModelType
@@ -28,7 +28,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
             output_dim (int): Size of output vector from MLP layer
             upos_to_id (Mapping[str, int]): A dictionary mapping UPOS tag strings to their respective IDs
             pt_embedding (Pretrain): pretrained embeddings
-            known_words (list(str)): Words which are in the training data
+            known_words (list(str)): The VOCAB_PREFIX entries followed by the lowercased words in the training data
             target_words (set(str)): a set of the words which might need lemmatization
             use_charlm (bool): Whether or not to use the charlm embeddings
             charlm_forward_file (str): The path to the forward pass model for the character language model
@@ -55,11 +55,29 @@ class LemmaClassifierLSTM(LemmaClassifier):
         self.embedding_dim = emb_matrix.shape[1]
 
         self.known_words = known_words
-        self.known_word_map = {word: idx for idx, word in enumerate(known_words)}
-        self.delta_embedding = nn.Embedding(num_embeddings=len(known_words)+1,
+        if list(known_words[:VOCAB_PREFIX_SIZE]) == VOCAB_PREFIX:
+            # known_words starts with the VOCAB_PREFIX entries, so no real word shares the padding row
+            self.known_word_map = {word: idx for idx, word in enumerate(known_words) if idx >= VOCAB_PREFIX_SIZE}
+            self.unknown_word_id = UNK_ID
+            num_delta_words = len(known_words)
+        else:
+            # Models from before the VOCAB_PREFIX convention numbered the
+            # known words from 0, so the first known word shares the
+            # padding row with unknown words
+            self.known_word_map = {word: idx for idx, word in enumerate(known_words)}
+            self.unknown_word_id = PAD_ID
+            num_delta_words = len(known_words) + 1
+        self.delta_embedding = nn.Embedding(num_embeddings=num_delta_words,
                                             embedding_dim=self.embedding_dim,
-                                            padding_idx=0)
+                                            padding_idx=PAD_ID)
         nn.init.normal_(self.delta_embedding.weight, std=0.01)
+        if self.unknown_word_id == UNK_ID:
+            # Every training word is in known_word_map, so the <UNK> row gets
+            # no gradient.  Starting it and the padding row at zero means an
+            # unknown word gets no delta, just its pretrained embedding.
+            with torch.no_grad():
+                self.delta_embedding.weight[PAD_ID].zero_()
+                self.delta_embedding.weight[UNK_ID].zero_()
 
         self.input_size += self.embedding_dim
 
@@ -175,7 +193,7 @@ class LemmaClassifierLSTM(LemmaClassifier):
             sentence_token_ids = torch.tensor(sentence_token_ids, device=device)
             token_ids.append(sentence_token_ids)
 
-            sentence_delta_token_ids = [self.known_word_map.get(word.lower(), 0) for word in words]
+            sentence_delta_token_ids = [self.known_word_map.get(word.lower(), self.unknown_word_id) for word in words]
             sentence_delta_token_ids = torch.tensor(sentence_delta_token_ids, device=device)
             delta_token_ids.append(sentence_delta_token_ids)
 
