@@ -235,6 +235,9 @@ def test_convert_one_sentence(tmp_path):
     # the reserved tags come first, so no real tag gets the padding id
     assert [dataset.upos_to_id[tag] for tag in VOCAB_PREFIX] == list(range(len(VOCAB_PREFIX)))
 
+    # same for the known words used by the delta embedding
+    assert dataset.known_words == VOCAB_PREFIX + ["'s", "a", "herald", "here", "interview", "miami"]
+
 def test_dataset_fixed_upos_to_id(tmp_path):
     """
     Evaluating an existing model uses that model's tag ids, and its unknown tag id for anything else

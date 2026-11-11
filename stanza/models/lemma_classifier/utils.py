@@ -121,7 +121,8 @@ class Dataset:
         self.batch_size = batch_size
         self.shuffle = shuffle
 
-        self.known_words = [x.lower() for x in sorted(known_words)]
+        # the VOCAB_PREFIX entries come first, so no real word gets the padding row of the delta embedding
+        self.known_words = list(VOCAB_PREFIX) + sorted(set(x.lower() for x in known_words))
         self.target_words = set(x.lower() for x in target_words)
 
     def __len__(self):

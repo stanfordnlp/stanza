@@ -28,7 +28,8 @@ from types import SimpleNamespace
 import pytest
 import torch
 
-from stanza.models.common.vocab import PAD_ID, UNK_ID, VOCAB_PREFIX
+from stanza.models.common.foundation_cache import load_pretrain
+from stanza.models.common.vocab import PAD_ID, UNK_ID, VOCAB_PREFIX, VOCAB_PREFIX_SIZE
 from stanza.models.lemma.trainer import Trainer
 from stanza.models.lemma_classifier import train_lstm_model
 from stanza.models.lemma_classifier.base_model import LemmaClassifier
@@ -337,3 +338,41 @@ def test_evaluate_model_restores_mode(tmp_path, trained_s_classifier):
         model.eval()
     evaluate_model(model, converted_files[1], verbose=False)
     assert not model.training
+
+def test_delta_embedding_reserved_rows(trained_s_classifier):
+    """
+    Known words start after the reserved rows, and unknown words get the zero <UNK> row
+    """
+    model = trained_s_classifier
+    assert model.known_words[:VOCAB_PREFIX_SIZE] == VOCAB_PREFIX
+    assert min(model.known_word_map.values()) == VOCAB_PREFIX_SIZE
+    assert model.delta_embedding.num_embeddings == len(model.known_words)
+    assert model.unknown_word_id == UNK_ID
+    # <UNK> never appears in training, so both reserved rows are still zero after training
+    assert not model.delta_embedding.weight[PAD_ID].any()
+    assert not model.delta_embedding.weight[UNK_ID].any()
+
+def _build_lstm(pretrain_file, known_words):
+    model_args = {"hidden_dim": 8, "num_heads": 0, "upos_emb_dim": 4}
+    upos_to_id = {tag: idx for idx, tag in enumerate(VOCAB_PREFIX)}
+    upos_to_id["AUX"] = len(upos_to_id)
+    return LemmaClassifierLSTM(model_args, 2, load_pretrain(pretrain_file), {"be": 0, "have": 1}, upos_to_id,
+                               known_words, {"'s"}, {"AUX"})
+
+def test_delta_embedding_old_known_words(pretrain_file):
+    """
+    Models from before VOCAB_PREFIX number known words from 0, and unknown words use the padding row
+    """
+    model = _build_lstm(pretrain_file, ["'s", "she"])
+    assert model.known_word_map == {"'s": 0, "she": 1}
+    assert model.unknown_word_id == PAD_ID
+    assert model.delta_embedding.num_embeddings == 3
+
+def test_delta_embedding_new_known_words(pretrain_file):
+    model = _build_lstm(pretrain_file, VOCAB_PREFIX + ["'s", "she"])
+    assert model.known_word_map == {"'s": VOCAB_PREFIX_SIZE, "she": VOCAB_PREFIX_SIZE + 1}
+    assert model.unknown_word_id == UNK_ID
+    assert model.delta_embedding.num_embeddings == VOCAB_PREFIX_SIZE + 2
+    assert not model.delta_embedding.weight[PAD_ID].any()
+    assert not model.delta_embedding.weight[UNK_ID].any()
+    assert model.delta_embedding.weight[VOCAB_PREFIX_SIZE].any()
