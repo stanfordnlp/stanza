@@ -87,6 +87,7 @@ def build_argparse():
     parser.add_argument("--charlm_forward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_forward.pt"), help="Path to forward charlm file")
     parser.add_argument("--charlm_backward_file", type=str, default=os.path.join(os.path.dirname(__file__), "charlm_files", "1billion_backwards.pt"), help="Path to backward charlm file")
     parser.add_argument("--upos_emb_dim", type=int, default=20, help="Dimension size for UPOS tag embeddings.")
+    parser.add_argument("--upos_dropout", type=float, default=0.05, help="During training, the probability of replacing a context word's UPOS tag with <UNK>, which teaches the model what to do with tags it hasn't seen.")
     parser.add_argument("--use_attn", action='store_true', dest='attn', default=False, help='Whether to use multihead attention instead of LSTM.')
     parser.add_argument("--num_heads", type=int, default=0, help="Number of heads to use for multihead attention.")
     parser.add_argument("--save_dir", type=str, default="saved_models/lemma_classifier", help="Which directory for saving lemma classifiers")

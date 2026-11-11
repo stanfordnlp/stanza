@@ -2,6 +2,7 @@ import os
 
 import pytest
 
+from stanza.models.common.vocab import PAD_ID, UNK_ID, VOCAB_PREFIX
 import stanza.models.lemma_classifier.utils as utils
 import stanza.utils.datasets.prepare_lemma_classifier as prepare_lemma_classifier
 
@@ -230,6 +231,33 @@ def test_convert_one_sentence(tmp_path):
         assert text_batches == [['Here', "'s", 'a', 'Miami', 'Herald', 'interview']]
         upos = [id_to_upos[x] for x in upos_batches[0]]
         assert upos == ['ADV', 'AUX', 'DET', 'PROPN', 'PROPN', 'NOUN']
+
+    # the reserved tags come first, so no real tag gets the padding id
+    assert [dataset.upos_to_id[tag] for tag in VOCAB_PREFIX] == list(range(len(VOCAB_PREFIX)))
+
+def test_dataset_fixed_upos_to_id(tmp_path):
+    """
+    Evaluating an existing model uses that model's tag ids, and its unknown tag id for anything else
+    """
+    texts = [EWT_ONE_SENTENCE]
+    datasets = ["train"]
+    paths = write_test_dataset(tmp_path, texts, datasets)
+    converted_files = prepare_lemma_classifier.process_treebank(paths, "en_ewt", "'s", "AUX", "be|have", ["train"])
+
+    # tags are ADV AUX DET PROPN PROPN NOUN
+    upos_to_id = {tag: idx for idx, tag in enumerate(VOCAB_PREFIX)}
+    upos_to_id.update({"NOUN": 4, "AUX": 5, "ADV": 6})
+    dataset = utils.Dataset(converted_files[0], batch_size=10, shuffle=False, upos_to_id=upos_to_id)
+    assert dataset.upos_to_id is upos_to_id
+    assert len(upos_to_id) == len(VOCAB_PREFIX) + 3
+    for _, _, upos_batches, _ in dataset:
+        assert upos_batches[0] == [6, 5, UNK_ID, UNK_ID, UNK_ID, 4]
+
+    # a model from before VOCAB_PREFIX has no <UNK>, so unknown tags get the padding id
+    old_upos_to_id = {"NOUN": 0, "AUX": 1, "ADV": 2}
+    dataset = utils.Dataset(converted_files[0], batch_size=10, shuffle=False, upos_to_id=old_upos_to_id)
+    for _, _, upos_batches, _ in dataset:
+        assert upos_batches[0] == [2, 1, PAD_ID, PAD_ID, PAD_ID, 0]
 
 def test_convert_dataset(tmp_path):
     converted_files = convert_english_dataset(tmp_path)

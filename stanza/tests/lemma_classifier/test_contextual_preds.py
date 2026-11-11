@@ -23,12 +23,17 @@ hold "PLACEHOLDER".
 """
 
 import os
+from types import SimpleNamespace
 
 import pytest
+import torch
 
+from stanza.models.common.vocab import PAD_ID, UNK_ID, VOCAB_PREFIX
 from stanza.models.lemma.trainer import Trainer
 from stanza.models.lemma_classifier import train_lstm_model
 from stanza.models.lemma_classifier.base_model import LemmaClassifier
+from stanza.models.lemma_classifier.evaluate_models import evaluate_model
+from stanza.models.lemma_classifier.lstm_model import LemmaClassifierLSTM
 from stanza.tests import TEST_WORKING_DIR
 from stanza.tests.lemma_classifier.test_data_preparation import convert_english_dataset
 from stanza.utils.conll import CoNLL
@@ -271,11 +276,64 @@ class TestUpdateContextualPreds:
 
 def test_convert_tags_unseen(trained_s_classifier):
     """
-    Unseen tags map to the padding index of the tag embedding, which is all zeros
+    Unseen tags map to <UNK>, and the padding row of the tag embedding stays all zeros
     """
     upos_to_id = trained_s_classifier.upos_to_id
-    known = next(iter(upos_to_id))
-    converted = trained_s_classifier.convert_tags([[known, UNSEEN_TAG]])
-    assert converted == [[upos_to_id[known], 0]]
-    assert trained_s_classifier.upos_emb.padding_idx == 0
-    assert not trained_s_classifier.upos_emb.weight[0].any()
+    assert [upos_to_id[tag] for tag in VOCAB_PREFIX] == list(range(len(VOCAB_PREFIX)))
+    converted = trained_s_classifier.convert_tags([["AUX", UNSEEN_TAG]])
+    assert converted == [[upos_to_id["AUX"], UNK_ID]]
+    assert trained_s_classifier.upos_emb.padding_idx == PAD_ID
+    assert not trained_s_classifier.upos_emb.weight[PAD_ID].any()
+
+def test_loaded_classifier_in_eval_mode(trained_s_classifier):
+    """
+    A loaded classifier is used for prediction, so it should not apply dropout
+    """
+    assert not trained_s_classifier.training
+
+def test_prediction_independent_of_batch(trained_s_classifier):
+    """
+    A sentence's logits should not depend on the length of the other sentences in its batch
+    """
+    model = trained_s_classifier
+    short = ["She", "'s", "happy", "."]
+    short_tags = ["PRON", "AUX", "ADJ", "PUNCT"]
+    long = ["It", "'s", "been", "a", "very", "long", "day", "at", "the", "office", "today", "."]
+    long_tags = ["PRON", "AUX", "AUX", "DET", "ADV", "ADJ", "NOUN", "ADP", "DET", "NOUN", "NOUN", "PUNCT"]
+
+    with torch.no_grad():
+        alone = model(torch.tensor([1]), [short], model.convert_tags([short_tags]))
+        batched = model(torch.tensor([1, 1]), [short, long], model.convert_tags([short_tags, long_tags]))
+        reversed_batch = model(torch.tensor([1, 1]), [long, short], model.convert_tags([long_tags, short_tags]))
+    assert torch.allclose(alone[0], batched[0], atol=1e-5)
+    assert torch.allclose(alone[0], reversed_batch[1], atol=1e-5)
+
+def test_drop_tags():
+    """
+    drop_tags replaces context tags with <UNK>, but never padding or the target word
+    """
+    fake_model = SimpleNamespace(upos_dropout=1.0, unknown_upos_id=UNK_ID)
+    upos_tags = torch.tensor([[5, 6, 7, 8],
+                              [9, 10, PAD_ID, PAD_ID]])
+    dropped = LemmaClassifierLSTM.drop_tags(fake_model, upos_tags, [1, 0])
+    expected = torch.tensor([[UNK_ID, 6, UNK_ID, UNK_ID],
+                             [9, UNK_ID, PAD_ID, PAD_ID]])
+    assert torch.equal(dropped, expected)
+
+    fake_model.upos_dropout = 0.0
+    assert torch.equal(LemmaClassifierLSTM.drop_tags(fake_model, upos_tags, [1, 0]), upos_tags)
+
+def test_evaluate_model_restores_mode(tmp_path, trained_s_classifier):
+    """
+    evaluate_model scores in eval mode, then returns the model to the mode it was in
+    """
+    converted_files = convert_english_dataset(tmp_path)
+    model = trained_s_classifier
+    try:
+        model.train()
+        evaluate_model(model, converted_files[1], verbose=False)
+        assert model.training
+    finally:
+        model.eval()
+    evaluate_model(model, converted_files[1], verbose=False)
+    assert not model.training
