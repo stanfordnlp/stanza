@@ -20,6 +20,7 @@ import pytest
 
 import stanza
 import stanza.resources.prepare_resources as prepare_resources
+from stanza.utils.datasets.prepare_lemma_classifier import default_lemma_charlm, uses_lemma_classifier
 
 from stanza.tests import *
 
@@ -799,3 +800,57 @@ def test_check_only_keeps_alternates(monkeypatch, fake_config, input_dir, output
     monkeypatch.setattr(sys, "argv", ["prepare_resources", "--input_dir", str(input_dir), "--output_dir", str(output_dir), "--packages_only", "--clear_alternate_md5", "--check_only"])
     prepare_resources.main()
     assert (output_dir / "resources.json").read_text() == before
+
+def test_uses_lemma_classifier():
+    datasets = {"en_ewt": None, "fr_gsd": None}
+    language_charlms = {"en": "1billion"}
+
+    def uses(short_name, charlm, dataset_charlms=None):
+        return uses_lemma_classifier(short_name, charlm,
+                                     classifier_datasets=datasets,
+                                     language_charlms=language_charlms,
+                                     dataset_charlms={} if dataset_charlms is None else dataset_charlms)
+
+    # no classifier for this treebank, with or without a charlm
+    assert not uses("en_gum", "1billion")
+    assert not uses("en_gum", None)
+
+    # en has a charlm, so only the charlm lemmatizer gets the classifier
+    assert uses("en_ewt", "1billion")
+    assert not uses("en_ewt", None)
+
+    # fr has no charlm, so the nocharlm lemmatizer gets the classifier
+    assert uses("fr_gsd", None)
+
+    # a dataset-specific "no charlm" overrides the language default
+    assert uses("en_ewt", None, {"en": {"ewt": None}})
+    assert uses("en_ewt", None, {"en": {"ewt": ""}})
+
+def test_default_lemma_charlm():
+    language_charlms = {"en": "1billion"}
+    assert default_lemma_charlm("en_ewt", language_charlms, {}) == "1billion"
+    assert default_lemma_charlm("en_ewt", language_charlms, {"en": {"ewt": "pubmed"}}) == "pubmed"
+    assert default_lemma_charlm("en_ewt", language_charlms, {"en": {"ewt": None}}) is None
+    assert default_lemma_charlm("fr_gsd", language_charlms, {}) is None
+
+def test_lemma_classifier_dependencies(monkeypatch, fake_config):
+    """
+    The lemmatizer with the contextual classifier attached needs a pretrain, and the others don't
+    """
+    monkeypatch.setattr(prepare_resources, "LEMMA_CLASSIFIER_DATASETS", {"en_ewt": None, "fr_gsd": None})
+    charlm_deps = [{'model': 'forward_charlm', 'package': '1billion'}, {'model': 'backward_charlm', 'package': '1billion'}]
+    pretrain_deps = [{'model': 'pretrain', 'package': 'conll17'}]
+
+    assert prepare_resources.get_dependencies("lemma", "en", "ewt_charlm") == pretrain_deps + charlm_deps
+    assert prepare_resources.get_dependencies("lemma", "en", "ewt_nocharlm") == []
+    # fr has no charlm, so its nocharlm lemmatizer is the one with the classifier
+    assert prepare_resources.get_dependencies("lemma", "fr", "gsd_nocharlm") == pretrain_deps
+
+def test_lemma_classifier_no_charlm_resources(monkeypatch, fake_config, input_dir, output_dir):
+    """
+    A language with no charlm still packages the pretrain its contextual lemma classifier needs
+    """
+    monkeypatch.setattr(prepare_resources, "LEMMA_CLASSIFIER_DATASETS", {"fr_gsd": None})
+    resources = run_prepare(monkeypatch, input_dir, output_dir)
+    assert resources["fr"]["lemma"]["gsd_nocharlm"]["dependencies"] == [{'model': 'pretrain', 'package': 'conll17'}]
+    assert "dependencies" not in resources["en"]["lemma"]["ewt_nocharlm"]
