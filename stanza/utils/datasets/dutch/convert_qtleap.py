@@ -30,10 +30,11 @@ Alpino is converted from, so compared with the official conversion:
 
 This script also:
 
-  - fixes the trees in TREE_FIXES, which have a parse error in exactly the
+  - fixes the trees in TREE_FIXES.  Most have a parse error in exactly the
     construction this data is for: the object of an imperative, or a
     possessive je, analyzed as the subject ("Reset de router",
-    "Probeer je gegevens opnieuw in te voeren")
+    "Probeer je gegevens opnieuw in te voeren"), or an imperative tagged
+    as a noun or as part of a menu name
   - retags imperative "ga" from WW(pv,conj,ev) to WW(pv,tgw,ev).  The UD
     Dutch treebanks never tag "ga" as a subjunctive
   - puts the sentences in document order and adds a newdoc for each
@@ -51,8 +52,8 @@ from stanza.utils.datasets.dutch.merge_colon_sentences import read_sentences, se
 
 SENT_ID_RE = re.compile(r'^(Batch\d+_answers_nl-(\d+))-(\d+)$')
 
-XPOS, FEATS, HEAD, DEPREL, DEPS = 4, 5, 6, 7, 8
-COLUMNS = {'XPOS': XPOS, 'FEATS': FEATS, 'HEAD': HEAD, 'DEPREL': DEPREL, 'DEPS': DEPS}
+LEMMA, UPOS, XPOS, FEATS, HEAD, DEPREL, DEPS = 2, 3, 4, 5, 6, 7, 8
+COLUMNS = {'LEMMA': LEMMA, 'UPOS': UPOS, 'XPOS': XPOS, 'FEATS': FEATS, 'HEAD': HEAD, 'DEPREL': DEPREL, 'DEPS': DEPS}
 
 POSSESSIVE_JE = {
     'XPOS': 'VNW|bez|det|stan|red|2v|ev|prenom|zonder|agr',
@@ -65,8 +66,8 @@ def possessive_je(noun):
     return dict(POSSESSIVE_JE, HEAD=str(noun), DEPS='%d:nmod:poss' % noun)
 
 def object_of(verb):
-    """Edits which turn a misparsed subject into the object of token verb"""
-    return {'DEPREL': 'obj', 'DEPS': '%d:obj' % verb}
+    """Edits which make a token the object of token verb"""
+    return {'HEAD': str(verb), 'DEPREL': 'obj', 'DEPS': '%d:obj' % verb}
 
 # sent_id -> list of (token id, form, edits)
 TREE_FIXES = {
@@ -77,8 +78,22 @@ TREE_FIXES = {
     'Batch1_answers_nl-279-2': [(2, 'je', possessive_je(3))],          # Probeer je computer op te starten ...
     'Batch1_answers_nl-71-2':  [(8, 'je', possessive_je(9))],          # Als dit niet lukt, controleer dan je inloggegevens ...
     'Batch1_answers_nl-83-1':  [(3, 'router', object_of(1))],          # Reset de router, door ...
-    'Batch1_answers_nl-280-1': [(3, 'PS3', object_of(1))],             # Start de PS3 op, ga naar ...
+    # Start de PS3 op, ga naar ‘Instellingen’ > ‘Netwerk Instellingen’, kies ‘Netwerk’ en voer ...
+    # the object PS3 is analyzed as the subject, and the imperative kies,
+    # with its object Netwerk, as part of the menu name
+    'Batch1_answers_nl-280-1': [(3, 'PS3', object_of(1)),
+                                (15, '’', {'HEAD': '9', 'DEPS': '9:punct'}),
+                                (17, 'kies', {'LEMMA': 'kiezen', 'HEAD': '1', 'DEPREL': 'conj', 'DEPS': '1:conj:en'}),
+                                (19, 'Netwerk', object_of(17))],
     'Batch1_answers_nl-247-2': [(10, 'computer', object_of(8))],       # Als dit niet het geval is, herstart de computer.
+    # Ga naar de Facebookpagina, klik op het instellingen icoontje > ...
+    # the imperative klik is tagged as the noun
+    'Batch1_answers_nl-337-1': [(6, 'klik', {'LEMMA': 'klikken', 'UPOS': 'VERB', 'XPOS': 'WW|pv|tgw|ev',
+                                             'FEATS': 'Mood=Ind|Number=Sing|Tense=Pres|VerbForm=Fin'}),
+                                (9, 'instellingen', {'DEPREL': 'obl:arg', 'DEPS': '6:obl:arg:op'})],
+    # Je kunt ook gratis programma’s gebruiken zoals GIMP of kiezen voor ...
+    # kiezen is an infinitive coordinated with gebruiken, not a finite plural
+    'Batch1_answers_nl-311-2': [(10, 'kiezen', {'XPOS': 'WW|inf|vrij|zonder', 'FEATS': 'VerbForm=Inf'})],
     # Om PDF bestanden te kunnen wijzigen, heb je PDF software nodig ...
     # je is attached as the subject of wijzigen rather than heb
     'Batch1_answers_nl-256-1': [(9, 'je', {'HEAD': '8', 'DEPS': '6:nsubj:xsubj|8:nsubj'})],
