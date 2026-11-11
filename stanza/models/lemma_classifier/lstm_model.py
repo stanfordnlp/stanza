@@ -59,14 +59,46 @@ class LemmaClassifierLSTM(LemmaClassifier):
             # known_words starts with the VOCAB_PREFIX entries, so no real word shares the padding row
             self.known_word_map = {word: idx for idx, word in enumerate(known_words) if idx >= VOCAB_PREFIX_SIZE}
             self.unknown_word_id = UNK_ID
-            num_delta_words = len(known_words)
         else:
             # Models from before the VOCAB_PREFIX convention numbered the
             # known words from 0, so the first known word shares the
             # padding row with unknown words
             self.known_word_map = {word: idx for idx, word in enumerate(known_words)}
             self.unknown_word_id = PAD_ID
-            num_delta_words = len(known_words) + 1
+
+        # The delta embedding has len(known_words) + 1 rows for both kinds
+        # of model, even though a model with the VOCAB_PREFIX entries never
+        # uses the last row.  That extra row keeps the new models loadable
+        # by Stanza releases from before the VOCAB_PREFIX convention, so a
+        # retrained classifier can go into the resources without forcing
+        # everyone to upgrade.
+        #
+        # Those older releases build this embedding with len(known_words) + 1
+        # rows and number the words with enumerate(known_words), treating
+        # the reserved entries as ordinary words.  With a VOCAB_PREFIX
+        # model, that means:
+        #   - the tensor shapes match, so load_state_dict succeeds.
+        #     Changing the row count here breaks loading in those releases
+        #     with a size mismatch, which strict=False does not cover.
+        #   - each real word gets the same index as it does here, since the
+        #     reserved entries occupy indices 0 to VOCAB_PREFIX_SIZE-1 in
+        #     both numberings.  Lookups lowercase the word first, so no
+        #     word can match the uppercase reserved entries.
+        #   - an unknown word gets the <PAD> row instead of the <UNK> row.
+        #     Both rows are zero, so the result is the same.
+        #
+        # The UPOS tag embedding needs no such allowance, since both old and
+        # new code give it len(upos_to_id) rows and read the ids from
+        # upos_to_id itself.
+        #
+        # Those releases still have the other bugs fixed alongside this
+        # convention, such as the KeyError on UPOS tags missing from the
+        # training data, but the model itself works in them.
+        #
+        # Don't drop the extra row later, either: the row count comes from
+        # known_words rather than being saved, so every model trained with
+        # the extra row would then fail to load with a size mismatch.
+        num_delta_words = len(known_words) + 1
         self.delta_embedding = nn.Embedding(num_embeddings=num_delta_words,
                                             embedding_dim=self.embedding_dim,
                                             padding_idx=PAD_ID)
@@ -75,9 +107,11 @@ class LemmaClassifierLSTM(LemmaClassifier):
             # Every training word is in known_word_map, so the <UNK> row gets
             # no gradient.  Starting it and the padding row at zero means an
             # unknown word gets no delta, just its pretrained embedding.
+            # The unused last row is zeroed as well so it is obviously inert.
             with torch.no_grad():
                 self.delta_embedding.weight[PAD_ID].zero_()
                 self.delta_embedding.weight[UNK_ID].zero_()
+                self.delta_embedding.weight[-1].zero_()
 
         self.input_size += self.embedding_dim
 
