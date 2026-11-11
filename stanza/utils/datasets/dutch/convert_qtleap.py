@@ -101,9 +101,10 @@ TREE_FIXES = {
     # the closing bracket on Ip-adressen is non-projective over "van"
     'Batch1_answers_nl-215-1': [(19, ')', {'HEAD': '21', 'DEPS': '21:punct'})],
     # Probeer onnodige programma's te verwijderenen voer een schijfopruiming uit.
-    # "voer" is tagged as the past tense of varen
+    # "voer" is tagged as the past tense of varen, and its object as a locative
     'Batch1_answers_nl-184-1': [(6, 'voer', {'XPOS': 'WW|pv|tgw|ev',
-                                             'FEATS': 'Mood=Ind|Number=Sing|Tense=Pres|VerbForm=Fin'})],
+                                             'FEATS': 'Mood=Ind|Number=Sing|Tense=Pres|VerbForm=Fin'}),
+                                (8, 'schijfopruiming', object_of(6))],
 }
 
 
