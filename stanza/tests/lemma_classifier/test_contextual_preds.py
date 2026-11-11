@@ -71,6 +71,21 @@ CONLLU_NO_S_SENTENCE = """\
 """.lstrip()
 
 
+# A sentence with an 's token and a UPOS tag the classifier never saw
+# in training.  This happened with the Greek classifier, which had no
+# SYM or INTJ in its training data.
+UNSEEN_TAG = "NOTATAG"
+CONLLU_UNSEEN_TAG_SENTENCE = """\
+# sent_id = ctx-004
+# text = She 's happy :)
+1\tShe\tshe\tPRON\tPRP\tCase=Nom\t3\tnsubj\t3:nsubj\t_
+2\t's\tbe\tAUX\tVBZ\tMood=Ind\t3\tcop\t3:cop\t_
+3\thappy\thappy\tADJ\tJJ\tDegree=Pos\t0\troot\t0:root\t_
+4\t:)\t:)\t%s\tNFP\t_\t3\tdiscourse\t3:discourse\tSpaceAfter=No
+
+""".lstrip() % UNSEEN_TAG
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -232,3 +247,35 @@ class TestUpdateContextualPreds:
         assert len(result) == len(preds), (
             f"Expected output length {len(preds)}, got {len(result)}"
         )
+
+    def test_unseen_upos_tag(self, tmp_path, trained_s_classifier):
+        """
+        A UPOS tag the classifier never saw in training must not crash prediction
+        """
+        assert UNSEEN_TAG not in trained_s_classifier.upos_to_id
+
+        conllu_file = str(tmp_path / "unseen_tag.conllu")
+        with open(conllu_file, "w", encoding="utf-8") as f:
+            f.write(CONLLU_UNSEEN_TAG_SENTENCE)
+        doc = CoNLL.conll2doc(conllu_file)
+
+        trainer = _make_dict_only_trainer(trained_s_classifier)
+        preds = _flat_preds(doc)
+
+        result = trainer.update_contextual_preds(doc, preds)
+        assert result[1] in {"be", "have"}
+        assert result[0] == PLACEHOLDER
+        assert result[2] == PLACEHOLDER
+        assert result[3] == PLACEHOLDER
+
+
+def test_convert_tags_unseen(trained_s_classifier):
+    """
+    Unseen tags map to the padding index of the tag embedding, which is all zeros
+    """
+    upos_to_id = trained_s_classifier.upos_to_id
+    known = next(iter(upos_to_id))
+    converted = trained_s_classifier.convert_tags([[known, UNSEEN_TAG]])
+    assert converted == [[upos_to_id[known], 0]]
+    assert trained_s_classifier.upos_emb.padding_idx == 0
+    assert not trained_s_classifier.upos_emb.weight[0].any()

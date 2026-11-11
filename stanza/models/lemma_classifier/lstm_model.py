@@ -78,7 +78,10 @@ class LemmaClassifierLSTM(LemmaClassifier):
         self.upos_emb_dim = self.model_args["upos_emb_dim"]
         self.upos_to_id = upos_to_id
         if self.upos_emb_dim > 0 and self.upos_to_id is not None:
-            # TODO: should leave space for unknown POS?
+            # convert_tags maps tags unseen in training to padding_idx 0,
+            # which has a zero embedding
+            # TODO: index 0 is also the first tag seen in the training data,
+            # so that tag shares the untrained padding embedding
             self.upos_emb = nn.Embedding(num_embeddings=len(self.upos_to_id),
                                          embedding_dim=self.upos_emb_dim,
                                          padding_idx=0)
@@ -121,8 +124,16 @@ class LemmaClassifierLSTM(LemmaClassifier):
         return save_dict
 
     def convert_tags(self, upos_tags: List[List[str]]):
+        """
+        Convert UPOS tags to the ids used by the tag embedding
+
+        A tag not seen in the training data, such as SYM in a treebank
+        where no training sentence had one, maps to 0, the embedding's
+        padding index.  Its embedding is all zeros, so the tag
+        contributes no POS information rather than crashing the pipeline.
+        """
         if self.upos_to_id is not None:
-            return [[self.upos_to_id[x] for x in sentence] for sentence in upos_tags]
+            return [[self.upos_to_id.get(x, 0) for x in sentence] for sentence in upos_tags]
         return None
 
     def forward(self, pos_indices: List[int], sentences: List[List[str]], upos_tags: List[List[int]]):
