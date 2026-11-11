@@ -143,6 +143,24 @@ class TestTreeFixes:
         lines, _ = convert(monkeypatch, RESET_ROUTER)
         assert 'Mood=Ind' in rows_of(lines)[('Batch1_answers_nl-5-1', 1)][5]
 
+    def test_object_of_moves_head(self):
+        """object_of reattaches the token to the verb, not just relabels it"""
+        assert convert_qtleap.object_of(17) == {'HEAD': '17', 'DEPREL': 'obj', 'DEPS': '17:obj'}
+
+    def test_lemma_and_upos_fix(self, monkeypatch):
+        """Fixes can change the lemma and UPOS, as for an imperative tagged as a noun"""
+        klik = sentence('Batch1_answers_nl-6-1', 'klik op OK', [
+            ('klik', 'klik', 'NOUN',  'N|soort|ev|basis|zijd|stan', 'Number=Sing', 0, 'root'),
+            ('op',   'op',   'ADP',   'VZ|init',                    '_',           3, 'case'),
+            ('OK',   'OK',   'PROPN', 'N|eigen|ev|basis|zijd|stan', 'Number=Sing', 1, 'nmod'),
+        ])
+        fixes = {'Batch1_answers_nl-6-1': [(1, 'klik', {'LEMMA': 'klikken', 'UPOS': 'VERB', 'XPOS': 'WW|pv|tgw|ev',
+                                                         'FEATS': FIN_SING})]}
+        lines, _ = convert(monkeypatch, klik, fixes=fixes)
+        columns = rows_of(lines)[('Batch1_answers_nl-6-1', 1)]
+        assert columns[2:5] == ['klikken', 'VERB', 'WW|pv|tgw|ev']
+        assert 'Mood=Imp' in columns[5]
+
     def test_possessive_je(self):
         """possessive_je makes je the possessive of the given noun"""
         edits = convert_qtleap.possessive_je(3)
