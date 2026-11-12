@@ -65,8 +65,8 @@ EN_DOC_DEPENDENCY_PARSES_GOLD = """
 
 @pytest.fixture(scope="module")
 def en_depparse_pipeline():
-    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors='tokenize,pos,lemma,depparse')
     gc.collect()
+    nlp = stanza.Pipeline(dir=TEST_MODELS_DIR, lang='en', processors='tokenize,pos,lemma,depparse')
     return nlp
 
 def test_depparse(en_depparse_pipeline):
@@ -76,7 +76,7 @@ def test_depparse(en_depparse_pipeline):
 
 def test_depparse_with_pretagged_doc():
     nlp = stanza.Pipeline(**{'processors': 'depparse', 'dir': TEST_MODELS_DIR, 'lang': 'en',
-                                  'depparse_pretagged': True})
+                             'depparse_pretagged': True})
 
     doc = CoNLL.conll2doc(input_str=EN_DOC_CONLLU_PRETAGGED)
     processed_doc = nlp(doc)

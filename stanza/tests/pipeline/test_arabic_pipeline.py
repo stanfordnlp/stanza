@@ -6,6 +6,7 @@ but incidentally this would have caught a bug where the xpos tags
 were split into individual pieces instead of reassembled as expected
 """
 
+import gc
 import pytest
 import stanza
 
@@ -14,6 +15,10 @@ from stanza.tests import TEST_MODELS_DIR
 pytestmark = pytest.mark.pipeline
 
 def test_arabic_pos_pipeline():
+    # call gc.collect() occasionally in the test suite
+    # to avoid OOM errors
+    gc.collect()
+
     pipe = stanza.Pipeline(**{'processors': 'tokenize,pos', 'dir': TEST_MODELS_DIR, 'download_method': None, 'lang': 'ar'})
     text = "ولم يتم اعتقال احد بحسب المتحدث باسم الشرطة."
 
