@@ -2,7 +2,6 @@
 Processor that attaches coref annotations to a document
 """
 
-from stanza.models.common.utils import misc_to_space_after
 from stanza.models.coref.coref_chain import CorefMention, CorefChain
 from stanza.models.common.doc import Word
 
@@ -12,8 +11,19 @@ from stanza.pipeline.processor import UDProcessor, register_processor
 import torch
 
 def extract_text(document, sent_id, start_word, end_word):
+    """
+    Build the surface text of the words [start_word, end_word) in sentence sent_id
+
+    start_word and end_word are 0-based word indices, end exclusive,
+    as produced by the coref model.
+
+    Pieces of text are joined using the spaces_after of the Token
+    they come from, so SpaceAfter=No and SpacesAfter annotations
+    (which are kept on the Token, not in the misc field) are respected.
+    """
     sentence = document.sentences[sent_id]
-    tokens = []
+    # list of (text, whitespace following that text)
+    pieces = []
 
     # the coref model indexes the words from 0,
     # whereas the ids we are looking at on the tokens start from 1
@@ -25,29 +35,32 @@ def extract_text(document, sent_id, start_word, end_word):
     # If a word is part of an MWT, and the entire token
     # is inside the range, we use that Token's text for that span
     # This will let us easily handle words which are split into pieces
-    # Otherwise, we only take the text of the word itself
+    # Otherwise, we only take the text of the word itself.
+    # A word which ends its MWT is followed by the Token's whitespace,
+    # and a word in the middle of an MWT is followed by no whitespace
     next_idx = start_word
     while next_idx < end_word:
         word = sentence.words[next_idx-1]
         parent_token = word.parent
         if isinstance(parent_token.id, int) or len(parent_token.id) == 1:
-            tokens.append(parent_token)
+            pieces.append((parent_token.text, parent_token.spaces_after))
             next_idx += 1
         elif parent_token.id[0] >= start_word and parent_token.id[1] < end_word:
-            tokens.append(parent_token)
+            pieces.append((parent_token.text, parent_token.spaces_after))
             next_idx = parent_token.id[1] + 1
         else:
-            tokens.append(word)
+            if word.id == parent_token.id[-1]:
+                pieces.append((word.text, parent_token.spaces_after))
+            else:
+                pieces.append((word.text, ""))
             next_idx += 1
 
-    # We use the SpaceAfter or SpacesAfter attribute on each Word or Token
-    # we chose in the above loop to separate the text pieces
-    text = []
-    for token in tokens:
-        text.append(token.text)
-        text.append(misc_to_space_after(token.misc))
-    # the last token space_after will be discarded
+    # the whitespace after the last piece is discarded
     # so that we don't have stray WS at the end of the mention text
+    text = []
+    for piece_text, piece_space in pieces:
+        text.append(piece_text)
+        text.append(piece_space)
     text = text[:-1]
     return "".join(text)
 
