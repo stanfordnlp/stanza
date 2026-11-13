@@ -44,6 +44,10 @@ def get_default_paths():
         # on the cluster, for example, /u/nlp/software/stanza/bio_ud
         "BIO_UD_DIR": "extern_data/bio",
 
+        # external lexicons used as lemma dictionaries, one directory per language,
+        # such as greek/el-extract.jsonl.gz from https://kaikki.org/elwiktionary/rawdata.html
+        "DICTIONARY_DIR": "extern_data/dictionary",
+
         # data root for other general input files, such as VI_VLSP
         "STANZA_EXTERN_DIR": "extern_data",
     }
