@@ -59,18 +59,23 @@ the seq2seq model makes the decision instead of the dictionary.
 --ambiguous_file writes out the forms which were dropped.
 
 The output has one single-word sentence per (form, UPOS, lemma), with
-the case of the forms as they are in Wiktionary.  The converted file is
-kept in handparsed-treebank:
+the case of the forms as they are in Wiktionary.
 
-  https://github.com/stanfordnlp/handparsed-treebank/tree/master/greek-lemmas-wiki
+prepare_lemma_treebank converts the dump at
 
-prepare_lemma_treebank copies it to data/lemma/el_gdt.dict.conllu,
-and run_lemma passes that file to the lemmatizer as its --secondary_file.
+  $DICTIONARY_DIR/greek/el-extract.jsonl.gz
+
+(extern_data/dictionary by default, and .xz or uncompressed also work)
+to data/lemma/el_gdt.dict.conllu, counting the rewrites from the
+UD_Greek-GDT training file in $UDBASE.  The rewrites are written next
+to it as el_gdt.dict.rewrites.tsv.  run_lemma passes the dictionary to
+the lemmatizer as its --secondary_file.  To update the dictionary,
+download a newer el-extract.jsonl.gz to that directory.
 
 Greek Wiktionary is licensed under CC BY-SA 4.0.
 
-Usage:
-  python3 -m stanza.utils.datasets.lemma.convert_el_wiktionary el-extract.jsonl.xz el_wiki_lemmas.conllu.gz --rewrite_treebank UD_Greek-GDT/el_gdt-ud-train.conllu
+Usage, to convert a dump by hand:
+  python3 -m stanza.utils.datasets.lemma.convert_el_wiktionary el-extract.jsonl.gz el_wiki_lemmas.conllu.gz --rewrite_treebank UD_Greek-GDT/el_gdt-ud-train.conllu
 
 An output filename ending in .gz is written with gzip.
 """
@@ -83,14 +88,21 @@ import logging
 import lzma
 import os
 import re
-import shutil
 import sys
 import unicodedata
 
+from stanza.utils.datasets import common
 from stanza.utils.datasets.lemma.convert_de_wiktionary import write_conllu, write_ambiguous
 from stanza.utils.datasets.lemma.convert_es_freeling import has_feature, read_conllu_words
 
 logger = logging.getLogger('stanza')
+
+# The dump prepare_lemma_treebank converts, under DICTIONARY_DIR, in order of preference
+DUMP_FILENAMES = ("el-extract.jsonl.gz", "el-extract.jsonl.xz", "el-extract.jsonl")
+DUMP_SUBDIR = "greek"
+
+# The treebank the dictionary follows, whose training file the rewrites are counted from
+REWRITE_TREEBANK = "UD_Greek-GDT"
 
 # kaikki POS -> UPOS
 POS_MAP = {
@@ -494,28 +506,36 @@ def check_conventions(train_file, dict_file, conventions=CONVENTIONS):
     return results
 
 
+def find_dump(dictionary_dir):
+    """
+    Return the path of the Greek Wiktionary dump in dictionary_dir/greek, or raise FileNotFoundError
+    """
+    dump_dir = os.path.join(dictionary_dir, DUMP_SUBDIR)
+    for filename in DUMP_FILENAMES:
+        path = os.path.join(dump_dir, filename)
+        if os.path.exists(path):
+            return path
+    raise FileNotFoundError("Could not find the Greek Wiktionary dump at %s ... please download el-extract.jsonl.gz from https://kaikki.org/elwiktionary/rawdata.html to %s, or use --no_external_dictionary to prepare the dataset without it" % (os.path.join(dump_dir, DUMP_FILENAMES[0]), dump_dir))
+
+
+def rewrites_filename(output_filename):
+    """
+    el_gdt.dict.conllu -> el_gdt.dict.rewrites.tsv
+    """
+    return os.path.splitext(output_filename)[0] + ".rewrites.tsv"
+
+
 def build_dictionary(paths, output_filename):
     """
-    Copy the converted Greek Wiktionary lemmas from handparsed-treebank to output_filename
+    Convert the Greek Wiktionary dump in DICTIONARY_DIR to output_filename, with rewrites counted from the GDT training file
 
-    The file in handparsed-treebank is el_wiki_lemmas.conllu.gz, which
-    is decompressed here.  An uncompressed el_wiki_lemmas.conllu is used
-    if there is no gzipped one.
-
-    The conversion itself is not rerun here, since it needs the whole
-    kaikki dump.  To update the file in handparsed-treebank, run this
-    script on a new dump.
+    The rewrites are written next to output_filename, so that each
+    conversion leaves a record of them.
     """
-    lemma_dir = os.path.join(paths["HANDPARSED_DIR"], "greek-lemmas-wiki")
-    gz_filename = os.path.join(lemma_dir, "el_wiki_lemmas.conllu.gz")
-    lemma_filename = os.path.join(lemma_dir, "el_wiki_lemmas.conllu")
-    if os.path.exists(gz_filename):
-        with gzip.open(gz_filename, 'rb') as fin, open(output_filename, 'wb') as fout:
-            shutil.copyfileobj(fin, fout)
-    elif os.path.exists(lemma_filename):
-        shutil.copyfile(lemma_filename, output_filename)
-    else:
-        raise FileNotFoundError("Could not find the Greek Wiktionary lemmas at %s ... please check out https://github.com/stanfordnlp/handparsed-treebank or use --no_external_dictionary to prepare the dataset without it" % gz_filename)
+    dump_filename = find_dump(paths["DICTIONARY_DIR"])
+    train_filename = common.find_treebank_dataset_file(REWRITE_TREEBANK, paths["UDBASE"], "train", "conllu", fail=True)
+    logger.info("Converting %s to %s, with rewrites counted from %s", dump_filename, output_filename, train_filename)
+    convert_dump(dump_filename, output_filename, [train_filename], rewrites_filename=rewrites_filename(output_filename))
 
 
 def parse_args(args=None):

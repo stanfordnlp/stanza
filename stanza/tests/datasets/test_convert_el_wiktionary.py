@@ -273,22 +273,33 @@ def test_check_conventions(tmp_path):
 
 def test_prepare_dictionary(tmp_path):
     """
-    prepare_lemma_treebank copies the converted lemmas from handparsed-treebank to el_gdt.dict.conllu
+    prepare_lemma_treebank converts the dump in DICTIONARY_DIR to el_gdt.dict.conllu, with rewrites from the GDT training file
     """
     from stanza.utils.datasets import prepare_lemma_treebank
-    paths = {"HANDPARSED_DIR": str(tmp_path / "handparsed"), "LEMMA_DATA_DIR": str(tmp_path / "data" / "lemma")}
-    with pytest.raises(FileNotFoundError):
+    paths = {"DICTIONARY_DIR": str(tmp_path / "dictionary"),
+             "UDBASE": str(tmp_path / "ud"),
+             "LEMMA_DATA_DIR": str(tmp_path / "data" / "lemma")}
+    with pytest.raises(FileNotFoundError, match="el-extract.jsonl.gz"):
         prepare_lemma_treebank.prepare_external_dictionary(paths, "el_gdt")
 
-    lemma_dir = tmp_path / "handparsed" / "greek-lemmas-wiki"
-    lemma_dir.mkdir(parents=True)
-    convert_el_wiktionary.write_conllu(convert([NIKI]), str(lemma_dir / "el_wiki_lemmas.conllu"))
+    dump_dir = tmp_path / "dictionary" / "greek"
+    dump_dir.mkdir(parents=True)
+    with gzip.open(dump_dir / "el-extract.jsonl.gz", "wt", encoding="utf-8") as fout:
+        for item in (entry("λέω", "verb", table=["λέει"]), NIKI, entry("casa", "noun", lang_code="it")):
+            fout.write(json.dumps(item, ensure_ascii=False) + "\n")
+    # the dump is there, but the treebank to count the rewrites from is not
+    with pytest.raises(FileNotFoundError, match="UD_Greek-GDT"):
+        prepare_lemma_treebank.prepare_external_dictionary(paths, "el_gdt")
+
+    gdt_dir = tmp_path / "ud" / "UD_Greek-GDT"
+    gdt_dir.mkdir(parents=True)
+    (gdt_dir / "el_gdt-ud-train.conllu").write_text("1\tλέει\tλέγω\tVERB\t_\t_\t0\troot\t_\t_\n\n"
+                                                     "1\tλέω\tλέγω\tVERB\t_\t_\t0\troot\t_\t_\n\n", encoding="utf-8")
     dict_file = prepare_lemma_treebank.prepare_external_dictionary(paths, "el_gdt")
     assert dict_file == str(tmp_path / "data" / "lemma" / "el_gdt.dict.conllu")
-    assert len(CoNLL.conll2doc(input_file=dict_file).sentences) == 4
-
-    # the gzipped file is used instead when it exists
-    (lemma_dir / "el_wiki_lemmas.conllu").unlink()
-    convert_el_wiktionary.write_conllu(convert([NIKI])[:2], str(lemma_dir / "el_wiki_lemmas.conllu.gz"))
-    dict_file = prepare_lemma_treebank.prepare_external_dictionary(paths, "el_gdt")
-    assert len(CoNLL.conll2doc(input_file=dict_file).sentences) == 2
+    words = [(w.text, w.lemma, w.upos) for s in CoNLL.conll2doc(input_file=dict_file).sentences for w in s.words]
+    assert ("λέει", "λέγω", "VERB") in words
+    assert ("παραφροσύνες", "παραφροσύνη", "NOUN") in words
+    assert len(words) == 6
+    rewrites = tmp_path / "data" / "lemma" / "el_gdt.dict.rewrites.tsv"
+    assert rewrites.read_text(encoding="utf-8") == "λέω\tVERB\tλέγω\n"
