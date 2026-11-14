@@ -135,7 +135,8 @@ def process_el_gdt(paths, short_name):
     upos = "PRON"
     allowed_lemmas = None
 
-    process_treebank(paths, short_name, word, upos, allowed_lemmas)
+    # el_combined is built from GDT, so both use the el_gdt dataset
+    process_treebank(paths, short_name, word, upos, allowed_lemmas, dataset_to_use='el_gdt')
 
 def process_sl(paths, short_name):
     # TODO: could refactor some with the en equivalent
@@ -185,6 +186,7 @@ def process_sl(paths, short_name):
 
 DATASET_MAPPING = {
     "ar_padt":           process_ar_padt,
+    "el_combined":       process_el_gdt,
     "el_gdt":            process_el_gdt,
     "en_combined":       process_en_combined,
     "fa_perdt":          process_fa_perdt,

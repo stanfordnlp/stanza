@@ -1033,6 +1033,25 @@ def build_combined_german_dataset(paths, model_type, dataset, args, context):
     return sents
 
 
+def build_combined_greek_dataset(paths, model_type, dataset, args, context):
+    """
+    el_combined is currently GDT
+
+    The lemmatizer also uses a dictionary of lemmas from Greek Wiktionary,
+    which prepare_lemma_treebank writes as el_combined.dict.conllu.  The
+    dictionary's lemmas are rewritten to follow GDT, so adding another
+    treebank here means checking that it follows the same conventions,
+    such as -ώ rather than -άω for contracted verbs, which GUD does not.
+    See stanza/utils/datasets/lemma/convert_el_wiktionary.py
+
+    el_gdt is GDT alone, without the dictionary, for comparison with
+    other pipelines.
+    """
+    udbase_dir = paths["UDBASE"]
+    conllu_file = common.find_treebank_dataset_file("UD_Greek-GDT", udbase_dir, dataset, "conllu", fail=True)
+    return read_sentences_from_conllu(conllu_file)
+
+
 def build_combined_spanish_dataset(paths, model_type, dataset, args, context):
     """
     es_combined is AnCora and GSD put together
@@ -1263,6 +1282,7 @@ def build_combined_bhojpuri_dataset(paths, model_type, dataset, args, context):
 COMBINED_FNS = {
     "bho_combined":build_combined_bhojpuri_dataset,
     "de_combined": build_combined_german_dataset,
+    "el_combined": build_combined_greek_dataset,
     "en_combined": build_combined_english_dataset,
     "es_combined": build_combined_spanish_dataset,
     "fi_combined": build_combined_finnish_dataset,
