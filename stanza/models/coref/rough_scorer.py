@@ -47,6 +47,24 @@ class RoughScorer(torch.nn.Module):
         """
         Selects top-k rough antecedent scores for each mention.
 
+        The AnaphoricityScorer's start_map is a linear layer over the k
+        antecedent positions, so the layout of each row must be
+        deterministic.  This reproduces the layout of CUDA's
+        topk(sorted=False), which is what the existing models were
+        trained with: the selected entries strictly greater than the
+        kth value in ascending index order, followed by the entries
+        equal to the kth value (the kth value itself, plus any ties) in
+        ascending index order.  When there are more ties than slots,
+        the lowest indices are chosen.
+
+        In practice, for a row with k real antecedents, that is the top
+        k-1 in ascending order with the lowest scoring antecedent last.
+        The first k rows have fewer than k real antecedents, the rest
+        being -inf padding, so they always come out as 0..k-1.
+
+        CPU topk(sorted=False) returns an arbitrary order and an
+        arbitrary choice among the -inf padding, hence the rearranging.
+
         Args:
             rough_scores: tensor of shape [n_mentions, n_mentions], containing
                 rough antecedent scores of each mention-antecedent pair.
@@ -55,7 +73,18 @@ class RoughScorer(torch.nn.Module):
             FloatTensor of shape [n_mentions, k], top rough scores
             LongTensor of shape [n_mentions, k], top indices
         """
-        top_scores, indices = torch.topk(rough_scores,
-                                         k=min(self.k, len(rough_scores)),
-                                         dim=1, sorted=False)
+        n_mentions = len(rough_scores)
+        k = min(self.k, n_mentions)
+        _, indices = torch.topk(rough_scores, k=k, dim=1, sorted=False)
+        # the only ties expected are the -inf padding in the first k rows,
+        # where the lowest indices are 0..k-1
+        indices[:k] = torch.arange(k, device=indices.device)
+        top_scores = rough_scores.gather(1, indices)
+
+        # entries equal to the kth value go after everything else,
+        # and each group is in ascending index order
+        kth_scores = top_scores.min(dim=1, keepdim=True).values
+        order = (indices + (top_scores == kth_scores) * n_mentions).argsort(dim=1)
+        indices = indices.gather(1, order)
+        top_scores = top_scores.gather(1, order)
         return top_scores, indices, rough_scores
