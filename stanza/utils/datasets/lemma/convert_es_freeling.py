@@ -60,7 +60,7 @@ decision instead of the dictionary.
 
 The FreeLing repo keeps changing, so the first sentence of the output
 records which version it came from: the git commit of the FreeLing
-clone, if it is one, and a sha256 of the MM.* files.
+clone and its date, if it is one, and a sha256 of the MM.* files.
 
 The lemma changes above follow the conventions of GSD and AnCora.
 check_conventions compares the dictionary with the training data on
@@ -77,11 +77,12 @@ where FreeLing is a clone of the FreeLing repo, or its data/es/dictionary/entrie
 import argparse
 from collections import Counter, defaultdict
 import glob
-import hashlib
 import logging
 import os
 import subprocess
 import unicodedata
+
+from stanza.utils.datasets.lemma.source_info import files_sha256
 
 logger = logging.getLogger('stanza')
 
@@ -145,16 +146,21 @@ def git_commit(entries_dir):
     except (OSError, subprocess.CalledProcessError):
         return None
 
+def git_commit_date(entries_dir, commit):
+    """
+    The committer date of commit in the repo containing entries_dir, as YYYY-MM-DD, or None if git fails
+    """
+    try:
+        result = subprocess.run(["git", "-C", entries_dir, "show", "-s", "--format=%cs", commit], capture_output=True, text=True, check=True)
+        return result.stdout.strip() or None
+    except (OSError, subprocess.CalledProcessError):
+        return None
+
 def entries_sha256(entries_dir):
     """
     A sha256 of the names and contents of the MM.* files in entries_dir
     """
-    digest = hashlib.sha256()
-    for filename in sorted(glob.glob(os.path.join(entries_dir, "MM.*"))):
-        digest.update(os.path.basename(filename).encode('utf-8'))
-        with open(filename, 'rb') as fin:
-            digest.update(fin.read())
-    return digest.hexdigest()
+    return files_sha256(sorted(glob.glob(os.path.join(entries_dir, "MM.*"))))
 
 def source_comments(entries_dir):
     """
@@ -164,6 +170,9 @@ def source_comments(entries_dir):
     commit = git_commit(entries_dir)
     if commit is not None:
         comments.append(f"# freeling_commit = {commit}")
+        date = git_commit_date(entries_dir, commit)
+        if date is not None:
+            comments.append(f"# freeling_commit_date = {date}")
     comments.append(f"# freeling_entries_sha256 = {entries_sha256(entries_dir)}")
     return comments
 

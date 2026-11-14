@@ -55,7 +55,9 @@ German nouns, verbs, adjectives, and adverbs are kept, with names
   "Geschoss", which goes to the lemma the variant points to.
   --ambiguous_file writes out the forms which were dropped.
 
-The output has one single-word sentence per (form, UPOS, lemma).
+The output has one single-word sentence per (form, UPOS, lemma).  The
+first sentence starts with the sha256 and modification date of the
+dump, to record which dump it came from.
 Converting the dump takes the whole dump and Python 3.13, so the
 converted file is kept in handparsed-treebank:
 
@@ -81,6 +83,8 @@ import logging
 import os
 import shutil
 import sys
+
+from stanza.utils.datasets.lemma.source_info import file_comments
 
 logger = logging.getLogger('stanza')
 
@@ -398,11 +402,15 @@ def open_text(filename, mode):
     return open(filename, mode, encoding='utf-8', newline='\n')
 
 
-def write_conllu(processed, output_filename):
+def write_conllu(processed, output_filename, first_comments=()):
     """
     Write (lemma, form, upos) as single-word CoNLL-U sentences, gzipped if the filename ends in .gz
+
+    first_comments are written as comment lines at the start of the first sentence
     """
     with open_text(output_filename, 'w') as fout:
+        for line in first_comments:
+            fout.write(line + "\n")
         for lemma, form, upos in processed:
             fout.write("# sent_id = %s_%s_%s\n" % (form, lemma, upos))
             fout.write("# text = %s\n" % form)
@@ -433,7 +441,7 @@ def convert_dump(dump_filename, output_filename, workers=None, allow_other_versi
     unused_fields = Counter()
     ambiguous = []
     processed = extract_lemmas(parse_dump(dump_filename, workers), skipped, unused_fields, ambiguous)
-    write_conllu(processed, output_filename)
+    write_conllu(processed, output_filename, file_comments("dewiktionary", [dump_filename]))
     if ambiguous_filename:
         write_ambiguous(ambiguous, ambiguous_filename)
     logger.info("Wrote %d (form, upos, lemma) entries to %s", len(processed), output_filename)

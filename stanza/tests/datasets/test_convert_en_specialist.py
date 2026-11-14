@@ -10,7 +10,7 @@ import pytest
 
 from stanza.utils.conll import CoNLL
 from stanza.utils.datasets import prepare_lemma_treebank
-from stanza.utils.datasets.lemma import convert_en_specialist
+from stanza.utils.datasets.lemma import convert_en_specialist, source_info
 from stanza.utils.training import run_lemma
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
@@ -111,6 +111,8 @@ def test_convert_file(sample_file, tmp_path):
     assert "en_specialist-NOUN-housewives" in sent_ids
     assert "en_specialist-VERB-dives" in sent_ids
     assert "en_specialist-NOUN-dives" in sent_ids
+    first_comments = [x for x in doc.sentences[0].comments if not x.startswith(("# sent_id", "# text"))]
+    assert first_comments == source_info.file_comments("specialist", [sample_file])
 
 def test_skipped_counts(sample_file):
     skipped = Counter()

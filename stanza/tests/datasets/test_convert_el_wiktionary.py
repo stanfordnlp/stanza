@@ -13,7 +13,7 @@ import lzma
 import pytest
 
 from stanza.utils.conll import CoNLL
-from stanza.utils.datasets.lemma import convert_el_wiktionary
+from stanza.utils.datasets.lemma import convert_el_wiktionary, source_info
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
@@ -245,6 +245,8 @@ def test_convert_dump(tmp_path):
     with gzip.open(output, "rt", encoding="utf-8") as fin:
         doc = CoNLL.conll2doc(input_str=fin.read())
     assert [(w.text, w.lemma, w.upos) for s in doc.sentences for w in s.words] == [("λέει", "λέγω", "VERB"), ("λέω", "λέγω", "VERB"), ("νέο", "νέο", "NOUN")]
+    first_comments = [x for x in doc.sentences[0].comments if not x.startswith(("# sent_id", "# text"))]
+    assert first_comments == source_info.file_comments("kaikki", [str(dump)])
     assert (tmp_path / "rewrites.tsv").read_text(encoding="utf-8") == "λέω\tVERB\tλέγω\n"
     assert (tmp_path / "ambiguous.tsv").read_text(encoding="utf-8") == "νέα\tNOUN\tνέα νέο\n"
 
