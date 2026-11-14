@@ -915,8 +915,9 @@ def build_combined_japanese_dataset(paths, model_type, dataset, args, context):
             extra_japanese = os.path.join(handparsed_dir, "japanese-handparsed", extra_file)
             if not os.path.exists(extra_japanese):
                 raise FileNotFoundError("Cannot find the extra dataset which includes various verb patterns, expected {}".format(extra_japanese))
-            extra_sents = read_sentences_from_conllu(extra_japanese)
-            print("Read %d sentences from %s" % (len(extra_sents), extra_japanese))
+            file_sents = read_sentences_from_conllu(extra_japanese)
+            print("Read %d sentences from %s" % (len(file_sents), extra_japanese))
+            extra_sents.extend(file_sents)
 
         if model_type == common.ModelType.POS:
             documents = {}
