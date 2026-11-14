@@ -25,7 +25,7 @@ from stanza.utils.datasets.lemma import convert_de_wiktionary, convert_el_wiktio
 # lexicon from STANZA_EXTERN_DIR into the dictionary file given
 EXTERNAL_DICTIONARIES = {
     'de_combined': convert_de_wiktionary.build_dictionary,
-    'el_gdt':      convert_el_wiktionary.build_dictionary,
+    'el_combined': convert_el_wiktionary.build_dictionary,
     'en_combined': convert_en_specialist.build_dictionary,
     'es_combined': convert_es_freeling.build_dictionary,
     'sl_combined': convert_sl_sloleks.build_dictionary,
@@ -37,7 +37,7 @@ EXTERNAL_DICTIONARIES = {
 # Each one raises an exception if the lexicon no longer follows the
 # treebank's lemma conventions
 EXTERNAL_DICTIONARY_CHECKS = {
-    'el_gdt':      convert_el_wiktionary.check_conventions,
+    'el_combined': convert_el_wiktionary.check_conventions,
     'es_combined': convert_es_freeling.check_conventions,
 }
 
@@ -54,7 +54,7 @@ def add_specific_args(parser) -> None:
     parser.add_argument('--no_lemma_classifier', dest='lemma_classifier', action='store_false', default=True,
                         help="Don't use the lemma classifier datasets.  Default is to build lemma classifier as part of the original lemmatizer")
     parser.add_argument('--no_external_dictionary', dest='external_dictionary', action='store_false', default=True,
-                        help="Don't write the external lexicon for datasets which have one, such as German Wiktionary for de_combined, the SPECIALIST Lexicon for en_combined, FreeLing for es_combined, or Sloleks for sl_combined.  Removes any dictionary file left from an earlier run")
+                        help="Don't write the external lexicon for datasets which have one, such as German Wiktionary for de_combined, Greek Wiktionary for el_combined, the SPECIALIST Lexicon for en_combined, FreeLing for es_combined, or Sloleks for sl_combined.  Removes any dictionary file left from an earlier run")
     parser.add_argument('--no_exact_dictionary', dest='exact_dictionary', action='store_false', default=True,
                         help="Don't write the exact dictionary for datasets which have one, such as the capitalized words for en_combined and es_combined.  Removes any exact dictionary file left from an earlier run")
     add_retagging_args(parser)
@@ -103,20 +103,21 @@ def prepare_external_dictionary(paths, short_name, use_external_dictionary=True)
     """
     Write the external lexicon for short_name, if it has one, to {short_name}.dict.conllu in LEMMA_DATA_DIR
 
-    If use_external_dictionary is False, an existing dictionary file
-    is removed instead, so that run_lemma does not train with it.
+    If short_name has no external lexicon, or use_external_dictionary
+    is False, an existing dictionary file is removed instead, so that
+    run_lemma does not train with it.  Otherwise a dictionary file left
+    over from an earlier run which gave the dataset a dictionary would
+    still be used.
 
     Returns the dictionary filename, or None if no dictionary was written
     """
     build_fn = EXTERNAL_DICTIONARIES.get(short_name)
-    if build_fn is None:
-        return None
-
     lemma_dir = paths["LEMMA_DATA_DIR"]
     dict_file = dictionary_filename(lemma_dir, short_name)
-    if not use_external_dictionary:
+    if build_fn is None or not use_external_dictionary:
         if os.path.exists(dict_file):
-            print("Removing %s, as the external dictionary was turned off" % dict_file)
+            reason = "the external dictionary was turned off" if build_fn is not None else "%s has no external dictionary" % short_name
+            print("Removing %s, as %s" % (dict_file, reason))
             os.remove(dict_file)
         return None
 

@@ -15,6 +15,10 @@ Nouns, verbs, adjectives, and names (PROPN) are kept.  The pairs come from:
 - form-of entries, such as πλατειών, "γενική πληθυντικού του πλατεία",
   which point to their lemma
 
+The dictionary is for el_combined, which is built from UD_Greek-GDT.
+el_gdt is GDT alone, without the dictionary, so that it can be
+compared with other pipelines.
+
 Wiktionary's conventions differ from UD_Greek-GDT in several places,
 and the pairs are rewritten to match GDT:
 
@@ -66,9 +70,9 @@ prepare_lemma_treebank converts the dump at
   $DICTIONARY_DIR/greek/el-extract.jsonl.gz
 
 (extern_data/dictionary by default, and .xz or uncompressed also work)
-to data/lemma/el_gdt.dict.conllu, counting the rewrites from the
+to data/lemma/el_combined.dict.conllu, counting the rewrites from the
 UD_Greek-GDT training file in $UDBASE.  The rewrites are written next
-to it as el_gdt.dict.rewrites.tsv.  run_lemma passes the dictionary to
+to it as el_combined.dict.rewrites.tsv.  run_lemma passes the dictionary to
 the lemmatizer as its --secondary_file.  To update the dictionary,
 download a newer el-extract.jsonl.gz to that directory.
 
@@ -101,7 +105,9 @@ logger = logging.getLogger('stanza')
 DUMP_FILENAMES = ("el-extract.jsonl.gz", "el-extract.jsonl.xz", "el-extract.jsonl")
 DUMP_SUBDIR = "greek"
 
-# The treebank the dictionary follows, whose training file the rewrites are counted from
+# The treebank the dictionary follows, whose training file the rewrites
+# are counted from.  This is the treebank el_combined is built from in
+# build_combined_greek_dataset
 REWRITE_TREEBANK = "UD_Greek-GDT"
 
 # kaikki POS -> UPOS
@@ -520,7 +526,7 @@ def find_dump(dictionary_dir):
 
 def rewrites_filename(output_filename):
     """
-    el_gdt.dict.conllu -> el_gdt.dict.rewrites.tsv
+    el_combined.dict.conllu -> el_combined.dict.rewrites.tsv
     """
     return os.path.splitext(output_filename)[0] + ".rewrites.tsv"
 

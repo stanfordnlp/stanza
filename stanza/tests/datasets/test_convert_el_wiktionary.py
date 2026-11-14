@@ -271,16 +271,22 @@ def test_check_conventions(tmp_path):
     with pytest.raises(ValueError, match="contracted verbs"):
         convert_el_wiktionary.check_conventions(str(train), str(dict_file))
 
+def write_gdt_train(udbase):
+    gdt_dir = udbase / "UD_Greek-GDT"
+    gdt_dir.mkdir(parents=True)
+    (gdt_dir / "el_gdt-ud-train.conllu").write_text("1\tλέει\tλέγω\tVERB\t_\t_\t0\troot\t_\t_\n\n"
+                                                     "1\tλέω\tλέγω\tVERB\t_\t_\t0\troot\t_\t_\n\n", encoding="utf-8")
+
 def test_prepare_dictionary(tmp_path):
     """
-    prepare_lemma_treebank converts the dump in DICTIONARY_DIR to el_gdt.dict.conllu, with rewrites from the GDT training file
+    prepare_lemma_treebank converts the dump in DICTIONARY_DIR to el_combined.dict.conllu, with rewrites from the GDT training file
     """
     from stanza.utils.datasets import prepare_lemma_treebank
     paths = {"DICTIONARY_DIR": str(tmp_path / "dictionary"),
              "UDBASE": str(tmp_path / "ud"),
              "LEMMA_DATA_DIR": str(tmp_path / "data" / "lemma")}
     with pytest.raises(FileNotFoundError, match="el-extract.jsonl.gz"):
-        prepare_lemma_treebank.prepare_external_dictionary(paths, "el_gdt")
+        prepare_lemma_treebank.prepare_external_dictionary(paths, "el_combined")
 
     dump_dir = tmp_path / "dictionary" / "greek"
     dump_dir.mkdir(parents=True)
@@ -289,17 +295,40 @@ def test_prepare_dictionary(tmp_path):
             fout.write(json.dumps(item, ensure_ascii=False) + "\n")
     # the dump is there, but the treebank to count the rewrites from is not
     with pytest.raises(FileNotFoundError, match="UD_Greek-GDT"):
-        prepare_lemma_treebank.prepare_external_dictionary(paths, "el_gdt")
+        prepare_lemma_treebank.prepare_external_dictionary(paths, "el_combined")
 
-    gdt_dir = tmp_path / "ud" / "UD_Greek-GDT"
-    gdt_dir.mkdir(parents=True)
-    (gdt_dir / "el_gdt-ud-train.conllu").write_text("1\tλέει\tλέγω\tVERB\t_\t_\t0\troot\t_\t_\n\n"
-                                                     "1\tλέω\tλέγω\tVERB\t_\t_\t0\troot\t_\t_\n\n", encoding="utf-8")
-    dict_file = prepare_lemma_treebank.prepare_external_dictionary(paths, "el_gdt")
-    assert dict_file == str(tmp_path / "data" / "lemma" / "el_gdt.dict.conllu")
+    write_gdt_train(tmp_path / "ud")
+    dict_file = prepare_lemma_treebank.prepare_external_dictionary(paths, "el_combined")
+    assert dict_file == str(tmp_path / "data" / "lemma" / "el_combined.dict.conllu")
     words = [(w.text, w.lemma, w.upos) for s in CoNLL.conll2doc(input_file=dict_file).sentences for w in s.words]
     assert ("λέει", "λέγω", "VERB") in words
     assert ("παραφροσύνες", "παραφροσύνη", "NOUN") in words
     assert len(words) == 6
-    rewrites = tmp_path / "data" / "lemma" / "el_gdt.dict.rewrites.tsv"
+    rewrites = tmp_path / "data" / "lemma" / "el_combined.dict.rewrites.tsv"
     assert rewrites.read_text(encoding="utf-8") == "λέω\tVERB\tλέγω\n"
+
+def test_no_dictionary_for_el_gdt(tmp_path):
+    """
+    el_gdt is GDT alone, so it gets no dictionary, and a dictionary file left from an earlier run is removed
+    """
+    from stanza.utils.datasets import prepare_lemma_treebank
+    paths = {"LEMMA_DATA_DIR": str(tmp_path / "data" / "lemma")}
+    assert prepare_lemma_treebank.prepare_external_dictionary(paths, "el_gdt") is None
+
+    stale = tmp_path / "data" / "lemma" / "el_gdt.dict.conllu"
+    stale.parent.mkdir(parents=True)
+    convert_el_wiktionary.write_conllu(convert([NIKI]), str(stale))
+    assert prepare_lemma_treebank.prepare_external_dictionary(paths, "el_gdt") is None
+    assert not stale.exists()
+
+def test_combined_greek_dataset(tmp_path):
+    """
+    el_combined is built from GDT, and the lemma classifier for it uses the GDT data
+    """
+    from stanza.utils.datasets import prepare_lemma_classifier
+    from stanza.utils.datasets import prepare_tokenizer_treebank
+    write_gdt_train(tmp_path / "ud")
+    assert prepare_tokenizer_treebank.COMBINED_FNS["el_combined"] is prepare_tokenizer_treebank.build_combined_greek_dataset
+    sents = prepare_tokenizer_treebank.build_combined_greek_dataset({"UDBASE": str(tmp_path / "ud")}, None, "train", None, None)
+    assert len(sents) == 2
+    assert prepare_lemma_classifier.DATASET_MAPPING["el_combined"] is prepare_lemma_classifier.DATASET_MAPPING["el_gdt"]
