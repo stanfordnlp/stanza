@@ -43,7 +43,9 @@ such as 1,234,567 -> 1234567, the UD English convention for NUM, to
 teach the seq2seq model to copy long numbers.  See number_entries.
 
 The output has one single-word sentence per (form, UPOS, lemma),
-the same format as the Sloleks dictionary for Slovenian.
+the same format as the Sloleks dictionary for Slovenian.  The first
+sentence starts with the sha256 and modification date of inflVars.data,
+as the lexicon has a new release each year.
 prepare_lemma_treebank writes it to data/lemma/en_combined.dict.conllu
 from extern_data/dictionary/english/specialist/inflVars.data, and run_lemma
 passes that file to the lemmatizer as its --secondary_file.
@@ -76,6 +78,8 @@ import logging
 import os
 import random
 import sys
+
+from stanza.utils.datasets.lemma.source_info import file_comments
 
 logger = logging.getLogger('stanza')
 
@@ -221,18 +225,22 @@ def number_entries(count=DEFAULT_NUMBERS, seed=1234):
         entries[form] = lemma
     return sorted(entries.items())[:count] if len(entries) > count else sorted(entries.items())
 
-def write_conllu(lemma_dict, output_filename):
+def write_conllu(lemma_dict, output_filename, first_comments=()):
     """
     Write {(form, upos): lemma} as single-word CoNLL-U sentences
 
     The SPECIALIST entries come first and the generated numbers after
     them, each sorted by form then UPOS.
+
+    first_comments are written as comment lines at the start of the first sentence
     """
     def sort_key(key):
         form, upos = key
         return (upos == 'NUM', form, upos)
 
     with open(output_filename, 'w', encoding='utf-8', newline='\n') as fout:
+        for line in first_comments:
+            fout.write(line + "\n")
         for (form, upos) in sorted(lemma_dict.keys(), key=sort_key):
             lemma = lemma_dict[(form, upos)]
             fout.write(f"# sent_id = {sent_id(form, upos)}\n")
@@ -254,7 +262,7 @@ def convert_file(input_filename, output_filename, num_numbers=DEFAULT_NUMBERS):
     if num_numbers > 0:
         for form, lemma in number_entries(num_numbers):
             lemma_dict[(form, 'NUM')] = lemma
-    write_conllu(lemma_dict, output_filename)
+    write_conllu(lemma_dict, output_filename, file_comments("specialist", [input_filename]))
     logger.info("Wrote %d (form, upos, lemma) entries to %s, skipping %d ambiguous (form, upos) pairs",
                 len(lemma_dict), output_filename, len(ambiguous))
     logger.info("Rows skipped when reading %s: %s", input_filename,

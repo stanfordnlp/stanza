@@ -202,9 +202,12 @@ def test_source_comments(tmp_path):
     git(freeling_dir, "add", ".")
     git(freeling_dir, "-c", "user.name=test", "-c", "user.email=test@example.com", "commit", "-q", "-m", "sample")
     commit = git(freeling_dir, "rev-parse", "HEAD")
+    date = git(freeling_dir, "show", "-s", "--format=%cs", "HEAD")
     sha = convert_es_freeling.entries_sha256(str(entries_dir))
 
-    assert convert_es_freeling.source_comments(str(entries_dir)) == ["# freeling_commit = %s" % commit, "# freeling_entries_sha256 = %s" % sha]
+    assert convert_es_freeling.source_comments(str(entries_dir)) == ["# freeling_commit = %s" % commit,
+                                                                     "# freeling_commit_date = %s" % date,
+                                                                     "# freeling_entries_sha256 = %s" % sha]
 
     # the same entries somewhere else in the repo are not FreeLing's
     other_dir = freeling_dir / "copy"

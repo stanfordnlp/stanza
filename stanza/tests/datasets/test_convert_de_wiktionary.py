@@ -232,6 +232,12 @@ def test_write_conllu(tmp_path):
     assert doc.sentences[0].sent_id == "geliebt_lieben_VERB"
     assert [(word.text, word.lemma, word.upos) for sentence in doc.sentences for word in sentence.words][0] == ("geliebt", "lieben", "VERB")
 
+    convert_de_wiktionary.write_conllu(convert_de_wiktionary.extract_lemmas([LIEBEN]), str(output_file), ["# dewiktionary_sha256 = 1234"])
+    doc = CoNLL.conll2doc(input_file=str(output_file))
+    assert len(doc.sentences) == 6
+    assert doc.sentences[0].comments[0] == "# dewiktionary_sha256 = 1234"
+    assert doc.sentences[0].sent_id == "geliebt_lieben_VERB"
+
 def test_parser_version(monkeypatch):
     import importlib.metadata
     monkeypatch.setattr(importlib.metadata, "version", lambda name: "0.0.1")

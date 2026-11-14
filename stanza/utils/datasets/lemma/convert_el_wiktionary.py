@@ -98,6 +98,7 @@ import unicodedata
 from stanza.utils.datasets import common
 from stanza.utils.datasets.lemma.convert_de_wiktionary import write_conllu, write_ambiguous
 from stanza.utils.datasets.lemma.convert_es_freeling import has_feature, read_conllu_words
+from stanza.utils.datasets.lemma.source_info import file_comments
 
 logger = logging.getLogger('stanza')
 
@@ -426,7 +427,7 @@ def convert_dump(dump_filename, output_filename, treebank_filenames=(), contract
     skipped = Counter()
     ambiguous = []
     processed = extract_lemmas(lemmas, skipped, ambiguous)
-    write_conllu(processed, output_filename)
+    write_conllu(processed, output_filename, file_comments("kaikki", [dump_filename]))
     if ambiguous_filename:
         write_ambiguous(ambiguous, ambiguous_filename)
     if rewrites_filename:

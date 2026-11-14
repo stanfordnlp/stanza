@@ -5,7 +5,7 @@ Tests for converting the Sloleks lexicon to a lemma dictionary
 import pytest
 
 from stanza.utils.conll import CoNLL
-from stanza.utils.datasets.lemma import convert_sl_sloleks
+from stanza.utils.datasets.lemma import convert_sl_sloleks, source_info
 
 pytestmark = [pytest.mark.travis, pytest.mark.pipeline]
 
@@ -59,6 +59,8 @@ def test_sent_ids(tmp_path):
                         "sl_sloleks-NOUN-mizi-miza",
                         "sl_sloleks-ADJ-mizni-mizen",
                         "sl_sloleks-NOUN-mizi-mizi"]
+    first_comments = [x for x in doc.sentences[0].comments if not x.startswith(("# sent_id", "# text"))]
+    assert first_comments == source_info.file_comments("sloleks", [str(sloleks_dir / "sloleks_3.1_001.xml")])
 
 def test_repeated_sent_ids():
     build_id = convert_sl_sloleks.sent_ids()

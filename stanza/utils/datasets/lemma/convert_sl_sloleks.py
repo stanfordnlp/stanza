@@ -18,6 +18,8 @@ import sys
 import re
 from collections import defaultdict
 
+from stanza.utils.datasets.lemma.source_info import file_comments
+
 # JOS category -> UPOS mapping (skipping conjunction, abbreviation, residual)
 CATEGORY_MAP = {
     'noun':         'NOUN',
@@ -121,8 +123,15 @@ def sent_ids():
     return build
 
 def write_sloleks_dict_file(filenames, output_filename):
+    """
+    Write the Sloleks entries as single-word CoNLL-U sentences
+
+    The first sentence starts with the sha256 and modification date of the XML files
+    """
     build_id = sent_ids()
     with open(output_filename, 'w', encoding='utf-8', newline='\n') as fout:
+        for line in file_comments("sloleks", filenames):
+            fout.write(line + "\n")
         for form, upos, lemma in sloleks_to_dict(filenames):
             fout.write(f"# sent_id = {build_id(form, upos, lemma)}\n")
             fout.write(f"# text = {form}\n")
