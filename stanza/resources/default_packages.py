@@ -32,7 +32,7 @@ default_treebanks = {
     "da":      "ddt",
     "de":      "combined",
     "egy":     "pc",
-    "el":      "gdt",
+    "el":      "combined",
     "en":      "combined",
     "es":      "combined",
     "et":      "edt",
