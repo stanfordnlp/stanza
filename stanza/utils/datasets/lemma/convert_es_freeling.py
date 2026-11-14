@@ -445,9 +445,9 @@ def check_conventions(train_file, dict_file, min_agreement=MIN_AGREEMENT):
 
 def build_dictionary(paths, output_filename):
     """
-    Convert the FreeLing clone in STANZA_EXTERN_DIR/spanish/FreeLing to a CoNLL-U dictionary at output_filename
+    Convert the FreeLing clone in DICTIONARY_DIR/spanish/FreeLing to a CoNLL-U dictionary at output_filename
     """
-    freeling_dir = os.path.join(paths["STANZA_EXTERN_DIR"], "spanish", "FreeLing")
+    freeling_dir = os.path.join(paths["DICTIONARY_DIR"], "spanish", "FreeLing")
     if not os.path.exists(freeling_dir):
         raise FileNotFoundError("Could not find FreeLing at %s ... please clone it with git clone https://github.com/TALP-UPC/FreeLing.git %s or use --no_external_dictionary to prepare the dataset without it" % (freeling_dir, freeling_dir))
     convert_directory(freeling_dir, output_filename)

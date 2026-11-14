@@ -45,7 +45,7 @@ teach the seq2seq model to copy long numbers.  See number_entries.
 The output has one single-word sentence per (form, UPOS, lemma),
 the same format as the Sloleks dictionary for Slovenian.
 prepare_lemma_treebank writes it to data/lemma/en_combined.dict.conllu
-from extern_data/english/specialist/inflVars.data, and run_lemma
+from extern_data/dictionary/english/specialist/inflVars.data, and run_lemma
 passes that file to the lemmatizer as its --secondary_file.
 
 The SPECIALIST Lexicon is distributed under the terms and conditions of
@@ -266,9 +266,9 @@ def convert_file(input_filename, output_filename, num_numbers=DEFAULT_NUMBERS):
 
 def build_dictionary(paths, output_filename):
     """
-    Convert inflVars.data from STANZA_EXTERN_DIR/english/specialist to a CoNLL-U dictionary at output_filename
+    Convert inflVars.data from DICTIONARY_DIR/english/specialist to a CoNLL-U dictionary at output_filename
     """
-    infl_vars = os.path.join(paths["STANZA_EXTERN_DIR"], "english", "specialist", "inflVars.data")
+    infl_vars = os.path.join(paths["DICTIONARY_DIR"], "english", "specialist", "inflVars.data")
     if not os.path.exists(infl_vars):
         raise FileNotFoundError("Could not find the SPECIALIST Lexicon inflection table at %s ... please download inflVars.data from the MISC directory of the current release at https://lhncbc.nlm.nih.gov/LSG/Projects/lexicon/current/web/release/index.html or use --no_external_dictionary to prepare the dataset without it" % infl_vars)
     convert_file(infl_vars, output_filename)

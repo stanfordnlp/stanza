@@ -68,4 +68,4 @@ def test_repeated_sent_ids():
 
 def test_missing_sloleks(tmp_path):
     with pytest.raises(FileNotFoundError):
-        convert_sl_sloleks.build_dictionary({"STANZA_EXTERN_DIR": str(tmp_path)}, str(tmp_path / "out.conllu"))
+        convert_sl_sloleks.build_dictionary({"DICTIONARY_DIR": str(tmp_path)}, str(tmp_path / "out.conllu"))

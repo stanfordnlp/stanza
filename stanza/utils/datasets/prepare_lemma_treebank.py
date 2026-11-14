@@ -22,7 +22,7 @@ from stanza.utils.datasets.dataset_retagging import Tags, add_retagging_args, bu
 from stanza.utils.datasets.lemma import convert_de_wiktionary, convert_el_wiktionary, convert_en_specialist, convert_es_freeling, convert_sl_sloleks, case_variants
 
 # Datasets with an external lexicon.  Each function converts the
-# lexicon from STANZA_EXTERN_DIR into the dictionary file given
+# lexicon from DICTIONARY_DIR into the dictionary file given
 EXTERNAL_DICTIONARIES = {
     'de_combined': convert_de_wiktionary.build_dictionary,
     'el_combined': convert_el_wiktionary.build_dictionary,
