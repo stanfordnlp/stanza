@@ -179,11 +179,11 @@ def test_report(sample_file, tmp_path):
                                ('hover', 'VERB', 'hover', None, 'hover')]
 
 def build_paths(tmp_path):
-    return {"STANZA_EXTERN_DIR": str(tmp_path / "extern"),
+    return {"DICTIONARY_DIR":    str(tmp_path / "dictionary"),
             "LEMMA_DATA_DIR":    str(tmp_path / "data" / "lemma")}
 
 def write_infl_vars(tmp_path):
-    specialist_dir = tmp_path / "extern" / "english" / "specialist"
+    specialist_dir = tmp_path / "dictionary" / "english" / "specialist"
     specialist_dir.mkdir(parents=True)
     (specialist_dir / "inflVars.data").write_text(SAMPLE, encoding="utf-8")
 

@@ -164,12 +164,12 @@ def test_entries_dir(tmp_path):
         convert_es_freeling.convert_directory(str(tmp_path), str(tmp_path / "out.conllu"))
 
 def test_build_dictionary(tmp_path):
-    paths = {"STANZA_EXTERN_DIR": str(tmp_path / "extern")}
+    paths = {"DICTIONARY_DIR": str(tmp_path / "dictionary")}
     output_file = tmp_path / "es_combined.dict.conllu"
     with pytest.raises(FileNotFoundError):
         convert_es_freeling.build_dictionary(paths, str(output_file))
 
-    write_sample(tmp_path / "extern" / "spanish" / "FreeLing")
+    write_sample(tmp_path / "dictionary" / "spanish" / "FreeLing")
     convert_es_freeling.build_dictionary(paths, str(output_file))
     assert os.path.exists(output_file)
 
