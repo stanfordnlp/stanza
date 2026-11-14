@@ -7,6 +7,11 @@ such as
   python -m stanza.utils.datasets.prepare_lemma_treebank UD_English-EWT
 
 and it will prepare each of train, dev, test
+
+By default, all three are retagged with predicted tags.  --gold keeps
+the gold tags in all three, and --gold_train keeps the gold tags in
+train while retagging dev and test, so that a lemmatizer trained on
+gold tags is scored with the tags the pipeline would give it
 """
 
 import os
@@ -18,7 +23,7 @@ import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_tre
 
 import stanza.utils.datasets.prepare_lemma_classifier as prepare_lemma_classifier
 
-from stanza.utils.datasets.dataset_retagging import Tags, add_retagging_args, build_retagger
+from stanza.utils.datasets.dataset_retagging import add_retagging_args, build_postprocess
 from stanza.utils.datasets.lemma import convert_de_wiktionary, convert_el_wiktionary, convert_en_specialist, convert_es_freeling, convert_sl_sloleks, case_variants
 
 # Datasets with an external lexicon.  Each function converts the
@@ -169,13 +174,8 @@ def process_treebank(treebank, model_type, paths, args):
         # TODO: check the data to see if there are lemmas or not
         augment = True
 
-    if args.tag_method is Tags.GOLD:
-        prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], args, augment=augment)
-    elif args.tag_method is Tags.PREDICTED:
-        retag_dataset = build_retagger(treebank, paths, args)
-        prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], args=args, augment=augment, postprocess=retag_dataset)
-    else:
-        raise ValueError("Unknown tags method: {}".format(args.tag_method))
+    postprocess = build_postprocess(treebank, paths, args)
+    prepare_tokenizer_treebank.copy_conllu_treebank(treebank, model_type, paths, paths["LEMMA_DATA_DIR"], args=args, augment=augment, postprocess=postprocess)
 
     if dict_file is not None and short_name in EXTERNAL_DICTIONARY_CHECKS:
         train_file = os.path.join(paths["LEMMA_DATA_DIR"], f"{short_name}.train.in.conllu")

@@ -10,22 +10,33 @@ from stanza.models.common.constant import treebank_to_short_name
 from stanza.resources.common import download, DEFAULT_MODEL_DIR, UnknownLanguageError
 from stanza.resources.default_packages import default_charlms, pos_charlms
 from stanza.resources.default_packages import TRANSFORMERS, TRANSFORMER_NICKNAMES
+from stanza.utils.datasets.prepare_tokenizer_treebank import copy_conllu_file
 from stanza.utils.training.common import build_pos_wordvec_args
 from stanza.utils.training.common import add_charlm_args, build_charlm_args, choose_charlm
 
 class Tags(Enum):
-    """Tags parameter values."""
+    """
+    Which splits of the dataset get predicted tags
+
+    GOLD: none of them
+    PREDICTED: train, dev, and test
+    GOLD_TRAIN: dev and test.  The model trains on gold tags, but is
+      scored and has its checkpoints chosen with tags from the tagger
+    """
     GOLD = 1
     PREDICTED = 2
+    GOLD_TRAIN = 3
 
 def add_retagging_args(parser):
     """
     Add args for building a dataset specifically pertaining to retagging the dataset
     """
     parser.add_argument("--gold", dest='tag_method', action='store_const', const=Tags.GOLD, default=Tags.PREDICTED,
-                        help='Use gold tags for building the depparse data')
+                        help='Use gold tags for train, dev, and test')
     parser.add_argument("--predicted", dest='tag_method', action='store_const', const=Tags.PREDICTED,
-                        help='Use predicted tags for building the depparse data')
+                        help='Use predicted tags for train, dev, and test.  This is the default')
+    parser.add_argument("--gold_train", dest='tag_method', action='store_const', const=Tags.GOLD_TRAIN,
+                        help='Use gold tags for train and predicted tags for dev and test')
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None,
                         help='Exact name of the pretrain file to read')
     parser.add_argument('--tagger_model', type=str, default=None,
@@ -71,7 +82,7 @@ def choose_tagger_model(short_language, dataset, tagger_model, args):
     try:
         download_list = download(lang=short_language, package=None, processors={"pos": dataset})
     except UnknownLanguageError as e:
-        raise FileNotFoundError("The language %s appears to be a language new to Stanza.  Unfortunately, that means there are no taggers available for retagging the dependency dataset.  Furthermore, there are no tagger models for this language found in %s.  You can specify a different directory for already trained tagger models with --save_dir, specify an exact tagger model name with --tagger_model, or use gold tags with --gold" % (short_language, args.save_dir)) from e
+        raise FileNotFoundError("The language %s appears to be a language new to Stanza.  Unfortunately, that means there are no taggers available for retagging the dataset.  Furthermore, there are no tagger models for this language found in %s.  You can specify a different directory for already trained tagger models with --save_dir, specify an exact tagger model name with --tagger_model, or use gold tags with --gold" % (short_language, args.save_dir)) from e
     for processor, name in download_list:
         if processor == 'pos':
             pos_path = os.path.join(DEFAULT_MODEL_DIR, short_language, "pos", name + ".pt")
@@ -123,3 +134,27 @@ def build_retagger(treebank, paths, args):
         tagger.main(tagger_args)
 
     return retag_dataset
+
+def build_postprocess(treebank, paths, args):
+    """
+    Build the postprocess for copy_conllu_treebank which applies args.tag_method
+
+    Returns None for Tags.GOLD, which copies each split unchanged.
+    The tagger is only looked for if some split gets predicted tags.
+    """
+    if args.tag_method is Tags.GOLD:
+        return None
+    if args.tag_method not in (Tags.PREDICTED, Tags.GOLD_TRAIN):
+        raise ValueError("Unknown tags method: {}".format(args.tag_method))
+
+    retag_dataset = build_retagger(treebank, paths, args)
+    if args.tag_method is Tags.PREDICTED:
+        return retag_dataset
+
+    def retag_dev_test(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name):
+        if tokenizer_file.split(".")[0] == "train":
+            copy_conllu_file(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name)
+        else:
+            retag_dataset(tokenizer_dir, tokenizer_file, dest_dir, dest_file, short_name)
+
+    return retag_dev_test
