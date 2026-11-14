@@ -106,13 +106,13 @@ def test_cycle_batches():
     for idx in range(3):
         assert sorted(words[idx*3:idx*3+3]) == sorted(x[0] for x in SECONDARY_ENTRIES)
 
-def train_model(tmp_path, secondary_rate, extra_args=()):
+def train_model(tmp_path, secondary_rate, extra_args=(), secondary_comments=()):
     train_file = tmp_path / "train.conllu"
     train_file.write_text(build_conllu(TRAIN_ENTRIES + CASED_ENTRIES), encoding="utf-8")
     dev_file = tmp_path / "dev.conllu"
     dev_file.write_text(build_conllu(DEV_ENTRIES), encoding="utf-8")
     secondary_file = tmp_path / "secondary.conllu"
-    secondary_file.write_text(build_conllu(SECONDARY_ENTRIES), encoding="utf-8")
+    secondary_file.write_text("".join(x + "\n" for x in secondary_comments) + build_conllu(SECONDARY_ENTRIES), encoding="utf-8")
     save_dir = tmp_path / ("models_%s" % secondary_rate)
 
     lemmatizer.main(["--train_file", str(train_file),
@@ -138,6 +138,27 @@ def test_train_with_secondary(tmp_path):
     assert 'é' in char_vocab
     assert 'ç' in char_vocab
     assert trainer.predict_dict([("housewives", "NOUN"), ("dogs", "NOUN")]) == ["housewife", "dog"]
+
+def test_secondary_file_source(tmp_path):
+    """
+    The comments at the start of the secondary file are kept in the saved model's config
+    """
+    comments = ["# specialist_sha256 = 1234", "# specialist_modified = 2026-01-15"]
+    trainer = train_model(tmp_path, 0, secondary_comments=comments)
+    assert trainer.args['secondary_file_source'] == comments
+
+    # without comments, there is no source recorded
+    no_comments = tmp_path / "no_comments"
+    no_comments.mkdir()
+    trainer = train_model(no_comments, 0)
+    assert trainer.args['secondary_file_source'] == []
+
+def test_secondary_file_source_sentences():
+    doc = CoNLL.conll2doc(input_str="# freeling_commit = abcd\n" + build_conllu(SECONDARY_ENTRIES))
+    assert lemmatizer.secondary_file_source(doc) == ["# freeling_commit = abcd"]
+    # only the first sentence's comments count
+    doc = CoNLL.conll2doc(input_str=build_conllu(SECONDARY_ENTRIES[:1]) + "# freeling_commit = abcd\n" + build_conllu(SECONDARY_ENTRIES[1:]))
+    assert lemmatizer.secondary_file_source(doc) == []
 
 def test_train_dict_only_secondary(tmp_path):
     """

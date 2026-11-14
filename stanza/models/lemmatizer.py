@@ -125,6 +125,21 @@ def all_lowercase(doc):
 def model_file_name(args):
     return utils.standard_model_file_name(args, "lemmatizer")
 
+def secondary_file_source(doc):
+    """
+    The comments at the start of a secondary file which record where it came from
+
+    These are the comments of the first sentence other than its sent_id
+    and text, such as the sha256 and date of the lexicon written by the
+    converters in stanza/utils/datasets/lemma.  The lemmatizer keeps them
+    in the model's config as secondary_file_source, so the model records
+    which version of the lexicon it was trained with.
+    """
+    if len(doc.sentences) == 0:
+        return []
+    return [comment for comment in doc.sentences[0].comments
+            if not comment.startswith(("# sent_id", "# text"))]
+
 def cycle_batches(data_loader):
     """
     Iterate over the batches of data_loader forever, reshuffling after each pass
@@ -164,8 +179,12 @@ def train(args):
         args['caseless'] = True
 
     secondary_doc = None
+    args['secondary_file_source'] = []
     if args['secondary_file']:
         secondary_doc = CoNLL.conll2doc(input_file=args['secondary_file'])
+        args['secondary_file_source'] = secondary_file_source(secondary_doc)
+        for comment in args['secondary_file_source']:
+            logger.info("Secondary file %s: %s", args['secondary_file'], comment)
 
     vocab = None
     if secondary_doc is not None and args['secondary_rate'] > 0:
