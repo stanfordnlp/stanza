@@ -4,6 +4,7 @@ Run the tagger for a couple iterations on some fake data
 Uses a couple sentences of UD_English-EWT as training/dev data
 """
 
+import logging
 import os
 import pytest
 
@@ -404,6 +405,36 @@ class TestTagger:
 
         with_extra = predict(str(tmp_path / "extra.conllu"), ['--write_extra_tag_columns'])
         assert 'BIS=' in with_extra
+
+    def test_no_tag_breakdown(self, tmp_path, wordvec_pretrain_file, caplog):
+        """
+        --no_tag_breakdown leaves out the F1 of each tag, but still logs the overall score
+        """
+        trainer = self.run_training(tmp_path, wordvec_pretrain_file, TRAIN_DATA, DEV_DATA)
+        dev_file = str(tmp_path / "dev.conllu")
+
+        def predict(extra_args):
+            args = ['--mode', 'predict',
+                    '--wordvec_pretrain_file', wordvec_pretrain_file,
+                    '--eval_file', dev_file,
+                    '--output_file', str(tmp_path / "retagged.conllu"),
+                    '--shorthand', 'en_test',
+                    '--lang', 'en',
+                    '--save_dir', str(tmp_path),
+                    '--save_name', trainer.args['save_name']]
+            caplog.clear()
+            with caplog.at_level(logging.INFO, logger='stanza'):
+                tagger.main(args + extra_args)
+            return caplog.text
+
+        with_breakdown = predict([])
+        assert "F1 scores for each UPOS" in with_breakdown
+        assert "POS Tagger score on en_test" in with_breakdown
+
+        without_breakdown = predict(['--no_tag_breakdown'])
+        assert "F1 scores for each" not in without_breakdown
+        assert "Confusion matrix" not in without_breakdown
+        assert "POS Tagger score on en_test" in without_breakdown
 
     def test_train_ratios_by_name(self, tmp_path, wordvec_pretrain_file):
         """A ratio can name a training file, including one inside a zip"""

@@ -33,13 +33,15 @@ def fake_retagger(treebank, paths, args):
         CoNLL.write_doc2conll(doc, f"{dest_dir}/{short_name}.{dest_file}.conllu")
     return retag_dataset
 
-def parse_tag_method(flags):
+def parse_tag_method(flags, default_tag_method=Tags.PREDICTED):
     parser = argparse.ArgumentParser()
-    add_retagging_args(parser)
+    add_retagging_args(parser, default_tag_method)
     return parser.parse_args(flags)
 
 def test_tag_method_args():
     assert parse_tag_method([]).tag_method is Tags.PREDICTED
+    assert parse_tag_method([], Tags.GOLD_TRAIN).tag_method is Tags.GOLD_TRAIN
+    assert parse_tag_method(["--predicted"], Tags.GOLD_TRAIN).tag_method is Tags.PREDICTED
     assert parse_tag_method(["--predicted"]).tag_method is Tags.PREDICTED
     assert parse_tag_method(["--gold"]).tag_method is Tags.GOLD
     assert parse_tag_method(["--gold_train"]).tag_method is Tags.GOLD_TRAIN
@@ -79,3 +81,14 @@ def test_gold_train_retags_dev_test(monkeypatch, tmp_path):
     postprocess = build_postprocess("UD_English-Test", {}, parse_tag_method(["--gold_train"]))
     upos = run_postprocess(postprocess, tmp_path)
     assert upos == {"train": ["NOUN", "VERB"], "dev": ["X", "X"], "test": ["X", "X"]}
+
+def test_script_defaults():
+    """
+    The lemma data retags only dev and test by default, and the depparse data retags all three
+    """
+    from stanza.utils.datasets import prepare_depparse_treebank, prepare_lemma_treebank
+    for module, expected in ((prepare_lemma_treebank, Tags.GOLD_TRAIN),
+                             (prepare_depparse_treebank, Tags.PREDICTED)):
+        parser = argparse.ArgumentParser()
+        module.add_specific_args(parser)
+        assert parser.parse_args([]).tag_method is expected

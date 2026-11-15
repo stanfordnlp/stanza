@@ -50,6 +50,7 @@ def build_argparse():
     parser.add_argument('--upos_word_regex', type=str, default=None, help='Regex to use to build a confusion matrix specifically for those words.  Example use case, to test whether adding "como" as a VERB to the Spanish dataset caused errors on ADV or SCONJ usages.  Uses "search", so an example regex for that test would be "^(?i:como)$"')
     parser.add_argument('--feature_confusion', type=lambda x: [y for y in x.split(',') if y], default=None, help='Comma separated features which get a confusion matrix when scoring, such as "Mood,VerbForm".  Every feature gets one by default')
     parser.add_argument('--no_feature_confusion', dest='feature_confusion', action='store_const', const=[], help='Do not print any feature confusion matrices when scoring')
+    parser.add_argument('--no_tag_breakdown', dest='tag_breakdown', action='store_false', default=True, help='When scoring, only print the overall UPOS/XPOS/UFeats/AllTags scores, not the F1 of each tag and feature value or the feature confusion matrices')
 
     parser.add_argument('--mode', default='train', choices=['train', 'predict'])
     parser.add_argument('--lang', type=str, help='Language')
@@ -629,7 +630,8 @@ def evaluate_trainer(args, trainer, pretrain):
 
     if args['gold_labels']:
         gold_doc = CoNLL.conll2doc(input_file=args['eval_file'])
-        scorer.score_named_tags(dev_data.doc, gold_doc, args.get('feature_confusion'))
+        if args.get('tag_breakdown', True):
+            scorer.score_named_tags(dev_data.doc, gold_doc, args.get('feature_confusion'))
 
         system_pred_file = "{:C}\n\n".format(dev_data.doc)
         system_pred_file = io.StringIO(system_pred_file)
