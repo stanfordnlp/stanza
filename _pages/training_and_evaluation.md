@@ -43,6 +43,7 @@ We provide scripts that are useful for model training and evaluation in the `scr
 - `WORDVEC_DIR`: The directory to store all word vector files (see below).
 - `HANDPARSED_DIR`: A fork of [handparsed-treebank](https://github.com/stanfordnlp/handparsed-treebank), only needed if retraining "combined" models
 - `STANZA_EXTERN_DIR`: Where other external resources are read from, such as the lemma lexicons for the combined models.  Defaults to `extern_data`.  See [Lemmatization](lemma.md#training-with-an-external-dictionary) for what goes there
+- `DICTIONARY_DIR`: Where the Greek Wiktionary lexicon for `el_combined` is read from, in a `greek` subdirectory.  Defaults to `extern_data/dictionary`.  On the `dev` branch, the other lemma lexicons are read from here as well.
 
 These variables are used by the `.sh` files in the `scripts` folder.  They are also used by the python scripts, and so they need to be part of your environment.
 

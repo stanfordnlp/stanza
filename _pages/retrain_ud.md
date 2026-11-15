@@ -211,7 +211,9 @@ than a single UD treebank.  Preparing a combined dataset also needs
 [handparsed-treebank](https://github.com/stanfordnlp/handparsed-treebank)
 in `$HANDPARSED_DIR`.  For the lemmatizer, `en_combined`,
 `de_combined`, `es_combined`, and `sl_combined` also need an external
-lexicon in `$STANZA_EXTERN_DIR`, which defaults to `extern_data`.  The
+lexicon in `$STANZA_EXTERN_DIR`, which defaults to `extern_data`, and
+`el_combined` needs one in `$DICTIONARY_DIR`, which defaults to
+`extern_data/dictionary`.  The
 [lemmatizer page](lemma.md#training-with-an-external-dictionary) lists
 where each lexicon goes:
 
@@ -223,8 +225,9 @@ python3 -m stanza.utils.training.run_lemma en_combined
 Preparing the dataset stops with an error if the lexicon is missing.
 For a new UD release, it is also a good time to
 [update the lexicons](lemma.md#updating-a-lexicon).  For
-`es_combined`, preparing the dataset also
-[checks the Spanish lemma conventions](lemma.md#checking-the-spanish-conventions),
+`es_combined` and `el_combined`, preparing the dataset also checks the
+[Spanish](lemma.md#checking-the-spanish-conventions) and
+[Greek](lemma.md#checking-the-greek-conventions) lemma conventions,
 which stops if a treebank in the new release has changed one of them.
 
 ### Word Vectors

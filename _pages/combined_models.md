@@ -16,6 +16,7 @@ The default models for some languages are "combined".  The goal is to get better
 | English | EWT, GUM, GUMReddit, PUD, Pronouns | [SPECIALIST Lexicon](#specialist-lexicon) lemma dictionary |
 | French  | GSD, ParisStories, Rhapsodie, Sequoia | |
 | German  | GSD | [German Wiktionary](#german-wiktionary) lemma dictionary |
+| Greek   | GDT | [Greek Wiktionary](#greek-wiktionary) lemma dictionary |
 | Hebrew  | IAHLTwiki | [HTB fork from IAHLT](https://github.com/IAHLT/UD_Hebrew) |
 | Italian | ISDT, VIT, PoSTWITA, and TWITTIRO | [MWT list from Prof. Attardi](https://github.com/stanfordnlp/handparsed-treebank/blob/master/italian-mwt/italian.mwt) |
 | Japanese | GSD | [Parsed data from CMU](https://github.com/stanfordnlp/handparsed-treebank/blob/master/japanese-handparsed/spaces-ready-checked.conllu) |
@@ -34,7 +35,7 @@ Whether or not this was a good idea was explored [in a GURT paper from Georgetow
 
 ## Lemma dictionaries
 
-The English, German, Slovenian, and Spanish lemmatizers also use a large
+The English, German, Greek, Slovenian, and Spanish lemmatizers also use a large
 external lexicon, to cover words which never appear in the treebanks.
 Each lexicon is converted to a list of `(word, UPOS, lemma)` entries,
 and those entries go into the lemmatizer's dictionary.  Where a
@@ -100,6 +101,35 @@ adjectival declension, such as *Abgeordneter*, has its weak form
 with `ss`, for Swiss spelling, and a form with more than one lemma is
 left out.  The conversion is
 [stanza/utils/datasets/lemma/convert_de_wiktionary.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/lemma/convert_de_wiktionary.py).
+
+### Greek Wiktionary
+
+The Greek lemma dictionary is built from
+[Greek Wiktionary](https://el.wiktionary.org/), which is licensed under
+[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/), using
+the [kaikki.org extraction](https://kaikki.org/elwiktionary/rawdata.html)
+made with Wiktextract (Tatu Ylonen, 2022,
+[Wiktextract: Wiktionary as Machine-Readable Structured Data](https://aclanthology.org/2022.lrec-1.140/),
+Proceedings of the 13th Conference on Language Resources and
+Evaluation, pp. 1317–1325).
+
+Only the Greek entries are used.  The forms of nouns, verbs,
+adjectives, and names (`PROPN`) are taken from the declension and
+conjugation tables of their entries, along with the pages for
+inflected forms which point to their lemma.  The lemmas are changed to
+follow UD_Greek-GDT:
+
+- A variant spelling or a diminutive is its own lemma.
+- An inflected form which points to another inflected form, such as an adjective form which points to the feminine, has the lemma at the end of the chain (*ιαπωνικές* → *ιαπωνικός*).
+- Comparatives and superlatives have the positive adjective as their lemma (*μεγαλύτερο* → *μεγάλος*).
+- Passive verb forms have the active verb as their lemma when tagged `VERB` (*χτισμένος* → *χτίζω*), and participles keep the participle as their lemma when tagged `ADJ`.
+- Contracted verbs have the -ώ lemma rather than -άω (*μιλάω* → *μιλώ*).
+- Where GDT gives most of the forms of a Wiktionary lemma a different lemma, the GDT lemma is used, such as *λέω* → *λέγω*.
+
+Forms and lemmas with spaces, digits, markup, or polytonic accents are
+skipped, and a form with more than one lemma is left out.  The
+conversion is
+[stanza/utils/datasets/lemma/convert_el_wiktionary.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/lemma/convert_el_wiktionary.py).
 
 ### Sloleks
 

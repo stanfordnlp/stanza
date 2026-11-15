@@ -164,14 +164,15 @@ Most training-only options are documented in the [argument parser](https://githu
 
 ### Training with an external dictionary
 
-**Coming soon:** the scripts and options in this section are on the
-[`dev` branch](https://github.com/stanfordnlp/stanza/tree/dev), and
-will be part of the next code release.
+The scripts and options in this section are part of Stanza 1.15.1.
+Some changes on the
+[`dev` branch](https://github.com/stanfordnlp/stanza/tree/dev) are
+described in [Coming soon](#coming-soon).
 
 A lemmatizer can be trained with an external lexicon as well as a
-treebank.  The default English, German, Slovenian, and Spanish models
-do this, with the SPECIALIST Lexicon, German Wiktionary, Sloleks, and
-FreeLing.  See
+treebank.  The default English, German, Greek, Slovenian, and Spanish
+models do this, with the SPECIALIST Lexicon, German Wiktionary, Greek
+Wiktionary, Sloleks, and FreeLing.  See
 [Combined models](combined_models.md#lemma-dictionaries) for where
 those lexicons come from and the terms of their licenses.
 
@@ -181,16 +182,23 @@ The lexicon is used in two ways:
 - The seq2seq model also trains on the lexicon, mixed in with the treebank batches.  This teaches it inflection patterns which the treebank has too few examples of, so it does better on words which are in neither one.
 
 The lexicon is converted when the dataset is prepared.  For
-`de_combined`, `en_combined`, `es_combined`, and `sl_combined`, `prepare_lemma_treebank` reads the
-lexicon from `extern_data` and writes it next to the train, dev, and
-test files as `{short_name}.dict.conllu`:
+`de_combined`, `el_combined`, `en_combined`, `es_combined`, and
+`sl_combined`, `prepare_lemma_treebank` reads the lexicon from
+`extern_data` and writes it next to the train, dev, and test files as
+`{short_name}.dict.conllu`:
 
 | Dataset | Lexicon | Expected location |
 | :------ | :------ | :---------------- |
 | en_combined | [`inflVars.data`](https://data.lhncbc.nlm.nih.gov/public/lsg/lexicon/2026/release/LEX_DOC/MISC/inflVars.data) from the [2026 SPECIALIST Lexicon release](https://lhncbc.nlm.nih.gov/LSG/Projects/lexicon/current/web/release/2026.html) | `extern_data/english/specialist/inflVars.data` |
 | de_combined | `de_wiki_lemmas.conllu.gz`, already converted from German Wiktionary | `extern_data/handparsed-treebank/german-lemmas-wiki/de_wiki_lemmas.conllu.gz` |
+| el_combined | `el-extract.jsonl.gz`, the [kaikki.org extraction of Greek Wiktionary](https://kaikki.org/elwiktionary/rawdata.html) | `extern_data/dictionary/greek/el-extract.jsonl.gz` (`.xz` or uncompressed also work) |
 | es_combined | A clone of [FreeLing](https://github.com/TALP-UPC/FreeLing), whose Spanish dictionary is in `data/es/dictionary/entries` | `extern_data/spanish/FreeLing/` |
 | sl_combined | [Sloleks 3.1](http://hdl.handle.net/11356/2080) XML files | `extern_data/slovenian/Sloleks.3.1/` |
+
+The Greek lexicon is in `$DICTIONARY_DIR`, which defaults to
+`extern_data/dictionary`.  Converting it also uses the UD_Greek-GDT
+training file in `$UDBASE`, as described in
+[Checking the Greek conventions](#checking-the-greek-conventions).
 
 ```bash
 python3 -m stanza.utils.datasets.prepare_lemma_treebank en_combined
@@ -288,15 +296,47 @@ of FreeLing it was built from: `# freeling_commit` if the FreeLing
 directory is a git clone, and `# freeling_entries_sha256`, a hash of
 its dictionary files.
 
+### Checking the Greek conventions
+
+The Greek Wiktionary conversion rewrites lemmas to follow UD_Greek-GDT,
+as described in [Combined models](combined_models.md#greek-wiktionary).
+Most of the rewrites are fixed rules.  The rest are counted from the
+GDT training file: when GDT gives most of the forms of a Wiktionary
+lemma a different lemma, at least twice, the Wiktionary lemma is
+replaced, such as *λέω* → *λέγω*.  These are written next to the
+dictionary as `el_combined.dict.rewrites.tsv`, one per line as
+Wiktionary lemma, UPOS, and GDT lemma, so that each conversion leaves a
+record of them.
+
+After writing the `el_combined` training data, `prepare_lemma_treebank`
+compares the converted dictionary with the training data in the same
+way as for [Spanish](#checking-the-spanish-conventions), except that
+each convention has its own minimum.  GDT is not consistent about
+participles itself, so those minimums are lower:
+
+| Convention | Words compared | Minimum |
+| :--------- | :------------- | :------ |
+| Passive verbs have the active lemma (*δημιουργήθηκε* → *δημιουργώ*) | `VERB`s with `Voice=Pass`, other than participles | 85% |
+| `VERB` participles have the verb as the lemma (*κτισμένο* → *κτίζω*) | `VERB`s with `VerbForm=Part` ending in -μένος and its forms | 60% |
+| `ADJ` participles have the participle as the lemma (*αυξημένη* → *αυξημένος*) | `ADJ`s ending in -μένος and its forms | 70% |
+| Comparatives and superlatives have the positive as the lemma (*μεγαλύτερο* → *μεγάλος*) | `ADJ`s with `Degree=Cmp` or `Degree=Sup` | 70% |
+| Contracted verbs have the -ώ lemma (*μιλάει* → *μιλώ*) | `VERB`s whose lemma ends in -ώ or -άω | 85% |
+
+If a check fails, the rules in
+[convert_el_wiktionary.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/lemma/convert_el_wiktionary.py)
+need to change to match the treebank.  The check is skipped with
+`--no_external_dictionary`.
+
 ### Updating a lexicon
 
 After a lexicon is updated, prepare the dataset again and retrain the
 lemmatizer with `run_lemma`.  `extern_data` is the default for
-`$STANZA_EXTERN_DIR`, and `extern_data/handparsed-treebank` for
-`$HANDPARSED_DIR`.
+`$STANZA_EXTERN_DIR`, `extern_data/dictionary` for `$DICTIONARY_DIR`,
+and `extern_data/handparsed-treebank` for `$HANDPARSED_DIR`.
 
 - **SPECIALIST Lexicon** (`en_combined`): download `inflVars.data` from the `LEX_DOC/MISC` directory of the new release, replacing `extern_data/english/specialist/inflVars.data`.  The license requires the release number and date of the lexicon to be given with any distribution, so update the release in the table above and in [Combined models](combined_models.md#specialist-lexicon) when models built with it are released.
 - **FreeLing** (`es_combined`): run `git pull` in `extern_data/spanish/FreeLing`.  The [convention check](#checking-the-spanish-conventions) runs when the dataset is prepared.
+- **Greek Wiktionary** (`el_combined`): download the latest `el-extract.jsonl.gz` from [kaikki.org](https://kaikki.org/elwiktionary/rawdata.html), replacing `extern_data/dictionary/greek/el-extract.jsonl.gz`.  The [convention check](#checking-the-greek-conventions) runs when the dataset is prepared, and comparing the new `el_combined.dict.rewrites.tsv` with the previous one shows which of the counted rewrites changed.
 - **Sloleks** (`sl_combined`): the converter reads `extern_data/slovenian/Sloleks.3.1/`, so a new version needs the directory in `build_dictionary` of [convert_sl_sloleks.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/lemma/convert_sl_sloleks.py) changed, along with the citation in [Combined models](combined_models.md#sloleks).
 - **German Wiktionary** (`de_combined`): the dump is converted ahead of time, and the result is kept in handparsed-treebank, so preparing `de_combined` doesn't need the dump or the parser library.  To rebuild it, install the `wiktionary` extra, which needs Python 3.13 or later (`pip install -e '.[wiktionary]'` from a git checkout of Stanza), download the latest `dewiktionary-latest-pages-articles-multistream.xml.bz2` from [Wikimedia dumps](https://dumps.wikimedia.org/dewiktionary/latest/), and run
 
@@ -311,11 +351,62 @@ lemmatizer with `run_lemma`.  `extern_data` is the default for
 A lexicon for another dataset needs a license which allows the
 converted entries to be distributed as part of a model.  To add one:
 
-1. Write a converter in [stanza/utils/datasets/lemma](https://github.com/stanfordnlp/stanza/tree/dev/stanza/utils/datasets/lemma), named after the language and the lexicon, such as `convert_es_freeling.py`.  It needs a `build_dictionary(paths, output_filename)` function which reads the lexicon from `paths["STANZA_EXTERN_DIR"]` and writes one word per sentence in the format above.  If the lexicon is missing, it should raise `FileNotFoundError` with where to download it.
+1. Write a converter in [stanza/utils/datasets/lemma](https://github.com/stanfordnlp/stanza/tree/dev/stanza/utils/datasets/lemma), named after the language and the lexicon, such as `convert_es_freeling.py`.  It needs a `build_dictionary(paths, output_filename)` function which reads the lexicon from a directory named after the language in `paths["DICTIONARY_DIR"]`, such as `greek`, and writes one word per sentence in the format above.  If the lexicon is missing, it should raise `FileNotFoundError` with where to download it.
 2. Map the lexicon's categories to UPOS, and change its lemmas to match the treebank's conventions.  Comparing the converted entries with the training data, on the words in both and on the dev set words the training data doesn't have, turns up most of the differences.  Drop a word and UPOS with more than one lemma rather than choosing one, and leave out the closed classes, which the treebank already covers.
 3. Add the dataset and its `build_dictionary` to `EXTERNAL_DICTIONARIES` in [prepare_lemma_treebank.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/prepare_lemma_treebank.py).  If any of the lemma rules depend on a treebank convention which might change, also add a check to `EXTERNAL_DICTIONARY_CHECKS`, such as `convert_es_freeling.check_conventions`.  It is run as `check_fn(train_file, dict_file)` after the training data is written, and should raise an exception if the conventions no longer match.
 4. For the [capitalized entries](#capitalized-words), add the dataset to `EXACT_DICTIONARIES`, with the UPOS tags to build them for.
 5. Add the lexicon to the table above, and describe its source, its license, and the modifications made to it in [Combined models](combined_models.md#lemma-dictionaries).
+
+### Coming soon
+
+These changes are on the
+[`dev` branch](https://github.com/stanfordnlp/stanza/tree/dev), and
+will be part of the next code release.
+
+The English, Slovenian, and Spanish lexicons are read from
+`$DICTIONARY_DIR` along with the Greek one, so that all of them can be
+kept in one directory, such as a shared one on a cluster.  They keep
+the same layout:
+
+| Dataset | Expected location |
+| :------ | :---------------- |
+| en_combined | `extern_data/dictionary/english/specialist/inflVars.data` |
+| es_combined | `extern_data/dictionary/spanish/FreeLing/` |
+| sl_combined | `extern_data/dictionary/slovenian/Sloleks.3.1/` |
+
+The German file stays in handparsed-treebank.
+
+Each converter writes comments at the start of the first sentence of
+the dictionary which record the version of the lexicon it was built
+from.  For the SPECIALIST Lexicon, Sloleks, and both Wiktionary dumps,
+these are a sha256 of the input files and their latest modification
+date, such as
+
+```
+# specialist_sha256 = 3f2a...
+# specialist_modified = 2026-01-15
+```
+
+with the prefixes `specialist`, `sloleks`, `kaikki`, and
+`dewiktionary`.  For a downloaded file, the modification date is the
+server's date for it if the download kept it, as `wget` does, and
+otherwise the date it was downloaded.  The FreeLing dictionary also
+has `# freeling_commit_date` along with the commit.
+
+The lemmatizer keeps these comments from its `--secondary_file` in the
+model's config as `secondary_file_source`, so a model records which
+version of the lexicon it was trained with, even after the dictionary
+file is rebuilt.  A lexicon of your own can record its source the same
+way, with comments before the first word.  To see it for a model:
+
+```python
+import torch
+model = torch.load("saved_models/lemma/en_combined_charlm_lemmatizer.pt", weights_only=True)
+print(model['config'].get('secondary_file_source'))
+```
+
+Models trained without this have no `secondary_file_source`, so this
+prints `None`.
 
 ## Contextual Classifier
 
