@@ -11,12 +11,12 @@ Example:
 
 import stanza.utils.datasets.common as common
 import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_treebank
-from stanza.utils.datasets.dataset_retagging import add_retagging_args, build_postprocess
+from stanza.utils.datasets.dataset_retagging import Tags, add_retagging_args, build_postprocess
 
 
 def add_specific_args(parser) -> None:
     """Add specific args."""
-    add_retagging_args(parser)
+    add_retagging_args(parser, Tags.PREDICTED)
 
 
 def process_treebank(treebank, model_type, paths, args) -> None:

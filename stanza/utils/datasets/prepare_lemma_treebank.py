@@ -8,10 +8,10 @@ such as
 
 and it will prepare each of train, dev, test
 
-By default, all three are retagged with predicted tags.  --gold keeps
-the gold tags in all three, and --gold_train keeps the gold tags in
-train while retagging dev and test, so that a lemmatizer trained on
-gold tags is scored with the tags the pipeline would give it
+By default, train keeps its gold tags while dev and test are retagged
+with predicted tags (--gold_train), so that the lemmatizer is scored
+with the tags the pipeline would give it.  --gold keeps the gold tags
+in all three, and --predicted retags all three
 """
 
 import os
@@ -23,7 +23,7 @@ import stanza.utils.datasets.prepare_tokenizer_treebank as prepare_tokenizer_tre
 
 import stanza.utils.datasets.prepare_lemma_classifier as prepare_lemma_classifier
 
-from stanza.utils.datasets.dataset_retagging import add_retagging_args, build_postprocess
+from stanza.utils.datasets.dataset_retagging import Tags, add_retagging_args, build_postprocess
 from stanza.utils.datasets.lemma import convert_de_wiktionary, convert_el_wiktionary, convert_en_specialist, convert_es_freeling, convert_sl_sloleks, case_variants
 
 # Datasets with an external lexicon.  Each function converts the
@@ -62,7 +62,7 @@ def add_specific_args(parser) -> None:
                         help="Don't write the external lexicon for datasets which have one, such as German Wiktionary for de_combined, Greek Wiktionary for el_combined, the SPECIALIST Lexicon for en_combined, FreeLing for es_combined, or Sloleks for sl_combined.  Removes any dictionary file left from an earlier run")
     parser.add_argument('--no_exact_dictionary', dest='exact_dictionary', action='store_false', default=True,
                         help="Don't write the exact dictionary for datasets which have one, such as the capitalized words for en_combined and es_combined.  Removes any exact dictionary file left from an earlier run")
-    add_retagging_args(parser)
+    add_retagging_args(parser, Tags.GOLD_TRAIN)
 
 def dictionary_filename(lemma_dir, short_name):
     """

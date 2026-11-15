@@ -27,16 +27,24 @@ class Tags(Enum):
     PREDICTED = 2
     GOLD_TRAIN = 3
 
-def add_retagging_args(parser):
+def add_retagging_args(parser, default_tag_method):
     """
     Add args for building a dataset specifically pertaining to retagging the dataset
+
+    default_tag_method is the Tags value used if none of --gold,
+    --predicted, or --gold_train is given
     """
-    parser.add_argument("--gold", dest='tag_method', action='store_const', const=Tags.GOLD, default=Tags.PREDICTED,
-                        help='Use gold tags for train, dev, and test')
+    def tag_help(text, tag_method):
+        if tag_method is default_tag_method:
+            return text + '.  This is the default'
+        return text
+
+    parser.add_argument("--gold", dest='tag_method', action='store_const', const=Tags.GOLD, default=default_tag_method,
+                        help=tag_help('Use gold tags for train, dev, and test', Tags.GOLD))
     parser.add_argument("--predicted", dest='tag_method', action='store_const', const=Tags.PREDICTED,
-                        help='Use predicted tags for train, dev, and test.  This is the default')
+                        help=tag_help('Use predicted tags for train, dev, and test', Tags.PREDICTED))
     parser.add_argument("--gold_train", dest='tag_method', action='store_const', const=Tags.GOLD_TRAIN,
-                        help='Use gold tags for train and predicted tags for dev and test')
+                        help=tag_help('Use gold tags for train and predicted tags for dev and test', Tags.GOLD_TRAIN))
     parser.add_argument('--wordvec_pretrain_file', type=str, default=None,
                         help='Exact name of the pretrain file to read')
     parser.add_argument('--tagger_model', type=str, default=None,
@@ -98,7 +106,8 @@ def build_retagger(treebank, paths, args):
     # fmt: off
     base_args = ["--lang", short_language,
                  "--shorthand", short_name,
-                 "--mode", "predict"]
+                 "--mode", "predict",
+                 "--no_tag_breakdown"]
     # fmt: on
 
     # perhaps download a tagger if one doesn't already exist
