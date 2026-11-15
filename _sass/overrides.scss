@@ -25,6 +25,13 @@ td, th {
     min-width: 10px;
 }
 
+// Flags in inline code, such as --no_external_dictionary, which are
+// marked in the table_wrappers layout.  An unlabeled code block can
+// also start with a dash, so code inside a pre is left alone.
+:not(pre) > code.flag {
+    white-space: nowrap;
+}
+
 // Custom footer lists
 footer ul {
     list-style: none;

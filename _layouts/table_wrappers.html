@@ -4,4 +4,7 @@ layout: vendor/compress
 
 {% assign content_ = content | replace: '<table', '<div class="table-wrapper"><table' %}
 {% assign content_ = content_ | replace: '</table>', '</table></div>' %}
+{% comment %} Inline code starting with a dash, such as a flag, gets the flag class, which keeps it from wrapping at its dashes {% endcomment %}
+{% assign content_ = content_ | replace: '<code class="language-plaintext highlighter-rouge">-', '<code class="language-plaintext highlighter-rouge flag">-' %}
+{% assign content_ = content_ | replace: '<code>-', '<code class="flag">-' %}
 {{ content_ }}

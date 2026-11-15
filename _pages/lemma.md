@@ -410,25 +410,44 @@ prints `None`.
 
 ## Contextual Classifier
 
-As of Stanza 1.10, there is a contextual classifier for words with
-ambiguous words that can be determined by context.  For example, in
-English, the token `'s` as a verb can either represent `is` or `has`,
-with the lemma `be` or `have` respectively.
+As of Stanza 1.10, there is a contextual classifier for ambiguous words
+whose lemma can be determined by context.  For example, in English,
+the token `'s` as an `AUX` can either represent `is` or `has`, with the
+lemma `be` or `have` respectively.
 
-One caveat is that this requires at least a few examples to have
-reasonable results.  Therefore, although there are other possible
-examples in English such as `saw`, `wound`, and `found`, the existing
-training data does not cover those ambiguous lemmas.
+The POS is enough to tell apart many ambiguous lemmas, so the
+contextual classifier is only needed where the two lemmas have the
+same UPOS.  In English, the ambiguity of `'s` as an `AUX` or as a
+possessive `PART` was never an issue.  The classifier also needs
+enough examples of each lemma in the training data to give reasonable
+results.  Other ambiguous English words, such as `saw`, `wound`, and
+`found`, don't have enough examples in the treebanks.
 
-Note that in general POS is sufficient to distinguish many possible
-ambiguous lemmas, and the contextual lemmatizer is only needed for
-cases where the POS (specifically the UPOS) are the same for two
-possible resolutions.  For example, in English, the ambiguity of `'s`
-as a verb or as a possessive was never an issue.
+The default models for these languages have a contextual classifier:
 
-Candidates for this expansion based on exploring UD treebanks can be
-found in
-[stanza/utils/datasets/prepare_lemma_classifier.py](https://github.com/stanfordnlp/stanza/blob/main/stanza/utils/datasets/prepare_lemma_classifier.py).
-Currently, the released models only use this for `'s` in English and
-`के` in Hindi, although we can expand this later, and more suggestions
-or data for ambiguous cases with little available data are welcome.
+| Language | Datasets | Words | UPOS | Lemmas |
+| :------- | :------- | :---- | :--- | :----- |
+| Arabic | ar_padt | أن | `SCONJ` | أَن, أَنَّ |
+| English | en_combined | `'s` | `AUX` | be, have |
+| English | en_combined | her | `PRON` | her (possessive), she (object) |
+| Greek | el_combined, el_gdt | τους, μας, του, της, σας, μου | `PRON` | μου, εγώ |
+| Hindi | hi_hdtb | के | `ADP` | का, के |
+| Japanese | ja_combined, ja_gsd | だ | `AUX` | だ, た |
+| Persian | fa_perdt | شد | `VERB` | شد, کرد |
+| Slovenian | sl_combined, sl_ssj | rok, roka, roke, roki | `NOUN` | rok, roka |
+| Slovenian | sl_combined, sl_ssj | dela, delu, delom, delih, deli | `NOUN` | del, delo |
+
+The classifier is stored in the lemmatizer's model file, and uses the
+language's word vectors, which are downloaded along with the
+lemmatizer.
+
+When training a lemmatizer for one of these datasets, `run_lemma`
+builds the classifier from the data prepared by
+`prepare_lemma_treebank` and attaches it to the lemmatizer: the charlm
+lemmatizer, or the nocharlm lemmatizer if the language has no charlm.
+`--no_lemma_classifier` turns this off.  The datasets and target words
+are in `DATASET_MAPPING` and `DATASET_TARGETS` in
+[stanza/utils/datasets/prepare_lemma_classifier.py](https://github.com/stanfordnlp/stanza/blob/dev/stanza/utils/datasets/prepare_lemma_classifier.py),
+along with notes on other candidates found in the UD treebanks.
+Suggestions, or data for ambiguous words which don't have enough
+examples yet, are welcome.
