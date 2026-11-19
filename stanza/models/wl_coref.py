@@ -148,6 +148,7 @@ if __name__ == "__main__":
                            help="Train this many epochs")
     argparser.add_argument("--plateau_epochs", type=int, default=None,
                            help="Stop training if plateaued for this many epochs (only applies if positive)")
+    argparser.add_argument("--device", default=None, help="Override the default device")
 
     argparser.add_argument("--train_data", default=None, help="File to use for train data")
     argparser.add_argument("--dev_data", default=None, help="File to use for dev data")
@@ -216,6 +217,9 @@ if __name__ == "__main__":
     if args.lang_lr_weights:
         config.lang_lr_weights = args.lang_lr_weights
 
+    if args.device:
+        config.device = args.device
+
     # if wandb, generate wandb configuration 
     if args.mode == "train":
         if args.wandb:
@@ -238,6 +242,8 @@ if __name__ == "__main__":
         }
         if args.test_data:
             config_update['test_data'] = args.test_data
+        if args.device:
+            config_update['device'] = args.device
 
         if args.weights is None and config.save_name is not None:
             args.weights = config.save_name
