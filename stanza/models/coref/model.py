@@ -46,6 +46,16 @@ import torch.nn as nn
 
 logger = logging.getLogger('stanza')
 
+def dataset_has_zeros(docs):
+    """
+    Whether any document in the dataset has a zero anaphor
+
+    convert_udcoref.py writes an is_zero list for every document,
+    including datasets with no zeros, so this checks the values
+    rather than whether the field exists.
+    """
+    return any(any(doc.get('is_zero') or ()) for doc in docs)
+
 class CorefModel:  # pylint: disable=too-many-instance-attributes
     """Combines all coref modules together to find coreferent spans.
 
@@ -479,12 +489,14 @@ class CorefModel:  # pylint: disable=too-many-instance-attributes
         avg_spans = docs.avg_span
 
         # for a brand new model, we set the zeros prediction to all 0 if the dataset has no zeros
-        training_has_zeros = any('is_zero' in doc for doc in docs)
+        training_has_zeros = dataset_has_zeros(docs)
         if not training_has_zeros:
             logger.info("No zeros found in the dataset.  The zeros predictor will set to 0")
             if self.epochs_trained == 0:
-                # new model, set it to always predict not-zero
+                # new model, set it to always predict not-zero,
+                # and record that in the saved config
                 self.disable_zeros_predictor()
+                self.config.use_zeros = False
 
         attenuated_languages = set()
         if self.config.lang_lr_attenuation:
