@@ -1,9 +1,11 @@
+import pytest
 import torch
 
 from stanza.models.common.doc import Document
 from stanza.models.coref.const import CorefResult
 from stanza.pipeline.coref_processor import CorefProcessor
 
+pytestmark = pytest.mark.pipeline
 
 def test_zero_anaphora_uses_original_span_head():
     class Model:
