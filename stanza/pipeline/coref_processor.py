@@ -135,9 +135,10 @@ class CorefProcessor(UDProcessor):
         for cluster_idx, span_cluster in enumerate(results.span_clusters):
             if len(span_cluster) == 0:
                 continue
-            span_cluster = sorted(span_cluster)
+            # Keep the original position so each sorted span still uses its own head.
+            sorted_spans = sorted(enumerate(span_cluster), key=lambda item: item[1])
 
-            for span in span_cluster:
+            for _, span in sorted_spans:
                 # check there are no sentence crossings before
                 # manipulating the spans, since we will expect it to
                 # be this way for multiple usages of the spans
@@ -153,8 +154,8 @@ class CorefProcessor(UDProcessor):
             max_len = 0
             best_span = None
             max_propn = 0
-            for span_idx, span in enumerate(span_cluster):
-                word_idx = results.word_clusters[cluster_idx][span_idx]
+            for span_idx, (original_idx, span) in enumerate(sorted_spans):
+                word_idx = results.word_clusters[cluster_idx][original_idx]
                 is_zero = zero_nodes_created.get((cluster_idx, word_idx))
                 if is_zero:
                     continue
@@ -176,8 +177,8 @@ class CorefProcessor(UDProcessor):
                     max_propn = num_propn
 
             mentions = []
-            for span_idx, span in enumerate(span_cluster):
-                word_idx = results.word_clusters[cluster_idx][span_idx]
+            for original_idx, span in sorted_spans:
+                word_idx = results.word_clusters[cluster_idx][original_idx]
                 is_zero = zero_nodes_created.get((cluster_idx, word_idx))
                 if is_zero:
                     (sent_id, zero_word_id) = is_zero
