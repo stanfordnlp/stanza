@@ -33,6 +33,14 @@ those issues and expand the models.
 
 Whether or not this was a good idea was explored [in a GURT paper from Georgetown](https://arxiv.org/abs/2302.00636)
 
+### Coref
+
+Coref goes a step further and combines languages as well as datasets.
+The Catalan, English, French, German, Norwegian (Bokmål and Nynorsk),
+and Spanish coref models are a single model trained on the CorefUD
+data for all of those languages.  See
+[the coref page](coref.md#germanic-and-romance-model) for details.
+
 ## Lemma dictionaries
 
 The English, German, Greek, Slovenian, and Spanish lemmatizers also use a large

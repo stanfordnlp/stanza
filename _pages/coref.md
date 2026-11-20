@@ -148,21 +148,64 @@ This is the first release of coref, so if there are suggested improvements to th
 
 Currently, there are models available for several languages, with more to come:
 
-| Language | Dataset |
-| :---     | :------ |
-| CA       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
-| CS       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
-| DE       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
-| EN       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
-| ES       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
-| FR       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
-| HE       | IAHLT(https://github.com/IAHLT/iahlt_coref_he) |
-| HI       | DeepH   |
-| NB       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
-| NN       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
-| PL       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
-| RU       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) |
-| TA       | [KBC](https://aclanthology.org/2020.wildre-1.4.pdf) |
+| Language | Dataset | Package |
+| :---     | :------ | :------ |
+| CA       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478), [Germanic and Romance](#germanic-and-romance-model) | `udcoref_xlm-roberta-lora` |
+| CS       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) | `udcoref_xlm-roberta-lora` |
+| DE       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478), [Germanic and Romance](#germanic-and-romance-model) | `udcoref_xlm-roberta-lora` |
+| EN       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478), [Germanic and Romance](#germanic-and-romance-model) | `udcoref_xlm-roberta-lora` |
+| EN       | [GUM](#english-gum) | `gum-speakers_roberta-large-lora`, `gum-nospeakers_roberta-large-lora` |
+| EN       | OntoNotes | `ontonotes-singletons_roberta-large-lora` |
+| ES       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478), [Germanic and Romance](#germanic-and-romance-model) | `udcoref_xlm-roberta-lora` |
+| FR       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478), [Germanic and Romance](#germanic-and-romance-model) | `udcoref_xlm-roberta-lora` |
+| HE       | [IAHLT](https://github.com/IAHLT/iahlt_coref_he) | `iahlt_xlm-roberta-lora` |
+| HI       | DeepH   | `deeph_muril-large-cased-lora` |
+| NB       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478), [Germanic and Romance](#germanic-and-romance-model) | `udcoref_xlm-roberta-lora` |
+| NN       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478), [Germanic and Romance](#germanic-and-romance-model) | `udcoref_xlm-roberta-lora` |
+| PL       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) | `udcoref_xlm-roberta-lora` |
+| RU       | [CorefUD](https://lindat.mff.cuni.cz/repository/xmlui/handle/11234/1-5478) | `udcoref_xlm-roberta-lora` |
+| TA       | [KBC](https://aclanthology.org/2020.wildre-1.4.pdf) | `kbc_muril-large-cased-lora` |
+
+The first package listed for each language is the one used when
+`coref` is added to a pipeline.  The others can be chosen with the
+`package` argument, such as
+`stanza.Pipeline("en", processors="tokenize,coref", package={"coref": "gum-speakers_roberta-large-lora"})`.
+
+### Germanic and Romance model
+
+The `udcoref_xlm-roberta-lora` models for Catalan, English, French,
+German, Norwegian Bokmål, Norwegian Nynorsk, and Spanish are the same
+model.  It is trained on the CorefUD treebanks for all six languages
+at once (the two Norwegian treebanks are both included), using
+XLM-RoBERTa so that one transformer covers every language.  The model
+files for those seven languages are identical copies, so:
+
+- It does not matter which of the seven languages is used in the
+  `Pipeline` for coref.  The model will process text in any of them,
+  including documents which mix those languages.
+- Downloading coref for more than one of these languages downloads the
+  same model again for each language.
+
+The Czech, Polish, and Russian `udcoref_xlm-roberta-lora` models are
+separate models, despite having the same package name.
+
+The CorefUD data for this model is converted with
+`convert_udcoref.py --project gerrom`.  The same data is also mixed
+into the [Hebrew model](#hebrew-iahlt).
+
+#### Zero anaphora
+
+Some CorefUD treebanks annotate zero anaphora, such as dropped
+subjects, as empty nodes, and this model is trained to predict them.
+When it does, the coref processor adds an empty word to the sentence
+(numbered such as `3.1` in the CoNLL-U output) and attaches the
+mention to it.  As the model is shared, this can happen for text in
+any of its seven languages.  To turn this off, use
+`coref_use_zeros=False`:
+
+```python
+pipe = stanza.Pipeline("es", processors="tokenize,coref", coref_use_zeros=False)
+```
 
 
 ### English GUM
@@ -191,4 +234,8 @@ experiments improved the 52 F1.
 Although that number is not particularly high, it does match the published results from IAHLT.
 
 `convert_hebrew_iahlt.py` converts the dataset as published.
-`convert_hebrew_mixed.py` includes the CorefUD data.
+`convert_hebrew_mixed.py` includes the CorefUD data, the same data as
+the [Germanic and Romance model](#germanic-and-romance-model).  The
+Hebrew model was also trained to predict the zero anaphora in that
+data, so it can add empty words for zeros as well, which [`coref_use_zeros=False`](#zero-anaphora)
+turns off.
